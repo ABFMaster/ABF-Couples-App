@@ -1,0 +1,332 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
+import AiChatMessage from '@/components/AiChatMessage';
+
+export default function AiCoach() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [coupleId, setCoupleId] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [conversationId, setConversationId] = useState(null);
+  const [messagesRemaining, setMessagesRemaining] = useState(5);
+  const [limitReached, setLimitReached] = useState(false);
+  const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const checkAuth = async () => {
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (error || !user) {
+      router.push('/login');
+      return;
+    }
+
+    setUser(user);
+
+    // Get couple data
+    const { data: couple, error: coupleError } = await supabase
+      .from('couples')
+      .select('id')
+      .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+      .single();
+
+    if (coupleError || !couple) {
+      router.push('/connect');
+      return;
+    }
+
+    setCoupleId(couple.id);
+
+    // Check for existing conversation or load most recent
+    const { data: conversations } = await supabase
+      .from('ai_conversations')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('type', 'solo')
+      .order('updated_at', { ascending: false })
+      .limit(1);
+
+    if (conversations && conversations.length > 0) {
+      // Load existing conversation
+      await loadConversation(conversations[0].id);
+    }
+
+    setLoading(false);
+  };
+
+  const loadConversation = async (convId) => {
+    setConversationId(convId);
+
+    // Get session token for API authentication
+    const { data: { session } } = await supabase.auth.getSession();
+
+    const response = await fetch(`/api/ai-coach?conversationId=${convId}`, {
+      headers: {
+        'Authorization': `Bearer ${session?.access_token}`,
+      },
+    });
+    const data = await response.json();
+
+    if (data.messages) {
+      setMessages(data.messages);
+    }
+    if (data.messagesRemaining !== undefined) {
+      setMessagesRemaining(data.messagesRemaining);
+      setLimitReached(data.messagesRemaining <= 0);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!inputMessage.trim() || sending || limitReached) return;
+
+    const userMessage = inputMessage.trim();
+    setInputMessage('');
+    setSending(true);
+
+    // Optimistically add user message
+    const tempUserMsg = {
+      id: 'temp-user-' + Date.now(),
+      role: 'user',
+      content: userMessage,
+      created_at: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, tempUserMsg]);
+
+    try {
+      // Get session token for API authentication
+      const { data: { session } } = await supabase.auth.getSession();
+
+      const response = await fetch('/api/ai-coach', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          conversationId,
+          coupleId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.limitReached) {
+        setLimitReached(true);
+        setMessagesRemaining(0);
+        // Remove optimistic message and show limit message
+        setMessages(prev => prev.filter(m => m.id !== tempUserMsg.id));
+        return;
+      }
+
+      if (data.success) {
+        // Update conversation ID if new
+        if (data.conversationId && !conversationId) {
+          setConversationId(data.conversationId);
+        }
+
+        // Replace temp message with real one and add AI response
+        setMessages(prev => {
+          const filtered = prev.filter(m => m.id !== tempUserMsg.id);
+          return [...filtered, { ...tempUserMsg, id: 'user-' + Date.now() }, data.message];
+        });
+
+        if (data.messagesRemaining !== undefined) {
+          setMessagesRemaining(data.messagesRemaining);
+        }
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== tempUserMsg.id));
+    } finally {
+      setSending(false);
+      inputRef.current?.focus();
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const startNewConversation = () => {
+    setConversationId(null);
+    setMessages([]);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-pink-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-pink-500 text-lg">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-screen flex flex-col bg-gradient-to-br from-pink-50 to-purple-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm z-10 flex-shrink-0">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-pink-600 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center">
+              <span className="text-sm">🤖</span>
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-800">AI Coach</h1>
+              <p className="text-xs text-gray-500">Your relationship guide</p>
+            </div>
+          </div>
+
+          <button
+            onClick={startNewConversation}
+            className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-pink-600 transition-colors"
+            title="New conversation"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="max-w-2xl mx-auto">
+          {/* Empty state / Welcome message */}
+          {messages.length === 0 && (
+            <div className="text-center py-12">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <span className="text-4xl">🤖</span>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-3">Hi! I'm your AI Coach</h2>
+              <p className="text-gray-600 max-w-sm mx-auto mb-6">
+                I'm here to help you strengthen your relationship. Whether you want to discuss communication, plan a special date, or work through a challenge, I'm here to listen and guide you.
+              </p>
+              <div className="flex flex-wrap justify-center gap-2 max-w-md mx-auto">
+                {[
+                  'How can I show appreciation?',
+                  'We had a disagreement...',
+                  'Date night ideas',
+                  'Communication tips',
+                ].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => setInputMessage(suggestion)}
+                    className="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 transition-colors shadow-sm"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Messages */}
+          {messages.map((message) => (
+            <AiChatMessage key={message.id} message={message} />
+          ))}
+
+          {/* Typing indicator */}
+          {sending && <AiChatMessage message={{}} isTyping />}
+
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
+
+      {/* Message Limit Banner */}
+      {messagesRemaining <= 2 && messagesRemaining > 0 && (
+        <div className="bg-amber-50 border-t border-amber-200 px-4 py-2 flex-shrink-0">
+          <p className="text-center text-amber-700 text-sm">
+            <span className="font-medium">{messagesRemaining}</span> free {messagesRemaining === 1 ? 'message' : 'messages'} remaining today
+          </p>
+        </div>
+      )}
+
+      {/* Limit Reached Banner */}
+      {limitReached && (
+        <div className="bg-pink-50 border-t border-pink-200 px-4 py-3 flex-shrink-0">
+          <div className="max-w-2xl mx-auto text-center">
+            <p className="text-pink-700 text-sm mb-2">
+              You've used all 5 free messages today. Come back tomorrow!
+            </p>
+            <button className="text-pink-600 text-sm font-medium hover:text-pink-700">
+              Upgrade for unlimited access
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Input Area */}
+      <div className="bg-white border-t border-gray-200 px-4 py-3 flex-shrink-0">
+        <div className="max-w-2xl mx-auto">
+          <div className="flex items-end gap-2">
+            <div className="flex-1 relative">
+              <textarea
+                ref={inputRef}
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={limitReached ? 'Daily limit reached...' : 'Type your message...'}
+                disabled={sending || limitReached}
+                rows={1}
+                className="w-full px-4 py-3 pr-12 border-2 border-pink-200 rounded-2xl focus:border-pink-400 focus:outline-none resize-none disabled:bg-gray-50 disabled:text-gray-400"
+                style={{ minHeight: '48px', maxHeight: '120px' }}
+              />
+            </div>
+            <button
+              onClick={handleSend}
+              disabled={!inputMessage.trim() || sending || limitReached}
+              className="w-12 h-12 bg-gradient-to-r from-pink-400 to-purple-500 text-white rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:from-pink-500 hover:to-purple-600 transition-all shadow-md"
+            >
+              {sending ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              )}
+            </button>
+          </div>
+          {!limitReached && (
+            <p className="text-xs text-gray-400 mt-2 text-center">
+              Press Enter to send, Shift+Enter for new line
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
