@@ -221,6 +221,17 @@ export default function ConnectPage() {
             >
               I Have a Code
             </button>
+            <div className="pt-4 border-t border-gray-100">
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="w-full border-2 border-[#FF6B9D] text-[#FF6B9D] hover:bg-pink-50 font-semibold py-3 px-6 rounded-lg transition-all"
+              >
+                Explore First
+              </button>
+              <p className="text-xs text-gray-400 mt-2 text-center">
+                You can connect with your partner later
+              </p>
+            </div>
           </div>
         )}
 
@@ -258,9 +269,15 @@ export default function ConnectPage() {
                 {copied ? '✓ Copied!' : 'Copy Code'}
               </button>
             </div>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 mb-6">
               Your partner should use the "I Have a Code" option and enter this code
             </p>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="w-full border-2 border-[#FF6B9D] text-[#FF6B9D] hover:bg-pink-50 font-semibold py-3 px-6 rounded-lg transition-all"
+            >
+              I'll Connect Later
+            </button>
           </div>
         )}
 

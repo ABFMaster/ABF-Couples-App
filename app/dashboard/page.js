@@ -64,6 +64,11 @@ export default function Dashboard() {
   // Trip Planning State
   const [upcomingTrip, setUpcomingTrip] = useState(null)
 
+  // Partner Connection State
+  const [hasPartner, setHasPartner] = useState(true)
+  const [connectCode, setConnectCode] = useState('')
+  const [codeCopied, setCodeCopied] = useState(false)
+
   // Daily relationship quotes/affirmations
   const dailyQuotes = [
     "The best relationships are built on small moments of connection.",
@@ -380,15 +385,23 @@ export default function Dashboard() {
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
         .single()
 
+      // Allow users without a couple to view dashboard with limited features
       if (coupleError || !coupleData) {
-        router.push('/connect')
+        setHasPartner(false)
+        setLoading(false)
         return
       }
 
       setCouple(coupleData)
+      setConnectCode(coupleData.connect_code || '')
 
       const partnerUserId = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id
       setPartnerId(partnerUserId)
+
+      // Check if partner is actually connected
+      if (!partnerUserId) {
+        setHasPartner(false)
+      }
 
       const { data: userResponse } = await supabase
         .from('onboarding_responses')
@@ -629,6 +642,18 @@ export default function Dashboard() {
     ? Math.floor((new Date() - new Date(couple.created_at)) / (1000 * 60 * 60 * 24))
     : 0
 
+  // Copy connect code to clipboard
+  const handleCopyConnectCode = async () => {
+    if (!connectCode) return
+    try {
+      await navigator.clipboard.writeText(connectCode)
+      setCodeCopied(true)
+      setTimeout(() => setCodeCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center">
@@ -706,6 +731,50 @@ export default function Dashboard() {
           </div>
         </header>
 
+        {/* ===== PARTNER CONNECTION BANNER ===== */}
+        {!hasPartner && (
+          <section className="mb-8">
+            <div className="bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] rounded-xl py-4 px-6 text-white shadow-lg">
+              <div className="flex flex-col md:flex-row md:items-center gap-4">
+                <div className="flex items-center gap-3 flex-1">
+                  <span className="text-3xl">💕</span>
+                  <div>
+                    <h3 className="font-bold text-lg">Connect with your partner to unlock all features!</h3>
+                    <p className="text-pink-100 text-sm">Share your code or enter theirs to get started together</p>
+                  </div>
+                </div>
+                {connectCode ? (
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white/20 rounded-lg px-4 py-2">
+                      <p className="text-xs text-pink-100 mb-1">Your Code</p>
+                      <p className="text-2xl font-bold tracking-widest">{connectCode}</p>
+                    </div>
+                    <button
+                      onClick={handleCopyConnectCode}
+                      className="bg-white/20 hover:bg-white/30 border border-white/30 text-white px-4 py-2 rounded-lg font-medium transition-all"
+                    >
+                      {codeCopied ? '✓ Copied!' : 'Copy'}
+                    </button>
+                    <button
+                      onClick={() => router.push('/connect')}
+                      className="bg-white text-[#FF6B9D] px-4 py-2 rounded-lg font-bold hover:bg-pink-50 transition-all"
+                    >
+                      Connect Now
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => router.push('/connect')}
+                    className="bg-white text-[#FF6B9D] px-6 py-3 rounded-lg font-bold hover:bg-pink-50 transition-all"
+                  >
+                    Get Started
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* ===== GREETING SECTION ===== */}
         <section className="mb-8">
           <h2 className="text-3xl font-bold text-gray-800 mb-2">
@@ -720,7 +789,7 @@ export default function Dashboard() {
         </section>
 
         {/* ===== HERO CARD: RELATIONSHIP HEALTH ===== */}
-        {couple && (
+        {couple && hasPartner && (
           <section className="mb-8">
             <HealthMeter
               coupleId={couple.id}
@@ -852,7 +921,7 @@ export default function Dashboard() {
         )}
 
         {/* ===== DAILY CHECK-IN CARD ===== */}
-        {todayQuestion && (
+        {hasPartner && todayQuestion && (
           <section className="mb-8">
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300">
               {/* Card Header */}
@@ -1059,7 +1128,7 @@ export default function Dashboard() {
         )}
 
         {/* ===== WEEK IN REVIEW CARD ===== */}
-        {isReflectionWindow && (
+        {hasPartner && isReflectionWindow && (
           <section className="mb-8">
             <div
               onClick={() => router.push('/weekly-reflection')}
@@ -1122,6 +1191,7 @@ export default function Dashboard() {
         )}
 
         {/* ===== FLIRTS SECTION ===== */}
+        {hasPartner && (
         <section className="mb-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">💕 Flirts</h2>
           <div className="grid grid-cols-2 gap-4">
@@ -1179,6 +1249,7 @@ export default function Dashboard() {
             </div>
           </div>
         </section>
+        )}
 
         {/* ===== FEATURE CARDS GRID ===== */}
         <section className="mb-8">
@@ -1301,26 +1372,30 @@ export default function Dashboard() {
         </section>
 
         {/* ===== CONNECTION STATUS ===== */}
-        <section className="mb-8">
-          <div className="bg-white/70 rounded-xl p-6 text-center shadow-sm">
-            <p className="text-lg font-semibold text-pink-600 mb-1">
-              💕 Connected with {onboardingStatus.partnerName}
-            </p>
-            <p className="text-gray-500 text-sm">
-              Since {new Date(couple?.created_at).toLocaleDateString('en-US', {
-                month: 'long',
-                day: 'numeric',
-                year: 'numeric'
-              })}
-            </p>
-          </div>
-        </section>
+        {hasPartner && couple && (
+          <section className="mb-8">
+            <div className="bg-white/70 rounded-xl p-6 text-center shadow-sm">
+              <p className="text-lg font-semibold text-pink-600 mb-1">
+                💕 Connected with {onboardingStatus.partnerName}
+              </p>
+              <p className="text-gray-500 text-sm">
+                Since {new Date(couple?.created_at).toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </p>
+            </div>
+          </section>
+        )}
 
         {/* ===== FOOTER ===== */}
         <footer className="text-center pb-8">
-          <p className="text-gray-500 text-sm">
-            Your Connect Code: <span className="font-mono font-bold text-pink-600">{couple?.connect_code}</span>
-          </p>
+          {connectCode && (
+            <p className="text-gray-500 text-sm">
+              Your Connect Code: <span className="font-mono font-bold text-pink-600">{connectCode}</span>
+            </p>
+          )}
         </footer>
       </div>
 
