@@ -2,7 +2,7 @@
 
 Single source of truth for future work, enhancements, and known issues.
 
-**Last Updated:** February 10, 2025
+**Last Updated:** February 13, 2026
 
 ---
 
@@ -152,6 +152,49 @@ Add "Book Now" buttons throughout itinerary.
 ### AI Coach
 
 *(Placeholder for AI Coach backlog items)*
+
+---
+
+### Biometric Health Integration (Phase 2)
+**Status:** Not Started
+**Effort:** Large
+**Value:** High
+**Monetization:** Premium feature candidate + Major differentiator
+
+**Concept:**
+Integrate wearable health data (Oura, Fitbit, Whoop, Apple Health) to help couples understand how physical wellness affects their relationship.
+
+**Why It Matters:**
+- Makes invisible stress visible ("You seem irritable" -> data shows 3hrs sleep)
+- Couples can see patterns: arguments correlate with poor sleep, connection improves with recovery
+- Proactive care: "Your partner's readiness is low today - maybe pick up slack on chores"
+
+**Phase 1: Individual Awareness**
+- Daily check-in overlays Oura/Fitbit data
+- AI Coach references biometrics: "Your sleep was rough - want low-key plans?"
+
+**Phase 2: Couple Patterns**
+- Weekly reports: "You both had stressful weeks - plan something restorative"
+- Conflict correlation: "Arguments happen when X is under-slept"
+
+**Phase 3: Proactive Suggestions**
+- Morning notifications based on partner's recovery scores
+- Evening suggestions when both partners show high readiness
+
+**Technical Approach:**
+- OAuth integration (similar to Spotify)
+- Priority: Oura (best for relationship health) -> Fitbit (widest base) -> Whoop -> Apple Health
+- Store daily metrics in Supabase
+- Privacy: opt-in, granular sharing controls
+
+**Competitive Advantage:**
+First couples app to say "Your relationship isn't just feelings - it's biology, sleep, stress, and recovery."
+
+**Next Steps When Ready:**
+1. Sign up for Oura/Fitbit developer accounts
+2. Prototype: Daily check-in + Oura overlay
+3. Test with Matt & Cass for 2 weeks
+4. Analyze if data correlates with relationship patterns
 
 ---
 

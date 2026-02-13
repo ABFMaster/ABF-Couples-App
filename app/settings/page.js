@@ -290,10 +290,10 @@ export default function Settings() {
               </p>
               <div className="space-y-4">
                 <button
-                  onClick={() => router.push('/profile-onboarding')}
+                  onClick={() => router.push('/assessment')}
                   className="w-full py-4 bg-gradient-to-r from-pink-400 to-purple-500 text-white rounded-2xl font-bold text-lg hover:from-pink-500 hover:to-purple-600 transition-all transform hover:scale-[1.02] shadow-lg"
                 >
-                  Take the Quiz
+                  Start Assessment
                 </button>
                 <p className="text-sm text-gray-400">
                   You can always update your answers later in settings

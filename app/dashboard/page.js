@@ -404,17 +404,19 @@ export default function Dashboard() {
       }
 
       const { data: userResponse } = await supabase
-        .from('onboarding_responses')
+        .from('relationship_assessments')
         .select('id')
         .eq('user_id', user.id)
         .eq('couple_id', coupleData.id)
+        .not('completed_at', 'is', null)
         .single()
 
       const { data: partnerResponse } = await supabase
-        .from('onboarding_responses')
+        .from('relationship_assessments')
         .select('id')
         .eq('user_id', partnerUserId)
         .eq('couple_id', coupleData.id)
+        .not('completed_at', 'is', null)
         .single()
 
       const { data: partnerProfile } = await supabase
@@ -429,15 +431,17 @@ export default function Dashboard() {
         partnerName: partnerProfile?.first_name || 'Partner',
       })
 
-      // Check if user has completed their profile onboarding quiz
-      const { data: userProfile } = await supabase
-        .from('user_profiles')
+      // Check if user has completed their relationship assessment
+      const { data: userAssessment } = await supabase
+        .from('relationship_assessments')
         .select('completed_at')
         .eq('user_id', user.id)
+        .eq('couple_id', coupleData.id)
+        .not('completed_at', 'is', null)
         .single()
 
-      // Profile is completed if the row exists and completed_at is not null
-      setProfileCompleted(!!userProfile?.completed_at)
+      // Profile is completed if they have a completed assessment
+      setProfileCompleted(!!userAssessment?.completed_at)
 
       await fetchDailyCheckin(coupleData, user.id)
       await fetchFlirts(coupleData.id, user.id)
@@ -818,7 +822,7 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* ===== PROFILE ONBOARDING BANNER ===== */}
+        {/* ===== ASSESSMENT BANNER ===== */}
         {!profileCompleted && (
           <section className="mb-8">
             <div className="bg-gradient-to-r from-purple-600 via-pink-500 to-rose-500 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
@@ -828,36 +832,36 @@ export default function Dashboard() {
               <div className="relative flex flex-col md:flex-row md:items-center gap-4">
                 <div className="text-4xl">✨</div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold mb-1">Complete Your Profile Quiz!</h3>
+                  <h3 className="text-xl font-bold mb-1">Complete Your Relationship Assessment!</h3>
                   <p className="text-pink-100">
-                    Take our quick personality quiz to unlock personalized AI coaching.
+                    Take our 5-module assessment to unlock personalized insights and AI coaching.
                   </p>
                 </div>
                 <button
-                  onClick={() => router.push('/profile-onboarding')}
+                  onClick={() => router.push('/assessment')}
                   className="bg-white text-pink-600 px-6 py-3 rounded-full font-bold hover:bg-pink-50 transition-all shadow-lg transform hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap"
                 >
-                  Start Quiz
+                  Start Assessment
                 </button>
               </div>
             </div>
           </section>
         )}
 
-        {/* ===== ONBOARDING STATUS BANNERS ===== */}
+        {/* ===== ASSESSMENT STATUS BANNERS ===== */}
         {!onboardingStatus.userCompleted && (
           <section className="mb-8">
             <div className="bg-gradient-to-r from-pink-500 to-pink-400 rounded-2xl shadow-lg p-6 text-white">
               <div className="flex items-center gap-4">
                 <div className="text-4xl">❤️</div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold mb-1">Complete Your 18 Questions!</h3>
+                  <h3 className="text-xl font-bold mb-1">Complete Your Relationship Assessment!</h3>
                   <p className="text-pink-100">
-                    Answer questions about your relationship style to discover your compatibility.
+                    Answer questions about your relationship to discover your compatibility and strengths.
                   </p>
                 </div>
                 <button
-                  onClick={() => router.push('/onboarding')}
+                  onClick={() => router.push('/assessment')}
                   className="bg-white text-pink-500 px-6 py-3 rounded-full font-bold hover:bg-pink-50 transition-colors shadow-lg"
                 >
                   Start Now
@@ -877,7 +881,7 @@ export default function Dashboard() {
                     Waiting for {onboardingStatus.partnerName}
                   </h3>
                   <p className="text-gray-600">
-                    You've completed your 18 questions! Once {onboardingStatus.partnerName} finishes, you'll see your compatibility results.
+                    You've completed your assessment! Once {onboardingStatus.partnerName} finishes, you'll see your compatibility results.
                   </p>
                 </div>
                 <div className="flex gap-1">
@@ -901,20 +905,12 @@ export default function Dashboard() {
                     Discover how to connect with {onboardingStatus.partnerName} in ways that truly matter.
                   </p>
                 </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => router.push('/partner-insights')}
-                    className="bg-white text-pink-600 px-5 py-3 rounded-full font-bold hover:bg-pink-50 transition-colors shadow-lg"
-                  >
-                    Partner Insights
-                  </button>
-                  <button
-                    onClick={() => router.push('/results')}
-                    className="bg-white/20 text-white px-5 py-3 rounded-full font-medium hover:bg-white/30 transition-colors border border-white/30"
-                  >
-                    Results
-                  </button>
-                </div>
+                <button
+                  onClick={() => router.push('/assessment/results')}
+                  className="bg-white text-pink-600 px-6 py-3 rounded-full font-bold hover:bg-pink-50 transition-colors shadow-lg"
+                >
+                  View Results & Insights
+                </button>
               </div>
             </div>
           </section>
@@ -1255,40 +1251,26 @@ export default function Dashboard() {
         <section className="mb-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">✨ Features</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {/* Partner Insights Card */}
+            {/* Results & Insights Card */}
             {onboardingStatus.userCompleted && onboardingStatus.partnerCompleted && (
               <div
-                onClick={() => router.push('/partner-insights')}
+                onClick={() => router.push('/assessment/results')}
                 className="bg-gradient-to-br from-pink-500 to-pink-400 rounded-xl p-6 shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-[1.01] text-white"
               >
-                <div className="text-3xl mb-3">🔍</div>
-                <h3 className="text-lg font-semibold mb-1">Partner Insights</h3>
-                <p className="text-pink-100 text-sm">
-                  Understand {onboardingStatus.partnerName}
-                </p>
-              </div>
-            )}
-
-            {/* Compatibility Results Card */}
-            {onboardingStatus.userCompleted && onboardingStatus.partnerCompleted && (
-              <div
-                onClick={() => router.push('/results')}
-                className="bg-white rounded-xl p-6 shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-[1.01]"
-              >
                 <div className="text-3xl mb-3">📊</div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-1">Compatibility</h3>
-                <p className="text-gray-600 text-sm">
-                  See your alignment
+                <h3 className="text-lg font-semibold mb-1">Results & Insights</h3>
+                <p className="text-pink-100 text-sm">
+                  Your compatibility with {onboardingStatus.partnerName}
                 </p>
               </div>
             )}
 
-            {/* 18 Questions Card - Shows when NOT both completed */}
+            {/* Assessment Card - Shows when NOT both completed */}
             {!(onboardingStatus.userCompleted && onboardingStatus.partnerCompleted) && (
               <div
                 onClick={() => {
                   if (!onboardingStatus.userCompleted) {
-                    router.push('/onboarding')
+                    router.push('/assessment')
                   }
                 }}
                 className={`bg-white rounded-xl p-6 shadow-sm transition-all ${
@@ -1298,7 +1280,7 @@ export default function Dashboard() {
                 }`}
               >
                 <div className="text-3xl mb-3">❤️</div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-1">18 Questions</h3>
+                <h3 className="text-lg font-semibold text-gray-800 mb-1">Assessment</h3>
                 <p className="text-gray-600 text-sm mb-2">
                   Get to know each other
                 </p>
