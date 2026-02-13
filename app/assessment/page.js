@@ -198,7 +198,8 @@ export default function AssessmentPage() {
           .from('relationship_assessments')
           .update({
             answers,
-            results,
+            results,           // Legacy column name (if exists)
+            module_results: results,  // New column name
             completed_at: new Date().toISOString(),
           })
           .eq('id', existingAssessment.id)
@@ -209,7 +210,8 @@ export default function AssessmentPage() {
             user_id: user.id,
             couple_id: couple.id,
             answers,
-            results,
+            results,           // Legacy column name (if exists)
+            module_results: results,  // New column name
             completed_at: new Date().toISOString(),
           })
       }
@@ -453,6 +455,11 @@ export default function AssessmentPage() {
 // Ranking Question Component
 function RankingQuestion({ question, value, onChange }) {
   const [rankings, setRankings] = useState(value)
+
+  // Reset rankings when question changes
+  useEffect(() => {
+    setRankings(value || {})
+  }, [question.id])
 
   const handleRankChange = (optionValue, rank) => {
     const newRankings = { ...rankings }

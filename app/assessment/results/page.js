@@ -150,7 +150,10 @@ export default function AssessmentResultsPage() {
     )
   }
 
-  if (!assessment?.results) {
+  // Support both column names: results (legacy) and module_results (new)
+  const assessmentResults = assessment?.results || assessment?.module_results
+
+  if (!assessmentResults) {
     return (
       <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">
@@ -168,7 +171,7 @@ export default function AssessmentResultsPage() {
     )
   }
 
-  const { results } = assessment
+  const results = assessmentResults
   const moduleResults = results.modules || []
 
   return (
@@ -253,7 +256,9 @@ export default function AssessmentResultsPage() {
             if (!moduleConfig) return null
 
             const isExpanded = expandedModule === moduleResult.moduleId
-            const partnerModuleResult = partnerAssessment?.results?.modules?.find(
+            // Support both column names for partner data
+            const partnerResults = partnerAssessment?.results || partnerAssessment?.module_results
+            const partnerModuleResult = partnerResults?.modules?.find(
               m => m.moduleId === moduleResult.moduleId
             )
 
