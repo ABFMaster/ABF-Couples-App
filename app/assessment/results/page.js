@@ -5,19 +5,84 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ASSESSMENT_MODULES, ASSESSMENT_ATTRIBUTION } from '@/lib/relationship-questions'
 
+// Circular Progress Component with gradient
+function CircularProgress({ percentage, color, size = 80, strokeWidth = 6, animate = true }) {
+  const [animatedPercentage, setAnimatedPercentage] = useState(0)
+  const radius = (size - strokeWidth) / 2
+  const circumference = radius * 2 * Math.PI
+  const offset = circumference - (animatedPercentage / 100) * circumference
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAnimatedPercentage(percentage)
+    }, animate ? 100 : 0)
+    return () => clearTimeout(timer)
+  }, [percentage, animate])
+
+  // Parse gradient colors from Tailwind class
+  const getGradientColors = (colorClass) => {
+    const colorMap = {
+      'from-pink-500 to-rose-500': ['#ec4899', '#f43f5e'],
+      'from-purple-500 to-violet-500': ['#a855f7', '#8b5cf6'],
+      'from-blue-500 to-cyan-500': ['#3b82f6', '#06b6d4'],
+      'from-amber-500 to-orange-500': ['#f59e0b', '#f97316'],
+      'from-emerald-500 to-teal-500': ['#10b981', '#14b8a6'],
+    }
+    return colorMap[colorClass] || ['#FF6B9D', '#C9184A']
+  }
+
+  const [startColor, endColor] = getGradientColors(color)
+  const gradientId = `progress-gradient-${color?.replace(/\s/g, '-') || 'default'}`
+
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="transform -rotate-90">
+        <defs>
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor={startColor} />
+            <stop offset="100%" stopColor={endColor} />
+          </linearGradient>
+        </defs>
+        {/* Background circle */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="#E5E7EB"
+          strokeWidth={strokeWidth}
+        />
+        {/* Progress circle */}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={`url(#${gradientId})`}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          className="transition-all duration-1000 ease-out"
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-lg font-bold text-[#2D3648]">{Math.round(animatedPercentage)}%</span>
+      </div>
+    </div>
+  )
+}
+
 export default function AssessmentResultsPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState(null)
-  const [couple, setCouple] = useState(null)
   const [assessment, setAssessment] = useState(null)
   const [partnerAssessment, setPartnerAssessment] = useState(null)
   const [partnerName, setPartnerName] = useState('Partner')
   const [expandedModule, setExpandedModule] = useState(null)
-
-  useEffect(() => {
-    checkAuth()
-  }, [])
+  const [showShareMenu, setShowShareMenu] = useState(false)
+  const [animateCards, setAnimateCards] = useState(false)
+  const [incompleteAssessment, setIncompleteAssessment] = useState(null)
 
   const checkAuth = async () => {
     try {
@@ -28,8 +93,6 @@ export default function AssessmentResultsPage() {
         return
       }
 
-      setUser(user)
-
       const { data: coupleData } = await supabase
         .from('couples')
         .select('*')
@@ -37,8 +100,6 @@ export default function AssessmentResultsPage() {
         .single()
 
       if (coupleData) {
-        setCouple(coupleData)
-
         const partnerId = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id
 
         // Get partner name
@@ -81,16 +142,60 @@ export default function AssessmentResultsPage() {
         if (assessmentData) {
           setAssessment(assessmentData)
         } else {
-          // No completed assessment, redirect to start
-          router.push('/assessment')
-          return
+          // Check for incomplete assessment
+          const { data: incompleteData } = await supabase
+            .from('relationship_assessments')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('couple_id', coupleData.id)
+            .is('completed_at', null)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single()
+
+          if (incompleteData) {
+            setIncompleteAssessment(incompleteData)
+          }
         }
       }
 
       setLoading(false)
+      // Trigger card animations after load
+      setTimeout(() => setAnimateCards(true), 100)
     } catch (err) {
       console.error('Error:', err)
       setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    checkAuth()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleShare = async () => {
+    const shareData = {
+      title: 'My Relationship Assessment Results',
+      text: `I scored ${assessment?.results?.overallPercentage || assessment?.module_results?.overallPercentage}% on my relationship health assessment!`,
+      url: window.location.href,
+    }
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData)
+      } catch (err) {
+        // User cancelled or error
+        console.log('Share cancelled')
+      }
+    } else {
+      // Fallback: copy to clipboard
+      try {
+        await navigator.clipboard.writeText(`${shareData.text} ${shareData.url}`)
+        setShowShareMenu(true)
+        setTimeout(() => setShowShareMenu(false), 2000)
+      } catch (err) {
+        console.error('Failed to copy:', err)
+      }
     }
   }
 
@@ -154,17 +259,52 @@ export default function AssessmentResultsPage() {
   const assessmentResults = assessment?.results || assessment?.module_results
 
   if (!assessmentResults) {
+    // Calculate progress for incomplete assessment
+    const answeredCount = incompleteAssessment?.answers
+      ? Object.keys(incompleteAssessment.answers).length
+      : 0
+    const totalQuestions = 30 // 6 questions per module × 5 modules
+    const progressPercent = Math.round((answeredCount / totalQuestions) * 100)
+
     return (
       <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">
-          <div className="text-7xl mb-6">📋</div>
-          <h2 className="text-3xl font-bold text-[#2D3648] mb-3">No Results Yet</h2>
-          <p className="text-[#6B7280] mb-8">Complete the relationship assessment to see your personalized insights.</p>
+          <div className="text-7xl mb-6">{incompleteAssessment ? '📝' : '📋'}</div>
+          <h2 className="text-3xl font-bold text-[#2D3648] mb-3">
+            {incompleteAssessment ? 'Assessment In Progress' : 'No Results Yet'}
+          </h2>
+          <p className="text-[#6B7280] mb-6">
+            {incompleteAssessment
+              ? `You've completed ${progressPercent}% of the assessment. Pick up where you left off!`
+              : 'Complete the relationship assessment to see your personalized insights.'
+            }
+          </p>
+
+          {/* Progress bar for incomplete */}
+          {incompleteAssessment && (
+            <div className="mb-8">
+              <div className="h-3 bg-[#E5E2DD] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] rounded-full transition-all duration-500"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              <p className="text-sm text-[#9CA3AF] mt-2">{answeredCount} of {totalQuestions} questions answered</p>
+            </div>
+          )}
+
           <button
             onClick={() => router.push('/assessment')}
             className="bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white px-8 py-4 rounded-full font-bold text-lg hover:opacity-90 transition-opacity"
           >
-            Start Assessment
+            {incompleteAssessment ? 'Continue Assessment' : 'Start Assessment'}
+          </button>
+
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="block mx-auto mt-4 text-[#6B7280] hover:text-[#2D3648] transition-colors"
+          >
+            Back to Dashboard
           </button>
         </div>
       </div>
@@ -189,17 +329,45 @@ export default function AssessmentResultsPage() {
             <span>Back to Dashboard</span>
           </button>
 
-          <h1 className="text-4xl font-bold mb-2">Your Relationship Insights</h1>
-          <p className="text-white/80 text-lg">
-            Completed {new Date(assessment.completed_at).toLocaleDateString('en-US', {
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric'
-            })}
-          </p>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-4xl font-bold mb-2">Your Relationship Insights</h1>
+              <p className="text-white/80 text-lg">
+                Completed {new Date(assessment.completed_at).toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </p>
+            </div>
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-full transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+              <span className="hidden sm:inline">Share</span>
+            </button>
+          </div>
+
+          {/* Share confirmation toast */}
+          {showShareMenu && (
+            <div className="fixed top-4 right-4 bg-[#2D3648] text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in">
+              Copied to clipboard!
+            </div>
+          )}
+
+          {/* Celebration Message */}
+          <div className="mt-4 text-white/90 text-lg">
+            {results.overallPercentage >= 80 && "You and your partner have built something special together."}
+            {results.overallPercentage >= 60 && results.overallPercentage < 80 && "Your relationship has a strong foundation with room to grow."}
+            {results.overallPercentage >= 40 && results.overallPercentage < 60 && "Every relationship is a journey—you're on the path to growth."}
+            {results.overallPercentage < 40 && "Understanding where you are is the first step to where you want to be."}
+          </div>
 
           {/* Overall Score */}
-          <div className="mt-8 bg-white/20 rounded-2xl p-6 backdrop-blur-sm">
+          <div className="mt-6 bg-white/20 rounded-2xl p-6 backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-white/70 text-sm mb-1">Overall Relationship Health</p>
@@ -219,6 +387,20 @@ export default function AssessmentResultsPage() {
                 style={{ width: `${results.overallPercentage}%` }}
               />
             </div>
+
+            {/* Strengths Summary */}
+            {moduleResults.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {moduleResults
+                  .filter(m => m.strengthLevel === 'strong')
+                  .map(m => (
+                    <span key={m.moduleId} className="bg-white/30 px-3 py-1 rounded-full text-sm">
+                      {ASSESSMENT_MODULES.find(am => am.id === m.moduleId)?.icon} {m.title}
+                    </span>
+                  ))
+                }
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -265,16 +447,23 @@ export default function AssessmentResultsPage() {
             return (
               <div
                 key={moduleResult.moduleId}
-                className="bg-white rounded-2xl shadow-sm border border-[#E5E2DD] overflow-hidden"
+                className={`bg-white rounded-2xl shadow-sm border border-[#E5E2DD] overflow-hidden transform transition-all duration-500 ${
+                  animateCards
+                    ? 'opacity-100 translate-y-0'
+                    : 'opacity-0 translate-y-4'
+                }`}
+                style={{
+                  transitionDelay: animateCards ? `${index * 100}ms` : '0ms'
+                }}
               >
                 {/* Module Header */}
                 <button
                   onClick={() => setExpandedModule(isExpanded ? null : moduleResult.moduleId)}
-                  className="w-full p-6 text-left hover:bg-[#F8F6F3] transition-colors"
+                  className={`w-full p-6 text-left transition-colors ${isExpanded ? moduleConfig.bgColor : 'hover:bg-[#F8F6F3]'}`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className={`w-14 h-14 rounded-2xl ${moduleConfig.bgColor} flex items-center justify-center`}>
+                      <div className={`w-14 h-14 rounded-2xl ${isExpanded ? 'bg-white/80' : moduleConfig.bgColor} flex items-center justify-center transition-colors`}>
                         <span className="text-2xl">{moduleConfig.icon}</span>
                       </div>
                       <div>
@@ -283,11 +472,18 @@ export default function AssessmentResultsPage() {
                           <span className={`text-sm font-medium px-3 py-1 rounded-full ${getStrengthBg(moduleResult.strengthLevel)} ${getStrengthColor(moduleResult.strengthLevel)}`}>
                             {getStrengthLabel(moduleResult.strengthLevel)}
                           </span>
-                          <span className="text-[#6B7280] text-sm">{moduleResult.percentage}%</span>
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
+                      {/* Circular Progress */}
+                      <CircularProgress
+                        percentage={moduleResult.percentage}
+                        color={moduleConfig.color}
+                        size={64}
+                        strokeWidth={5}
+                        animate={animateCards}
+                      />
                       {/* Score comparison if partner has completed */}
                       {partnerModuleResult && (
                         <div className="text-right hidden sm:block">
@@ -296,7 +492,7 @@ export default function AssessmentResultsPage() {
                         </div>
                       )}
                       <svg
-                        className={`w-6 h-6 text-[#9CA3AF] transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                        className={`w-6 h-6 text-[#9CA3AF] transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -304,14 +500,6 @@ export default function AssessmentResultsPage() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </div>
-                  </div>
-
-                  {/* Progress bar */}
-                  <div className="mt-4 h-2 bg-[#F8F6F3] rounded-full overflow-hidden">
-                    <div
-                      className={`h-full bg-gradient-to-r ${moduleConfig.color} transition-all duration-500`}
-                      style={{ width: `${moduleResult.percentage}%` }}
-                    />
                   </div>
                 </button>
 
