@@ -260,7 +260,28 @@ export default function ProfileAssessmentPage() {
           />
         </div>
 
-        <div className="min-h-screen flex flex-col items-center justify-center px-4">
+        {/* Header with back button */}
+        <div className="max-w-2xl mx-auto px-4 pt-8">
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={() => {
+                saveProgress()
+                router.push('/dashboard')
+              }}
+              className="flex items-center gap-2 text-[#6B7280] hover:text-[#2D3648] transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span>Dashboard</span>
+            </button>
+            <span className="text-[#9CA3AF] text-sm">
+              {progressPercentage}% complete
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-col items-center justify-center px-4 pt-8 pb-16">
           <div className="max-w-lg w-full text-center">
             {/* Module icon */}
             <div className={`w-24 h-24 rounded-3xl ${currentModule.bgColor} flex items-center justify-center mx-auto mb-6`}>
@@ -293,14 +314,6 @@ export default function ProfileAssessmentPage() {
               className="bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white px-8 py-4 rounded-full font-bold text-lg hover:opacity-90 transition-opacity"
             >
               Begin
-            </button>
-
-            {/* Back to dashboard */}
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="block mx-auto mt-6 text-[#6B7280] hover:text-[#2D3648] transition-colors"
-            >
-              Save & Exit
             </button>
           </div>
         </div>

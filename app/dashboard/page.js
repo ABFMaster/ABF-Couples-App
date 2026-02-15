@@ -132,10 +132,6 @@ export default function Dashboard() {
 
   const dailyQuote = getDailyQuote()
 
-  useEffect(() => {
-    checkAuth()
-  }, [])
-
   // Show celebration with auto-dismiss
   const showCelebration = (type, message, duration = 2000) => {
     setCelebration({ type, message })
@@ -473,6 +469,11 @@ export default function Dashboard() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    checkAuth()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Track points silently in the background
   const trackPoints = async (action, points, referenceId) => {
@@ -843,7 +844,7 @@ export default function Dashboard() {
         {/* ===== ASSESSMENT CARDS - 2 CLEAR OPTIONS ===== */}
         <section className="mb-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Know Yourself & Your Relationship</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
 
             {/* Individual Profile Card - Always Available */}
             <div
