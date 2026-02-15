@@ -9,9 +9,10 @@ import { useRouter } from 'next/navigation'
  *
  * This page redirects users to the appropriate onboarding step:
  * 1. If not authenticated → /login
- * 2. If no couple → /connect
- * 3. If assessment not completed → /assessment
- * 4. If assessment completed → /dashboard or /assessment/results
+ * 2. If individual profile not completed → /profile (Who I Am)
+ * 3. If no couple → /dashboard (they can explore, connect later)
+ * 4. If partner connected but relationship assessment not done → /assessment
+ * 5. If everything completed → /dashboard
  */
 export default function OnboardingRedirect() {
   const router = useRouter()
@@ -19,6 +20,7 @@ export default function OnboardingRedirect() {
 
   useEffect(() => {
     checkOnboardingStatus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const checkOnboardingStatus = async () => {
@@ -32,6 +34,23 @@ export default function OnboardingRedirect() {
         return
       }
 
+      // Check individual profile status FIRST
+      setStatus('Loading your profile...')
+      const { data: individualProfile } = await supabase
+        .from('individual_profiles')
+        .select('completed_at')
+        .eq('user_id', user.id)
+        .not('completed_at', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (!individualProfile) {
+        // No completed individual profile - start here first
+        router.push('/profile')
+        return
+      }
+
       // Check couple status
       setStatus('Checking connection...')
       const { data: coupleData, error: coupleError } = await supabase
@@ -41,8 +60,8 @@ export default function OnboardingRedirect() {
         .single()
 
       if (coupleError || !coupleData) {
-        // No couple - go to connect page
-        router.push('/connect')
+        // No couple yet - go to dashboard (they can explore and connect later)
+        router.push('/dashboard')
         return
       }
 
@@ -50,7 +69,13 @@ export default function OnboardingRedirect() {
       const partnerId = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id
       const hasPartner = !!partnerId
 
-      // Check for completed assessment
+      if (!hasPartner) {
+        // Couple exists but no partner connected yet
+        router.push('/dashboard')
+        return
+      }
+
+      // Check for completed relationship assessment
       setStatus('Loading your assessment...')
       const { data: assessment } = await supabase
         .from('relationship_assessments')
@@ -62,34 +87,19 @@ export default function OnboardingRedirect() {
         .limit(1)
         .single()
 
-      if (assessment) {
-        // Assessment completed - check if partner has completed too
-        if (hasPartner) {
-          const { data: partnerAssessment } = await supabase
-            .from('relationship_assessments')
-            .select('completed_at')
-            .eq('user_id', partnerId)
-            .eq('couple_id', coupleData.id)
-            .not('completed_at', 'is', null)
-            .single()
-
-          if (partnerAssessment) {
-            // Both completed - go to results
-            router.push('/assessment/results')
-            return
-          }
-        }
-        // User completed but partner hasn't - go to results with waiting state
-        router.push('/assessment/results')
+      if (!assessment) {
+        // Partner connected but no completed relationship assessment
+        // Redirect to assessment
+        router.push('/assessment')
         return
       }
 
-      // No completed assessment - start/continue assessment
-      router.push('/assessment')
+      // Everything is done - go to dashboard
+      router.push('/dashboard')
     } catch (err) {
       console.error('Error checking onboarding status:', err)
-      // Default to assessment page
-      router.push('/assessment')
+      // Default to dashboard
+      router.push('/dashboard')
     }
   }
 

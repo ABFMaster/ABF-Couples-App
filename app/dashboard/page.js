@@ -53,6 +53,10 @@ export default function Dashboard() {
   const [lastSentFlirtTime, setLastSentFlirtTime] = useState(null)
   const [profileCompleted, setProfileCompleted] = useState(true)
   const [totalFlirtsSent, setTotalFlirtsSent] = useState(0)
+  const [individualProfileStatus, setIndividualProfileStatus] = useState({
+    completed: false,
+    inProgress: false,
+  })
 
   // Timeline State
   const [recentTimelineEvents, setRecentTimelineEvents] = useState([])
@@ -443,6 +447,20 @@ export default function Dashboard() {
       // Profile is completed if they have a completed assessment
       setProfileCompleted(!!userAssessment?.completed_at)
 
+      // Check individual profile status
+      const { data: individualProfile } = await supabase
+        .from('individual_profiles')
+        .select('completed_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      setIndividualProfileStatus({
+        completed: !!individualProfile?.completed_at,
+        inProgress: !!individualProfile && !individualProfile.completed_at,
+      })
+
       await fetchDailyCheckin(coupleData, user.id)
       await fetchFlirts(coupleData.id, user.id)
       await fetchTimelineEvents(coupleData.id)
@@ -822,99 +840,131 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* ===== ASSESSMENT BANNER ===== */}
-        {!profileCompleted && (
-          <section className="mb-8">
-            <div className="bg-gradient-to-r from-purple-600 via-pink-500 to-rose-500 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2"></div>
+        {/* ===== ASSESSMENT CARDS - 2 CLEAR OPTIONS ===== */}
+        <section className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Know Yourself & Your Relationship</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-              <div className="relative flex flex-col md:flex-row md:items-center gap-4">
-                <div className="text-4xl">✨</div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold mb-1">Complete Your Relationship Assessment!</h3>
-                  <p className="text-pink-100">
-                    Take our 5-module assessment to unlock personalized insights and AI coaching.
-                  </p>
+            {/* Individual Profile Card - Always Available */}
+            <div
+              onClick={() => router.push(individualProfileStatus.completed ? '/profile/results' : '/profile')}
+              className={`rounded-2xl shadow-lg p-6 cursor-pointer transition-all hover:scale-[1.01] relative overflow-hidden ${
+                individualProfileStatus.completed
+                  ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
+                  : 'bg-white border-2 border-indigo-200 hover:border-indigo-400'
+              }`}
+            >
+              <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+              <div className="flex items-start gap-4">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
+                  individualProfileStatus.completed ? 'bg-white/20' : 'bg-indigo-100'
+                }`}>
+                  <span className="text-3xl">🪞</span>
                 </div>
-                <button
-                  onClick={() => router.push('/assessment')}
-                  className="bg-white text-pink-600 px-6 py-3 rounded-full font-bold hover:bg-pink-50 transition-all shadow-lg transform hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap"
-                >
-                  Start Assessment
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* ===== ASSESSMENT STATUS BANNERS ===== */}
-        {!onboardingStatus.userCompleted && (
-          <section className="mb-8">
-            <div className="bg-gradient-to-r from-pink-500 to-pink-400 rounded-2xl shadow-lg p-6 text-white">
-              <div className="flex items-center gap-4">
-                <div className="text-4xl">❤️</div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold mb-1">Complete Your Relationship Assessment!</h3>
-                  <p className="text-pink-100">
-                    Answer questions about your relationship to discover your compatibility and strengths.
-                  </p>
-                </div>
-                <button
-                  onClick={() => router.push('/assessment')}
-                  className="bg-white text-pink-500 px-6 py-3 rounded-full font-bold hover:bg-pink-50 transition-colors shadow-lg"
-                >
-                  Start Now
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {onboardingStatus.userCompleted && !onboardingStatus.partnerCompleted && (
-          <section className="mb-8">
-            <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-pink-200">
-              <div className="flex items-center gap-4">
-                <div className="text-4xl">⏳</div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-pink-600 mb-1">
-                    Waiting for {onboardingStatus.partnerName}
+                  <h3 className={`text-xl font-bold mb-1 ${
+                    individualProfileStatus.completed ? 'text-white' : 'text-gray-800'
+                  }`}>
+                    Your Profile
                   </h3>
-                  <p className="text-gray-600">
-                    You've completed your assessment! Once {onboardingStatus.partnerName} finishes, you'll see your compatibility results.
+                  <p className={`text-sm mb-3 ${
+                    individualProfileStatus.completed ? 'text-indigo-100' : 'text-gray-600'
+                  }`}>
+                    {individualProfileStatus.completed
+                      ? 'Discover insights about who you are'
+                      : 'Understand your personality, values & needs'}
                   </p>
-                </div>
-                <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <span className={`inline-block text-sm px-4 py-1.5 rounded-full font-medium ${
+                    individualProfileStatus.completed
+                      ? 'bg-white/20 text-white'
+                      : individualProfileStatus.inProgress
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'bg-indigo-500 text-white'
+                  }`}>
+                    {individualProfileStatus.completed
+                      ? 'View Results'
+                      : individualProfileStatus.inProgress
+                        ? 'Continue'
+                        : 'Start Profile'}
+                  </span>
                 </div>
               </div>
             </div>
-          </section>
-        )}
 
-        {onboardingStatus.userCompleted && onboardingStatus.partnerCompleted && (
-          <section className="mb-8">
-            <div className="bg-gradient-to-r from-pink-500 to-purple-500 rounded-2xl shadow-lg p-6 text-white">
-              <div className="flex flex-col md:flex-row md:items-center gap-4">
-                <div className="text-4xl">🎉</div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold mb-1">You're All Set!</h3>
-                  <p className="text-pink-100">
-                    Discover how to connect with {onboardingStatus.partnerName} in ways that truly matter.
-                  </p>
+            {/* Relationship Health Card - Requires Partner */}
+            <div
+              onClick={() => {
+                if (!hasPartner) return
+                if (onboardingStatus.userCompleted && onboardingStatus.partnerCompleted) {
+                  router.push('/assessment/results')
+                } else if (!onboardingStatus.userCompleted) {
+                  router.push('/assessment')
+                }
+              }}
+              className={`rounded-2xl shadow-lg p-6 relative overflow-hidden ${
+                !hasPartner
+                  ? 'bg-gray-100 cursor-not-allowed'
+                  : onboardingStatus.userCompleted && onboardingStatus.partnerCompleted
+                    ? 'bg-gradient-to-br from-pink-500 to-rose-600 text-white cursor-pointer hover:scale-[1.01]'
+                    : 'bg-white border-2 border-pink-200 hover:border-pink-400 cursor-pointer hover:scale-[1.01]'
+              } transition-all`}
+            >
+              <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+              <div className="flex items-start gap-4">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
+                  !hasPartner
+                    ? 'bg-gray-200'
+                    : onboardingStatus.userCompleted && onboardingStatus.partnerCompleted
+                      ? 'bg-white/20'
+                      : 'bg-pink-100'
+                }`}>
+                  <span className="text-3xl">{hasPartner ? '❤️' : '🔗'}</span>
                 </div>
-                <button
-                  onClick={() => router.push('/assessment/results')}
-                  className="bg-white text-pink-600 px-6 py-3 rounded-full font-bold hover:bg-pink-50 transition-colors shadow-lg"
-                >
-                  View Results & Insights
-                </button>
+                <div className="flex-1">
+                  <h3 className={`text-xl font-bold mb-1 ${
+                    !hasPartner
+                      ? 'text-gray-400'
+                      : onboardingStatus.userCompleted && onboardingStatus.partnerCompleted
+                        ? 'text-white'
+                        : 'text-gray-800'
+                  }`}>
+                    Relationship Health
+                  </h3>
+                  <p className={`text-sm mb-3 ${
+                    !hasPartner
+                      ? 'text-gray-400'
+                      : onboardingStatus.userCompleted && onboardingStatus.partnerCompleted
+                        ? 'text-pink-100'
+                        : 'text-gray-600'
+                  }`}>
+                    {!hasPartner
+                      ? 'Connect with your partner first'
+                      : onboardingStatus.userCompleted && onboardingStatus.partnerCompleted
+                        ? `Your insights with ${onboardingStatus.partnerName}`
+                        : `Understand your dynamic with ${onboardingStatus.partnerName}`}
+                  </p>
+                  <span className={`inline-block text-sm px-4 py-1.5 rounded-full font-medium ${
+                    !hasPartner
+                      ? 'bg-gray-200 text-gray-500'
+                      : onboardingStatus.userCompleted && onboardingStatus.partnerCompleted
+                        ? 'bg-white/20 text-white'
+                        : onboardingStatus.userCompleted
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-pink-500 text-white'
+                  }`}>
+                    {!hasPartner
+                      ? 'Partner Required'
+                      : onboardingStatus.userCompleted && onboardingStatus.partnerCompleted
+                        ? 'View Results'
+                        : onboardingStatus.userCompleted
+                          ? `Waiting for ${onboardingStatus.partnerName}`
+                          : 'Start Assessment'}
+                  </span>
+                </div>
               </div>
             </div>
-          </section>
-        )}
+          </div>
+        </section>
 
         {/* ===== DAILY CHECK-IN CARD ===== */}
         {hasPartner && todayQuestion && (
@@ -1249,53 +1299,8 @@ export default function Dashboard() {
 
         {/* ===== FEATURE CARDS GRID ===== */}
         <section className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">✨ Features</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Explore</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {/* Results & Insights Card */}
-            {onboardingStatus.userCompleted && onboardingStatus.partnerCompleted && (
-              <div
-                onClick={() => router.push('/assessment/results')}
-                className="bg-gradient-to-br from-pink-500 to-pink-400 rounded-xl p-6 shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-[1.01] text-white"
-              >
-                <div className="text-3xl mb-3">📊</div>
-                <h3 className="text-lg font-semibold mb-1">Results & Insights</h3>
-                <p className="text-pink-100 text-sm">
-                  Your compatibility with {onboardingStatus.partnerName}
-                </p>
-              </div>
-            )}
-
-            {/* Assessment Card - Shows when NOT both completed */}
-            {!(onboardingStatus.userCompleted && onboardingStatus.partnerCompleted) && (
-              <div
-                onClick={() => {
-                  if (!onboardingStatus.userCompleted) {
-                    router.push('/assessment')
-                  }
-                }}
-                className={`bg-white rounded-xl p-6 shadow-sm transition-all ${
-                  !onboardingStatus.userCompleted
-                    ? 'hover:shadow-md cursor-pointer hover:scale-[1.01]'
-                    : ''
-                }`}
-              >
-                <div className="text-3xl mb-3">❤️</div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-1">Assessment</h3>
-                <p className="text-gray-600 text-sm mb-2">
-                  Get to know each other
-                </p>
-                {!onboardingStatus.userCompleted ? (
-                  <span className="inline-block bg-pink-500 text-white text-xs px-3 py-1 rounded-full font-medium">
-                    Start Now
-                  </span>
-                ) : (
-                  <span className="inline-block bg-amber-100 text-amber-600 text-xs px-3 py-1 rounded-full font-medium">
-                    Waiting
-                  </span>
-                )}
-              </div>
-            )}
-
             {/* AI Coach Card */}
             <div
               onClick={() => router.push('/ai-coach')}
