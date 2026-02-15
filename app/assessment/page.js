@@ -180,29 +180,7 @@ export default function AssessmentPage() {
         ...(currentQuestionId && currentAnswer !== undefined ? { [currentQuestionId]: currentAnswer } : {})
       }
 
-      // First, ensure all answers (including the last one) are saved to the database
-      if (user && couple) {
-        if (existingAssessment && !existingAssessment.completed_at) {
-          await supabase
-            .from('relationship_assessments')
-            .update({ answers: finalAnswers, updated_at: new Date().toISOString() })
-            .eq('id', existingAssessment.id)
-        } else if (!existingAssessment) {
-          const { data } = await supabase
-            .from('relationship_assessments')
-            .insert({
-              user_id: user.id,
-              couple_id: couple.id,
-              answers: finalAnswers,
-            })
-            .select()
-            .single()
-
-          if (data) setExistingAssessment(data)
-        }
-      }
-
-      // Now generate insights using the complete answer set
+      // Generate insights FIRST using the complete answer set
       const moduleResults = ASSESSMENT_MODULES.map(module => {
         const moduleAnswers = {}
         ASSESSMENT_QUESTIONS[module.id].forEach(q => {
@@ -224,28 +202,41 @@ export default function AssessmentPage() {
         completedAt: new Date().toISOString(),
       }
 
-      // Save completed assessment
+      const completedAt = new Date().toISOString()
+
+      // Single database operation - either update or insert with ALL data
       if (existingAssessment) {
-        await supabase
+        // Update existing assessment with all data at once
+        const { error } = await supabase
           .from('relationship_assessments')
           .update({
             answers: finalAnswers,
-            results,           // Legacy column name (if exists)
-            module_results: results,  // New column name
-            completed_at: new Date().toISOString(),
+            results,
+            completed_at: completedAt,
+            updated_at: completedAt,
           })
           .eq('id', existingAssessment.id)
+
+        if (error) {
+          console.error('Error updating assessment:', error)
+          throw error
+        }
       } else if (user && couple) {
-        await supabase
+        // Insert new assessment with all data at once
+        const { error } = await supabase
           .from('relationship_assessments')
           .insert({
             user_id: user.id,
             couple_id: couple.id,
             answers: finalAnswers,
-            results,           // Legacy column name (if exists)
-            module_results: results,  // New column name
-            completed_at: new Date().toISOString(),
+            results,
+            completed_at: completedAt,
           })
+
+        if (error) {
+          console.error('Error inserting assessment:', error)
+          throw error
+        }
       }
 
       // Navigate to results
