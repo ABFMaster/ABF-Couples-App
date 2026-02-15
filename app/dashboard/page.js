@@ -848,7 +848,7 @@ export default function Dashboard() {
             {/* Individual Profile Card - Always Available */}
             <div
               onClick={() => router.push(individualProfileStatus.completed ? '/profile/results' : '/profile')}
-              className={`rounded-2xl shadow-lg p-6 cursor-pointer transition-all hover:scale-[1.01] relative overflow-hidden ${
+              className={`rounded-2xl shadow-lg p-6 cursor-pointer transition-all hover:scale-[1.01] relative overflow-hidden h-full min-h-[160px] ${
                 individualProfileStatus.completed
                   ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
                   : 'bg-white border-2 border-indigo-200 hover:border-indigo-400'
@@ -901,7 +901,7 @@ export default function Dashboard() {
                   router.push('/assessment')
                 }
               }}
-              className={`rounded-2xl shadow-lg p-6 relative overflow-hidden ${
+              className={`rounded-2xl shadow-lg p-6 relative overflow-hidden h-full min-h-[160px] ${
                 !hasPartner
                   ? 'bg-gray-100 cursor-not-allowed'
                   : onboardingStatus.userCompleted && onboardingStatus.partnerCompleted
