@@ -24,10 +24,6 @@ export default function AssessmentPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [existingAssessment, setExistingAssessment] = useState(null)
 
-  useEffect(() => {
-    checkAuth()
-  }, [])
-
   const checkAuth = async () => {
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -73,6 +69,11 @@ export default function AssessmentPage() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    checkAuth()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const currentModule = ASSESSMENT_MODULES[currentModuleIndex]
   const moduleQuestions = ASSESSMENT_QUESTIONS[currentModule?.id] || []
@@ -122,8 +123,11 @@ export default function AssessmentPage() {
       // Save progress
       await saveProgress()
     } else {
-      // Assessment complete
-      await completeAssessment()
+      // Assessment complete - pass current answers to avoid race condition
+      // The current question's answer is already in state, but we pass it explicitly
+      // to ensure it's included even if React hasn't re-rendered yet
+      const currentAnswer = answers[currentQuestion?.id]
+      await completeAssessment(currentQuestion?.id, currentAnswer)
     }
   }
 
@@ -166,16 +170,22 @@ export default function AssessmentPage() {
     }
   }
 
-  const completeAssessment = async () => {
+  const completeAssessment = async (currentQuestionId, currentAnswer) => {
     setIsSubmitting(true)
 
     try {
+      // Merge current answer to avoid race condition where state hasn't updated yet
+      const finalAnswers = {
+        ...answers,
+        ...(currentQuestionId && currentAnswer !== undefined ? { [currentQuestionId]: currentAnswer } : {})
+      }
+
       // First, ensure all answers (including the last one) are saved to the database
       if (user && couple) {
         if (existingAssessment && !existingAssessment.completed_at) {
           await supabase
             .from('relationship_assessments')
-            .update({ answers, updated_at: new Date().toISOString() })
+            .update({ answers: finalAnswers, updated_at: new Date().toISOString() })
             .eq('id', existingAssessment.id)
         } else if (!existingAssessment) {
           const { data } = await supabase
@@ -183,7 +193,7 @@ export default function AssessmentPage() {
             .insert({
               user_id: user.id,
               couple_id: couple.id,
-              answers,
+              answers: finalAnswers,
             })
             .select()
             .single()
@@ -196,8 +206,8 @@ export default function AssessmentPage() {
       const moduleResults = ASSESSMENT_MODULES.map(module => {
         const moduleAnswers = {}
         ASSESSMENT_QUESTIONS[module.id].forEach(q => {
-          if (answers[q.id] !== undefined) {
-            moduleAnswers[q.id] = answers[q.id]
+          if (finalAnswers[q.id] !== undefined) {
+            moduleAnswers[q.id] = finalAnswers[q.id]
           }
         })
         return generateModuleInsights(module.id, moduleAnswers)
@@ -219,7 +229,7 @@ export default function AssessmentPage() {
         await supabase
           .from('relationship_assessments')
           .update({
-            answers,
+            answers: finalAnswers,
             results,           // Legacy column name (if exists)
             module_results: results,  // New column name
             completed_at: new Date().toISOString(),
@@ -231,7 +241,7 @@ export default function AssessmentPage() {
           .insert({
             user_id: user.id,
             couple_id: couple.id,
-            answers,
+            answers: finalAnswers,
             results,           // Legacy column name (if exists)
             module_results: results,  // New column name
             completed_at: new Date().toISOString(),
@@ -478,10 +488,11 @@ export default function AssessmentPage() {
 function RankingQuestion({ question, value, onChange }) {
   const [rankings, setRankings] = useState(value)
 
-  // Reset rankings when question changes
+  // Reset rankings when question changes - defer to next tick to avoid sync setState warning
   useEffect(() => {
-    setRankings(value || {})
-  }, [question.id])
+    const timer = setTimeout(() => setRankings(value || {}), 0)
+    return () => clearTimeout(timer)
+  }, [question.id, value])
 
   const handleRankChange = (optionValue, rank) => {
     const newRankings = { ...rankings }
