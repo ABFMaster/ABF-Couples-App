@@ -165,28 +165,7 @@ export default function ProfileAssessmentPage() {
         ...(currentQuestionId && currentAnswer !== undefined ? { [currentQuestionId]: currentAnswer } : {})
       }
 
-      // First save all answers
-      if (user) {
-        if (existingProfile && !existingProfile.completed_at) {
-          await supabase
-            .from('individual_profiles')
-            .update({ answers: finalAnswers, updated_at: new Date().toISOString() })
-            .eq('id', existingProfile.id)
-        } else if (!existingProfile) {
-          const { data } = await supabase
-            .from('individual_profiles')
-            .insert({
-              user_id: user.id,
-              answers: finalAnswers,
-            })
-            .select()
-            .single()
-
-          if (data) setExistingProfile(data)
-        }
-      }
-
-      // Generate insights for each module
+      // Generate insights for each module FIRST
       const moduleResults = PROFILE_MODULES.map(module => {
         const moduleAnswers = {}
         PROFILE_QUESTIONS[module.id].forEach(q => {
@@ -197,7 +176,7 @@ export default function ProfileAssessmentPage() {
         return generateProfileInsights(module.id, moduleAnswers)
       })
 
-      // Calculate overall completion
+      // Calculate overall percentage
       const overallPercentage = Math.round(
         moduleResults.reduce((sum, r) => sum + (r?.percentage || 0), 0) / moduleResults.length
       )
@@ -208,25 +187,40 @@ export default function ProfileAssessmentPage() {
         completedAt: new Date().toISOString(),
       }
 
-      // Save completed profile
+      const completedAt = new Date().toISOString()
+
+      // Single database operation - either update or insert
       if (existingProfile) {
-        await supabase
+        // Update existing profile with all data at once
+        const { error } = await supabase
           .from('individual_profiles')
           .update({
             answers: finalAnswers,
             results,
-            completed_at: new Date().toISOString(),
+            completed_at: completedAt,
+            updated_at: completedAt,
           })
           .eq('id', existingProfile.id)
+
+        if (error) {
+          console.error('Error updating profile:', error)
+          throw error
+        }
       } else if (user) {
-        await supabase
+        // Insert new profile with all data at once
+        const { error } = await supabase
           .from('individual_profiles')
           .insert({
             user_id: user.id,
             answers: finalAnswers,
             results,
-            completed_at: new Date().toISOString(),
+            completed_at: completedAt,
           })
+
+        if (error) {
+          console.error('Error inserting profile:', error)
+          throw error
+        }
       }
 
       // Navigate to results
