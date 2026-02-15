@@ -170,7 +170,29 @@ export default function AssessmentPage() {
     setIsSubmitting(true)
 
     try {
-      // Generate insights for each module
+      // First, ensure all answers (including the last one) are saved to the database
+      if (user && couple) {
+        if (existingAssessment && !existingAssessment.completed_at) {
+          await supabase
+            .from('relationship_assessments')
+            .update({ answers, updated_at: new Date().toISOString() })
+            .eq('id', existingAssessment.id)
+        } else if (!existingAssessment) {
+          const { data } = await supabase
+            .from('relationship_assessments')
+            .insert({
+              user_id: user.id,
+              couple_id: couple.id,
+              answers,
+            })
+            .select()
+            .single()
+
+          if (data) setExistingAssessment(data)
+        }
+      }
+
+      // Now generate insights using the complete answer set
       const moduleResults = ASSESSMENT_MODULES.map(module => {
         const moduleAnswers = {}
         ASSESSMENT_QUESTIONS[module.id].forEach(q => {
