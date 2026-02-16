@@ -84,6 +84,9 @@ export default function AssessmentResultsPage() {
   const [animateCards, setAnimateCards] = useState(false)
   const [incompleteAssessment, setIncompleteAssessment] = useState(null)
 
+  // Check if both partners have completed for language switching
+  const bothCompleted = assessment && partnerAssessment
+
   const checkAuth = async () => {
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -331,7 +334,9 @@ export default function AssessmentResultsPage() {
 
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-4xl font-bold mb-2">Your Relationship Insights</h1>
+              <h1 className="text-4xl font-bold mb-2">
+                {bothCompleted ? 'Your Relationship Insights' : 'Your Assessment Results'}
+              </h1>
               <p className="text-white/80 text-lg">
                 Completed {new Date(assessment.completed_at).toLocaleDateString('en-US', {
                   month: 'long',
@@ -358,12 +363,25 @@ export default function AssessmentResultsPage() {
             </div>
           )}
 
-          {/* Celebration Message */}
+          {/* Celebration Message - different language based on partner completion */}
           <div className="mt-4 text-white/90 text-lg">
-            {results.overallPercentage >= 80 && "You and your partner have built something special together."}
-            {results.overallPercentage >= 60 && results.overallPercentage < 80 && "Your relationship has a strong foundation with room to grow."}
-            {results.overallPercentage >= 40 && results.overallPercentage < 60 && "Every relationship is a journey—you're on the path to growth."}
-            {results.overallPercentage < 40 && "Understanding where you are is the first step to where you want to be."}
+            {bothCompleted ? (
+              // Couple language when both completed
+              <>
+                {results.overallPercentage >= 80 && "You and your partner have built something special together."}
+                {results.overallPercentage >= 60 && results.overallPercentage < 80 && "Your relationship has a strong foundation with room to grow."}
+                {results.overallPercentage >= 40 && results.overallPercentage < 60 && "Every relationship is a journey—you're both on the path to growth."}
+                {results.overallPercentage < 40 && "Understanding where you are together is the first step forward."}
+              </>
+            ) : (
+              // Individual language when partner hasn't completed
+              <>
+                {results.overallPercentage >= 80 && "You bring real strengths to your relationship."}
+                {results.overallPercentage >= 60 && results.overallPercentage < 80 && "You have a solid foundation with room to grow."}
+                {results.overallPercentage >= 40 && results.overallPercentage < 60 && "You're on the path to growth and self-awareness."}
+                {results.overallPercentage < 40 && "Understanding yourself is the first step to a better relationship."}
+              </>
+            )}
           </div>
 
           {/* Overall Score */}
@@ -419,10 +437,12 @@ export default function AssessmentResultsPage() {
       ) : (
         <div className="max-w-4xl mx-auto px-4 -mt-4">
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
-            <span className="text-2xl">⏳</span>
+            <span className="text-2xl">📊</span>
             <div>
-              <p className="text-amber-800 font-medium">Waiting for {partnerName}</p>
-              <p className="text-amber-600 text-sm">Invite them to complete the assessment to compare results</p>
+              <p className="text-amber-800 font-medium">These are your individual results</p>
+              <p className="text-amber-600 text-sm">
+                Once {partnerName} completes the assessment, you'll unlock couple comparisons and deeper insights
+              </p>
             </div>
           </div>
         </div>
@@ -430,7 +450,9 @@ export default function AssessmentResultsPage() {
 
       {/* Module Results */}
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <h2 className="text-2xl font-bold text-[#2D3648] mb-6">Your Results by Dimension</h2>
+        <h2 className="text-2xl font-bold text-[#2D3648] mb-6">
+          {bothCompleted ? 'Your Results by Dimension' : 'Your Individual Results'}
+        </h2>
 
         <div className="space-y-4">
           {moduleResults.map((moduleResult, index) => {

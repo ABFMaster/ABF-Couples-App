@@ -896,16 +896,17 @@ export default function Dashboard() {
             <div
               onClick={() => {
                 if (!hasPartner) return
-                if (onboardingStatus.userCompleted && onboardingStatus.partnerCompleted) {
+                if (onboardingStatus.userCompleted) {
+                  // User can view their results even if partner hasn't completed
                   router.push('/assessment/results')
-                } else if (!onboardingStatus.userCompleted) {
+                } else {
                   router.push('/assessment')
                 }
               }}
               className={`rounded-2xl shadow-lg p-6 relative overflow-hidden h-full min-h-[160px] ${
                 !hasPartner
                   ? 'bg-gray-100 cursor-not-allowed'
-                  : onboardingStatus.userCompleted && onboardingStatus.partnerCompleted
+                  : onboardingStatus.userCompleted
                     ? 'bg-gradient-to-br from-pink-500 to-rose-600 text-white cursor-pointer hover:scale-[1.01]'
                     : 'bg-white border-2 border-pink-200 hover:border-pink-400 cursor-pointer hover:scale-[1.01]'
               } transition-all`}
@@ -915,7 +916,7 @@ export default function Dashboard() {
                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
                   !hasPartner
                     ? 'bg-gray-200'
-                    : onboardingStatus.userCompleted && onboardingStatus.partnerCompleted
+                    : onboardingStatus.userCompleted
                       ? 'bg-white/20'
                       : 'bg-pink-100'
                 }`}>
@@ -925,7 +926,7 @@ export default function Dashboard() {
                   <h3 className={`text-xl font-bold mb-1 ${
                     !hasPartner
                       ? 'text-gray-400'
-                      : onboardingStatus.userCompleted && onboardingStatus.partnerCompleted
+                      : onboardingStatus.userCompleted
                         ? 'text-white'
                         : 'text-gray-800'
                   }`}>
@@ -934,7 +935,7 @@ export default function Dashboard() {
                   <p className={`text-sm mb-3 ${
                     !hasPartner
                       ? 'text-gray-400'
-                      : onboardingStatus.userCompleted && onboardingStatus.partnerCompleted
+                      : onboardingStatus.userCompleted
                         ? 'text-pink-100'
                         : 'text-gray-600'
                   }`}>
@@ -942,24 +943,22 @@ export default function Dashboard() {
                       ? 'Connect with your partner first'
                       : onboardingStatus.userCompleted && onboardingStatus.partnerCompleted
                         ? `Your insights with ${onboardingStatus.partnerName}`
-                        : `Understand your dynamic with ${onboardingStatus.partnerName}`}
+                        : onboardingStatus.userCompleted
+                          ? `View your insights (waiting for ${onboardingStatus.partnerName})`
+                          : `Understand your dynamic with ${onboardingStatus.partnerName}`}
                   </p>
                   <span className={`inline-block text-sm px-4 py-1.5 rounded-full font-medium ${
                     !hasPartner
                       ? 'bg-gray-200 text-gray-500'
-                      : onboardingStatus.userCompleted && onboardingStatus.partnerCompleted
+                      : onboardingStatus.userCompleted
                         ? 'bg-white/20 text-white'
-                        : onboardingStatus.userCompleted
-                          ? 'bg-amber-100 text-amber-700'
-                          : 'bg-pink-500 text-white'
+                        : 'bg-pink-500 text-white'
                   }`}>
                     {!hasPartner
                       ? 'Partner Required'
-                      : onboardingStatus.userCompleted && onboardingStatus.partnerCompleted
+                      : onboardingStatus.userCompleted
                         ? 'View Results'
-                        : onboardingStatus.userCompleted
-                          ? `Waiting for ${onboardingStatus.partnerName}`
-                          : 'Start Assessment'}
+                        : 'Start Assessment'}
                   </span>
                 </div>
               </div>
