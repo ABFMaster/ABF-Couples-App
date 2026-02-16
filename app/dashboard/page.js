@@ -7,6 +7,7 @@ import Link from 'next/link'
 import HealthMeter from '@/components/HealthMeter'
 import FlirtComposer from '@/components/FlirtComposer'
 import FlirtView from '@/components/FlirtView'
+import { MOOD_OPTIONS } from '@/lib/checkin-questions'
 
 export default function Dashboard() {
   const router = useRouter()
@@ -21,7 +22,7 @@ export default function Dashboard() {
   })
   const healthMeterRef = useRef(null)
 
-  // Daily Check-in State
+  // Daily Check-in State (legacy - old system)
   const [checkinExpanded, setCheckinExpanded] = useState(false)
   const [todayCheckin, setTodayCheckin] = useState(null)
   const [todayQuestion, setTodayQuestion] = useState(null)
@@ -31,6 +32,11 @@ export default function Dashboard() {
   const [commentText, setCommentText] = useState('')
   const [showCommentInput, setShowCommentInput] = useState(false)
   const [streak, setStreak] = useState(0)
+
+  // Daily Check-in State (v2 - new mood/connection system)
+  const [v2Checkin, setV2Checkin] = useState(null)
+  const [v2PartnerCheckin, setV2PartnerCheckin] = useState(null)
+  const [v2Streak, setV2Streak] = useState(0)
 
   // Celebration State (organic feedback, not gamified)
   const [celebration, setCelebration] = useState(null)
@@ -368,6 +374,69 @@ export default function Dashboard() {
     setUpcomingTrip(data)
   }, [])
 
+  // Fetch v2 daily check-ins (mood/connection system)
+  const fetchV2Checkins = useCallback(async (userId, partnerId, coupleId) => {
+    const today = new Date().toISOString().split('T')[0]
+
+    // Get user's check-in for today
+    const { data: userCheckin } = await supabase
+      .from('daily_checkins')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('check_date', today)
+      .single()
+
+    setV2Checkin(userCheckin)
+
+    // Get partner's check-in for today
+    if (partnerId) {
+      const { data: partnerCheckin } = await supabase
+        .from('daily_checkins')
+        .select('*')
+        .eq('user_id', partnerId)
+        .eq('check_date', today)
+        .single()
+
+      setV2PartnerCheckin(partnerCheckin)
+    }
+
+    // Calculate v2 streak
+    const { data: checkins } = await supabase
+      .from('daily_checkins')
+      .select('check_date')
+      .eq('user_id', userId)
+      .order('check_date', { ascending: false })
+      .limit(30)
+
+    if (checkins && checkins.length > 0) {
+      let currentStreak = 0
+      const todayDate = new Date(today)
+
+      // Check if checked in today
+      const checkedInToday = checkins.some(c => c.check_date === today)
+      if (checkedInToday) {
+        currentStreak = 1
+        let checkDate = new Date(todayDate)
+        checkDate.setDate(checkDate.getDate() - 1)
+
+        for (let i = 1; i < checkins.length; i++) {
+          const checkinDate = new Date(checkins[i].check_date)
+          checkinDate.setHours(0, 0, 0, 0)
+          checkDate.setHours(0, 0, 0, 0)
+
+          if (checkinDate.getTime() === checkDate.getTime()) {
+            currentStreak++
+            checkDate.setDate(checkDate.getDate() - 1)
+          } else {
+            break
+          }
+        }
+      }
+
+      setV2Streak(currentStreak)
+    }
+  }, [])
+
   const checkAuth = async () => {
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -462,6 +531,7 @@ export default function Dashboard() {
       await fetchTimelineEvents(coupleData.id)
       await fetchDatePlans(coupleData.id, user.id)
       await fetchUpcomingTrip(coupleData.id)
+      await fetchV2Checkins(user.id, partnerUserId, coupleData.id)
 
       setLoading(false)
     } catch (err) {
@@ -966,210 +1036,139 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* ===== DAILY CHECK-IN CARD ===== */}
-        {hasPartner && todayQuestion && (
+        {/* ===== DAILY CHECK-IN CARD (V2) ===== */}
+        {hasPartner && (
           <section className="mb-8">
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300">
-              {/* Card Header */}
-              <div
-                className="p-6 cursor-pointer hover:bg-pink-50 transition-colors"
-                onClick={() => setCheckinExpanded(!checkinExpanded)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="text-4xl">☀️</div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-800">Daily Check-in</h3>
-                      <p className="text-gray-500 text-sm">
-                        {!myAnswerSubmitted
-                          ? "Answer today's question"
-                          : !partnerAnswerSubmitted
-                          ? `Waiting for ${onboardingStatus.partnerName}...`
-                          : `See ${onboardingStatus.partnerName}'s answer`}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {bothAnswered && (
-                      <span className="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full font-medium">
-                        Both Answered
-                      </span>
-                    )}
-                    {myAnswerSubmitted && !partnerAnswerSubmitted && (
-                      <span className="bg-amber-100 text-amber-600 text-xs px-3 py-1 rounded-full animate-pulse font-medium">
-                        Waiting
-                      </span>
-                    )}
-                    {!myAnswerSubmitted && (
-                      <span className="bg-pink-500 text-white text-xs px-3 py-1 rounded-full font-medium">
-                        New
-                      </span>
-                    )}
-                    <svg
-                      className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${checkinExpanded ? 'rotate-180' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
+            {(() => {
+              const userMood = v2Checkin ? MOOD_OPTIONS.find(m => m.value === v2Checkin.mood) : null
+              const partnerMood = v2PartnerCheckin ? MOOD_OPTIONS.find(m => m.value === v2PartnerCheckin.mood) : null
 
-              {/* Expanded Content */}
-              {checkinExpanded && (
-                <div className="px-6 pb-6 border-t border-gray-100">
-                  {/* Question */}
-                  <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl p-4 my-4">
-                    <p className="text-lg text-gray-800 font-medium">
-                      {todayQuestion.question}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-2 capitalize">
-                      {todayQuestion.category} • {todayQuestion.tone}
-                    </p>
-                  </div>
-
-                  {/* Answer Input */}
-                  {!myAnswerSubmitted && (
-                    <div className="space-y-4">
-                      <textarea
-                        value={myAnswer}
-                        onChange={(e) => setMyAnswer(e.target.value.slice(0, 500))}
-                        placeholder="Share your thoughts..."
-                        className="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-pink-400 focus:outline-none resize-none h-32 transition-colors"
-                      />
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-400">{myAnswer.length}/500</span>
-                        <button
-                          onClick={handleSubmitAnswer}
-                          disabled={!myAnswer.trim() || submittingAnswer}
-                          className="bg-gradient-to-r from-pink-400 to-pink-500 text-white px-6 py-3 rounded-full font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:from-pink-500 hover:to-pink-600 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
-                        >
-                          {submittingAnswer ? (
-                            <span className="flex items-center gap-2">
-                              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                              Sending...
-                            </span>
-                          ) : (
-                            'Submit'
-                          )}
-                        </button>
+              // STATE 1: Not checked in today
+              if (!v2Checkin) {
+                return (
+                  <div
+                    onClick={() => router.push('/checkin')}
+                    className="bg-gradient-to-br from-amber-400 via-orange-400 to-rose-400 rounded-2xl shadow-lg p-6 cursor-pointer hover:shadow-xl hover:scale-[1.01] transition-all"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="text-5xl">☀️</div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-white mb-1">Daily Check-in</h3>
+                        <p className="text-white/90">How are you feeling today?</p>
                       </div>
-                    </div>
-                  )}
-
-                  {/* My Answer */}
-                  {myAnswerSubmitted && (
-                    <div className="mb-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <p className="text-sm text-gray-500">Your answer</p>
-                        {answerSubmitSuccess && (
-                          <span className="text-green-500 animate-fadeIn">✓</span>
-                        )}
-                      </div>
-                      <div className="bg-pink-50 rounded-xl p-4">
-                        <p className="text-gray-800">{isUser1 ? todayCheckin.user1_answer : todayCheckin.user2_answer}</p>
-                      </div>
-                      {partnerHearted && (
-                        <p className="text-sm text-pink-500 mt-2 flex items-center gap-1 animate-fadeIn">
-                          <span>❤️</span> {onboardingStatus.partnerName} loved this!
-                        </p>
-                      )}
-                      {partnerComment && (
-                        <div className="mt-2 bg-purple-50 rounded-xl p-3 animate-fadeIn">
-                          <p className="text-sm text-gray-600">
-                            <span className="font-medium">{onboardingStatus.partnerName}:</span> {partnerComment}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Waiting State */}
-                  {myAnswerSubmitted && !partnerAnswerSubmitted && (
-                    <div className="text-center py-4">
-                      <div className="flex justify-center gap-2 mb-2">
-                        <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                      </div>
-                      <p className="text-gray-500">
-                        Waiting for {onboardingStatus.partnerName} to answer...
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Partner's Answer */}
-                  {bothAnswered && (
-                    <div className="mt-4 pt-4 border-t border-gray-100">
-                      <p className="text-sm text-gray-500 mb-2">{onboardingStatus.partnerName}'s answer</p>
-                      <div className="bg-purple-50 rounded-xl p-4">
-                        <p className="text-gray-800">{partnerAnswer}</p>
-                      </div>
-
-                      {/* Reaction Buttons */}
-                      <div className="flex gap-3 mt-3">
-                        <button
-                          onClick={handleHeartPartner}
-                          className={`flex items-center gap-1 px-4 py-2 rounded-full transition-all transform active:scale-95 ${
-                            iHearted
-                              ? 'bg-pink-500 text-white scale-105'
-                              : 'bg-pink-100 text-pink-600 hover:bg-pink-200 hover:scale-105'
-                          }`}
-                        >
-                          <span className={`transition-transform ${iHearted ? 'scale-110' : ''}`}>
-                            {iHearted ? '❤️' : '🤍'}
+                      <div className="flex flex-col items-end gap-2">
+                        <span className="bg-white text-orange-600 px-4 py-2 rounded-full font-bold text-sm shadow-sm">
+                          Check In Now
+                        </span>
+                        {v2Streak > 0 && (
+                          <span className="text-white/90 text-sm flex items-center gap-1">
+                            <span>🔥</span> {v2Streak} day{v2Streak !== 1 ? 's' : ''}
                           </span>
-                          <span className="text-sm font-medium">{iHearted ? 'Loved!' : 'Love this'}</span>
-                        </button>
-
-                        {!myComment && (
-                          <button
-                            onClick={() => setShowCommentInput(!showCommentInput)}
-                            className={`flex items-center gap-1 px-4 py-2 rounded-full transition-all transform active:scale-95
-                              ${showCommentInput ? 'bg-purple-200 text-purple-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                          >
-                            <span>💬</span>
-                            <span className="text-sm font-medium">Comment</span>
-                          </button>
                         )}
                       </div>
+                    </div>
+                  </div>
+                )
+              }
 
-                      {/* Comment Input */}
-                      {showCommentInput && !myComment && (
-                        <div className="mt-3 flex gap-2 animate-fadeIn">
-                          <input
-                            type="text"
-                            value={commentText}
-                            onChange={(e) => setCommentText(e.target.value)}
-                            placeholder="Add a comment..."
-                            className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-full focus:border-pink-400 focus:outline-none transition-colors"
-                            autoFocus
-                          />
-                          <button
-                            onClick={handleSubmitComment}
-                            disabled={!commentText.trim()}
-                            className="bg-pink-500 text-white px-4 py-2 rounded-full font-medium disabled:opacity-50 transition-all transform hover:scale-105 active:scale-95"
-                          >
-                            Send
-                          </button>
-                        </div>
-                      )}
+              // STATE 2: Checked in, waiting for partner
+              if (v2Checkin && !v2PartnerCheckin) {
+                return (
+                  <div
+                    onClick={() => router.push('/checkin/complete')}
+                    className="bg-white rounded-2xl shadow-lg p-6 cursor-pointer hover:shadow-xl transition-all border-2 border-green-200"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <span className="text-2xl">✓</span>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-gray-800 mb-2">Daily Check-in</h3>
 
-                      {/* My Comment */}
-                      {myComment && (
-                        <div className={`mt-3 bg-pink-50 rounded-xl p-3 ${commentSubmitSuccess ? 'animate-fadeIn' : ''}`}>
-                          <p className="text-sm text-gray-600">
-                            <span className="font-medium">You:</span> {myComment}
-                          </p>
+                        {/* Your check-in summary */}
+                        <div className="flex items-center gap-3 mb-3">
+                          <span className="text-sm text-gray-600">You:</span>
+                          <span className="text-2xl">{userMood?.emoji}</span>
+                          <span className="text-sm text-gray-700">{userMood?.label}</span>
+                          <span className="text-sm text-[#C9184A]">
+                            {'❤️'.repeat(v2Checkin.connection_score || 0)}
+                          </span>
                         </div>
+
+                        {/* Waiting for partner */}
+                        <div className="flex items-center gap-2 text-amber-600">
+                          <div className="flex gap-1">
+                            <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce"></div>
+                            <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                            <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                          </div>
+                          <span className="text-sm">Waiting for {onboardingStatus.partnerName}...</span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-2">
+                        <span className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full text-sm font-medium">
+                          View Details
+                        </span>
+                        {v2Streak > 0 && (
+                          <span className="text-gray-500 text-sm flex items-center gap-1">
+                            <span>🔥</span> {v2Streak} day{v2Streak !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+
+              // STATE 3: Both checked in
+              return (
+                <div
+                  onClick={() => router.push('/checkin/complete')}
+                  className="bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl shadow-lg p-6 cursor-pointer hover:shadow-xl hover:scale-[1.01] transition-all text-white"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                      <span className="text-2xl">💕</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold mb-3">Daily Check-in</h3>
+
+                      {/* Both check-in summaries */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-white/80 w-20">You:</span>
+                          <span className="text-2xl">{userMood?.emoji}</span>
+                          <span className="text-sm">{userMood?.label}</span>
+                          <span className="text-sm">
+                            {'❤️'.repeat(v2Checkin.connection_score || 0)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-white/80 w-20">{onboardingStatus.partnerName}:</span>
+                          <span className="text-2xl">{partnerMood?.emoji}</span>
+                          <span className="text-sm">{partnerMood?.label}</span>
+                          <span className="text-sm">
+                            {'❤️'.repeat(v2PartnerCheckin.connection_score || 0)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-2">
+                      <span className="bg-white/20 text-white px-3 py-1.5 rounded-full text-sm font-medium">
+                        See How You're Both Doing
+                      </span>
+                      {v2Streak > 0 && (
+                        <span className="text-white/90 text-sm flex items-center gap-1">
+                          <span>🔥</span> {v2Streak} day{v2Streak !== 1 ? 's' : ''}
+                        </span>
                       )}
                     </div>
-                  )}
+                  </div>
                 </div>
-              )}
-            </div>
+              )
+            })()}
           </section>
         )}
 
