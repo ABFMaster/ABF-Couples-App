@@ -961,79 +961,138 @@ export default function Dashboard() {
         )}
 
         {/* ===== RELATIONSHIP PULSE WIDGET ===== */}
-        {hasPartner && userPatterns && userPatterns.totalCheckins >= 3 && (
+        {hasPartner && (
           <section className="mb-8">
             <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">💓</span>
-                  <h3 className="text-lg font-bold text-[#2D3648]">Relationship Pulse</h3>
-                </div>
-                <button
-                  onClick={() => router.push('/checkin/weekly')}
-                  className="text-sm text-[#C9184A] hover:text-[#a01038] font-medium transition-colors"
-                >
-                  View Weekly Summary →
-                </button>
-              </div>
-
-              {/* Quick Stats */}
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <div className="text-center p-3 bg-gray-50 rounded-xl">
-                  <p className="text-2xl font-bold text-[#2D3648]">{userPatterns.connectionAverage || '—'}</p>
-                  <p className="text-xs text-gray-500">Avg Connection</p>
-                </div>
-                <div className="text-center p-3 bg-gray-50 rounded-xl">
-                  <p className="text-2xl font-bold text-[#2D3648]">
-                    {userPatterns.moodTrend === 'improving' ? '📈' : userPatterns.moodTrend === 'declining' ? '📉' : '➡️'}
-                  </p>
-                  <p className="text-xs text-gray-500">Mood Trend</p>
-                </div>
-                <div className="text-center p-3 bg-gray-50 rounded-xl">
-                  <p className="text-2xl font-bold text-[#2D3648]">{userPatterns.streakDays || 0}</p>
-                  <p className="text-xs text-gray-500">Day Streak 🔥</p>
-                </div>
-              </div>
-
-              {/* Positive Patterns */}
-              {userPatterns.positivePatterns?.length > 0 && (
-                <div className="space-y-2 mb-4">
-                  {userPatterns.positivePatterns.slice(0, 2).map((pattern, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 px-3 py-2 rounded-lg">
-                      <span>✓</span>
-                      <span>{pattern.description}</span>
+              {userPatterns && userPatterns.totalCheckins >= 3 ? (
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">💓</span>
+                      <h3 className="text-lg font-bold text-[#2D3648]">Relationship Pulse</h3>
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Couple Alignment */}
-              {couplePatterns && couplePatterns.alignmentScore > 0 && (
-                <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-50 px-3 py-2 rounded-lg mb-4">
-                  <span>💑</span>
-                  <span>You and {onboardingStatus.partnerName} are {couplePatterns.alignmentScore}% aligned this week</span>
-                </div>
-              )}
-
-              {/* Concerns (if any, but not high severity - those show in banner) */}
-              {userPatterns.concernFlags?.filter(c => c.severity === 'medium').length > 0 && (
-                <div className="border-t border-gray-100 pt-4 mt-4">
-                  <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
-                    <span>⚠️</span> Worth Noting:
-                  </p>
-                  <div className="space-y-1">
-                    {userPatterns.concernFlags.filter(c => c.severity === 'medium').slice(0, 2).map((concern, i) => (
-                      <p key={i} className="text-sm text-amber-700">{concern.description}</p>
-                    ))}
+                    <button
+                      onClick={() => router.push('/checkin/weekly')}
+                      className="text-sm text-[#C9184A] hover:text-[#a01038] font-medium transition-colors"
+                    >
+                      View Weekly Summary →
+                    </button>
                   </div>
-                </div>
-              )}
 
-              {/* Insights */}
-              {userPatterns.insights?.length > 0 && !userPatterns.concernFlags?.some(c => c.severity === 'medium') && (
-                <div className="border-t border-gray-100 pt-4 mt-4">
-                  <p className="text-xs text-gray-500 mb-2">💡 Insight:</p>
-                  <p className="text-sm text-[#2D3648]">{userPatterns.insights[0]}</p>
+                  {/* Quick Stats */}
+                  <div className="grid grid-cols-3 gap-4 mb-4">
+                    <div className="text-center p-3 bg-gray-50 rounded-xl">
+                      <p className="text-2xl font-bold text-[#2D3648]">{userPatterns.connectionAverage || '—'}</p>
+                      <p className="text-xs text-gray-500">Avg Connection</p>
+                    </div>
+                    <div className="text-center p-3 bg-gray-50 rounded-xl">
+                      <p className="text-2xl font-bold text-[#2D3648]">
+                        {userPatterns.moodTrend === 'improving' ? '📈' : userPatterns.moodTrend === 'declining' ? '📉' : '➡️'}
+                      </p>
+                      <p className="text-xs text-gray-500">Mood Trend</p>
+                    </div>
+                    <div className="text-center p-3 bg-gray-50 rounded-xl">
+                      <p className="text-2xl font-bold text-[#2D3648]">{userPatterns.streakDays || 0}</p>
+                      <p className="text-xs text-gray-500">Day Streak 🔥</p>
+                    </div>
+                  </div>
+
+                  {/* Positive Patterns */}
+                  {userPatterns.positivePatterns?.length > 0 && (
+                    <div className="space-y-2 mb-4">
+                      {userPatterns.positivePatterns.slice(0, 2).map((pattern, i) => (
+                        <div key={i} className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 px-3 py-2 rounded-lg">
+                          <span>✓</span>
+                          <span>{pattern.description}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Couple Alignment */}
+                  {couplePatterns && couplePatterns.alignmentScore > 0 && (
+                    <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-50 px-3 py-2 rounded-lg mb-4">
+                      <span>💑</span>
+                      <span>You and {onboardingStatus.partnerName} are {couplePatterns.alignmentScore}% aligned this week</span>
+                    </div>
+                  )}
+
+                  {/* Concerns (if any, but not high severity - those show in banner) */}
+                  {userPatterns.concernFlags?.filter(c => c.severity === 'medium').length > 0 && (
+                    <div className="border-t border-gray-100 pt-4 mt-4">
+                      <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                        <span>⚠️</span> Worth Noting:
+                      </p>
+                      <div className="space-y-1">
+                        {userPatterns.concernFlags.filter(c => c.severity === 'medium').slice(0, 2).map((concern, i) => (
+                          <p key={i} className="text-sm text-amber-700">{concern.description}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Insights */}
+                  {userPatterns.insights?.length > 0 && !userPatterns.concernFlags?.some(c => c.severity === 'medium') && (
+                    <div className="border-t border-gray-100 pt-4 mt-4">
+                      <p className="text-xs text-gray-500 mb-2">💡 Insight:</p>
+                      <p className="text-sm text-[#2D3648]">{userPatterns.insights[0]}</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* Empty State - Unlock Insights */
+                <div className="text-center py-8">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-pink-100 to-rose-100 rounded-full mb-4">
+                    <span className="text-3xl">💓</span>
+                  </div>
+
+                  <h3 className="text-xl font-bold text-[#2D3648] mb-2">
+                    Unlock Relationship Insights
+                  </h3>
+
+                  <p className="text-[#6B7280] mb-6 max-w-md mx-auto">
+                    Complete daily check-ins to see patterns, trends, and personalized insights about your relationship.
+                  </p>
+
+                  {/* Progress Bar */}
+                  <div className="max-w-xs mx-auto mb-6">
+                    <div className="flex items-center justify-between text-sm text-[#6B7280] mb-2">
+                      <span>Progress</span>
+                      <span className="font-semibold">
+                        {userPatterns?.totalCheckins || 0}/3 check-ins
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] transition-all duration-500 rounded-full"
+                        style={{ width: `${Math.min(((userPatterns?.totalCheckins || 0) / 3) * 100, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* What you'll unlock */}
+                  <div className="grid grid-cols-3 gap-4 mb-6 text-left">
+                    <div className="bg-[#F8F6F3] rounded-xl p-4">
+                      <span className="text-2xl mb-2 block">📈</span>
+                      <p className="text-xs font-medium text-[#2D3648]">Mood & Connection Trends</p>
+                    </div>
+                    <div className="bg-[#F8F6F3] rounded-xl p-4">
+                      <span className="text-2xl mb-2 block">💡</span>
+                      <p className="text-xs font-medium text-[#2D3648]">Pattern Detection</p>
+                    </div>
+                    <div className="bg-[#F8F6F3] rounded-xl p-4">
+                      <span className="text-2xl mb-2 block">🎯</span>
+                      <p className="text-xs font-medium text-[#2D3648]">Personalized Tips</p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => router.push('/checkin')}
+                    className="inline-flex items-center gap-2 bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+                  >
+                    Complete Today's Check-in
+                    <span>→</span>
+                  </button>
                 </div>
               )}
             </div>
