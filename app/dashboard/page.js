@@ -8,6 +8,7 @@ import HealthMeter from '@/components/HealthMeter'
 import FlirtComposer from '@/components/FlirtComposer'
 import FlirtView from '@/components/FlirtView'
 import { MOOD_OPTIONS } from '@/lib/checkin-questions'
+import { analyzeUserPatterns, analyzeCouplePatterns } from '@/lib/checkin-patterns'
 
 export default function Dashboard() {
   const router = useRouter()
@@ -37,6 +38,12 @@ export default function Dashboard() {
   const [v2Checkin, setV2Checkin] = useState(null)
   const [v2PartnerCheckin, setV2PartnerCheckin] = useState(null)
   const [v2Streak, setV2Streak] = useState(0)
+
+  // Pattern Detection State
+  const [userPatterns, setUserPatterns] = useState(null)
+  const [couplePatterns, setCouplePatterns] = useState(null)
+  const [patternsLoading, setPatternsLoading] = useState(false)
+  const [dismissedConcernBanner, setDismissedConcernBanner] = useState(false)
 
   // Celebration State (organic feedback, not gamified)
   const [celebration, setCelebration] = useState(null)
@@ -437,6 +444,25 @@ export default function Dashboard() {
     }
   }, [])
 
+  // Fetch check-in patterns for insights
+  const fetchPatterns = useCallback(async (userId, coupleId) => {
+    setPatternsLoading(true)
+    try {
+      // Fetch user patterns
+      const userPatternsData = await analyzeUserPatterns(userId, 14) // Last 2 weeks
+      setUserPatterns(userPatternsData)
+
+      // Fetch couple patterns
+      if (coupleId) {
+        const couplePatternsData = await analyzeCouplePatterns(coupleId, 14)
+        setCouplePatterns(couplePatternsData)
+      }
+    } catch (err) {
+      console.error('Error fetching patterns:', err)
+    }
+    setPatternsLoading(false)
+  }, [])
+
   const checkAuth = async () => {
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -532,6 +558,9 @@ export default function Dashboard() {
       await fetchDatePlans(coupleData.id, user.id)
       await fetchUpcomingTrip(coupleData.id)
       await fetchV2Checkins(user.id, partnerUserId, coupleData.id)
+
+      // Fetch patterns in background (non-blocking)
+      fetchPatterns(user.id, coupleData.id)
 
       setLoading(false)
     } catch (err) {
@@ -797,6 +826,46 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Concern Insights Banner */}
+      {!dismissedConcernBanner && userPatterns?.concernFlags?.some(c => c.severity === 'high') && (
+        <div className="fixed top-0 left-0 right-0 z-40 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200 shadow-sm">
+          <div className="max-w-4xl mx-auto px-4 py-3">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl flex-shrink-0">💭</span>
+              <div className="flex-1">
+                <p className="font-medium text-amber-800">I've noticed something...</p>
+                <p className="text-sm text-amber-700">
+                  {userPatterns.concernFlags.find(c => c.severity === 'high')?.description || 'You might benefit from some support.'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => router.push('/ai-coach')}
+                  className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Talk to Coach
+                </button>
+                <button
+                  onClick={() => router.push('/checkin/weekly')}
+                  className="bg-white hover:bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg text-sm font-medium border border-amber-200 transition-colors"
+                >
+                  View Patterns
+                </button>
+                <button
+                  onClick={() => setDismissedConcernBanner(true)}
+                  className="text-amber-400 hover:text-amber-600 p-1 transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Container */}
       <div className="max-w-4xl mx-auto px-4 py-6">
         {/* ===== HEADER SECTION ===== */}
@@ -888,6 +957,86 @@ export default function Dashboard() {
               coupleId={couple.id}
               onRefresh={healthMeterRef}
             />
+          </section>
+        )}
+
+        {/* ===== RELATIONSHIP PULSE WIDGET ===== */}
+        {hasPartner && userPatterns && userPatterns.totalCheckins >= 3 && (
+          <section className="mb-8">
+            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">💓</span>
+                  <h3 className="text-lg font-bold text-[#2D3648]">Relationship Pulse</h3>
+                </div>
+                <button
+                  onClick={() => router.push('/checkin/weekly')}
+                  className="text-sm text-[#C9184A] hover:text-[#a01038] font-medium transition-colors"
+                >
+                  View Weekly Summary →
+                </button>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="text-center p-3 bg-gray-50 rounded-xl">
+                  <p className="text-2xl font-bold text-[#2D3648]">{userPatterns.connectionAverage || '—'}</p>
+                  <p className="text-xs text-gray-500">Avg Connection</p>
+                </div>
+                <div className="text-center p-3 bg-gray-50 rounded-xl">
+                  <p className="text-2xl font-bold text-[#2D3648]">
+                    {userPatterns.moodTrend === 'improving' ? '📈' : userPatterns.moodTrend === 'declining' ? '📉' : '➡️'}
+                  </p>
+                  <p className="text-xs text-gray-500">Mood Trend</p>
+                </div>
+                <div className="text-center p-3 bg-gray-50 rounded-xl">
+                  <p className="text-2xl font-bold text-[#2D3648]">{userPatterns.streakDays || 0}</p>
+                  <p className="text-xs text-gray-500">Day Streak 🔥</p>
+                </div>
+              </div>
+
+              {/* Positive Patterns */}
+              {userPatterns.positivePatterns?.length > 0 && (
+                <div className="space-y-2 mb-4">
+                  {userPatterns.positivePatterns.slice(0, 2).map((pattern, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 px-3 py-2 rounded-lg">
+                      <span>✓</span>
+                      <span>{pattern.description}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Couple Alignment */}
+              {couplePatterns && couplePatterns.alignmentScore > 0 && (
+                <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-50 px-3 py-2 rounded-lg mb-4">
+                  <span>💑</span>
+                  <span>You and {onboardingStatus.partnerName} are {couplePatterns.alignmentScore}% aligned this week</span>
+                </div>
+              )}
+
+              {/* Concerns (if any, but not high severity - those show in banner) */}
+              {userPatterns.concernFlags?.filter(c => c.severity === 'medium').length > 0 && (
+                <div className="border-t border-gray-100 pt-4 mt-4">
+                  <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                    <span>⚠️</span> Worth Noting:
+                  </p>
+                  <div className="space-y-1">
+                    {userPatterns.concernFlags.filter(c => c.severity === 'medium').slice(0, 2).map((concern, i) => (
+                      <p key={i} className="text-sm text-amber-700">{concern.description}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Insights */}
+              {userPatterns.insights?.length > 0 && !userPatterns.concernFlags?.some(c => c.severity === 'medium') && (
+                <div className="border-t border-gray-100 pt-4 mt-4">
+                  <p className="text-xs text-gray-500 mb-2">💡 Insight:</p>
+                  <p className="text-sm text-[#2D3648]">{userPatterns.insights[0]}</p>
+                </div>
+              )}
+            </div>
           </section>
         )}
 
@@ -1122,6 +1271,13 @@ export default function Dashboard() {
               }
 
               // STATE 3: Both checked in
+              // Calculate connection trend for display
+              const connectionTrendText = userPatterns?.connectionTrend === 'improving'
+                ? `📈 Connection is stronger than last week`
+                : userPatterns?.connectionTrend === 'declining'
+                  ? `📉 Connection dipped this week`
+                  : null
+
               return (
                 <div
                   onClick={() => router.push('/checkin/complete')}
@@ -1153,6 +1309,13 @@ export default function Dashboard() {
                           </span>
                         </div>
                       </div>
+
+                      {/* Trend indicator */}
+                      {connectionTrendText && userPatterns?.totalCheckins >= 5 && (
+                        <div className="mt-3 pt-3 border-t border-white/20">
+                          <p className="text-sm text-white/90">{connectionTrendText}</p>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex flex-col items-end gap-2">
@@ -1229,6 +1392,41 @@ export default function Dashboard() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* ===== WEEKLY SUMMARY CARD (Pattern-based) ===== */}
+        {hasPartner && userPatterns && userPatterns.totalCheckins >= 3 && !isReflectionWindow && (
+          <section className="mb-8">
+            <div
+              onClick={() => router.push('/checkin/weekly')}
+              className="bg-white rounded-2xl shadow-sm p-5 cursor-pointer hover:shadow-md transition-all border border-gray-100"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl flex items-center justify-center">
+                    <span className="text-2xl">📊</span>
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-[#2D3648]">Your Week</h3>
+                    <div className="flex items-center gap-3 text-sm text-gray-600">
+                      <span className="flex items-center gap-1">
+                        {userPatterns.moodTrend === 'improving' ? '📈' : userPatterns.moodTrend === 'declining' ? '📉' : '😌'}
+                        {userPatterns.moodTrend === 'improving' ? 'Mood up' : userPatterns.moodTrend === 'declining' ? 'Mood down' : 'Stable'}
+                      </span>
+                      <span>•</span>
+                      <span>{userPatterns.totalCheckins}/7 check-ins</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-[#C9184A] font-medium">View Summary</span>
+                  <svg className="w-4 h-4 text-[#C9184A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </div>
               </div>
             </div>
