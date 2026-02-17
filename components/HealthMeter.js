@@ -7,8 +7,10 @@ export default function HealthMeter({ coupleId, onRefresh }) {
   const [expanded, setExpanded] = useState(false);
   const [health, setHealth] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [displayScore, setDisplayScore] = useState(0);
   const [animating, setAnimating] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   // Status messages based on score ranges
   const getStatusMessage = (score) => {
@@ -29,64 +31,79 @@ export default function HealthMeter({ coupleId, onRefresh }) {
     { key: 'support_score', label: 'Support', icon: '🌟' },
   ];
 
-  const fetchHealth = useCallback(async () => {
+  const fetchHealth = useCallback(async (forceRecalculate = false) => {
     if (!coupleId) return;
 
     try {
-      // First try to get existing health data
-      const { data: existingHealth, error: fetchError } = await supabase
+      // Always recalculate on first load or when forced
+      if (forceRecalculate || loading) {
+        console.log('[HealthMeter] Calculating relationship health...');
+
+        // Call the stored procedure to calculate/update health
+        const { data: calculated, error: calcError } = await supabase
+          .rpc('calculate_relationship_health', { p_couple_id: coupleId });
+
+        if (calcError) {
+          console.error('[HealthMeter] Error calculating health:', calcError);
+          // Fall through to fetch existing data
+        } else {
+          console.log('[HealthMeter] Calculation result:', calculated);
+        }
+      }
+
+      // Now fetch the updated health data from the table
+      const { data: healthData, error: fetchError } = await supabase
         .from('relationship_health')
         .select('*')
         .eq('couple_id', coupleId)
         .single();
 
       if (fetchError && fetchError.code !== 'PGRST116') {
-        console.error('Error fetching health:', fetchError);
+        console.error('[HealthMeter] Error fetching health:', fetchError);
       }
 
-      // If we have data, use it
-      if (existingHealth) {
-        setHealth(existingHealth);
+      if (healthData) {
+        setHealth(healthData);
+        setLastUpdated(healthData.updated_at ? new Date(healthData.updated_at) : new Date());
         // Animate the score counting up
-        animateScore(existingHealth.overall_score);
+        animateScore(healthData.overall_score || 0);
       } else {
-        // Calculate fresh health data
-        const { data: calculated, error: calcError } = await supabase
-          .rpc('calculate_relationship_health', { p_couple_id: coupleId });
-
-        if (calcError) {
-          console.error('Error calculating health:', calcError);
-          // Set default values if calculation fails
-          setHealth({
-            overall_score: 0,
-            communication_score: 0,
-            conflict_score: 0,
-            intimacy_score: 0,
-            values_score: 0,
-            affection_score: 0,
-            support_score: 0
-          });
-          setDisplayScore(0);
-        } else if (calculated && calculated.length > 0) {
-          const healthData = calculated[0];
-          setHealth({
-            overall_score: healthData.overall_score,
-            communication_score: healthData.communication_score,
-            conflict_score: healthData.conflict_score,
-            intimacy_score: healthData.intimacy_score,
-            values_score: healthData.values_score,
-            affection_score: healthData.affection_score,
-            support_score: healthData.support_score
-          });
-          animateScore(healthData.overall_score);
-        }
+        // No data exists - set defaults
+        setHealth({
+          overall_score: 0,
+          communication_score: 0,
+          conflict_score: 0,
+          intimacy_score: 0,
+          values_score: 0,
+          affection_score: 0,
+          support_score: 0
+        });
+        setDisplayScore(0);
       }
     } catch (error) {
-      console.error('Error in fetchHealth:', error);
+      console.error('[HealthMeter] Error in fetchHealth:', error);
+      // Set defaults on error
+      setHealth({
+        overall_score: 0,
+        communication_score: 0,
+        conflict_score: 0,
+        intimacy_score: 0,
+        values_score: 0,
+        affection_score: 0,
+        support_score: 0
+      });
+      setDisplayScore(0);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [coupleId]);
+  }, [coupleId, loading]);
+
+  // Manual refresh handler
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchHealth(true);
+  };
 
   // Animate score counting up
   const animateScore = (targetScore) => {
@@ -234,13 +251,38 @@ export default function HealthMeter({ coupleId, onRefresh }) {
       {/* Expanded State - Category Breakdown */}
       <div
         className={`overflow-hidden transition-all duration-300 ease-out ${
-          expanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+          expanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
         <div className="px-6 pb-6 border-t border-pink-100">
-          <p className="text-sm text-gray-500 mt-4 mb-4">
-            Your connection across different areas
-          </p>
+          <div className="flex items-center justify-between mt-4 mb-4">
+            <p className="text-sm text-gray-500">
+              Your connection across different areas
+            </p>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRefresh();
+              }}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-pink-600 bg-pink-50 hover:bg-pink-100 rounded-lg transition-colors disabled:opacity-50"
+            >
+              <svg
+                className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              {refreshing ? 'Updating...' : 'Refresh'}
+            </button>
+          </div>
 
           <div className="space-y-3">
             {categories.map((category) => {
@@ -275,6 +317,21 @@ export default function HealthMeter({ coupleId, onRefresh }) {
               {score >= 60 && score < 80 && "Your connection is growing stronger. Keep nurturing it!"}
               {score >= 80 && "Amazing! You're truly investing in your relationship. Keep it up!"}
             </p>
+          </div>
+
+          {/* Score breakdown info */}
+          <div className="mt-4 text-xs text-gray-400 text-center">
+            <p>Score based on check-ins, assessments, and relationship activities</p>
+            {lastUpdated && (
+              <p className="mt-1">
+                Last calculated: {lastUpdated.toLocaleString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit'
+                })}
+              </p>
+            )}
           </div>
         </div>
       </div>
