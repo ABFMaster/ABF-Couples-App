@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import AiChatMessage from '@/components/AiChatMessage';
+import { analyzeUserPatterns } from '@/lib/checkin-patterns';
 
 export default function AiCoach() {
   const router = useRouter();
@@ -16,6 +17,9 @@ export default function AiCoach() {
   const [conversationId, setConversationId] = useState(null);
   const [messagesRemaining, setMessagesRemaining] = useState(5);
   const [limitReached, setLimitReached] = useState(false);
+  const [checkinContext, setCheckinContext] = useState(null);
+  const [proactivePrompt, setProactivePrompt] = useState(null);
+  const [dismissedProactivePrompt, setDismissedProactivePrompt] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -54,6 +58,33 @@ export default function AiCoach() {
     }
 
     setCoupleId(couple.id);
+
+    // Fetch check-in patterns for context
+    try {
+      const patterns = await analyzeUserPatterns(user.id, 7);
+      setCheckinContext(patterns);
+
+      // Check for high-severity concerns to show proactive prompt
+      if (patterns?.concernFlags?.length > 0) {
+        const highConcern = patterns.concernFlags.find(c => c.severity === 'high');
+        if (highConcern) {
+          // Generate contextual prompt based on concern type
+          const promptMap = {
+            consecutive_stress: "I've been feeling stressed lately. Can you help me work through this?",
+            low_connection: "I want to feel more connected with my partner. Any suggestions?",
+            connection_drop: "My connection with my partner has dropped recently. What can I do?",
+            low_engagement: "I haven't been checking in regularly. Can you help me stay consistent?"
+          };
+          setProactivePrompt({
+            type: highConcern.type,
+            message: promptMap[highConcern.type] || "I'd like to talk about how things are going.",
+            description: highConcern.description
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching check-in patterns:', err);
+    }
 
     // Check for existing conversation or load most recent
     const { data: conversations } = await supabase
@@ -206,7 +237,16 @@ export default function AiCoach() {
             </div>
             <div>
               <h1 className="text-lg font-bold text-gray-800">AI Coach</h1>
-              <p className="text-xs text-gray-500">Your relationship guide</p>
+              {checkinContext ? (
+                <p className="text-xs text-green-600 flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Has your last 7 days of check-ins
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500">Your relationship guide</p>
+              )}
             </div>
           </div>
 
@@ -250,6 +290,38 @@ export default function AiCoach() {
                     {suggestion}
                   </button>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Proactive Prompt Suggestion */}
+          {proactivePrompt && !dismissedProactivePrompt && messages.length === 0 && (
+            <div className="mb-6 bg-gradient-to-r from-pink-50 to-purple-50 rounded-2xl p-4 border border-pink-200 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0">
+                  <span className="text-lg">💡</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-800 mb-1">Based on your recent check-ins...</p>
+                  <p className="text-sm text-gray-600 mb-3">{proactivePrompt.description}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={() => {
+                        setInputMessage(proactivePrompt.message);
+                        setDismissedProactivePrompt(true);
+                      }}
+                      className="px-4 py-2 bg-gradient-to-r from-pink-400 to-purple-500 text-white text-sm font-medium rounded-full hover:from-pink-500 hover:to-purple-600 transition-all shadow-sm"
+                    >
+                      Let's talk about this
+                    </button>
+                    <button
+                      onClick={() => setDismissedProactivePrompt(true)}
+                      className="px-4 py-2 text-gray-500 text-sm hover:text-gray-700 transition-colors"
+                    >
+                      Maybe later
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
