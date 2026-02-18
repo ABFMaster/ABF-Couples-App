@@ -5,6 +5,14 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { MOOD_OPTIONS, selectRotatingQuestion } from '@/lib/checkin-questions'
 
+const FALLBACK_QUESTION = {
+  id: 'grat_1',
+  text: "What's one thing your partner did recently that made you smile?",
+  type: 'text',
+  placeholder: 'A moment that made you happy...',
+  category: 'gratitude',
+}
+
 export default function DailyCheckinPage() {
   const router = useRouter()
 
@@ -25,6 +33,8 @@ export default function DailyCheckinPage() {
 
   // Transition state
   const [isTransitioning, setIsTransitioning] = useState(false)
+
+  const activeQuestion = rotatingQuestion || FALLBACK_QUESTION
 
   useEffect(() => {
     checkAuth()
@@ -175,7 +185,7 @@ export default function DailyCheckinPage() {
         .filter(Boolean)
 
       // Select rotating question
-      const question = selectRotatingQuestion(
+      const result = selectRotatingQuestion(
         assessment,
         profile,
         null, // Partner profile - could fetch if needed
@@ -183,6 +193,8 @@ export default function DailyCheckinPage() {
         usedQuestionIds
       )
 
+      const question = result?.question || result
+      console.log('[Checkin] rotatingQuestion selected:', question)
       setRotatingQuestion(question)
     } catch (err) {
       console.error('Error selecting question:', err)
@@ -230,7 +242,7 @@ export default function DailyCheckinPage() {
   }
 
   const handleSubmit = async () => {
-    if (!mood || !connectionScore || !rotatingQuestion) return
+    if (!mood || !connectionScore) return
 
     setSubmitting(true)
 
@@ -244,8 +256,8 @@ export default function DailyCheckinPage() {
           couple_id: couple.id,
           mood,
           connection_score: connectionScore,
-          question_id: rotatingQuestion.id,
-          question_text: rotatingQuestion.text,
+          question_id: activeQuestion.id,
+          question_text: activeQuestion.text,
           question_response: rotatingAnswer || null,
           check_date: today,
         })
@@ -437,31 +449,31 @@ export default function DailyCheckinPage() {
           )}
 
           {/* Step 3: Rotating Question */}
-          {step === 3 && rotatingQuestion && (
+          {step === 3 && (
             <div className="bg-white rounded-2xl shadow-sm p-6">
               <h2 className="text-xl font-bold text-[#2D3648] mb-2">
-                {rotatingQuestion.text}
+                {activeQuestion.text}
               </h2>
               <p className="text-[#6B7280] text-sm mb-6">
-                {rotatingQuestion.type === 'text' && 'Share your thoughts'}
-                {rotatingQuestion.type === 'choice' && 'Select what resonates'}
-                {rotatingQuestion.type === 'scale' && 'Rate how you feel'}
+                {activeQuestion.type === 'text' && 'Share your thoughts'}
+                {activeQuestion.type === 'choice' && 'Select what resonates'}
+                {activeQuestion.type === 'scale' && 'Rate how you feel'}
               </p>
 
               {/* Text input */}
-              {rotatingQuestion.type === 'text' && (
+              {activeQuestion.type === 'text' && (
                 <textarea
                   value={rotatingAnswer}
                   onChange={(e) => setRotatingAnswer(e.target.value)}
-                  placeholder={rotatingQuestion.placeholder || 'Type your response...'}
+                  placeholder={activeQuestion.placeholder || 'Type your response...'}
                   className="w-full h-32 p-4 border border-gray-200 rounded-xl text-[#2D3648] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#FF6B9D] focus:border-transparent resize-none"
                 />
               )}
 
               {/* Choice selection */}
-              {rotatingQuestion.type === 'choice' && (
+              {activeQuestion.type === 'choice' && (
                 <div className="space-y-2">
-                  {rotatingQuestion.options.map((option) => (
+                  {activeQuestion.options.map((option) => (
                     <button
                       key={option.value}
                       onClick={() => setRotatingAnswer(option.value)}
@@ -478,12 +490,12 @@ export default function DailyCheckinPage() {
               )}
 
               {/* Scale selection */}
-              {rotatingQuestion.type === 'scale' && rotatingQuestion.scale && (
+              {activeQuestion.type === 'scale' && activeQuestion.scale && (
                 <div>
                   <div className="flex justify-center gap-3 mb-4">
                     {Array.from(
-                      { length: rotatingQuestion.scale.max - rotatingQuestion.scale.min + 1 },
-                      (_, i) => i + rotatingQuestion.scale.min
+                      { length: activeQuestion.scale.max - activeQuestion.scale.min + 1 },
+                      (_, i) => i + activeQuestion.scale.min
                     ).map((value) => (
                       <button
                         key={value}
@@ -499,8 +511,8 @@ export default function DailyCheckinPage() {
                     ))}
                   </div>
                   <div className="flex justify-between text-xs text-[#9CA3AF] px-2">
-                    <span>{rotatingQuestion.scale.minLabel}</span>
-                    <span>{rotatingQuestion.scale.maxLabel}</span>
+                    <span>{activeQuestion.scale.minLabel}</span>
+                    <span>{activeQuestion.scale.maxLabel}</span>
                   </div>
                 </div>
               )}
@@ -548,7 +560,7 @@ export default function DailyCheckinPage() {
               </div>
 
               {/* Skip option for rotating question */}
-              {rotatingQuestion.type === 'text' && !rotatingAnswer && (
+              {activeQuestion.type === 'text' && !rotatingAnswer && (
                 <p className="text-center text-[#9CA3AF] text-xs mt-4">
                   This is optional - feel free to skip
                 </p>
