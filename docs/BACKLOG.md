@@ -139,7 +139,14 @@ Add "Book Now" buttons throughout itinerary.
 
 ### Date Night
 
-*(Placeholder for Date Night backlog items)*
+## Date Night Enhancements
+- [ ] Multi-city event source integrations (Eventbrite, Yelp, city-specific calendars)
+- [ ] OpenTable reservation integration
+- [ ] In-app reminders for scheduled dates
+- [ ] Date history stats and insights
+- [ ] Community-sourced date ideas
+- [ ] Anonymous relationship advice sharing
+- [ ] Lifestyle & Intimacy assessment modules
 
 ---
 

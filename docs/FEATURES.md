@@ -232,6 +232,37 @@
 
 ---
 
+## Date Night & Discovery
+
+### Custom Date Builder (V1.1)
+- Search and click-to-add locations to itinerary
+- Route mapping with timing estimates
+- Conversation topic selector (assessment-based + custom)
+- Calendar integration
+- Post-date reflection
+
+### Smart Date Suggestions (V1)
+- Google Places API integration
+- Category-based filtering (romantic, adventure, culture, etc.)
+- Weather-aware suggestions
+- Assessment-based personalization
+- Save favorites
+
+### Community Features (V2)
+- Anonymous contribution system (date spots, advice, conversation starters)
+- "Couples like you" discovery feed
+- Upvote/quality control system
+- City-based filtering
+- Privacy-preserving (no names, only city/relationship length)
+
+### Learning Algorithm (V2)
+- Track completed dates + ratings
+- Pattern detection (adventure dates → high connection)
+- Adaptive suggestions based on past behavior
+- Feed insights to AI Coach
+
+---
+
 ## Phase 2 Features (Planned)
 
 ### 14. Enhanced Music Features
