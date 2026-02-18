@@ -87,7 +87,7 @@ export default function DailyCheckinPage() {
       // Check if already checked in today (use local date, not UTC, to avoid
       // timezone drift: a UTC check makes 11pm local = next day, blocking the
       // user from checking in on their actual next calendar morning)
-      const today = new Date().toLocaleDateString('en-CA')
+      const today = new Date().toISOString().split('T')[0]
       const { data: existingCheckin } = await supabase
         .from('daily_checkins')
         .select('id')
@@ -249,7 +249,7 @@ export default function DailyCheckinPage() {
     setSubmitting(true)
 
     try {
-      const today = new Date().toLocaleDateString('en-CA')
+      const today = new Date().toISOString().split('T')[0]
 
       const { error } = await supabase
         .from('daily_checkins')
