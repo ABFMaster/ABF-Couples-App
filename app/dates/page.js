@@ -22,6 +22,15 @@ const ALL_CATEGORIES = [
   })),
 ]
 
+// Default datetime: tomorrow at 7pm
+function defaultDatetime() {
+  const d = new Date()
+  d.setDate(d.getDate() + 1)
+  d.setHours(19, 0, 0, 0)
+  // Format for datetime-local input: YYYY-MM-DDTHH:MM
+  return d.toISOString().slice(0, 16)
+}
+
 // ============================================
 // SKELETON CARD
 // ============================================
@@ -43,36 +52,27 @@ function SkeletonCard() {
 }
 
 // ============================================
-// PRICE DOTS
+// PRICE / RATING HELPERS
 // ============================================
 function PriceDots({ level }) {
   if (!level) return null
   const labels = ['', '$', '$$', '$$$', '$$$$']
-  return (
-    <span className="text-xs text-gray-500 font-medium">{labels[level] || ''}</span>
-  )
+  return <span className="text-xs text-gray-500 font-medium">{labels[level] || ''}</span>
 }
 
-// ============================================
-// STAR RATING
-// ============================================
 function StarRating({ rating }) {
   if (!rating) return null
-  return (
-    <span className="text-xs text-gray-500">
-      ⭐ {rating.toFixed(1)}
-    </span>
-  )
+  return <span className="text-xs text-gray-500">⭐ {rating.toFixed(1)}</span>
 }
 
 // ============================================
 // SUGGESTION CARD
 // ============================================
-function SuggestionCard({ place, recommendedCategories, assessmentScores, onSave, onPlan, saving }) {
+function SuggestionCard({ place, recommendedCategories, assessmentScores, onSave, onPlan, saving, savedIds }) {
   const config = CATEGORY_CONFIG[place.category] || CATEGORY_CONFIG.other
   const isRecommended = recommendedCategories.includes(place.category)
+  const isSaved = savedIds.has(place.place_id)
 
-  // Find which assessment reason applies for this category
   let recommendedReason = null
   if (isRecommended && place.category !== 'all') {
     const catDef = DATE_CATEGORIES[place.category]
@@ -93,24 +93,14 @@ function SuggestionCard({ place, recommendedCategories, assessmentScores, onSave
       {/* Photo */}
       <div className="relative h-44 bg-gradient-to-br from-pink-100 to-purple-100 flex-shrink-0">
         {place.photo_url ? (
-          <img
-            src={place.photo_url}
-            alt={place.title}
-            className="w-full h-full object-cover"
-          />
+          <img src={place.photo_url} alt={place.title} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-5xl">
-            {config.emoji}
-          </div>
+          <div className="w-full h-full flex items-center justify-center text-5xl">{config.emoji}</div>
         )}
-
-        {/* Category badge */}
         <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-xs font-medium text-gray-700 px-2 py-1 rounded-full flex items-center gap-1">
           <span>{config.emoji}</span>
           <span>{config.label}</span>
         </div>
-
-        {/* AI Recommended badge */}
         {recommendedReason && (
           <div className="absolute top-2 right-2 bg-pink-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
             AI Pick
@@ -120,19 +110,14 @@ function SuggestionCard({ place, recommendedCategories, assessmentScores, onSave
 
       {/* Content */}
       <div className="p-4 flex flex-col flex-1">
-        <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-1">
-          {place.title}
-        </h3>
+        <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-1">{place.title}</h3>
         {place.address && (
           <p className="text-xs text-gray-500 line-clamp-1 mb-2">{place.address}</p>
         )}
-
         <div className="flex items-center gap-3 mb-3">
           <StarRating rating={place.rating} />
           <PriceDots level={place.price_level} />
         </div>
-
-        {/* Recommended reason */}
         {recommendedReason && (
           <div className="bg-pink-50 border border-pink-100 rounded-xl px-3 py-2 mb-3">
             <p className="text-xs text-pink-700">{recommendedReason}</p>
@@ -143,21 +128,301 @@ function SuggestionCard({ place, recommendedCategories, assessmentScores, onSave
         <div className="mt-auto flex gap-2">
           <button
             onClick={() => onSave(place)}
-            disabled={saving === place.place_id}
-            className="flex-1 text-xs font-medium border border-pink-300 text-pink-600 rounded-full py-2 hover:bg-pink-50 transition-colors disabled:opacity-50"
+            disabled={saving === place.place_id || isSaved}
+            className="flex-1 text-xs font-medium border border-pink-300 text-pink-600 rounded-full py-2 hover:bg-pink-50 transition-colors disabled:opacity-40"
           >
-            {saving === place.place_id ? 'Saving…' : '♡ Save'}
+            {isSaved ? '♥ Saved' : saving === place.place_id ? 'Saving…' : '♡ Save'}
           </button>
-          <a
-            href={place.maps_url || '#'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 text-xs font-medium bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full py-2 text-center hover:opacity-90 transition-opacity"
+          <button
+            onClick={() => onPlan(place)}
+            className="flex-1 text-xs font-medium bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full py-2 hover:opacity-90 transition-opacity"
           >
             Plan This
-          </a>
+          </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ============================================
+// PLAN MODAL
+// ============================================
+function PlanModal({ place, onClose, onSubmit, submitting }) {
+  const [scheduledDate, setScheduledDate] = useState(defaultDatetime())
+  const [notes, setNotes] = useState('')
+  const config = CATEGORY_CONFIG[place?.category] || CATEGORY_CONFIG.other
+
+  if (!place) return null
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      onClick={onClose}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+
+      {/* Card */}
+      <div
+        className="relative bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Place preview */}
+        <div className="relative h-36 bg-gradient-to-br from-pink-100 to-purple-100">
+          {place.photo_url ? (
+            <img src={place.photo_url} alt={place.title} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-6xl">{config.emoji}</div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+          <div className="absolute bottom-3 left-4 right-4">
+            <p className="text-white font-bold text-lg leading-tight">{place.title}</p>
+            {place.address && (
+              <p className="text-white/80 text-xs mt-0.5 line-clamp-1">{place.address}</p>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-3 bg-black/40 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm hover:bg-black/60"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Form */}
+        <div className="p-5">
+          <h2 className="font-bold text-gray-900 text-lg mb-4">Schedule this date</h2>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              When?
+            </label>
+            <input
+              type="datetime-local"
+              value={scheduledDate}
+              onChange={e => setScheduledDate(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-300"
+            />
+          </div>
+
+          <div className="mb-5">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Notes <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Any ideas, reservations to make, or things to bring…"
+              rows={3}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
+            />
+          </div>
+
+          <button
+            onClick={() => onSubmit({ place, scheduledDate, notes })}
+            disabled={submitting || !scheduledDate}
+            className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white font-semibold py-3.5 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {submitting ? 'Scheduling…' : '💕 Schedule Date'}
+          </button>
+          <button
+            onClick={onClose}
+            className="w-full mt-2 text-gray-500 text-sm py-2 hover:text-gray-700"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================
+// REFLECTION MODAL (mark complete)
+// ============================================
+function ReflectionModal({ plan, onClose, onSubmit, submitting }) {
+  const [rating, setRating] = useState(0)
+  const [notes, setNotes] = useState('')
+
+  if (!plan) return null
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      onClick={onClose}
+    >
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+
+      <div
+        className="relative bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl p-6"
+        onClick={e => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg"
+        >
+          ✕
+        </button>
+
+        <div className="text-center mb-6">
+          <div className="text-4xl mb-2">🎉</div>
+          <h2 className="font-bold text-gray-900 text-xl">How was it?</h2>
+          <p className="text-gray-500 text-sm mt-1">{plan.title}</p>
+        </div>
+
+        {/* Star picker */}
+        <div className="flex justify-center gap-3 mb-5">
+          {[1, 2, 3, 4, 5].map(n => (
+            <button
+              key={n}
+              onClick={() => setRating(n)}
+              className={`text-3xl transition-transform hover:scale-110 ${
+                n <= rating ? 'opacity-100' : 'opacity-30'
+              }`}
+            >
+              ⭐
+            </button>
+          ))}
+        </div>
+
+        <div className="mb-5">
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Any thoughts? <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder="What made it special? What would you do differently?"
+            rows={3}
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
+          />
+        </div>
+
+        <button
+          onClick={() => onSubmit({ plan, rating: rating || null, notes })}
+          disabled={submitting}
+          className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white font-semibold py-3.5 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50"
+        >
+          {submitting ? 'Saving…' : 'Save Reflection'}
+        </button>
+        <button
+          onClick={() => onSubmit({ plan, rating: null, notes: '' })}
+          disabled={submitting}
+          className="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600"
+        >
+          Skip & Mark Complete
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ============================================
+// DATE PLAN CARD (My Dates view)
+// ============================================
+function DatePlanCard({ plan, onMarkComplete, onCancel }) {
+  const config = CATEGORY_CONFIG[plan.category] || { label: 'Date', emoji: '💕' }
+  const isPast = new Date(plan.date_time) < new Date()
+  const isCompleted = plan.status === 'completed'
+  const isCancelled = plan.status === 'cancelled'
+
+  const dateLabel = plan.date_time
+    ? new Date(plan.date_time).toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      })
+    : null
+  const timeLabel = plan.date_time
+    ? new Date(plan.date_time).toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    : null
+
+  return (
+    <div className={`bg-white rounded-2xl p-4 shadow-sm ${isCancelled ? 'opacity-50' : ''}`}>
+      <div className="flex gap-3">
+        {/* Photo or emoji */}
+        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-pink-100 to-purple-100 flex-shrink-0 overflow-hidden">
+          {plan.photo_url ? (
+            <img src={plan.photo_url} alt={plan.title} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-2xl">{config.emoji}</div>
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-semibold text-gray-900 text-sm leading-tight">{plan.title}</h3>
+            {isCompleted && (
+              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex-shrink-0">Done ✓</span>
+            )}
+            {isCancelled && (
+              <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full flex-shrink-0">Cancelled</span>
+            )}
+          </div>
+
+          {plan.address && (
+            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{plan.address}</p>
+          )}
+
+          {dateLabel && (
+            <p className="text-xs text-pink-600 font-medium mt-1">
+              {dateLabel} · {timeLabel}
+            </p>
+          )}
+
+          {/* Reflection */}
+          {isCompleted && plan.rating && (
+            <div className="mt-1.5 flex items-center gap-1">
+              {Array.from({ length: plan.rating }).map((_, i) => (
+                <span key={i} className="text-xs">⭐</span>
+              ))}
+            </div>
+          )}
+          {isCompleted && plan.reflection_notes && (
+            <p className="text-xs text-gray-500 mt-1 italic line-clamp-2">"{plan.reflection_notes}"</p>
+          )}
+
+          {/* Notes */}
+          {!isCompleted && plan.description && (
+            <p className="text-xs text-gray-400 mt-1 line-clamp-1">{plan.description}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Actions */}
+      {!isCompleted && !isCancelled && (
+        <div className="flex gap-2 mt-3">
+          {plan.maps_url && (
+            <a
+              href={plan.maps_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 text-xs font-medium border border-gray-200 text-gray-600 rounded-full py-2 text-center hover:border-gray-300"
+            >
+              View Map
+            </a>
+          )}
+          {(isPast || true) && (
+            <button
+              onClick={() => onMarkComplete(plan)}
+              className="flex-1 text-xs font-medium bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full py-2 hover:opacity-90"
+            >
+              Mark Complete
+            </button>
+          )}
+          <button
+            onClick={() => onCancel(plan)}
+            className="text-xs text-gray-400 px-3 py-2 rounded-full hover:text-gray-600 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -174,20 +439,42 @@ export default function DatesPage() {
   const [assessmentScores, setAssessmentScores] = useState({})
   const [location, setLocation] = useState(DEFAULT_LOCATION)
 
+  // Page tab
+  const [pageTab, setPageTab] = useState('suggestions') // 'suggestions' | 'my_dates'
+
   // Suggestions state
-  const [allPlaces, setAllPlaces] = useState([])           // flat list of all fetched places
+  const [allPlaces, setAllPlaces] = useState([])
   const [recommendedCategories, setRecommendedCategories] = useState([])
   const [activeCategory, setActiveCategory] = useState('all')
   const [fetchingPlaces, setFetchingPlaces] = useState(false)
   const [fetchError, setFetchError] = useState(null)
 
   // Save state
-  const [saving, setSaving] = useState(null)   // place_id being saved
+  const [saving, setSaving] = useState(null)
   const [savedIds, setSavedIds] = useState(new Set())
-  const [saveMsg, setSaveMsg] = useState(null)
+
+  // Plan modal
+  const [planModalPlace, setPlanModalPlace] = useState(null)
+  const [submittingPlan, setSubmittingPlan] = useState(false)
+
+  // My Dates state
+  const [datePlans, setDatePlans] = useState([])
+  const [loadingPlans, setLoadingPlans] = useState(false)
+
+  // Reflection modal
+  const [reflectionPlan, setReflectionPlan] = useState(null)
+  const [submittingReflection, setSubmittingReflection] = useState(false)
+
+  // Toast
+  const [toast, setToast] = useState(null)
+
+  const showToast = (msg) => {
+    setToast(msg)
+    setTimeout(() => setToast(null), 2500)
+  }
 
   // ============================================
-  // INIT: auth + profile + assessment
+  // INIT
   // ============================================
   useEffect(() => {
     init()
@@ -202,7 +489,6 @@ export default function DatesPage() {
     }
     setUser(authUser)
 
-    // Fetch couple
     const { data: coupleData } = await supabase
       .from('couples')
       .select('id')
@@ -212,7 +498,7 @@ export default function DatesPage() {
     const cid = coupleData?.id || null
     setCoupleId(cid)
 
-    // Fetch latest assessment scores
+    // Assessment scores
     let scores = {}
     const { data: assessment } = await supabase
       .from('relationship_assessments')
@@ -230,7 +516,7 @@ export default function DatesPage() {
     }
     setAssessmentScores(scores)
 
-    // Fetch recent completed date_plans (last 30 days) to avoid repeats
+    // Already-saved place_ids
     let recentDates = []
     if (cid) {
       const thirtyDaysAgo = new Date()
@@ -240,62 +526,51 @@ export default function DatesPage() {
         .select('place_id')
         .eq('couple_id', cid)
         .gte('created_at', thirtyDaysAgo.toISOString())
-
       recentDates = plans || []
 
-      // Track already-saved ids
       const { data: allSaved } = await supabase
         .from('couple_date_places')
         .select('place_id')
         .eq('couple_id', cid)
-
-      if (allSaved) {
-        setSavedIds(new Set(allSaved.map(r => r.place_id)))
-      }
+      if (allSaved) setSavedIds(new Set(allSaved.map(r => r.place_id)))
     }
 
-    // Try to get user's browser location; fall back to Seattle
+    // Browser location with Seattle fallback
+    let loc = DEFAULT_LOCATION
     try {
-      await new Promise((resolve) => {
+      loc = await new Promise((resolve) => {
         navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude })
-            resolve()
-          },
-          () => resolve(),   // silently fall back
+          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          () => resolve(DEFAULT_LOCATION),
           { timeout: 5000 }
         )
       })
     } catch {
       // use default
     }
+    setLocation(loc)
 
-    // Run smart selection
     const selection = selectDateSuggestions({
-      userLocation: location,
+      userLocation: loc,
       assessmentScores: scores,
       recentDates,
     })
     setRecommendedCategories(selection.categories)
-
     setLoading(false)
 
-    // Fetch places for top recommended categories
-    fetchPlacesForCategories(selection, location)
+    fetchPlacesForCategories(selection, loc)
   }
 
   // ============================================
-  // FETCH PLACES
+  // FETCH SUGGESTIONS
   // ============================================
   const fetchPlacesForCategories = useCallback(async (selection, loc) => {
     setFetchingPlaces(true)
     setFetchError(null)
-
-    const categoriesToFetch = selection.categories.slice(0, 4)
     const collected = []
     const seenIds = new Set()
 
-    for (const category of categoriesToFetch) {
+    for (const category of selection.categories.slice(0, 4)) {
       try {
         const places = await fetchDateSuggestions({
           location: loc,
@@ -317,57 +592,129 @@ export default function DatesPage() {
 
     setAllPlaces(collected)
     setFetchingPlaces(false)
-
     if (collected.length === 0) {
       setFetchError('No places found nearby. Try expanding your search area.')
     }
   }, [])
 
   // ============================================
+  // LOAD DATE PLANS
+  // ============================================
+  const loadDatePlans = useCallback(async () => {
+    if (!coupleId) return
+    setLoadingPlans(true)
+    const { data } = await supabase
+      .from('date_plans')
+      .select('*')
+      .eq('couple_id', coupleId)
+      .order('date_time', { ascending: true })
+    setDatePlans(data || [])
+    setLoadingPlans(false)
+  }, [coupleId])
+
+  useEffect(() => {
+    if (pageTab === 'my_dates' && coupleId) {
+      loadDatePlans()
+    }
+  }, [pageTab, coupleId, loadDatePlans])
+
+  // ============================================
   // SAVE PLACE
   // ============================================
   const handleSave = async (place) => {
-    if (!coupleId) return
-    if (savedIds.has(place.place_id)) return
-
+    if (!coupleId || savedIds.has(place.place_id)) return
     setSaving(place.place_id)
-
-    const { error } = await supabase
-      .from('couple_date_places')
-      .insert({
-        couple_id: coupleId,
-        place_id: place.place_id,
-        title: place.title,
-        description: place.description,
-        category: place.category,
-        location_name: place.location_name,
-        address: place.address,
-        latitude: place.latitude,
-        longitude: place.longitude,
-        price_level: place.price_level,
-        rating: place.rating,
-        photo_url: place.photo_url,
-        maps_url: place.maps_url,
-        source: 'google_places',
-      })
-
+    const { error } = await supabase.from('couple_date_places').insert({
+      couple_id: coupleId,
+      place_id: place.place_id,
+      title: place.title,
+      description: place.description,
+      category: place.category,
+      location_name: place.location_name,
+      address: place.address,
+      latitude: place.latitude,
+      longitude: place.longitude,
+      price_level: place.price_level,
+      rating: place.rating,
+      photo_url: place.photo_url,
+      maps_url: place.maps_url,
+      source: 'google_places',
+    })
     setSaving(null)
-
     if (!error) {
       setSavedIds(prev => new Set([...prev, place.place_id]))
-      setSaveMsg(`${place.title} saved!`)
-      setTimeout(() => setSaveMsg(null), 2500)
+      showToast(`${place.title} saved!`)
     }
   }
 
   // ============================================
-  // FILTER
+  // SCHEDULE DATE
+  // ============================================
+  const handleScheduleDate = async ({ place, scheduledDate, notes }) => {
+    if (!coupleId || !user) return
+    setSubmittingPlan(true)
+    const { error } = await supabase.from('date_plans').insert({
+      couple_id: coupleId,
+      created_by: user.id,
+      title: place.title,
+      description: notes || null,
+      date_time: scheduledDate ? new Date(scheduledDate).toISOString() : null,
+      location: place.address || place.location_name || null,
+      location_name: place.location_name,
+      address: place.address,
+      latitude: place.latitude,
+      longitude: place.longitude,
+      photo_url: place.photo_url,
+      maps_url: place.maps_url,
+      place_id: place.place_id,
+      status: 'planned',
+    })
+    setSubmittingPlan(false)
+    if (!error) {
+      setPlanModalPlace(null)
+      showToast(`${place.title} scheduled! 💕`)
+    }
+  }
+
+  // ============================================
+  // MARK COMPLETE
+  // ============================================
+  const handleMarkComplete = async ({ plan, rating, notes }) => {
+    setSubmittingReflection(true)
+    const { error } = await supabase
+      .from('date_plans')
+      .update({
+        status: 'completed',
+        rating: rating || null,
+        reflection_notes: notes || null,
+      })
+      .eq('id', plan.id)
+    setSubmittingReflection(false)
+    if (!error) {
+      setReflectionPlan(null)
+      showToast('Date marked as complete! 🎉')
+      loadDatePlans()
+    }
+  }
+
+  // ============================================
+  // CANCEL DATE
+  // ============================================
+  const handleCancelPlan = async (plan) => {
+    await supabase
+      .from('date_plans')
+      .update({ status: 'cancelled' })
+      .eq('id', plan.id)
+    loadDatePlans()
+  }
+
+  // ============================================
+  // FILTER / SORT SUGGESTIONS
   // ============================================
   const filteredPlaces = activeCategory === 'all'
     ? allPlaces
     : allPlaces.filter(p => p.category === activeCategory)
 
-  // Sort: recommended categories first, then by rating
   const sortedPlaces = [...filteredPlaces].sort((a, b) => {
     const aRec = recommendedCategories.indexOf(a.category)
     const bRec = recommendedCategories.indexOf(b.category)
@@ -376,6 +723,15 @@ export default function DatesPage() {
     if (aScore !== bScore) return aScore - bScore
     return (b.rating || 0) - (a.rating || 0)
   })
+
+  // Split My Dates
+  const now = new Date()
+  const upcomingPlans = datePlans.filter(
+    p => p.status !== 'cancelled' && p.status !== 'completed' && new Date(p.date_time) >= now
+  )
+  const pastPlans = datePlans.filter(
+    p => p.status === 'completed' || (p.status !== 'cancelled' && p.date_time && new Date(p.date_time) < now)
+  )
 
   const isLocationSeattle =
     Math.abs(location.lat - DEFAULT_LOCATION.lat) < 0.01 &&
@@ -399,104 +755,212 @@ export default function DatesPage() {
     <div className="min-h-screen bg-[#F8F6F3] pb-24">
 
       {/* Header */}
-      <div className="bg-gradient-to-br from-pink-500 to-rose-600 text-white px-6 pt-14 pb-8">
+      <div className="bg-gradient-to-br from-pink-500 to-rose-600 text-white px-6 pt-14 pb-6">
         <button
           onClick={() => router.back()}
           className="text-white/80 text-sm mb-4 flex items-center gap-1 hover:text-white"
         >
           ← Back
         </button>
-        <h1 className="text-2xl font-bold mb-1">Date Night Ideas</h1>
+        <h1 className="text-2xl font-bold mb-1">Date Night</h1>
         <p className="text-pink-100 text-sm">
-          {recommendedCategories.length > 0
-            ? 'Personalised to your relationship goals'
-            : 'Discover great places to go together'}
+          {pageTab === 'suggestions'
+            ? recommendedCategories.length > 0
+              ? 'Personalised to your relationship goals'
+              : 'Discover great places to go together'
+            : 'Your scheduled dates'}
         </p>
-        {isLocationSeattle && (
-          <p className="text-pink-200 text-xs mt-1">Showing results near Seattle, WA</p>
+        {pageTab === 'suggestions' && isLocationSeattle && (
+          <p className="text-pink-200 text-xs mt-0.5">Showing results near Seattle, WA</p>
         )}
+
+        {/* Page tabs */}
+        <div className="flex gap-1 mt-4 bg-white/20 rounded-xl p-1">
+          <button
+            onClick={() => setPageTab('suggestions')}
+            className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-colors ${
+              pageTab === 'suggestions' ? 'bg-white text-pink-600' : 'text-white/80 hover:text-white'
+            }`}
+          >
+            Suggestions
+          </button>
+          <button
+            onClick={() => setPageTab('my_dates')}
+            className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-colors ${
+              pageTab === 'my_dates' ? 'bg-white text-pink-600' : 'text-white/80 hover:text-white'
+            }`}
+          >
+            My Dates {upcomingPlans.length > 0 && `(${upcomingPlans.length})`}
+          </button>
+        </div>
       </div>
 
-      {/* Save toast */}
-      {saveMsg && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm px-4 py-2 rounded-full shadow-lg">
-          ✓ {saveMsg}
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm px-4 py-2 rounded-full shadow-lg whitespace-nowrap">
+          ✓ {toast}
         </div>
       )}
 
-      {/* Category tabs */}
-      <div className="px-4 mt-4 overflow-x-auto">
-        <div className="flex gap-2 w-max">
-          {ALL_CATEGORIES.map(cat => (
-            <button
-              key={cat.key}
-              onClick={() => setActiveCategory(cat.key)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                activeCategory === cat.key
-                  ? 'bg-pink-500 text-white shadow-sm'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:border-pink-300'
-              }`}
-            >
-              <span>{cat.emoji}</span>
-              <span>{cat.label}</span>
-              {/* Dot if this is a recommended category */}
-              {cat.key !== 'all' && recommendedCategories[0] === cat.key && (
-                <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
+      {/* ==============================
+          SUGGESTIONS TAB
+          ============================== */}
+      {pageTab === 'suggestions' && (
+        <>
+          {/* Category tabs */}
+          <div className="px-4 mt-4 overflow-x-auto">
+            <div className="flex gap-2 w-max">
+              {ALL_CATEGORIES.map(cat => (
+                <button
+                  key={cat.key}
+                  onClick={() => setActiveCategory(cat.key)}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                    activeCategory === cat.key
+                      ? 'bg-pink-500 text-white shadow-sm'
+                      : 'bg-white text-gray-600 border border-gray-200 hover:border-pink-300'
+                  }`}
+                >
+                  <span>{cat.emoji}</span>
+                  <span>{cat.label}</span>
+                  {cat.key !== 'all' && recommendedCategories[0] === cat.key && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Assessment note */}
+          {Object.keys(assessmentScores).length > 0 && (
+            <div className="mx-4 mt-4 bg-purple-50 border border-purple-100 rounded-2xl px-4 py-3 flex items-start gap-3">
+              <span className="text-lg mt-0.5">💜</span>
+              <div>
+                <p className="text-sm font-semibold text-purple-800">Personalised for you</p>
+                <p className="text-xs text-purple-600 mt-0.5">
+                  Cards marked "AI Pick" are matched to areas your relationship assessment highlighted.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Grid */}
+          <div className="px-4 mt-4">
+            {fetchingPlaces ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+              </div>
+            ) : fetchError ? (
+              <div className="text-center py-16">
+                <p className="text-4xl mb-3">🗺️</p>
+                <p className="text-gray-600 font-medium mb-1">No places found</p>
+                <p className="text-gray-400 text-sm">{fetchError}</p>
+              </div>
+            ) : sortedPlaces.length === 0 ? (
+              <div className="text-center py-16">
+                <p className="text-4xl mb-3">
+                  {ALL_CATEGORIES.find(c => c.key === activeCategory)?.emoji || '✨'}
+                </p>
+                <p className="text-gray-600 font-medium mb-1">No places in this category</p>
+                <p className="text-gray-400 text-sm">Try switching to a different tab</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {sortedPlaces.map(place => (
+                  <SuggestionCard
+                    key={place.place_id}
+                    place={place}
+                    recommendedCategories={recommendedCategories}
+                    assessmentScores={assessmentScores}
+                    onSave={handleSave}
+                    onPlan={setPlanModalPlace}
+                    saving={saving}
+                    savedIds={savedIds}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ==============================
+          MY DATES TAB
+          ============================== */}
+      {pageTab === 'my_dates' && (
+        <div className="px-4 mt-4 space-y-6">
+          {loadingPlans ? (
+            <div className="text-center py-16">
+              <div className="text-3xl mb-2">💕</div>
+              <p className="text-gray-400 text-sm">Loading your dates…</p>
+            </div>
+          ) : datePlans.filter(p => p.status !== 'cancelled').length === 0 ? (
+            <div className="text-center py-16">
+              <p className="text-5xl mb-3">📅</p>
+              <p className="text-gray-700 font-semibold mb-1">No dates planned yet</p>
+              <p className="text-gray-400 text-sm mb-4">Browse suggestions and tap "Plan This" to schedule your first date</p>
+              <button
+                onClick={() => setPageTab('suggestions')}
+                className="bg-gradient-to-r from-pink-500 to-rose-500 text-white font-semibold px-6 py-3 rounded-2xl"
+              >
+                Browse Suggestions
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Upcoming */}
+              {upcomingPlans.length > 0 && (
+                <div>
+                  <h2 className="font-bold text-gray-900 text-base mb-3">Upcoming 📅</h2>
+                  <div className="space-y-3">
+                    {upcomingPlans.map(plan => (
+                      <DatePlanCard
+                        key={plan.id}
+                        plan={plan}
+                        onMarkComplete={setReflectionPlan}
+                        onCancel={handleCancelPlan}
+                      />
+                    ))}
+                  </div>
+                </div>
               )}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {/* Assessment note */}
-      {Object.keys(assessmentScores).length > 0 && (
-        <div className="mx-4 mt-4 bg-purple-50 border border-purple-100 rounded-2xl px-4 py-3 flex items-start gap-3">
-          <span className="text-lg mt-0.5">💜</span>
-          <div>
-            <p className="text-sm font-semibold text-purple-800">Personalised for you</p>
-            <p className="text-xs text-purple-600 mt-0.5">
-              Cards marked "AI Pick" are matched to areas your relationship assessment highlighted.
-            </p>
-          </div>
+              {/* Past */}
+              {pastPlans.length > 0 && (
+                <div>
+                  <h2 className="font-bold text-gray-900 text-base mb-3">Past Dates ✨</h2>
+                  <div className="space-y-3">
+                    {[...pastPlans].reverse().map(plan => (
+                      <DatePlanCard
+                        key={plan.id}
+                        plan={plan}
+                        onMarkComplete={setReflectionPlan}
+                        onCancel={handleCancelPlan}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 
-      {/* Grid */}
-      <div className="px-4 mt-4">
-        {fetchingPlaces ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
-          </div>
-        ) : fetchError ? (
-          <div className="text-center py-16">
-            <p className="text-4xl mb-3">🗺️</p>
-            <p className="text-gray-600 font-medium mb-1">No places found</p>
-            <p className="text-gray-400 text-sm">{fetchError}</p>
-          </div>
-        ) : sortedPlaces.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-4xl mb-3">
-              {ALL_CATEGORIES.find(c => c.key === activeCategory)?.emoji || '✨'}
-            </p>
-            <p className="text-gray-600 font-medium mb-1">No places in this category</p>
-            <p className="text-gray-400 text-sm">Try switching to a different tab</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {sortedPlaces.map(place => (
-              <SuggestionCard
-                key={place.place_id}
-                place={place}
-                recommendedCategories={recommendedCategories}
-                assessmentScores={assessmentScores}
-                onSave={handleSave}
-                onPlan={() => {}}
-                saving={saving}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      {/* ==============================
+          MODALS
+          ============================== */}
+      <PlanModal
+        place={planModalPlace}
+        onClose={() => setPlanModalPlace(null)}
+        onSubmit={handleScheduleDate}
+        submitting={submittingPlan}
+      />
+
+      <ReflectionModal
+        plan={reflectionPlan}
+        onClose={() => setReflectionPlan(null)}
+        onSubmit={handleMarkComplete}
+        submitting={submittingReflection}
+      />
 
     </div>
   )
