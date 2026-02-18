@@ -84,8 +84,10 @@ export default function DailyCheckinPage() {
         }
       }
 
-      // Check if already checked in today
-      const today = new Date().toISOString().split('T')[0]
+      // Check if already checked in today (use local date, not UTC, to avoid
+      // timezone drift: a UTC check makes 11pm local = next day, blocking the
+      // user from checking in on their actual next calendar morning)
+      const today = new Date().toLocaleDateString('en-CA')
       const { data: existingCheckin } = await supabase
         .from('daily_checkins')
         .select('id')
@@ -176,7 +178,7 @@ export default function DailyCheckinPage() {
         .from('daily_checkins')
         .select('mood, connection_score, question_id, question_response')
         .eq('user_id', userId)
-        .gte('check_date', sevenDaysAgo.toISOString().split('T')[0])
+        .gte('check_date', sevenDaysAgo.toLocaleDateString('en-CA'))
         .order('check_date', { ascending: false })
 
       // Get recently used question IDs
@@ -247,7 +249,7 @@ export default function DailyCheckinPage() {
     setSubmitting(true)
 
     try {
-      const today = new Date().toISOString().split('T')[0]
+      const today = new Date().toLocaleDateString('en-CA')
 
       const { error } = await supabase
         .from('daily_checkins')
