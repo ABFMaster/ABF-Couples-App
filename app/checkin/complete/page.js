@@ -242,12 +242,14 @@ export default function CheckinCompletePage() {
                   </p>
                 </div>
 
-                {/* Response preview */}
-                {checkin?.question_response && (
-                  <div className="bg-gray-50 rounded-lg p-2">
-                    <p className="text-xs text-[#6B7280] line-clamp-2">
-                      "{checkin.question_response}"
-                    </p>
+                {/* Question & Answer */}
+                {checkin?.question_text && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <p className="text-sm text-gray-500 mb-2">{checkin.question_text}</p>
+                    {checkin.question_response
+                      ? <p className="text-gray-800 text-sm">{checkin.question_response}</p>
+                      : <p className="text-gray-400 text-sm italic">No answer</p>
+                    }
                   </div>
                 )}
               </div>
@@ -273,12 +275,14 @@ export default function CheckinCompletePage() {
                   </p>
                 </div>
 
-                {/* Response preview */}
-                {partnerCheckin?.question_response && (
-                  <div className="bg-gray-50 rounded-lg p-2">
-                    <p className="text-xs text-[#6B7280] line-clamp-2">
-                      "{partnerCheckin.question_response}"
-                    </p>
+                {/* Question & Answer */}
+                {partnerCheckin?.question_text && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    <p className="text-sm text-gray-500 mb-2">{partnerCheckin.question_text}</p>
+                    {partnerCheckin.question_response
+                      ? <p className="text-gray-800 text-sm">{partnerCheckin.question_response}</p>
+                      : <p className="text-gray-400 text-sm italic">No answer</p>
+                    }
                   </div>
                 )}
               </div>
@@ -303,16 +307,39 @@ export default function CheckinCompletePage() {
               </div>
             )}
 
-            {/* Start a Conversation Button */}
-            <button
-              onClick={() => router.push('/dashboard')}
-              className={`w-full py-4 rounded-2xl bg-[#2D3648] text-white font-medium flex items-center justify-center gap-2 hover:bg-[#3D4658] transition-all duration-500 delay-300 ${
-                showComparison ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-              }`}
-            >
-              <span>💬</span>
-              <span>Start a Conversation</span>
-            </button>
+            {/* Partner Reflection Section */}
+            <div className={`bg-white rounded-2xl shadow-sm p-5 transition-all duration-500 delay-300 ${
+              showComparison ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+            }`}>
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-xl">💭</span>
+                <h3 className="text-lg font-bold text-[#2D3648]">Today's Reflection</h3>
+              </div>
+
+              <p className="text-[#2D3648] mb-4">
+                <span className="font-semibold">{partnerName}</span> is feeling{' '}
+                <span className="font-semibold">{partnerMood?.label?.toLowerCase()}</span>{' '}
+                {partnerMood?.emoji} with a connection score of{' '}
+                <span className="font-semibold">{partnerCheckin?.connection_score}/5</span>.
+              </p>
+
+              <p className="text-sm text-[#6B7280] mb-3">Take a moment to:</p>
+              <ul className="space-y-2 mb-5">
+                <li className="flex items-start gap-2 text-sm text-[#2D3648]">
+                  <span className="text-[#FF6B9D]">•</span>
+                  <span>Acknowledge how they're feeling</span>
+                </li>
+                <li className="flex items-start gap-2 text-sm text-[#2D3648]">
+                  <span className="text-[#FF6B9D]">•</span>
+                  <span>Share what you appreciate about them today</span>
+                </li>
+                <li className="flex items-start gap-2 text-sm text-[#2D3648]">
+                  <span className="text-[#FF6B9D]">•</span>
+                  <span>Check in with them in person</span>
+                </li>
+              </ul>
+
+            </div>
           </>
         )}
 
