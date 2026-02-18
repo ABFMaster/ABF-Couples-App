@@ -345,14 +345,15 @@ export default function WeeklyReviewPage() {
       setPartnerId(partnerUserId)
 
       if (partnerUserId) {
+        // Try profiles table first (like dashboard uses)
         const { data: partnerProfile } = await supabase
-          .from('user_profiles')
-          .select('name')
-          .eq('user_id', partnerUserId)
+          .from('profiles')
+          .select('first_name')
+          .eq('id', partnerUserId)
           .single()
 
-        if (partnerProfile?.name) {
-          setPartnerName(partnerProfile.name.split(' ')[0])
+        if (partnerProfile?.first_name) {
+          setPartnerName(partnerProfile.first_name)
         }
       }
     } catch (err) {

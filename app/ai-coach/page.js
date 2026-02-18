@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AiChatMessage from '@/components/AiChatMessage';
 import { analyzeUserPatterns } from '@/lib/checkin-patterns';
 
-export default function AiCoach() {
+function AiCoachContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [coupleId, setCoupleId] = useState(null);
@@ -26,6 +27,16 @@ export default function AiCoach() {
   useEffect(() => {
     checkAuth();
   }, []);
+
+  // Check for pre-filled prompt from URL
+  useEffect(() => {
+    const promptParam = searchParams.get('prompt');
+    if (promptParam && !loading) {
+      setInputMessage(decodeURIComponent(promptParam));
+      // Clear the URL parameter without navigation
+      window.history.replaceState({}, '', '/ai-coach');
+    }
+  }, [searchParams, loading]);
 
   useEffect(() => {
     scrollToBottom();
@@ -400,5 +411,20 @@ export default function AiCoach() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AiCoach() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-pink-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-pink-500 text-lg">Loading...</p>
+        </div>
+      </div>
+    }>
+      <AiCoachContent />
+    </Suspense>
   );
 }
