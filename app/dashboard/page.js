@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import HealthMeter from '@/components/HealthMeter'
+import CoachInsightCard from '@/components/CoachInsightCard'
 import FlirtComposer from '@/components/FlirtComposer'
 import FlirtView from '@/components/FlirtView'
 import { MOOD_OPTIONS } from '@/lib/checkin-questions'
@@ -172,6 +173,11 @@ export default function Dashboard() {
 
   // Trip Planning State
   const [upcomingTrip, setUpcomingTrip] = useState(null)
+
+  // Coach Insight Card State
+  const [coachHealthScore, setCoachHealthScore] = useState(null)
+  const [coachLastCheckinDate, setCoachLastCheckinDate] = useState(null)
+  const [coachLastCompletedDate, setCoachLastCompletedDate] = useState(null)
 
   // Partner Connection State
   const [hasPartner, setHasPartner] = useState(true)
@@ -461,6 +467,62 @@ export default function Dashboard() {
   }, [])
 
 
+  const fetchCoachData = useCallback(async (coupleId) => {
+    try {
+      // Health score
+      const { data: health } = await supabase
+        .from('relationship_health')
+        .select('overall_score')
+        .eq('couple_id', coupleId)
+        .single()
+      if (health) setCoachHealthScore(health.overall_score)
+    } catch (e) { /* graceful */ }
+
+    try {
+      // Last check-in date for current user (most recent)
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (authUser) {
+        const { data: lastCheckin } = await supabase
+          .from('daily_checkins')
+          .select('check_date')
+          .eq('user_id', authUser.id)
+          .order('check_date', { ascending: false })
+          .limit(1)
+          .single()
+        if (lastCheckin) setCoachLastCheckinDate(lastCheckin.check_date)
+      }
+    } catch (e) { /* graceful */ }
+
+    try {
+      // Last completed date (past planned date or custom date)
+      const now = new Date().toISOString()
+
+      const { data: pastPlanned } = await supabase
+        .from('date_plans')
+        .select('title, date_time, notes')
+        .eq('couple_id', coupleId)
+        .in('status', ['planned', 'accepted'])
+        .lt('date_time', now)
+        .order('date_time', { ascending: false })
+        .limit(1)
+
+      const { data: pastCustom } = await supabase
+        .from('custom_dates')
+        .select('title, date_time, rating, review')
+        .eq('couple_id', coupleId)
+        .lt('date_time', now)
+        .order('date_time', { ascending: false })
+        .limit(1)
+
+      const candidates = [
+        ...(pastPlanned || []).map(d => ({ title: d.title, date: d.date_time, hasReview: false })),
+        ...(pastCustom || []).map(d => ({ title: d.title, date: d.date_time, hasReview: !!(d.review || d.rating) })),
+      ].sort((a, b) => new Date(b.date) - new Date(a.date))
+
+      if (candidates[0]) setCoachLastCompletedDate(candidates[0])
+    } catch (e) { /* graceful */ }
+  }, [])
+
   const fetchUpcomingTrip = useCallback(async (coupleId) => {
     const { data } = await supabase
       .from('trips')
@@ -653,6 +715,7 @@ export default function Dashboard() {
       await fetchDatePlans(coupleData.id, user.id)
       await fetchUpcomingTrip(coupleData.id)
       await fetchV2Checkins(user.id, partnerUserId, coupleData.id)
+      fetchCoachData(coupleData.id)
 
       // Fetch patterns in background (non-blocking)
       fetchPatterns(user.id, coupleData.id)
@@ -1079,6 +1142,19 @@ export default function Dashboard() {
             <HealthMeter
               coupleId={couple.id}
               onRefresh={healthMeterRef}
+            />
+          </section>
+        )}
+
+        {/* ===== COACH INSIGHT CARD ===== */}
+        {hasPartner && (
+          <section className="mb-6">
+            <CoachInsightCard
+              healthScore={coachHealthScore}
+              lastCheckinDate={coachLastCheckinDate}
+              upcomingDate={upcomingDate ? { title: upcomingDate.title, date: upcomingDate.date_time } : null}
+              lastCompletedDate={coachLastCompletedDate}
+              lastFlirtDate={lastSentFlirtTime ? lastSentFlirtTime.toISOString() : null}
             />
           </section>
         )}

@@ -16,7 +16,8 @@ function AiCoachContent() {
   const [inputMessage, setInputMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [conversationId, setConversationId] = useState(null);
-  const [messagesRemaining, setMessagesRemaining] = useState(5);
+  const [messagesRemaining, setMessagesRemaining] = useState(20);
+  const [isPremium, setIsPremium] = useState(false);
   const [limitReached, setLimitReached] = useState(false);
   const [checkinContext, setCheckinContext] = useState(null);
   const [proactivePrompt, setProactivePrompt] = useState(null);
@@ -130,14 +131,17 @@ function AiCoachContent() {
     if (data.messages) {
       setMessages(data.messages);
     }
-    if (data.messagesRemaining !== undefined) {
+    if (data.isPremium) {
+      setIsPremium(true);
+    }
+    if (data.messagesRemaining !== undefined && data.messagesRemaining !== null) {
       setMessagesRemaining(data.messagesRemaining);
       setLimitReached(data.messagesRemaining <= 0);
     }
   };
 
   const handleSend = async () => {
-    if (!inputMessage.trim() || sending || limitReached) return;
+    if (!inputMessage.trim() || sending || (!isPremium && limitReached)) return;
 
     const userMessage = inputMessage.trim();
     setInputMessage('');
@@ -191,7 +195,10 @@ function AiCoachContent() {
           return [...filtered, { ...tempUserMsg, id: 'user-' + Date.now() }, data.message];
         });
 
-        if (data.messagesRemaining !== undefined) {
+        if (data.isPremium) {
+          setIsPremium(true);
+        }
+        if (data.messagesRemaining !== undefined && data.messagesRemaining !== null) {
           setMessagesRemaining(data.messagesRemaining);
         }
       }
@@ -350,20 +357,20 @@ function AiCoachContent() {
       </div>
 
       {/* Message Limit Banner */}
-      {messagesRemaining <= 2 && messagesRemaining > 0 && (
+      {!isPremium && messagesRemaining <= 5 && messagesRemaining > 0 && (
         <div className="bg-amber-50 border-t border-amber-200 px-4 py-2 flex-shrink-0">
           <p className="text-center text-amber-700 text-sm">
-            <span className="font-medium">{messagesRemaining}</span> free {messagesRemaining === 1 ? 'message' : 'messages'} remaining today
+            <span className="font-medium">{messagesRemaining}</span> free {messagesRemaining === 1 ? 'message' : 'messages'} remaining this week
           </p>
         </div>
       )}
 
       {/* Limit Reached Banner */}
-      {limitReached && (
+      {!isPremium && limitReached && (
         <div className="bg-pink-50 border-t border-pink-200 px-4 py-3 flex-shrink-0">
           <div className="max-w-2xl mx-auto text-center">
             <p className="text-pink-700 text-sm mb-2">
-              You've used all 5 free messages today. Come back tomorrow!
+              You've used your 20 free messages this week. Upgrade for unlimited coaching.
             </p>
             <button className="text-pink-600 text-sm font-medium hover:text-pink-700">
               Upgrade for unlimited access
@@ -382,8 +389,8 @@ function AiCoachContent() {
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={limitReached ? 'Daily limit reached...' : 'Type your message...'}
-                disabled={sending || limitReached}
+                placeholder={!isPremium && limitReached ? 'Weekly limit reached...' : 'Type your message...'}
+                disabled={sending || (!isPremium && limitReached)}
                 rows={1}
                 className="w-full px-4 py-3 pr-12 border-2 border-pink-200 rounded-2xl focus:border-pink-400 focus:outline-none resize-none disabled:bg-gray-50 disabled:text-gray-400"
                 style={{ minHeight: '48px', maxHeight: '120px' }}
@@ -391,7 +398,7 @@ function AiCoachContent() {
             </div>
             <button
               onClick={handleSend}
-              disabled={!inputMessage.trim() || sending || limitReached}
+              disabled={!inputMessage.trim() || sending || (!isPremium && limitReached)}
               className="w-12 h-12 bg-gradient-to-r from-pink-400 to-purple-500 text-white rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:from-pink-500 hover:to-purple-600 transition-all shadow-md"
             >
               {sending ? (
