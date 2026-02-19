@@ -22,13 +22,41 @@ const ALL_CATEGORIES = [
   })),
 ]
 
-// Default datetime: tomorrow at 7pm
+// Format a Date object as YYYY-MM-DDTHH:MM in LOCAL time
+// (datetime-local inputs require local time, not UTC)
+function toDatetimeLocal(date) {
+  const d = date instanceof Date ? date : new Date(date)
+  if (isNaN(d.getTime())) return ''
+  const pad = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+// Build a Google Maps directions URL, preferring precise lat/lng
+function mapsDirectionsUrl(lat, lng, address, fallbackMapsUrl) {
+  if (lat && lng) return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+  if (fallbackMapsUrl) return fallbackMapsUrl
+  if (address) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
+  return null
+}
+
+// Build a Google Static Maps image URL (requires lat/lng + API key)
+function staticMapUrl(lat, lng) {
+  const key = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
+  if (!lat || !lng || !key) return null
+  return (
+    `https://maps.googleapis.com/maps/api/staticmap` +
+    `?center=${lat},${lng}&zoom=15&size=600x200` +
+    `&markers=color:red%7C${lat},${lng}` +
+    `&key=${key}`
+  )
+}
+
+// Default datetime: tomorrow at 7pm local time
 function defaultDatetime() {
   const d = new Date()
   d.setDate(d.getDate() + 1)
   d.setHours(19, 0, 0, 0)
-  // Format for datetime-local input: YYYY-MM-DDTHH:MM
-  return d.toISOString().slice(0, 16)
+  return toDatetimeLocal(d)
 }
 
 // ============================================
@@ -125,20 +153,32 @@ function SuggestionCard({ place, recommendedCategories, assessmentScores, onSave
         )}
 
         {/* Actions */}
-        <div className="mt-auto flex gap-2">
-          <button
-            onClick={() => onSave(place)}
-            disabled={saving === place.place_id || isSaved}
-            className="flex-1 text-xs font-medium border border-pink-300 text-pink-600 rounded-full py-2 hover:bg-pink-50 transition-colors disabled:opacity-40"
-          >
-            {isSaved ? '♥ Saved' : saving === place.place_id ? 'Saving…' : '♡ Save'}
-          </button>
-          <button
-            onClick={() => onPlan(place)}
-            className="flex-1 text-xs font-medium bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full py-2 hover:opacity-90 transition-opacity"
-          >
-            Plan This
-          </button>
+        <div className="mt-auto space-y-2">
+          <div className="flex gap-2">
+            <button
+              onClick={() => onSave(place)}
+              disabled={saving === place.place_id || isSaved}
+              className="flex-1 text-xs font-medium border border-pink-300 text-pink-600 rounded-full py-2 hover:bg-pink-50 transition-colors disabled:opacity-40"
+            >
+              {isSaved ? '♥ Saved' : saving === place.place_id ? 'Saving…' : '♡ Save'}
+            </button>
+            <button
+              onClick={() => onPlan(place)}
+              className="flex-1 text-xs font-medium bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full py-2 hover:opacity-90 transition-opacity"
+            >
+              Plan This
+            </button>
+          </div>
+          {mapsDirectionsUrl(place.latitude, place.longitude, place.address, place.maps_url) && (
+            <a
+              href={mapsDirectionsUrl(place.latitude, place.longitude, place.address, place.maps_url)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block text-center text-xs text-gray-400 hover:text-pink-500 transition-colors py-0.5"
+            >
+              📍 Get Directions
+            </a>
+          )}
         </div>
       </div>
     </div>
@@ -146,11 +186,15 @@ function SuggestionCard({ place, recommendedCategories, assessmentScores, onSave
 }
 
 // ============================================
-// PLAN MODAL
+// PLAN MODAL  (create new OR edit existing)
+// existingPlan: the date_plan row being edited (null for new)
 // ============================================
-function PlanModal({ place, onClose, onSubmit, submitting }) {
-  const [scheduledDate, setScheduledDate] = useState(defaultDatetime())
-  const [notes, setNotes] = useState('')
+function PlanModal({ place, existingPlan, onClose, onSubmit, submitting }) {
+  const isEditing = !!existingPlan
+  const [scheduledDate, setScheduledDate] = useState(
+    existingPlan?.date_time ? toDatetimeLocal(existingPlan.date_time) : defaultDatetime()
+  )
+  const [notes, setNotes] = useState(existingPlan?.description || '')
   const config = CATEGORY_CONFIG[place?.category] || CATEGORY_CONFIG.other
 
   if (!place) return null
@@ -192,7 +236,9 @@ function PlanModal({ place, onClose, onSubmit, submitting }) {
 
         {/* Form */}
         <div className="p-5">
-          <h2 className="font-bold text-gray-900 text-lg mb-4">Schedule this date</h2>
+          <h2 className="font-bold text-gray-900 text-lg mb-4">
+            {isEditing ? 'Edit Date' : 'Schedule this date'}
+          </h2>
 
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -220,11 +266,13 @@ function PlanModal({ place, onClose, onSubmit, submitting }) {
           </div>
 
           <button
-            onClick={() => onSubmit({ place, scheduledDate, notes })}
+            onClick={() => onSubmit({ place, scheduledDate, notes, planId: existingPlan?.id ?? null })}
             disabled={submitting || !scheduledDate}
             className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white font-semibold py-3.5 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50"
           >
-            {submitting ? 'Scheduling…' : '💕 Schedule Date'}
+            {submitting
+              ? isEditing ? 'Updating…' : 'Scheduling…'
+              : isEditing ? '✏️ Update Date' : '💕 Schedule Date'}
           </button>
           <button
             onClick={onClose}
@@ -321,12 +369,13 @@ function ReflectionModal({ plan, onClose, onSubmit, submitting }) {
 // ============================================
 // DATE PLAN CARD (My Dates view)
 // ============================================
-function DatePlanCard({ plan, onMarkComplete, onCancel }) {
+function DatePlanCard({ plan, onMarkComplete, onCancel, onEdit }) {
   const config = CATEGORY_CONFIG[plan.category] || { label: 'Date', emoji: '💕' }
-  const isPast = new Date(plan.date_time) < new Date()
+  const isPast = plan.date_time ? new Date(plan.date_time) < new Date() : false
   const isCompleted = plan.status === 'completed'
   const isCancelled = plan.status === 'cancelled'
 
+  // Display date/time in user's local timezone
   const dateLabel = plan.date_time
     ? new Date(plan.date_time).toLocaleDateString('en-US', {
         weekday: 'short',
@@ -388,39 +437,77 @@ function DatePlanCard({ plan, onMarkComplete, onCancel }) {
           )}
 
           {/* Notes */}
-          {!isCompleted && plan.description && (
+          {!isCompleted && !isCancelled && plan.description && (
             <p className="text-xs text-gray-400 mt-1 line-clamp-1">{plan.description}</p>
           )}
         </div>
       </div>
 
-      {/* Actions */}
+      {/* Static map preview */}
+      {staticMapUrl(plan.latitude, plan.longitude) && (
+        <a
+          href={mapsDirectionsUrl(plan.latitude, plan.longitude, plan.address, plan.maps_url)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block mt-3 rounded-xl overflow-hidden"
+        >
+          <img
+            src={staticMapUrl(plan.latitude, plan.longitude)}
+            alt={`Map for ${plan.title}`}
+            className="w-full h-32 object-cover"
+          />
+        </a>
+      )}
+
+      {/* Actions — vary by state */}
       {!isCompleted && !isCancelled && (
         <div className="flex gap-2 mt-3">
-          {plan.maps_url && (
+          {mapsDirectionsUrl(plan.latitude, plan.longitude, plan.address, plan.maps_url) && (
             <a
-              href={plan.maps_url}
+              href={mapsDirectionsUrl(plan.latitude, plan.longitude, plan.address, plan.maps_url)}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 text-xs font-medium border border-gray-200 text-gray-600 rounded-full py-2 text-center hover:border-gray-300"
+              className="text-xs font-medium border border-gray-200 text-gray-600 rounded-full px-3 py-2 hover:border-gray-300 whitespace-nowrap"
             >
-              View Map
+              📍 Directions
             </a>
           )}
-          {(isPast || true) && (
-            <button
-              onClick={() => onMarkComplete(plan)}
-              className="flex-1 text-xs font-medium bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full py-2 hover:opacity-90"
-            >
-              Mark Complete
-            </button>
+
+          {/* Upcoming (future): Edit + Cancel */}
+          {!isPast && (
+            <>
+              <button
+                onClick={() => onEdit(plan)}
+                className="flex-1 text-xs font-medium border border-pink-300 text-pink-600 rounded-full py-2 hover:bg-pink-50 transition-colors"
+              >
+                ✏️ Edit
+              </button>
+              <button
+                onClick={() => onCancel(plan)}
+                className="text-xs text-gray-400 px-3 py-2 rounded-full hover:text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </>
           )}
-          <button
-            onClick={() => onCancel(plan)}
-            className="text-xs text-gray-400 px-3 py-2 rounded-full hover:text-gray-600 hover:bg-gray-50"
-          >
-            Cancel
-          </button>
+
+          {/* Past (overdue, not yet completed): Mark Complete + Cancel */}
+          {isPast && (
+            <>
+              <button
+                onClick={() => onMarkComplete(plan)}
+                className="flex-1 text-xs font-medium bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full py-2 hover:opacity-90"
+              >
+                Mark Complete
+              </button>
+              <button
+                onClick={() => onCancel(plan)}
+                className="text-xs text-gray-400 px-3 py-2 rounded-full hover:text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -453,8 +540,9 @@ export default function DatesPage() {
   const [saving, setSaving] = useState(null)
   const [savedIds, setSavedIds] = useState(new Set())
 
-  // Plan modal
-  const [planModalPlace, setPlanModalPlace] = useState(null)
+  // Plan modal (create + edit)
+  const [planModalPlace, setPlanModalPlace] = useState(null)   // place-like object for the modal header
+  const [editingPlan, setEditingPlan] = useState(null)         // full date_plan row when editing, null for new
   const [submittingPlan, setSubmittingPlan] = useState(false)
 
   // My Dates state
@@ -647,32 +735,72 @@ export default function DatesPage() {
     }
   }
 
+  // Open edit modal: derive a place-like object from the stored plan
+  const handleOpenEdit = (plan) => {
+    setEditingPlan(plan)
+    setPlanModalPlace({
+      place_id: plan.place_id,
+      title: plan.title,
+      address: plan.address,
+      location_name: plan.location_name,
+      photo_url: plan.photo_url,
+      maps_url: plan.maps_url,
+      latitude: plan.latitude,
+      longitude: plan.longitude,
+      category: plan.category,
+    })
+  }
+
+  const handleClosePlanModal = () => {
+    setPlanModalPlace(null)
+    setEditingPlan(null)
+  }
+
   // ============================================
-  // SCHEDULE DATE
+  // SCHEDULE DATE (INSERT) or UPDATE existing
   // ============================================
-  const handleScheduleDate = async ({ place, scheduledDate, notes }) => {
+  const handleScheduleDate = async ({ place, scheduledDate, notes, planId }) => {
     if (!coupleId || !user) return
     setSubmittingPlan(true)
-    const { error } = await supabase.from('date_plans').insert({
-      couple_id: coupleId,
-      created_by: user.id,
-      title: place.title,
-      description: notes || null,
-      date_time: scheduledDate ? new Date(scheduledDate).toISOString() : null,
-      location: place.address || place.location_name || null,
-      location_name: place.location_name,
-      address: place.address,
-      latitude: place.latitude,
-      longitude: place.longitude,
-      photo_url: place.photo_url,
-      maps_url: place.maps_url,
-      place_id: place.place_id,
-      status: 'planned',
-    })
+
+    // Convert local datetime-local string to UTC ISO string for storage
+    const dateUtc = scheduledDate ? new Date(scheduledDate).toISOString() : null
+
+    let error
+    if (planId) {
+      // Edit existing plan
+      ;({ error } = await supabase
+        .from('date_plans')
+        .update({
+          description: notes || null,
+          date_time: dateUtc,
+        })
+        .eq('id', planId))
+    } else {
+      // Create new plan
+      ;({ error } = await supabase.from('date_plans').insert({
+        couple_id: coupleId,
+        created_by: user.id,
+        title: place.title,
+        description: notes || null,
+        date_time: dateUtc,
+        location: place.address || place.location_name || null,
+        location_name: place.location_name,
+        address: place.address,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        photo_url: place.photo_url,
+        maps_url: place.maps_url,
+        place_id: place.place_id,
+        status: 'planned',
+      }))
+    }
+
     setSubmittingPlan(false)
     if (!error) {
-      setPlanModalPlace(null)
-      showToast(`${place.title} scheduled! 💕`)
+      handleClosePlanModal()
+      showToast(planId ? 'Date updated! ✏️' : `${place.title} scheduled! 💕`)
+      if (pageTab === 'my_dates') loadDatePlans()
     }
   }
 
@@ -918,6 +1046,7 @@ export default function DatesPage() {
                         plan={plan}
                         onMarkComplete={setReflectionPlan}
                         onCancel={handleCancelPlan}
+                        onEdit={handleOpenEdit}
                       />
                     ))}
                   </div>
@@ -935,6 +1064,7 @@ export default function DatesPage() {
                         plan={plan}
                         onMarkComplete={setReflectionPlan}
                         onCancel={handleCancelPlan}
+                        onEdit={handleOpenEdit}
                       />
                     ))}
                   </div>
@@ -949,8 +1079,10 @@ export default function DatesPage() {
           MODALS
           ============================== */}
       <PlanModal
+        key={editingPlan?.id ?? 'new'}
         place={planModalPlace}
-        onClose={() => setPlanModalPlace(null)}
+        existingPlan={editingPlan}
+        onClose={handleClosePlanModal}
         onSubmit={handleScheduleDate}
         submitting={submittingPlan}
       />

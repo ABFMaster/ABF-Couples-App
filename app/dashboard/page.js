@@ -1186,11 +1186,13 @@ export default function Dashboard() {
                     >
                       View Details
                     </Link>
-                    {(upcomingDate.maps_url || upcomingDate.address) && (
+                    {(upcomingDate.latitude || upcomingDate.maps_url || upcomingDate.address || upcomingDate.location) && (
                       <a
                         href={
-                          upcomingDate.maps_url ||
-                          `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(upcomingDate.address)}`
+                          upcomingDate.latitude && upcomingDate.longitude
+                            ? `https://www.google.com/maps/dir/?api=1&destination=${upcomingDate.latitude},${upcomingDate.longitude}`
+                            : upcomingDate.maps_url
+                              || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(upcomingDate.address || upcomingDate.location || '')}`
                         }
                         target="_blank"
                         rel="noopener noreferrer"

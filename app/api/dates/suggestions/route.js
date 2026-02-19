@@ -9,6 +9,7 @@ const CATEGORY_TO_GOOGLE_TYPE = {
   culture: 'museum',
   adventure: 'amusement_park',
   outdoor: 'park',
+  relaxation: 'spa',
   wellness: 'spa',
   shopping: 'shopping_mall',
 };
@@ -106,6 +107,116 @@ export async function GET(request) {
 
   } catch (error) {
     console.error('Date suggestions API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/dates/suggestions
+ *
+ * Used by fetchDateSuggestions() in lib/date-suggestions.js.
+ * Accepts the full category config (placeTypes + keywords) so it can run
+ * multiple Nearby Search calls and merge results.
+ *
+ * Body:
+ *   location      - { lat, lng }  (required)
+ *   placeTypes    - string[]       (required) — Google Place types to search
+ *   keywords      - string[]       (optional) — keyword hint for the search
+ *   maxPrice      - number 1-4     (optional)
+ *   radius        - number metres  (optional, default 5000)
+ *   avoidPlaceIds - string[]       (optional) — place_ids to exclude
+ */
+export async function POST(request) {
+  try {
+    const body = await request.json();
+    const {
+      location,
+      placeTypes = [],
+      keywords = [],
+      maxPrice = null,
+      radius: rawRadius = 5000,
+      avoidPlaceIds = [],
+    } = body;
+
+    if (!location?.lat || !location?.lng) {
+      return NextResponse.json(
+        { error: 'location.lat and location.lng are required' },
+        { status: 400 }
+      );
+    }
+
+    if (placeTypes.length === 0) {
+      return NextResponse.json(
+        { error: 'placeTypes array is required' },
+        { status: 400 }
+      );
+    }
+
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: 'Google Places API key not configured' },
+        { status: 503 }
+      );
+    }
+
+    const radius = Math.min(Number(rawRadius) || 5000, 50000);
+    const avoidSet = new Set(avoidPlaceIds);
+
+    // Run one Nearby Search per placeType and merge results.
+    // Google Nearby Search only accepts a single `type` per request.
+    const allResults = [];
+    const seenPlaceIds = new Set();
+
+    for (const placeType of placeTypes) {
+      const googleParams = new URLSearchParams({
+        location: `${location.lat},${location.lng}`,
+        radius: String(radius),
+        type: placeType,
+        key: apiKey,
+      });
+
+      // Attach a single keyword hint (first one) if provided
+      if (keywords.length > 0) {
+        googleParams.set('keyword', keywords[0]);
+      }
+
+      if (maxPrice) {
+        // Our maxPrice is 1-4; Google uses 0-4 (0 = free)
+        googleParams.set('maxprice', String(maxPrice - 1));
+      }
+
+      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?${googleParams.toString()}`;
+      const res = await fetch(url);
+
+      if (!res.ok) {
+        console.error(`Google Places HTTP error for type ${placeType}:`, res.status);
+        continue;
+      }
+
+      const data = await res.json();
+
+      if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+        console.error(`Google Places error for type ${placeType}:`, data.status, data.error_message);
+        continue;
+      }
+
+      for (const place of data.results || []) {
+        if (!seenPlaceIds.has(place.place_id) && !avoidSet.has(place.place_id)) {
+          seenPlaceIds.add(place.place_id);
+          allResults.push(place);
+        }
+      }
+    }
+
+    // Sort by rating descending, then format
+    allResults.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    const places = allResults.slice(0, 40).map(formatPlaceForDisplay);
+
+    return NextResponse.json({ places });
+
+  } catch (error) {
+    console.error('Date suggestions POST error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
