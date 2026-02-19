@@ -10,11 +10,7 @@ import FlirtComposer from '@/components/FlirtComposer'
 import FlirtView from '@/components/FlirtView'
 import { MOOD_OPTIONS } from '@/lib/checkin-questions'
 import { analyzeUserPatterns, analyzeCouplePatterns } from '@/lib/checkin-patterns'
-import {
-  CATEGORY_CONFIG,
-  selectDateSuggestions,
-  fetchDateSuggestions as fetchSmartDateSuggestions,
-} from '@/lib/date-suggestions'
+import { CATEGORY_CONFIG } from '@/lib/date-suggestions'
 
 // Default datetime for scheduling modal: tomorrow at 7pm
 function defaultDatetime() {
@@ -168,10 +164,8 @@ export default function Dashboard() {
   const [upcomingDate, setUpcomingDate] = useState(null)
   const [pendingDateSuggestions, setPendingDateSuggestions] = useState(0)
 
-  // Date Suggestions Carousel + Plan Modal
-  const [dateSuggestions, setDateSuggestions] = useState([])
-  const [suggestionsLoading, setSuggestionsLoading] = useState(false)
-  const [assessmentScores, setAssessmentScores] = useState({})
+  // Plan Modal
+
   const [planModalPlace, setPlanModalPlace] = useState(null)
   const [submittingPlan, setSubmittingPlan] = useState(false)
   const [planSuccessMsg, setPlanSuccessMsg] = useState(null)
@@ -466,42 +460,6 @@ export default function Dashboard() {
     setPendingDateSuggestions(count || 0)
   }, [])
 
-  const fetchCarouselSuggestions = useCallback(async (scores, coupleId) => {
-    setSuggestionsLoading(true)
-    try {
-      // Collect recently scheduled place_ids to avoid repeats
-      let avoidPlaceIds = []
-      if (coupleId) {
-        const { data: recent } = await supabase
-          .from('date_plans')
-          .select('place_id')
-          .eq('couple_id', coupleId)
-          .not('place_id', 'is', null)
-        avoidPlaceIds = (recent || []).map(r => r.place_id).filter(Boolean)
-      }
-
-      const selection = selectDateSuggestions({
-        userLocation: { lat: 47.6062, lng: -122.3321 },
-        assessmentScores: scores,
-        recentDates: avoidPlaceIds.map(id => ({ place_id: id })),
-      })
-
-      const topCategory = selection.categories[0]
-      if (topCategory) {
-        const places = await fetchSmartDateSuggestions({
-          location: { lat: 47.6062, lng: -122.3321 },
-          category: topCategory,
-          maxPrice: selection.maxPrice,
-          radius: selection.radius,
-          avoidPlaceIds,
-        })
-        setDateSuggestions(places.slice(0, 5))
-      }
-    } catch (err) {
-      console.error('Failed to fetch carousel suggestions:', err)
-    }
-    setSuggestionsLoading(false)
-  }, [])
 
   const fetchUpcomingTrip = useCallback(async (coupleId) => {
     const { data } = await supabase
@@ -675,15 +633,6 @@ export default function Dashboard() {
       // Profile is completed if they have a completed assessment
       setProfileCompleted(!!userAssessment?.completed_at)
 
-      // Extract assessment module scores for smart suggestions
-      let scores = {}
-      if (userAssessment?.results?.modules) {
-        for (const mod of userAssessment.results.modules) {
-          scores[mod.moduleId] = mod.percentage
-        }
-      }
-      setAssessmentScores(scores)
-
       // Check individual profile status
       const { data: individualProfile } = await supabase
         .from('individual_profiles')
@@ -707,9 +656,6 @@ export default function Dashboard() {
 
       // Fetch patterns in background (non-blocking)
       fetchPatterns(user.id, coupleData.id)
-
-      // Fetch carousel suggestions in background (non-blocking)
-      fetchCarouselSuggestions(scores, coupleData.id)
 
       setLoading(false)
     } catch (err) {
@@ -1847,7 +1793,7 @@ export default function Dashboard() {
 
             {/* Date Night Card */}
             <div
-              onClick={() => router.push('/date-night')}
+              onClick={() => router.push('/dates')}
               className="bg-gradient-to-br from-rose-500 to-pink-500 rounded-xl p-6 shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-[1.01] text-white relative"
             >
               {pendingDateSuggestions > 0 && (
@@ -1876,73 +1822,62 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* ===== DATE SUGGESTIONS CAROUSEL ===== */}
+        {/* ===== DATE IDEAS FOR YOU ===== */}
         {hasPartner && (
           <section className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-gray-800">💡 Date Ideas for You</h2>
-              <Link href="/dates" className="text-sm text-[#C9184A] font-medium hover:text-[#a01038]">
-                See All →
-              </Link>
-            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">💡 Date Ideas for You</h2>
 
-            {suggestionsLoading ? (
-              <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="flex-shrink-0 w-44 bg-white rounded-2xl overflow-hidden shadow-sm animate-pulse">
-                    <div className="h-28 bg-gray-200" />
-                    <div className="p-3 space-y-2">
-                      <div className="h-3 bg-gray-200 rounded w-1/2" />
-                      <div className="h-4 bg-gray-200 rounded w-3/4" />
-                      <div className="h-7 bg-gray-200 rounded-full" />
+            <div className="space-y-3">
+              {/* Upcoming date teaser */}
+              {upcomingDate && (
+                <Link href="/dates" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-pink-100 to-purple-100 flex-shrink-0 flex items-center justify-center text-xl overflow-hidden">
+                      {upcomingDate.photo_url
+                        ? <img src={upcomingDate.photo_url} alt={upcomingDate.title} className="w-full h-full object-cover" />
+                        : '📅'
+                      }
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-pink-500 uppercase tracking-wide mb-0.5">Upcoming Date</p>
+                      <p className="font-semibold text-gray-900 text-sm truncate">{upcomingDate.title}</p>
+                      {upcomingDate.date_time && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {new Date(upcomingDate.date_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-xs font-semibold text-pink-500 flex-shrink-0">View →</span>
                   </div>
-                ))}
-              </div>
-            ) : dateSuggestions.length > 0 ? (
-              <>
-                <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
-                  {dateSuggestions.map(place => {
-                    const config = CATEGORY_CONFIG[place.category] || { label: 'Date', emoji: '💕' }
-                    return (
-                      <div key={place.place_id} className="flex-shrink-0 w-44 bg-white rounded-2xl overflow-hidden shadow-sm">
-                        <div className="h-28 bg-gradient-to-br from-pink-100 to-purple-100 relative">
-                          {place.photo_url ? (
-                            <img src={place.photo_url} alt={place.title} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-4xl">{config.emoji}</div>
-                          )}
-                          <div className="absolute top-1.5 left-1.5 bg-white/90 backdrop-blur-sm text-xs px-1.5 py-0.5 rounded-full text-gray-700">
-                            {config.emoji} {config.label}
-                          </div>
-                        </div>
-                        <div className="p-3">
-                          <p className="text-xs font-semibold text-gray-900 leading-tight line-clamp-2 mb-2">{place.title}</p>
-                          <button
-                            onClick={() => setPlanModalPlace(place)}
-                            className="w-full text-xs font-semibold bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full py-1.5 hover:opacity-90 transition-opacity"
-                          >
-                            Plan This
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-                <p className="text-xs text-gray-400 mt-2 text-center">Based on your relationship assessment</p>
-              </>
-            ) : (
-              <div className="bg-white rounded-2xl p-6 text-center shadow-sm">
-                <p className="text-2xl mb-2">💕</p>
-                <p className="text-sm text-gray-500 mb-3">Browse personalized date ideas for you two</p>
-                <Link
-                  href="/dates"
-                  className="inline-flex items-center gap-1 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:opacity-90"
-                >
-                  Explore Dates →
                 </Link>
+              )}
+
+              {/* Hardcoded idea card */}
+              <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
+                <div className="bg-gradient-to-br from-orange-400 to-rose-500 px-4 pt-4 pb-5 relative">
+                  <span className="absolute top-3 right-4 text-2xl opacity-75">🌅</span>
+                  <span className="inline-block text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 mb-2">
+                    Quality Time
+                  </span>
+                  <h3 className="font-bold text-white text-sm">Golden Hour Waterfront</h3>
+                </div>
+                <div className="px-4 py-3">
+                  <div className="flex items-center gap-1 text-xs text-gray-500 mb-3 flex-wrap">
+                    <span>Pike Place Market</span>
+                    <span className="text-gray-300">→</span>
+                    <span>Seattle Great Wheel</span>
+                    <span className="text-gray-300">→</span>
+                    <span>Aqua Verde</span>
+                  </div>
+                  <Link
+                    href="/dates"
+                    className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white text-xs font-bold rounded-xl hover:shadow-md transition-shadow"
+                  >
+                    View All Ideas →
+                  </Link>
+                </div>
               </div>
-            )}
+            </div>
           </section>
         )}
 

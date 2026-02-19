@@ -194,19 +194,40 @@ export default function CustomDateBuilderPage() {
   const inputRef        = useRef(null)
 
   // ── Load Google Maps JS API ──────────────────────────────────────
+  // Use &callback= (not script.onload) — Maps fires the callback only after
+  // window.google.maps and all services are fully initialized.
+  // script.onload fires when the script downloads, which can be before Maps
+  // is ready, causing "google is not defined" or silent service failures.
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
     if (!apiKey) return
 
-    if (window.google?.maps?.places) { setMapsReady(true); return }
+    // Already initialized from a previous page visit
+    if (window.google?.maps?.places) {
+      setMapsReady(true)
+      return
+    }
+
+    // Script already injected (e.g. hot reload) — callback will still fire
     if (document.getElementById('gmaps-custom')) return
+
+    // Register callback before injecting script so it's available when Maps calls it
+    window.__gmapsCustomInit = () => {
+      delete window.__gmapsCustomInit
+      setMapsReady(true)
+    }
 
     const script = document.createElement('script')
     script.id = 'gmaps-custom'
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry`
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&callback=__gmapsCustomInit`
     script.async = true
-    script.onload = () => setMapsReady(true)
+    script.defer = true
     document.head.appendChild(script)
+
+    return () => {
+      // Clean up if component unmounts before the script finishes loading
+      if (window.__gmapsCustomInit) delete window.__gmapsCustomInit
+    }
   }, [])
 
   // ── Geolocation ──────────────────────────────────────────────────
