@@ -19,6 +19,7 @@ function AiCoachContent() {
   const [messagesRemaining, setMessagesRemaining] = useState(20);
   const [isPremium, setIsPremium] = useState(false);
   const [limitReached, setLimitReached] = useState(false);
+  const [userName, setUserName] = useState(null);
   const [checkinContext, setCheckinContext] = useState(null);
   const [proactivePrompt, setProactivePrompt] = useState(null);
   const [dismissedProactivePrompt, setDismissedProactivePrompt] = useState(false);
@@ -98,33 +99,39 @@ function AiCoachContent() {
       console.error('Error fetching check-in patterns:', err);
     }
 
-    // Check for existing conversation or load most recent
+    // Fetch the most recent conversation (include updated_at for stale check)
     const { data: conversations } = await supabase
       .from('ai_conversations')
-      .select('id')
+      .select('id, updated_at')
       .eq('user_id', user.id)
       .eq('type', 'solo')
       .order('updated_at', { ascending: false })
       .limit(1);
 
-    if (conversations && conversations.length > 0) {
-      // Load existing conversation
-      await loadConversation(conversations[0].id);
+    const { data: { session } } = await supabase.auth.getSession();
+    const recentConv = conversations?.[0];
+    const isStale = recentConv
+      ? Date.now() - new Date(recentConv.updated_at).getTime() > 24 * 60 * 60 * 1000
+      : true;
+
+    if (recentConv && !isStale) {
+      // Resume recent conversation
+      await loadConversation(recentConv.id, session);
+    } else {
+      // Start fresh — fetch a warm opener from the server
+      await loadOpener(couple.id, session);
     }
 
     setLoading(false);
   };
 
-  const loadConversation = async (convId) => {
+  const loadConversation = async (convId, existingSession = null) => {
     setConversationId(convId);
 
-    // Get session token for API authentication
-    const { data: { session } } = await supabase.auth.getSession();
+    const session = existingSession ?? (await supabase.auth.getSession()).data.session;
 
     const response = await fetch(`/api/ai-coach?conversationId=${convId}`, {
-      headers: {
-        'Authorization': `Bearer ${session?.access_token}`,
-      },
+      headers: { 'Authorization': `Bearer ${session?.access_token}` },
     });
     const data = await response.json();
 
@@ -137,6 +144,50 @@ function AiCoachContent() {
     if (data.messagesRemaining !== undefined && data.messagesRemaining !== null) {
       setMessagesRemaining(data.messagesRemaining);
       setLimitReached(data.messagesRemaining <= 0);
+    }
+  };
+
+  // Fetch a warm opener for a fresh conversation start
+  const loadOpener = async (coupleIdParam, existingSession = null) => {
+    try {
+      const session = existingSession ?? (await supabase.auth.getSession()).data.session;
+
+      const response = await fetch(`/api/ai-coach?getOpener=true&coupleId=${coupleIdParam}`, {
+        headers: { 'Authorization': `Bearer ${session?.access_token}` },
+      });
+      const data = await response.json();
+
+      if (data.userName) setUserName(data.userName);
+      if (data.isPremium) setIsPremium(true);
+      if (data.messagesRemaining !== undefined && data.messagesRemaining !== null) {
+        setMessagesRemaining(data.messagesRemaining);
+        setLimitReached(data.messagesRemaining <= 0);
+      }
+
+      // Build a warm opener message from recent activity
+      if (data.recentActivity) {
+        const { type, description, suggestion } = data.recentActivity;
+        const nameGreeting = data.userName ? `Hey ${data.userName}! ` : 'Hey! ';
+
+        const openerMap = {
+          completed_date: `${nameGreeting}Great to see you. By the way, I noticed ${description}. ${suggestion} Of course, we can talk about anything on your mind — I'm here.`,
+          flirt_sent: `${nameGreeting}I noticed ${description} — love to see those little sparks. ${suggestion} What's on your mind today?`,
+          low_health: `${nameGreeting}I'm glad you're here. ${description}. ${suggestion} What would you like to talk about?`,
+          missed_checkins: `${nameGreeting}${description}. ${suggestion} No pressure — I'm just here whenever you need me.`,
+        };
+
+        const openerText = openerMap[type] || `${nameGreeting}Good to see you. What's on your mind today?`;
+
+        setMessages([{
+          id: 'opener-' + Date.now(),
+          role: 'assistant',
+          content: openerText,
+          created_at: new Date().toISOString(),
+          isOpener: true,
+        }]);
+      }
+    } catch (e) {
+      console.error('Error loading opener:', e);
     }
   };
 
@@ -219,9 +270,12 @@ function AiCoachContent() {
     }
   };
 
-  const startNewConversation = () => {
+  const startNewConversation = async () => {
     setConversationId(null);
     setMessages([]);
+    if (coupleId) {
+      await loadOpener(coupleId);
+    }
   };
 
   if (loading) {
@@ -255,15 +309,18 @@ function AiCoachContent() {
             </div>
             <div>
               <h1 className="text-lg font-bold text-gray-800">AI Coach</h1>
-              {checkinContext ? (
-                <p className="text-xs text-green-600 flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Has your last 7 days of check-ins
+              {isPremium ? (
+                <p className="text-xs text-purple-600 font-medium flex items-center gap-1">
+                  ✨ Premium — unlimited messages
+                </p>
+              ) : messagesRemaining <= 5 ? (
+                <p className="text-xs text-amber-600 font-medium">
+                  {messagesRemaining} {messagesRemaining === 1 ? 'message' : 'messages'} left this week
                 </p>
               ) : (
-                <p className="text-xs text-gray-500">Your relationship guide</p>
+                <p className="text-xs text-gray-500">
+                  {messagesRemaining} messages left this week
+                </p>
               )}
             </div>
           </div>

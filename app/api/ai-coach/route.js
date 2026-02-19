@@ -285,10 +285,25 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url);
     const conversationId = searchParams.get('conversationId');
+    const getOpener = searchParams.get('getOpener') === 'true';
+    const openerCoupleId = searchParams.get('coupleId');
 
     const premium = await isPremiumUser(supabase, user.id);
     const weeklyCount = premium ? 0 : await getWeeklyUsage(supabase, user.id);
     const messagesRemaining = premium ? null : Math.max(0, FREE_TIER_WEEKLY_LIMIT - weeklyCount);
+
+    // ── OPENER MODE: return recent activity for warm welcome ───────
+    if (getOpener && openerCoupleId) {
+      try {
+        const context = await buildCoachContext(user.id, openerCoupleId, supabase);
+        const activity = getRecentActivity(context);
+        const userName = context.user?.name || null;
+        return NextResponse.json({ recentActivity: activity, userName, messagesRemaining, isPremium: premium });
+      } catch (e) {
+        console.error('Coach opener error:', e);
+        return NextResponse.json({ recentActivity: null, userName: null, messagesRemaining, isPremium: premium });
+      }
+    }
 
     if (!conversationId) {
       const { data: conversations, error } = await supabase
