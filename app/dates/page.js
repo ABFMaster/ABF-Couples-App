@@ -1,879 +1,300 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import {
-  DATE_CATEGORIES,
-  CATEGORY_CONFIG,
-  selectDateSuggestions,
-  fetchDateSuggestions,
-} from '@/lib/date-suggestions'
 
-// Default location: Seattle, WA
-const DEFAULT_LOCATION = { lat: 47.6062, lng: -122.3321 }
-
-const ALL_CATEGORIES = [
-  { key: 'all', label: 'All', emoji: '✨' },
-  ...Object.entries(DATE_CATEGORIES).map(([key, cat]) => ({
-    key,
-    label: cat.label,
-    emoji: cat.emoji,
-  })),
-]
-
-// Format a Date object as YYYY-MM-DDTHH:MM in LOCAL time
-// (datetime-local inputs require local time, not UTC)
-function toDatetimeLocal(date) {
-  const d = date instanceof Date ? date : new Date(date)
-  if (isNaN(d.getTime())) return ''
-  const pad = n => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-// Build a Google Maps directions URL, preferring precise lat/lng
-function mapsDirectionsUrl(lat, lng, address, fallbackMapsUrl) {
-  if (lat && lng) return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
-  if (fallbackMapsUrl) return fallbackMapsUrl
-  if (address) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
-  return null
-}
-
-// Build a Google Static Maps image URL (requires lat/lng + API key)
+// ── Helpers ────────────────────────────────────────────────────────────────────
 function staticMapUrl(lat, lng) {
   const key = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
   if (!lat || !lng || !key) return null
   return (
     `https://maps.googleapis.com/maps/api/staticmap` +
-    `?center=${lat},${lng}&zoom=15&size=600x200` +
-    `&markers=color:red%7C${lat},${lng}` +
-    `&key=${key}`
+    `?center=${lat},${lng}&zoom=14&size=600x300` +
+    `&markers=color:0xec4899%7C${lat},${lng}` +
+    `&key=${key}` +
+    `&style=feature:poi%7Cvisibility:off`
   )
 }
 
-// Default datetime: tomorrow at 7pm local time
-function defaultDatetime() {
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  d.setHours(19, 0, 0, 0)
-  return toDatetimeLocal(d)
-}
-
-// ============================================
-// SKELETON CARD
-// ============================================
-function SkeletonCard() {
+function multiStopMapUrl(stops) {
+  const key = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
+  if (!key || !stops?.length) return null
+  const valid = stops.filter(s => s.lat && s.lng)
+  if (!valid.length) return null
+  const markers = valid.slice(0, 5)
+    .map((s, i) => `markers=color:0xec4899%7Clabel:${i + 1}%7C${s.lat},${s.lng}`)
+    .join('&')
   return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-sm animate-pulse">
-      <div className="h-44 bg-gray-200" />
-      <div className="p-4 space-y-2">
-        <div className="h-4 bg-gray-200 rounded w-1/3" />
-        <div className="h-5 bg-gray-200 rounded w-3/4" />
-        <div className="h-4 bg-gray-200 rounded w-1/2" />
-        <div className="flex gap-2 mt-3">
-          <div className="h-8 bg-gray-200 rounded-full flex-1" />
-          <div className="h-8 bg-gray-200 rounded-full flex-1" />
-        </div>
-      </div>
-    </div>
+    `https://maps.googleapis.com/maps/api/staticmap?size=600x300&${markers}` +
+    `&key=${key}&style=feature:poi%7Cvisibility:off`
   )
 }
 
-// ============================================
-// PRICE / RATING HELPERS
-// ============================================
-function PriceDots({ level }) {
-  if (!level) return null
-  const labels = ['', '$', '$$', '$$$', '$$$$']
-  return <span className="text-xs text-gray-500 font-medium">{labels[level] || ''}</span>
+function fmtDate(iso) {
+  if (!iso) return null
+  return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
-function StarRating({ rating }) {
-  if (!rating) return null
-  return <span className="text-xs text-gray-500">⭐ {rating.toFixed(1)}</span>
+function fmtTime(iso) {
+  if (!iso) return null
+  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
-// ============================================
-// SUGGESTION CARD
-// ============================================
-function SuggestionCard({ place, recommendedCategories, assessmentScores, onSave, onPlan, saving, savedIds }) {
-  const config = CATEGORY_CONFIG[place.category] || CATEGORY_CONFIG.other
-  const isRecommended = recommendedCategories.includes(place.category)
-  const isSaved = savedIds.has(place.place_id)
+// ── Hardcoded Seattle curated ideas ───────────────────────────────────────────
+const CURATED_IDEAS = [
+  {
+    id: 'golden-hour',
+    title: 'Golden Hour Waterfront',
+    tag: 'Quality Time',
+    tagColor: 'bg-rose-100 text-rose-700',
+    emoji: '🌅',
+    from: 'from-orange-400',
+    to: 'to-rose-500',
+    stops: [
+      { name: 'Pike Place Market',    address: 'Pike Place Market, Seattle, WA 98101' },
+      { name: 'Seattle Great Wheel',  address: '1301 Alaskan Way, Seattle, WA 98101' },
+      { name: 'Aqua Verde',           address: '1303 NE Boat St, Seattle, WA 98105' },
+    ],
+  },
+  {
+    id: 'capitol-hill',
+    title: 'Capitol Hill After Dark',
+    tag: 'Adventure',
+    tagColor: 'bg-purple-100 text-purple-700',
+    emoji: '🌙',
+    from: 'from-purple-500',
+    to: 'to-indigo-600',
+    stops: [
+      { name: 'Eltana Bagels', address: '1520 15th Ave, Seattle, WA 98122' },
+      { name: 'Oddfellows',    address: '915 E Pine St, Seattle, WA 98122' },
+      { name: 'Canon Bar',     address: '928 12th Ave, Seattle, WA 98122' },
+    ],
+  },
+  {
+    id: 'sunday-slow-down',
+    title: 'Sunday Slow Down',
+    tag: 'Connection',
+    tagColor: 'bg-teal-100 text-teal-700',
+    emoji: '☀️',
+    from: 'from-teal-400',
+    to: 'to-green-500',
+    stops: [
+      { name: 'Volunteer Park Conservatory', address: '1400 E Galer St, Seattle, WA 98112' },
+      { name: 'Café Presse',                 address: '1117 12th Ave, Seattle, WA 98122' },
+      { name: 'Elliott Bay Book Co',         address: '1521 10th Ave, Seattle, WA 98122' },
+    ],
+  },
+]
 
-  let recommendedReason = null
-  if (isRecommended && place.category !== 'all') {
-    const catDef = DATE_CATEGORIES[place.category]
-    if (catDef?.matchesAssessment) {
-      for (const [module, threshold] of Object.entries(catDef.matchesAssessment)) {
-        const score = assessmentScores[module]
-        if (score !== undefined && score < threshold) {
-          const label = module.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-          recommendedReason = `Helps improve ${label} (${Math.round(score)}%)`
-          break
-        }
+// ── Sub-components ─────────────────────────────────────────────────────────────
+
+function UpcomingHeroCard({ plan, onClick }) {
+  const mapUrl = staticMapUrl(plan.latitude, plan.longitude)
+  return (
+    <div
+      className="relative rounded-3xl overflow-hidden shadow-lg cursor-pointer"
+      style={{ minHeight: 180 }}
+      onClick={onClick}
+    >
+      {mapUrl
+        ? <img src={mapUrl} alt="Map" className="absolute inset-0 w-full h-full object-cover" />
+        : <div className="absolute inset-0 bg-gradient-to-br from-pink-400 to-purple-500" />
       }
-    }
-  }
-
-  return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col">
-      {/* Photo */}
-      <div className="relative h-44 bg-gradient-to-br from-pink-100 to-purple-100 flex-shrink-0">
-        {place.photo_url ? (
-          <img src={place.photo_url} alt={place.title} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-5xl">{config.emoji}</div>
-        )}
-        <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-xs font-medium text-gray-700 px-2 py-1 rounded-full flex items-center gap-1">
-          <span>{config.emoji}</span>
-          <span>{config.label}</span>
-        </div>
-        {recommendedReason && (
-          <div className="absolute top-2 right-2 bg-pink-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
-            AI Pick
-          </div>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="p-4 flex flex-col flex-1">
-        <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-1">{place.title}</h3>
-        {place.address && (
-          <p className="text-xs text-gray-500 line-clamp-1 mb-2">{place.address}</p>
-        )}
-        <div className="flex items-center gap-3 mb-3">
-          <StarRating rating={place.rating} />
-          <PriceDots level={place.price_level} />
-        </div>
-        {recommendedReason && (
-          <div className="bg-pink-50 border border-pink-100 rounded-xl px-3 py-2 mb-3">
-            <p className="text-xs text-pink-700">{recommendedReason}</p>
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="mt-auto space-y-2">
-          <div className="flex gap-2">
-            <button
-              onClick={() => onSave(place)}
-              disabled={saving === place.place_id || isSaved}
-              className="flex-1 text-xs font-medium border border-pink-300 text-pink-600 rounded-full py-2 hover:bg-pink-50 transition-colors disabled:opacity-40"
-            >
-              {isSaved ? '♥ Saved' : saving === place.place_id ? 'Saving…' : '♡ Save'}
-            </button>
-            <button
-              onClick={() => onPlan(place)}
-              className="flex-1 text-xs font-medium bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full py-2 hover:opacity-90 transition-opacity"
-            >
-              Plan This
-            </button>
-          </div>
-          {mapsDirectionsUrl(place.latitude, place.longitude, place.address, place.maps_url) && (
-            <a
-              href={mapsDirectionsUrl(place.latitude, place.longitude, place.address, place.maps_url)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block text-center text-xs text-gray-400 hover:text-pink-500 transition-colors py-0.5"
-            >
-              📍 Get Directions
-            </a>
+      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
+      <div className="relative px-5 pb-5 pt-24 sm:pt-32 flex items-end justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-white/60 text-xs font-semibold uppercase tracking-wide mb-1">Next Up</p>
+          <h3 className="text-white font-bold text-xl leading-tight truncate">{plan.title}</h3>
+          {plan.date_time && (
+            <p className="text-white/75 text-sm mt-1">📅 {fmtDate(plan.date_time)} · {fmtTime(plan.date_time)}</p>
+          )}
+          {plan.address && (
+            <p className="text-white/60 text-xs mt-0.5 truncate">📍 {plan.address}</p>
           )}
         </div>
-      </div>
-    </div>
-  )
-}
-
-// ============================================
-// PLAN MODAL  (create new OR edit existing)
-// existingPlan: the date_plan row being edited (null for new)
-// ============================================
-function PlanModal({ place, existingPlan, onClose, onSubmit, submitting }) {
-  const isEditing = !!existingPlan
-  const [scheduledDate, setScheduledDate] = useState(
-    existingPlan?.date_time ? toDatetimeLocal(existingPlan.date_time) : defaultDatetime()
-  )
-  const [notes, setNotes] = useState(existingPlan?.description || '')
-  const config = CATEGORY_CONFIG[place?.category] || CATEGORY_CONFIG.other
-
-  if (!place) return null
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-      onClick={onClose}
-    >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-
-      {/* Card */}
-      <div
-        className="relative bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Place preview */}
-        <div className="relative h-36 bg-gradient-to-br from-pink-100 to-purple-100">
-          {place.photo_url ? (
-            <img src={place.photo_url} alt={place.title} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-6xl">{config.emoji}</div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-          <div className="absolute bottom-3 left-4 right-4">
-            <p className="text-white font-bold text-lg leading-tight">{place.title}</p>
-            {place.address && (
-              <p className="text-white/80 text-xs mt-0.5 line-clamp-1">{place.address}</p>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            className="absolute top-3 right-3 bg-black/40 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm hover:bg-black/60"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Form */}
-        <div className="p-5">
-          <h2 className="font-bold text-gray-900 text-lg mb-4">
-            {isEditing ? 'Edit Date' : 'Schedule this date'}
-          </h2>
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              When?
-            </label>
-            <input
-              type="datetime-local"
-              value={scheduledDate}
-              onChange={e => setScheduledDate(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-300"
-            />
-          </div>
-
-          <div className="mb-5">
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Notes <span className="text-gray-400 font-normal">(optional)</span>
-            </label>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="Any ideas, reservations to make, or things to bring…"
-              rows={3}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
-            />
-          </div>
-
-          <button
-            onClick={() => onSubmit({ place, scheduledDate, notes, planId: existingPlan?.id ?? null })}
-            disabled={submitting || !scheduledDate}
-            className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white font-semibold py-3.5 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            {submitting
-              ? isEditing ? 'Updating…' : 'Scheduling…'
-              : isEditing ? '✏️ Update Date' : '💕 Schedule Date'}
-          </button>
-          <button
-            onClick={onClose}
-            className="w-full mt-2 text-gray-500 text-sm py-2 hover:text-gray-700"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ============================================
-// REFLECTION MODAL (mark complete)
-// ============================================
-function ReflectionModal({ plan, onClose, onSubmit, submitting }) {
-  const [rating, setRating] = useState(0)
-  const [notes, setNotes] = useState('')
-
-  if (!plan) return null
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-      onClick={onClose}
-    >
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-
-      <div
-        className="relative bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl p-6"
-        onClick={e => e.stopPropagation()}
-      >
         <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-lg"
+          onClick={e => { e.stopPropagation(); onClick() }}
+          className="flex-shrink-0 bg-white text-gray-900 text-xs font-bold px-4 py-2.5 rounded-full hover:bg-pink-50 transition-colors shadow-sm"
         >
-          ✕
+          View Details
         </button>
+      </div>
+    </div>
+  )
+}
 
-        <div className="text-center mb-6">
-          <div className="text-4xl mb-2">🎉</div>
-          <h2 className="font-bold text-gray-900 text-xl">How was it?</h2>
-          <p className="text-gray-500 text-sm mt-1">{plan.title}</p>
-        </div>
+function PastDateCard({ date, onClick }) {
+  const mapUrl = date.source === 'custom'
+    ? multiStopMapUrl(date.stops)
+    : staticMapUrl(date.lat, date.lng)
+  const stopCount = date.stops?.length ?? 0
 
-        {/* Star picker */}
-        <div className="flex justify-center gap-3 mb-5">
-          {[1, 2, 3, 4, 5].map(n => (
-            <button
-              key={n}
-              onClick={() => setRating(n)}
-              className={`text-3xl transition-transform hover:scale-110 ${
-                n <= rating ? 'opacity-100' : 'opacity-30'
-              }`}
-            >
-              ⭐
-            </button>
+  return (
+    <div
+      className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+      onClick={onClick}
+    >
+      <div className="relative h-28 bg-gradient-to-br from-pink-100 to-purple-100 overflow-hidden">
+        {mapUrl && <img src={mapUrl} alt="Map" className="w-full h-full object-cover" />}
+        {date.source === 'custom' && stopCount > 0 && (
+          <div className="absolute top-2 left-2 bg-white/90 text-xs font-medium text-purple-700 px-2 py-0.5 rounded-full">
+            {stopCount} stops
+          </div>
+        )}
+        {date.status === 'completed' && (
+          <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+            ✓
+          </div>
+        )}
+        {date.rating > 0 && (
+          <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
+            {'⭐'.repeat(date.rating)}
+          </div>
+        )}
+      </div>
+      <div className="p-3">
+        <h4 className="font-semibold text-gray-900 text-sm line-clamp-1">{date.title}</h4>
+        <p className="text-xs text-gray-400 mt-0.5">{fmtDate(date.date)}</p>
+      </div>
+    </div>
+  )
+}
+
+function IdeaCard({ idea, onBuild }) {
+  return (
+    <div className="bg-white rounded-2xl overflow-hidden shadow-sm flex flex-col">
+      <div className={`bg-gradient-to-br ${idea.from} ${idea.to} px-4 pt-4 pb-5 relative`}>
+        <span className="absolute top-3 right-4 text-3xl opacity-75">{idea.emoji}</span>
+        <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full mb-2 ${idea.tagColor}`}>
+          {idea.tag}
+        </span>
+        <h3 className="font-bold text-white text-base leading-tight">{idea.title}</h3>
+      </div>
+      <div className="px-4 pt-3 pb-2 flex-1">
+        <div className="space-y-2">
+          {idea.stops.map((stop, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-gradient-to-br from-pink-400 to-purple-400 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                {i + 1}
+              </span>
+              <p className="text-xs text-gray-700 truncate">{stop.name}</p>
+            </div>
           ))}
         </div>
-
-        <div className="mb-5">
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Any thoughts? <span className="text-gray-400 font-normal">(optional)</span>
-          </label>
-          <textarea
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-            placeholder="What made it special? What would you do differently?"
-            rows={3}
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
-          />
-        </div>
-
+      </div>
+      <div className="px-4 pb-4">
         <button
-          onClick={() => onSubmit({ plan, rating: rating || null, notes })}
-          disabled={submitting}
-          className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white font-semibold py-3.5 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50"
+          onClick={() => onBuild(idea)}
+          className="w-full py-2.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white text-sm font-semibold rounded-xl hover:shadow-md hover:from-pink-600 hover:to-purple-600 transition-all active:scale-95"
         >
-          {submitting ? 'Saving…' : 'Save Reflection'}
-        </button>
-        <button
-          onClick={() => onSubmit({ plan, rating: null, notes: '' })}
-          disabled={submitting}
-          className="w-full mt-2 text-gray-400 text-sm py-2 hover:text-gray-600"
-        >
-          Skip & Mark Complete
+          Build This Date →
         </button>
       </div>
     </div>
   )
 }
 
-// ============================================
-// DATE PLAN CARD (My Dates view)
-// ============================================
-function DatePlanCard({ plan, onMarkComplete, onCancel, onEdit }) {
-  const config = CATEGORY_CONFIG[plan.category] || { label: 'Date', emoji: '💕' }
-  const isPast = plan.date_time ? new Date(plan.date_time) < new Date() : false
-  const isCompleted = plan.status === 'completed'
-  const isCancelled = plan.status === 'cancelled'
-
-  // Display date/time in user's local timezone
-  const dateLabel = plan.date_time
-    ? new Date(plan.date_time).toLocaleDateString('en-US', {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-      })
-    : null
-  const timeLabel = plan.date_time
-    ? new Date(plan.date_time).toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-      })
-    : null
-
-  return (
-    <div className={`bg-white rounded-2xl p-4 shadow-sm ${isCancelled ? 'opacity-50' : ''}`}>
-      <div className="flex gap-3">
-        {/* Photo or emoji */}
-        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-pink-100 to-purple-100 flex-shrink-0 overflow-hidden">
-          {plan.photo_url ? (
-            <img src={plan.photo_url} alt={plan.title} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-2xl">{config.emoji}</div>
-          )}
-        </div>
-
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold text-gray-900 text-sm leading-tight">{plan.title}</h3>
-            {isCompleted && (
-              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex-shrink-0">Done ✓</span>
-            )}
-            {isCancelled && (
-              <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full flex-shrink-0">Cancelled</span>
-            )}
-          </div>
-
-          {plan.address && (
-            <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{plan.address}</p>
-          )}
-
-          {dateLabel && (
-            <p className="text-xs text-pink-600 font-medium mt-1">
-              {dateLabel} · {timeLabel}
-            </p>
-          )}
-
-          {/* Reflection */}
-          {isCompleted && plan.rating && (
-            <div className="mt-1.5 flex items-center gap-1">
-              {Array.from({ length: plan.rating }).map((_, i) => (
-                <span key={i} className="text-xs">⭐</span>
-              ))}
-            </div>
-          )}
-          {isCompleted && plan.reflection_notes && (
-            <p className="text-xs text-gray-500 mt-1 italic line-clamp-2">"{plan.reflection_notes}"</p>
-          )}
-
-          {/* Notes */}
-          {!isCompleted && !isCancelled && plan.description && (
-            <p className="text-xs text-gray-400 mt-1 line-clamp-1">{plan.description}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Static map preview */}
-      {staticMapUrl(plan.latitude, plan.longitude) && (
-        <a
-          href={mapsDirectionsUrl(plan.latitude, plan.longitude, plan.address, plan.maps_url)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block mt-3 rounded-xl overflow-hidden"
-        >
-          <img
-            src={staticMapUrl(plan.latitude, plan.longitude)}
-            alt={`Map for ${plan.title}`}
-            className="w-full h-32 object-cover"
-          />
-        </a>
-      )}
-
-      {/* Actions — vary by state */}
-      {!isCompleted && !isCancelled && (
-        <div className="flex gap-2 mt-3">
-          {mapsDirectionsUrl(plan.latitude, plan.longitude, plan.address, plan.maps_url) && (
-            <a
-              href={mapsDirectionsUrl(plan.latitude, plan.longitude, plan.address, plan.maps_url)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs font-medium border border-gray-200 text-gray-600 rounded-full px-3 py-2 hover:border-gray-300 whitespace-nowrap"
-            >
-              📍 Directions
-            </a>
-          )}
-
-          {/* Upcoming (future): Edit + Cancel */}
-          {!isPast && (
-            <>
-              <button
-                onClick={() => onEdit(plan)}
-                className="flex-1 text-xs font-medium border border-pink-300 text-pink-600 rounded-full py-2 hover:bg-pink-50 transition-colors"
-              >
-                ✏️ Edit
-              </button>
-              <button
-                onClick={() => onCancel(plan)}
-                className="text-xs text-gray-400 px-3 py-2 rounded-full hover:text-gray-600 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-            </>
-          )}
-
-          {/* Past (overdue, not yet completed): Mark Complete + Cancel */}
-          {isPast && (
-            <>
-              <button
-                onClick={() => onMarkComplete(plan)}
-                className="flex-1 text-xs font-medium bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full py-2 hover:opacity-90"
-              >
-                Mark Complete
-              </button>
-              <button
-                onClick={() => onCancel(plan)}
-                className="text-xs text-gray-400 px-3 py-2 rounded-full hover:text-gray-600 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ============================================
-// MAIN PAGE
-// ============================================
+// ── Main Page ──────────────────────────────────────────────────────────────────
 export default function DatesPage() {
   const router = useRouter()
+  const [loading, setLoading]           = useState(true)
+  const [upcomingDate, setUpcomingDate] = useState(null)
+  const [pastDates, setPastDates]       = useState([])
 
-  const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState(null)
-  const [coupleId, setCoupleId] = useState(null)
-  const [assessmentScores, setAssessmentScores] = useState({})
-  const [location, setLocation] = useState(DEFAULT_LOCATION)
-
-  // Page tab
-  const [pageTab, setPageTab] = useState('suggestions') // 'suggestions' | 'my_dates'
-
-  // Suggestions state
-  const [allPlaces, setAllPlaces] = useState([])
-  const [recommendedCategories, setRecommendedCategories] = useState([])
-  const [activeCategory, setActiveCategory] = useState('all')
-  const [fetchingPlaces, setFetchingPlaces] = useState(false)
-  const [fetchError, setFetchError] = useState(null)
-
-  // Save state
-  const [saving, setSaving] = useState(null)
-  const [savedIds, setSavedIds] = useState(new Set())
-
-  // Plan modal (create + edit)
-  const [planModalPlace, setPlanModalPlace] = useState(null)   // place-like object for the modal header
-  const [editingPlan, setEditingPlan] = useState(null)         // full date_plan row when editing, null for new
-  const [submittingPlan, setSubmittingPlan] = useState(false)
-
-  // My Dates state
-  const [datePlans, setDatePlans] = useState([])
-  const [loadingPlans, setLoadingPlans] = useState(false)
-
-  // Reflection modal
-  const [reflectionPlan, setReflectionPlan] = useState(null)
-  const [submittingReflection, setSubmittingReflection] = useState(false)
-
-  // Toast
-  const [toast, setToast] = useState(null)
-
-  const showToast = (msg) => {
-    setToast(msg)
-    setTimeout(() => setToast(null), 2500)
-  }
-
-  // ============================================
-  // INIT
-  // ============================================
   useEffect(() => {
     init()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const init = async () => {
-    const { data: { user: authUser }, error } = await supabase.auth.getUser()
-    if (error || !authUser) {
-      router.push('/login')
-      return
-    }
-    setUser(authUser)
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (error || !user) { router.push('/login'); return }
 
     const { data: coupleData } = await supabase
       .from('couples')
       .select('id')
-      .or(`user1_id.eq.${authUser.id},user2_id.eq.${authUser.id}`)
+      .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
       .single()
 
-    const cid = coupleData?.id || null
-    setCoupleId(cid)
+    const cid = coupleData?.id ?? null
 
-    // Assessment scores
-    let scores = {}
-    const { data: assessment } = await supabase
-      .from('relationship_assessments')
-      .select('results')
-      .eq('user_id', authUser.id)
-      .eq('status', 'completed')
-      .order('completed_at', { ascending: false })
-      .limit(1)
-      .single()
+    if (!cid) { setLoading(false); return }
 
-    if (assessment?.results?.modules) {
-      for (const mod of assessment.results.modules) {
-        scores[mod.moduleId] = mod.percentage
-      }
-    }
-    setAssessmentScores(scores)
+    const now = new Date().toISOString()
 
-    // Already-saved place_ids
-    let recentDates = []
-    if (cid) {
-      const thirtyDaysAgo = new Date()
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-      const { data: plans } = await supabase
-        .from('date_suggestions')
-        .select('place_id')
-        .eq('couple_id', cid)
-        .gte('created_at', thirtyDaysAgo.toISOString())
-      recentDates = plans || []
-
-      const { data: allSaved } = await supabase
-        .from('date_suggestions')
-        .select('place_id')
-        .eq('couple_id', cid)
-      if (allSaved) setSavedIds(new Set(allSaved.map(r => r.place_id)))
-    }
-
-    // Browser location with Seattle fallback
-    let loc = DEFAULT_LOCATION
-    try {
-      loc = await new Promise((resolve) => {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-          () => resolve(DEFAULT_LOCATION),
-          { timeout: 5000 }
-        )
-      })
-    } catch {
-      // use default
-    }
-    setLocation(loc)
-
-    const selection = selectDateSuggestions({
-      userLocation: loc,
-      assessmentScores: scores,
-      recentDates,
-    })
-    setRecommendedCategories(selection.categories)
-    setLoading(false)
-
-    fetchPlacesForCategories(selection, loc)
-  }
-
-  // ============================================
-  // FETCH SUGGESTIONS
-  // ============================================
-  const fetchPlacesForCategories = useCallback(async (selection, loc) => {
-    setFetchingPlaces(true)
-    setFetchError(null)
-    const collected = []
-    const seenIds = new Set()
-
-    for (const category of selection.categories.slice(0, 4)) {
-      try {
-        const places = await fetchDateSuggestions({
-          location: loc,
-          category,
-          maxPrice: selection.maxPrice,
-          radius: selection.radius,
-          avoidPlaceIds: selection.avoidPlaceIds,
-        })
-        for (const p of places) {
-          if (!seenIds.has(p.place_id)) {
-            seenIds.add(p.place_id)
-            collected.push(p)
-          }
-        }
-      } catch (err) {
-        console.error(`Failed to fetch places for ${category}:`, err)
-      }
-    }
-
-    setAllPlaces(collected)
-    setFetchingPlaces(false)
-    if (collected.length === 0) {
-      setFetchError('No places found nearby. Try expanding your search area.')
-    }
-  }, [])
-
-  // ============================================
-  // LOAD DATE PLANS
-  // ============================================
-  const loadDatePlans = useCallback(async () => {
-    if (!coupleId) return
-    setLoadingPlans(true)
-    const { data } = await supabase
+    // Upcoming: next planned date
+    const { data: upcoming } = await supabase
       .from('date_plans')
       .select('*')
-      .eq('couple_id', coupleId)
+      .eq('couple_id', cid)
+      .eq('status', 'planned')
+      .gt('date_time', now)
       .order('date_time', { ascending: true })
-    setDatePlans(data || [])
-    setLoadingPlans(false)
-  }, [coupleId])
+      .limit(1)
+      .maybeSingle()
 
-  useEffect(() => {
-    if (pageTab === 'my_dates' && coupleId) {
-      loadDatePlans()
-    }
-  }, [pageTab, coupleId, loadDatePlans])
+    setUpcomingDate(upcoming ?? null)
 
-  // ============================================
-  // SAVE PLACE
-  // ============================================
-  const handleSave = async (place) => {
-    if (!coupleId || savedIds.has(place.place_id)) return
-    setSaving(place.place_id)
-    const { error } = await supabase.from('date_suggestions').insert({
-      couple_id: coupleId,
-      place_id: place.place_id,
-      title: place.title,
-      description: place.description,
-      category: place.category,
-      location_name: place.location_name,
-      address: place.address,
-      latitude: place.latitude,
-      longitude: place.longitude,
-      price_level: place.price_level,
-      rating: place.rating,
-      photo_url: place.photo_url,
-      maps_url: place.maps_url,
-      source: 'google_places',
-    })
-    setSaving(null)
-    if (!error) {
-      setSavedIds(prev => new Set([...prev, place.place_id]))
-      showToast(`${place.title} saved!`)
-    }
-  }
-
-  // Open edit modal: derive a place-like object from the stored plan
-  const handleOpenEdit = (plan) => {
-    setEditingPlan(plan)
-    setPlanModalPlace({
-      place_id: plan.place_id,
-      title: plan.title,
-      address: plan.address,
-      location_name: plan.location_name,
-      photo_url: plan.photo_url,
-      maps_url: plan.maps_url,
-      latitude: plan.latitude,
-      longitude: plan.longitude,
-      category: plan.category,
-    })
-  }
-
-  const handleClosePlanModal = () => {
-    setPlanModalPlace(null)
-    setEditingPlan(null)
-  }
-
-  // ============================================
-  // SCHEDULE DATE (INSERT) or UPDATE existing
-  // ============================================
-  const handleScheduleDate = async ({ place, scheduledDate, notes, planId }) => {
-    if (!coupleId || !user) return
-    setSubmittingPlan(true)
-
-    // Convert local datetime-local string to UTC ISO string for storage
-    const dateUtc = scheduledDate ? new Date(scheduledDate).toISOString() : null
-
-    let error
-    if (planId) {
-      // Edit existing plan
-      ;({ error } = await supabase
-        .from('date_plans')
-        .update({
-          description: notes || null,
-          date_time: dateUtc,
-        })
-        .eq('id', planId))
-    } else {
-      // Create new plan
-      ;({ error } = await supabase.from('date_plans').insert({
-        couple_id: coupleId,
-        created_by: user.id,
-        title: place.title,
-        description: notes || null,
-        date_time: dateUtc,
-        location: place.address || place.location_name || null,
-        location_name: place.location_name,
-        address: place.address,
-        latitude: place.latitude,
-        longitude: place.longitude,
-        photo_url: place.photo_url,
-        maps_url: place.maps_url,
-        place_id: place.place_id,
-        status: 'planned',
-      }))
-    }
-
-    setSubmittingPlan(false)
-    if (!error) {
-      handleClosePlanModal()
-      showToast(planId ? 'Date updated! ✏️' : `${place.title} scheduled! 💕`)
-      if (pageTab === 'my_dates') loadDatePlans()
-    }
-  }
-
-  // ============================================
-  // MARK COMPLETE
-  // ============================================
-  const handleMarkComplete = async ({ plan, rating, notes }) => {
-    setSubmittingReflection(true)
-    const { error } = await supabase
+    // Past date_plans
+    const { data: pastPlans } = await supabase
       .from('date_plans')
-      .update({
-        status: 'completed',
-        rating: rating || null,
-        reflection_notes: notes || null,
-      })
-      .eq('id', plan.id)
-    setSubmittingReflection(false)
-    if (!error) {
-      setReflectionPlan(null)
-      showToast('Date marked as complete! 🎉')
-      loadDatePlans()
-    }
+      .select('*')
+      .eq('couple_id', cid)
+      .neq('status', 'cancelled')
+      .or(`status.eq.completed,date_time.lt.${now}`)
+      .order('date_time', { ascending: false })
+      .limit(10)
+
+    // Custom dates
+    const { data: customDates } = await supabase
+      .from('custom_dates')
+      .select('*')
+      .eq('couple_id', cid)
+      .order('created_at', { ascending: false })
+      .limit(6)
+
+    // Normalize to a common shape
+    const normalized = [
+      ...(pastPlans ?? []).map(p => ({
+        id:     p.id,
+        source: 'plan',
+        title:  p.title,
+        date:   p.date_time,
+        lat:    p.latitude,
+        lng:    p.longitude,
+        stops:  null,
+        status: p.status,
+        rating: p.rating,
+      })),
+      ...(customDates ?? []).map(c => ({
+        id:     c.id,
+        source: 'custom',
+        title:  c.title,
+        date:   c.created_at,
+        lat:    c.stops?.[0]?.lat ?? null,
+        lng:    c.stops?.[0]?.lng ?? null,
+        stops:  c.stops,
+        status: null,
+        rating: null,
+      })),
+    ].sort((a, b) => new Date(b.date ?? 0) - new Date(a.date ?? 0))
+
+    setPastDates(normalized)
+    setLoading(false)
   }
 
-  // ============================================
-  // CANCEL DATE
-  // ============================================
-  const handleCancelPlan = async (plan) => {
-    await supabase
-      .from('date_plans')
-      .update({ status: 'cancelled' })
-      .eq('id', plan.id)
-    loadDatePlans()
+  const handleBuildIdea = (idea) => {
+    sessionStorage.setItem('customDateItinerary', JSON.stringify(idea.stops))
+    router.push('/dates/custom')
   }
 
-  // ============================================
-  // FILTER / SORT SUGGESTIONS
-  // ============================================
-  const filteredPlaces = activeCategory === 'all'
-    ? allPlaces
-    : allPlaces.filter(p => p.category === activeCategory)
-
-  const sortedPlaces = [...filteredPlaces].sort((a, b) => {
-    const aRec = recommendedCategories.indexOf(a.category)
-    const bRec = recommendedCategories.indexOf(b.category)
-    const aScore = aRec === -1 ? 999 : aRec
-    const bScore = bRec === -1 ? 999 : bRec
-    if (aScore !== bScore) return aScore - bScore
-    return (b.rating || 0) - (a.rating || 0)
-  })
-
-  // Split My Dates
-  const now = new Date()
-  const upcomingPlans = datePlans.filter(
-    p => p.status !== 'cancelled' && p.status !== 'completed' && new Date(p.date_time) >= now
-  )
-  const pastPlans = datePlans.filter(
-    p => p.status === 'completed' || (p.status !== 'cancelled' && p.date_time && new Date(p.date_time) < now)
-  )
-
-  const isLocationSeattle =
-    Math.abs(location.lat - DEFAULT_LOCATION.lat) < 0.01 &&
-    Math.abs(location.lng - DEFAULT_LOCATION.lng) < 0.01
-
-  // ============================================
-  // RENDER
-  // ============================================
+  // ── Render ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-3">💕</div>
-          <p className="text-gray-500 text-sm">Finding date ideas for you…</p>
+          <p className="text-gray-400 text-sm animate-pulse">Loading…</p>
         </div>
       </div>
     )
@@ -882,218 +303,79 @@ export default function DatesPage() {
   return (
     <div className="min-h-screen bg-[#F8F6F3] pb-24">
 
-      {/* Header */}
-      <div className="bg-gradient-to-br from-pink-500 to-rose-600 text-white px-6 pt-14 pb-6">
+      {/* ── Header ──────────────────────────────────────────────── */}
+      <div className="bg-gradient-to-br from-pink-500 via-rose-500 to-purple-600 px-5 pt-14 pb-8">
         <button
           onClick={() => router.back()}
-          className="text-white/80 text-sm mb-4 flex items-center gap-1 hover:text-white"
-        >
-          ← Back
-        </button>
-        <h1 className="text-2xl font-bold mb-1">Date Night</h1>
-        <p className="text-pink-100 text-sm">
-          {pageTab === 'suggestions'
-            ? recommendedCategories.length > 0
-              ? 'Personalised to your relationship goals'
-              : 'Discover great places to go together'
-            : 'Your scheduled dates'}
-        </p>
-        {pageTab === 'suggestions' && isLocationSeattle && (
-          <p className="text-pink-200 text-xs mt-0.5">Showing results near Seattle, WA</p>
-        )}
-
-        {/* Page tabs */}
-        <div className="flex gap-1 mt-4 bg-white/20 rounded-xl p-1">
+          className="text-white/70 text-sm mb-5 flex items-center gap-1 hover:text-white transition-colors"
+        >← Back</button>
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-white">Date Night</h1>
+            <p className="text-pink-200 text-sm mt-1">Plan something special</p>
+          </div>
           <button
-            onClick={() => setPageTab('suggestions')}
-            className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-colors ${
-              pageTab === 'suggestions' ? 'bg-white text-pink-600' : 'text-white/80 hover:text-white'
-            }`}
+            onClick={() => router.push('/dates/custom')}
+            className="flex-shrink-0 bg-white text-pink-600 font-bold text-sm px-4 py-3 rounded-2xl shadow-lg hover:bg-pink-50 transition-colors flex items-center gap-1.5"
           >
-            Suggestions
-          </button>
-          <button
-            onClick={() => setPageTab('my_dates')}
-            className={`flex-1 text-sm font-semibold py-2 rounded-lg transition-colors ${
-              pageTab === 'my_dates' ? 'bg-white text-pink-600' : 'text-white/80 hover:text-white'
-            }`}
-          >
-            My Dates {upcomingPlans.length > 0 && `(${upcomingPlans.length})`}
+            <span>✨</span><span>Plan a Date</span>
           </button>
         </div>
       </div>
 
-      {/* Toast */}
-      {toast && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm px-4 py-2 rounded-full shadow-lg whitespace-nowrap">
-          ✓ {toast}
-        </div>
-      )}
+      <div className="px-5 space-y-8 mt-6">
 
-      {/* ==============================
-          SUGGESTIONS TAB
-          ============================== */}
-      {pageTab === 'suggestions' && (
-        <>
-          {/* Category tabs */}
-          <div className="px-4 mt-4 overflow-x-auto">
-            <div className="flex gap-2 w-max">
-              {ALL_CATEGORIES.map(cat => (
-                <button
-                  key={cat.key}
-                  onClick={() => setActiveCategory(cat.key)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                    activeCategory === cat.key
-                      ? 'bg-pink-500 text-white shadow-sm'
-                      : 'bg-white text-gray-600 border border-gray-200 hover:border-pink-300'
-                  }`}
-                >
-                  <span>{cat.emoji}</span>
-                  <span>{cat.label}</span>
-                  {cat.key !== 'all' && recommendedCategories[0] === cat.key && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-current opacity-60" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Assessment note */}
-          {Object.keys(assessmentScores).length > 0 && (
-            <div className="mx-4 mt-4 bg-purple-50 border border-purple-100 rounded-2xl px-4 py-3 flex items-start gap-3">
-              <span className="text-lg mt-0.5">💜</span>
-              <div>
-                <p className="text-sm font-semibold text-purple-800">Personalised for you</p>
-                <p className="text-xs text-purple-600 mt-0.5">
-                  Cards marked "AI Pick" are matched to areas your relationship assessment highlighted.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Grid */}
-          <div className="px-4 mt-4">
-            {fetchingPlaces ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
-              </div>
-            ) : fetchError ? (
-              <div className="text-center py-16">
-                <p className="text-4xl mb-3">🗺️</p>
-                <p className="text-gray-600 font-medium mb-1">No places found</p>
-                <p className="text-gray-400 text-sm">{fetchError}</p>
-              </div>
-            ) : sortedPlaces.length === 0 ? (
-              <div className="text-center py-16">
-                <p className="text-4xl mb-3">
-                  {ALL_CATEGORIES.find(c => c.key === activeCategory)?.emoji || '✨'}
-                </p>
-                <p className="text-gray-600 font-medium mb-1">No places in this category</p>
-                <p className="text-gray-400 text-sm">Try switching to a different tab</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {sortedPlaces.map(place => (
-                  <SuggestionCard
-                    key={place.place_id}
-                    place={place}
-                    recommendedCategories={recommendedCategories}
-                    assessmentScores={assessmentScores}
-                    onSave={handleSave}
-                    onPlan={setPlanModalPlace}
-                    saving={saving}
-                    savedIds={savedIds}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* ==============================
-          MY DATES TAB
-          ============================== */}
-      {pageTab === 'my_dates' && (
-        <div className="px-4 mt-4 space-y-6">
-          {loadingPlans ? (
-            <div className="text-center py-16">
-              <div className="text-3xl mb-2">💕</div>
-              <p className="text-gray-400 text-sm">Loading your dates…</p>
-            </div>
-          ) : datePlans.filter(p => p.status !== 'cancelled').length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-5xl mb-3">📅</p>
-              <p className="text-gray-700 font-semibold mb-1">No dates planned yet</p>
-              <p className="text-gray-400 text-sm mb-4">Browse suggestions and tap "Plan This" to schedule your first date</p>
+        {/* ── Upcoming Date ────────────────────────────────────── */}
+        <section>
+          <h2 className="font-bold text-gray-900 text-base mb-3">Next Up</h2>
+          {upcomingDate ? (
+            <UpcomingHeroCard
+              plan={upcomingDate}
+              onClick={() => router.push(`/dates/${upcomingDate.id}`)}
+            />
+          ) : (
+            <div className="bg-white rounded-3xl p-8 text-center shadow-sm border border-gray-100">
+              <div className="text-4xl mb-3">📅</div>
+              <p className="font-semibold text-gray-800 mb-1">No dates planned yet</p>
+              <p className="text-gray-400 text-sm mb-5">Let's change that — plan something special</p>
               <button
-                onClick={() => setPageTab('suggestions')}
-                className="bg-gradient-to-r from-pink-500 to-rose-500 text-white font-semibold px-6 py-3 rounded-2xl"
+                onClick={() => router.push('/dates/custom')}
+                className="bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold px-6 py-3 rounded-2xl text-sm shadow-md hover:shadow-lg transition-shadow"
               >
-                Browse Suggestions
+                Plan Your First Date
               </button>
             </div>
-          ) : (
-            <>
-              {/* Upcoming */}
-              {upcomingPlans.length > 0 && (
-                <div>
-                  <h2 className="font-bold text-gray-900 text-base mb-3">Upcoming 📅</h2>
-                  <div className="space-y-3">
-                    {upcomingPlans.map(plan => (
-                      <DatePlanCard
-                        key={plan.id}
-                        plan={plan}
-                        onMarkComplete={setReflectionPlan}
-                        onCancel={handleCancelPlan}
-                        onEdit={handleOpenEdit}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Past */}
-              {pastPlans.length > 0 && (
-                <div>
-                  <h2 className="font-bold text-gray-900 text-base mb-3">Past Dates ✨</h2>
-                  <div className="space-y-3">
-                    {[...pastPlans].reverse().map(plan => (
-                      <DatePlanCard
-                        key={plan.id}
-                        plan={plan}
-                        onMarkComplete={setReflectionPlan}
-                        onCancel={handleCancelPlan}
-                        onEdit={handleOpenEdit}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
           )}
-        </div>
-      )}
+        </section>
 
-      {/* ==============================
-          MODALS
-          ============================== */}
-      <PlanModal
-        key={editingPlan?.id ?? 'new'}
-        place={planModalPlace}
-        existingPlan={editingPlan}
-        onClose={handleClosePlanModal}
-        onSubmit={handleScheduleDate}
-        submitting={submittingPlan}
-      />
+        {/* ── Date History ─────────────────────────────────────── */}
+        {pastDates.length > 0 && (
+          <section>
+            <h2 className="font-bold text-gray-900 text-base mb-3">Date History</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {pastDates.map(date => (
+                <PastDateCard
+                  key={`${date.source}-${date.id}`}
+                  date={date}
+                  onClick={() => router.push(`/dates/${date.id}`)}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
-      <ReflectionModal
-        plan={reflectionPlan}
-        onClose={() => setReflectionPlan(null)}
-        onSubmit={handleMarkComplete}
-        submitting={submittingReflection}
-      />
+        {/* ── Ideas for You Two ─────────────────────────────────── */}
+        <section>
+          <h2 className="font-bold text-gray-900 text-base mb-0.5">💡 Ideas for You Two</h2>
+          <p className="text-gray-400 text-sm mb-4">Based on your relationship</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {CURATED_IDEAS.map(idea => (
+              <IdeaCard key={idea.id} idea={idea} onBuild={handleBuildIdea} />
+            ))}
+          </div>
+        </section>
 
+      </div>
     </div>
   )
 }
