@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 import { categorizeSuggestion, formatPlaceForDisplay } from '@/lib/date-suggestions';
 
 // Maps our category keys to the Google Places 'type' filter
@@ -127,6 +129,7 @@ export async function GET(request) {
  *   avoidPlaceIds - string[]       (optional) — place_ids to exclude
  */
 export async function POST(request) {
+  const supabase = createRouteHandlerClient({ cookies });
   try {
     const body = await request.json();
     const {
