@@ -50,7 +50,7 @@ export async function GET(request) {
       : null;
     const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 60);
 
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
         { error: 'Google Places API key not configured' },
@@ -157,7 +157,7 @@ export async function POST(request) {
       );
     }
 
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
         { error: 'Google Places API key not configured' },
