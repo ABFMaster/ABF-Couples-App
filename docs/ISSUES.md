@@ -1,47 +1,18 @@
-# ABF - Issues & Polish Tracker
+## Dashboard
 
-Track small fixes, typos, and polish items to batch fix later.
+### Dashboard needs redesign as relationship health overview
+**Priority:** Medium
+**Status:** Known improvement
+Redesign dashboard to tell the couple's relationship story. Lead with health score, recent check-in summary, upcoming date, and one AI insight. Features become secondary navigation.
 
-## Partner Insights Page
+### Date suggestion teaser takes too much real estate
+**Priority:** Low
+**Status:** Known improvement
+Reduce "Date Ideas for You" section to a subtle nudge that drives users to /dates without dominating the layout.
 
-### Text Quality
-- [ ] Review all insight paragraphs for typos and grammatical errors
-- [ ] Proofread "Try This" suggestions for clarity
-- [ ] Check all dynamic text generation for proper grammar
+## Date Night
 
-### Growth Area Indicators
-- [ ] Add variety to "Growth area for you" messaging
-  - Current: Same text for all categories
-  - Needed: 3-4 variations like:
-    - "Growth area for you — your styles differ here"
-    - "Room to grow — this takes more effort for you"
-    - "Learning zone — you're wired differently here"
-    - "Stretch area — small changes make big impact"
-- [ ] Randomize or contextually vary based on category
-
----
-
-## General Polish (Future)
-
-### Visual
-- [ ] TBD
-
-### Copy
-- [ ] TBD
-
-### UX
-- [ ] TBD
-
----
-
-## How to Use This File
-
-1. Add items as you notice them during building
-2. Don't stop to fix immediately unless blocking
-3. Schedule "Polish Pass" sessions to batch fix
-4. Check off items as completed
-5. Remove section when all items done
-
----
-
-*Keep building momentum. Polish later.*
+### Google Maps not rendering in /dates/custom
+**Priority:** Medium
+**Status:** Known bug
+AutocompleteService predictions not showing, map not initializing. Suspected race condition between Google Maps script load and component mount. Both API keys set in .env.local and Vercel. Fix: use named callback pattern for script loading.
