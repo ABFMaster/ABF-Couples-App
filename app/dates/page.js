@@ -610,14 +610,14 @@ export default function DatesPage() {
       const thirtyDaysAgo = new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
       const { data: plans } = await supabase
-        .from('couple_date_places')
+        .from('date_suggestions')
         .select('place_id')
         .eq('couple_id', cid)
         .gte('created_at', thirtyDaysAgo.toISOString())
       recentDates = plans || []
 
       const { data: allSaved } = await supabase
-        .from('couple_date_places')
+        .from('date_suggestions')
         .select('place_id')
         .eq('couple_id', cid)
       if (allSaved) setSavedIds(new Set(allSaved.map(r => r.place_id)))
@@ -712,7 +712,7 @@ export default function DatesPage() {
   const handleSave = async (place) => {
     if (!coupleId || savedIds.has(place.place_id)) return
     setSaving(place.place_id)
-    const { error } = await supabase.from('couple_date_places').insert({
+    const { error } = await supabase.from('date_suggestions').insert({
       couple_id: coupleId,
       place_id: place.place_id,
       title: place.title,
