@@ -24,3 +24,19 @@ AutocompleteService predictions not showing, map not initializing. Suspected rac
 Profile is only accessible via gear icon — no prompt or nudge for new users 
 to complete it. Needs a CTA during onboarding or on the dashboard for users 
 who haven't completed their assessment. Critical for coach personalization.
+
+## Onboarding
+
+### Fragmented onboarding creates incomplete data
+**Priority:** High
+**Status:** Known issue
+No guaranteed path ensures both partners complete all assessments.
+Matt missing user_profiles row as a result. Need linear onboarding flow:
+signup → individual assessment → profile quiz → partner invite → dashboard.
+No skipping allowed. Both partners must complete before accessing features.
+
+### No CTA to complete profile
+**Priority:** Medium  
+**Status:** Known improvement
+Profile only accessible via gear icon. No nudge for incomplete profiles.
+Coach personalization suffers when data is missing.
