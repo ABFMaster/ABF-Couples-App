@@ -133,10 +133,14 @@ function AddItemModal({ isOpen, onClose, coupleId, userId, onAdded }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={onClose}>
+    <div
+      className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center"
+      style={{ paddingBottom: '5rem' }}
+      onClick={onClose}
+    >
       <div
         className="w-full max-w-lg mx-auto bg-white rounded-t-3xl p-6 animate-slideUp overflow-y-auto"
-        style={{ maxHeight: '70vh', paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
+        style={{ maxHeight: '80vh', paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}
         onClick={e => e.stopPropagation()}
       >
         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
