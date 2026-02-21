@@ -35,103 +35,6 @@ function relativeTime(dateStr) {
   return 'just now'
 }
 
-// ── ADD ITEM MODAL ────────────────────────────────────────────────────────────
-
-function AddItemModal({ isOpen, onClose, coupleId, userId, onAdded, defaultType = 'movie' }) {
-  const [type, setType]     = useState(defaultType)
-  const [title, setTitle]   = useState('')
-  const [note, setNote]     = useState('')
-  const [saving, setSaving] = useState(false)
-  const [error, setError]   = useState(null)
-
-  useEffect(() => {
-    if (isOpen) { setType(defaultType); setTitle(''); setNote(''); setError(null) }
-  }, [isOpen, defaultType])
-
-  if (!isOpen) return null
-
-  const handleSave = async () => {
-    if (!title.trim() || saving) return
-    setSaving(true)
-    setError(null)
-    try {
-      const { error: err } = await supabase.from('shared_items').insert({
-        couple_id: coupleId,
-        user_id:   userId,
-        type,
-        title: title.trim(),
-        note:  note.trim() || null,
-      })
-      if (err) { setError(err.message); return }
-      onAdded()
-      onClose()
-    } catch (e) {
-      setError('Something went wrong. Please try again.')
-      console.error(e)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const typeOptions = Object.entries(TABS).filter(([k]) => k !== 'all')
-
-  return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={onClose}>
-      <div
-        className="w-full max-w-lg mx-auto bg-white rounded-t-3xl p-6 pb-10 animate-slideUp"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
-        <h3 className="text-xl font-bold text-[#2D3648] mb-5">Add to Our Space</h3>
-
-        {/* Type selector */}
-        <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
-          {typeOptions.map(([key, { emoji, label }]) => (
-            <button
-              key={key}
-              onClick={() => setType(key)}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium transition-all ${
-                type === key ? 'bg-[#E8614D] text-white' : 'bg-gray-100 text-gray-600'
-              }`}
-            >
-              <span>{emoji}</span><span>{label.replace(/s$/, '')}</span>
-            </button>
-          ))}
-        </div>
-
-        <input
-          type="text"
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSave()}
-          placeholder={`${TABS[type]?.emoji} ${TYPE_SINGULAR[type]} title…`}
-          className="w-full px-4 py-3 rounded-2xl border-2 border-gray-100 focus:border-[#E8614D] focus:outline-none text-[#2D3648] mb-3"
-          autoFocus
-        />
-        <input
-          type="text"
-          value={note}
-          onChange={e => setNote(e.target.value)}
-          placeholder="Add a note (optional)"
-          className="w-full px-4 py-3 rounded-2xl border-2 border-gray-100 focus:border-[#E8614D] focus:outline-none text-[#2D3648] mb-3"
-        />
-
-        {error && (
-          <p className="text-red-500 text-sm mb-3 px-1">{error}</p>
-        )}
-
-        <button
-          onClick={handleSave}
-          disabled={!title.trim() || saving}
-          className="w-full py-4 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white rounded-2xl font-bold text-lg disabled:opacity-50 transition-opacity mt-2"
-        >
-          {saving ? 'Saving…' : 'Add to Our Space'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
 // ── ITEM CARD ─────────────────────────────────────────────────────────────────
 
 function ItemCard({ item, userId, userName, onToggleDone, onDelete }) {
@@ -195,7 +98,6 @@ export default function SharedPage() {
   const [couple, setCouple]       = useState(null)
   const [items, setItems]         = useState([])
   const [tab, setTab]             = useState('all')
-  const [showAddModal, setShowAddModal] = useState(false)
   const [userNames, setUserNames] = useState({}) // userId → displayName
 
   const fetchData = useCallback(async () => {
@@ -338,7 +240,7 @@ export default function SharedPage() {
             <p className="text-[#2D3648] font-semibold text-lg mb-2">{emptyHeading}</p>
             <p className="text-[#9CA3AF] text-sm mb-6 max-w-xs mx-auto">{emptyBody}</p>
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={() => router.push('/shared/add')}
               className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-6 py-3 rounded-full font-semibold hover:opacity-90 transition-opacity"
             >
               + Add Something
@@ -384,29 +286,14 @@ export default function SharedPage() {
 
       {/* ===== FAB ===== */}
       <button
-        onClick={() => setShowAddModal(true)}
+        onClick={() => router.push('/shared/add')}
         className="fixed bottom-24 right-6 w-14 h-14 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:scale-110 transition-transform z-40"
         aria-label="Add item"
       >
         +
       </button>
 
-      {/* ===== ADD MODAL ===== */}
-      <AddItemModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        coupleId={couple?.id}
-        userId={user?.id}
-        onAdded={fetchData}
-        defaultType={tab === 'all' ? 'movie' : tab}
-      />
-
       <style jsx>{`
-        @keyframes slideUp {
-          from { transform: translateY(100%); }
-          to   { transform: translateY(0); }
-        }
-        .animate-slideUp { animation: slideUp 0.3s ease-out; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>

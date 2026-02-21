@@ -91,105 +91,6 @@ function buildFeatureCards({ todayCheckinDone, nextDate, lastFlirtDaysAgo, memor
   ]
 }
 
-// ── QUICK-ADD MODAL ──────────────────────────────────────────────────────────
-
-function AddItemModal({ isOpen, onClose, coupleId, userId, onAdded }) {
-  const [type, setType]     = useState('movie')
-  const [title, setTitle]   = useState('')
-  const [note, setNote]     = useState('')
-  const [saving, setSaving] = useState(false)
-
-  // Scroll the focused input into view after the keyboard opens (~300ms delay)
-  const handleInputFocus = (e) => {
-    const el = e.target
-    setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 320)
-  }
-
-  if (!isOpen) return null
-
-  const handleSave = async () => {
-    if (!title.trim() || saving) return
-    setSaving(true)
-    try {
-      const { error } = await supabase.from('shared_items').insert({
-        couple_id: coupleId,
-        user_id:   userId,
-        type,
-        title: title.trim(),
-        note:  note.trim() || null,
-      })
-      if (!error) {
-        setTitle('')
-        setNote('')
-        setType('movie')
-        onAdded()
-        onClose()
-      }
-    } catch (e) {
-      console.error('Failed to add item:', e)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <div
-      className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-lg mx-auto bg-white rounded-t-3xl p-6 animate-slideUp overflow-y-auto"
-        style={{ maxHeight: '60vh', marginBottom: '80px', paddingBottom: '1.5rem' }}
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
-        <h3 className="text-xl font-bold text-[#2D3648] mb-5">Add to Our Space</h3>
-
-        <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
-          {Object.entries(ITEM_TYPES).map(([key, { emoji, label }]) => (
-            <button
-              key={key}
-              onClick={() => setType(key)}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium transition-all ${
-                type === key ? 'bg-[#E8614D] text-white' : 'bg-gray-100 text-gray-600'
-              }`}
-            >
-              <span>{emoji}</span><span>{label}</span>
-            </button>
-          ))}
-        </div>
-
-        <input
-          type="text"
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          onFocus={handleInputFocus}
-          onKeyDown={e => e.key === 'Enter' && handleSave()}
-          placeholder={`${ITEM_TYPES[type].emoji} ${ITEM_TYPES[type].label} title…`}
-          className="w-full px-4 py-3 rounded-2xl border-2 border-gray-100 focus:border-[#E8614D] focus:outline-none text-[#2D3648] mb-3"
-          autoFocus
-        />
-        <input
-          type="text"
-          value={note}
-          onChange={e => setNote(e.target.value)}
-          onFocus={handleInputFocus}
-          placeholder="Add a note (optional)"
-          className="w-full px-4 py-3 rounded-2xl border-2 border-gray-100 focus:border-[#E8614D] focus:outline-none text-[#2D3648] mb-5"
-        />
-
-        <button
-          onClick={handleSave}
-          disabled={!title.trim() || saving}
-          className="w-full py-4 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white rounded-2xl font-bold text-lg disabled:opacity-50 transition-opacity"
-        >
-          {saving ? 'Saving…' : 'Add to Our Space'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
 // ── MAIN DASHBOARD ───────────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -216,7 +117,6 @@ export default function Dashboard() {
   const [activeTrip]                            = useState(null)
 
   const [sharedPreview, setSharedPreview]       = useState([])
-  const [showAddModal, setShowAddModal]         = useState(false)
 
   // Hydrate localStorage on client only
   useEffect(() => {
@@ -516,7 +416,7 @@ export default function Dashboard() {
                 Start building your shared list — movies, shows, songs, and more
               </p>
               <button
-                onClick={() => setShowAddModal(true)}
+                onClick={() => router.push('/shared/add')}
                 className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity"
               >
                 + Add Something
@@ -536,7 +436,7 @@ export default function Dashboard() {
                 </Link>
               ))}
               <button
-                onClick={() => setShowAddModal(true)}
+                onClick={() => router.push('/shared/add')}
                 className="flex-shrink-0 w-36 bg-white rounded-2xl p-4 shadow-sm border-2 border-dashed border-gray-200 hover:border-[#E8614D] flex flex-col items-center justify-center gap-2 transition-colors group"
               >
                 <span className="text-2xl text-gray-300 group-hover:text-[#E8614D] transition-colors">+</span>
@@ -568,22 +468,6 @@ export default function Dashboard() {
 
       </div>
 
-      {/* ===== QUICK-ADD MODAL ===== */}
-      <AddItemModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        coupleId={couple?.id}
-        userId={user?.id}
-        onAdded={fetchAll}
-      />
-
-      <style jsx>{`
-        @keyframes slideUp {
-          from { transform: translateY(100%); }
-          to   { transform: translateY(0); }
-        }
-        .animate-slideUp { animation: slideUp 0.3s ease-out; }
-      `}</style>
     </div>
   )
 }

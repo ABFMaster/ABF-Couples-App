@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-const EXCLUDED = ['/login', '/signup', '/onboarding', '/connect', '/assessment']
+const EXCLUDED = ['/login', '/signup', '/onboarding', '/connect', '/assessment', '/shared/add']
 
 const TABS = [
   { href: '/dashboard', emoji: '🏠', label: 'Home' },
