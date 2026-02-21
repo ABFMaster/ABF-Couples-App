@@ -236,8 +236,8 @@ export default function WeeklyReflection() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-pink-500 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-pink-500 text-lg">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-coral-500 text-lg">Loading...</p>
         </div>
       </div>
     )
@@ -252,14 +252,14 @@ export default function WeeklyReflection() {
           <div className="flex items-center justify-between mb-8">
             <button
               onClick={() => router.push('/dashboard')}
-              className="flex items-center gap-2 text-pink-600 hover:text-pink-700"
+              className="flex items-center gap-2 text-coral-600 hover:text-coral-700"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
               Back
             </button>
-            <div className="bg-gradient-to-r from-pink-400 to-pink-500 text-white rounded-xl px-4 py-2 shadow-lg">
+            <div className="bg-gradient-to-r from-coral-400 to-coral-500 text-white rounded-xl px-4 py-2 shadow-lg">
               <span className="font-bold">ABF</span>
             </div>
           </div>
@@ -272,7 +272,7 @@ export default function WeeklyReflection() {
             </p>
             <button
               onClick={() => router.push('/dashboard')}
-              className="bg-gradient-to-r from-pink-400 to-pink-500 text-white px-6 py-3 rounded-full font-semibold hover:from-pink-500 hover:to-pink-600 transition-all"
+              className="bg-gradient-to-r from-coral-400 to-coral-500 text-white px-6 py-3 rounded-full font-semibold hover:from-coral-500 hover:to-coral-600 transition-all"
             >
               Back to Dashboard
             </button>
@@ -291,14 +291,14 @@ export default function WeeklyReflection() {
           <div className="flex items-center justify-between mb-8">
             <button
               onClick={() => router.push('/dashboard')}
-              className="flex items-center gap-2 text-pink-600 hover:text-pink-700"
+              className="flex items-center gap-2 text-coral-600 hover:text-coral-700"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
               Back
             </button>
-            <div className="bg-gradient-to-r from-pink-400 to-pink-500 text-white rounded-xl px-4 py-2 shadow-lg">
+            <div className="bg-gradient-to-r from-coral-400 to-coral-500 text-white rounded-xl px-4 py-2 shadow-lg">
               <span className="font-bold">ABF</span>
             </div>
           </div>
@@ -311,7 +311,7 @@ export default function WeeklyReflection() {
             </p>
             <button
               onClick={() => router.push('/dashboard')}
-              className="bg-gradient-to-r from-pink-400 to-pink-500 text-white px-6 py-3 rounded-full font-semibold hover:from-pink-500 hover:to-pink-600 transition-all"
+              className="bg-gradient-to-r from-coral-400 to-coral-500 text-white px-6 py-3 rounded-full font-semibold hover:from-coral-500 hover:to-coral-600 transition-all"
             >
               Go to Daily Check-in
             </button>
@@ -348,14 +348,14 @@ export default function WeeklyReflection() {
         <div className="flex items-center justify-between mb-8">
           <button
             onClick={() => router.push('/dashboard')}
-            className="flex items-center gap-2 text-pink-600 hover:text-pink-700"
+            className="flex items-center gap-2 text-coral-600 hover:text-coral-700"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
             Back
           </button>
-          <div className="bg-gradient-to-r from-pink-400 to-pink-500 text-white rounded-xl px-4 py-2 shadow-lg">
+          <div className="bg-gradient-to-r from-coral-400 to-coral-500 text-white rounded-xl px-4 py-2 shadow-lg">
             <span className="font-bold">ABF</span>
           </div>
         </div>
@@ -365,10 +365,10 @@ export default function WeeklyReflection() {
           <div className="space-y-6 animate-fadeIn">
             {/* Celebration Header */}
             {showCelebration && (
-              <div className="bg-gradient-to-r from-pink-500 to-purple-500 rounded-2xl shadow-xl p-6 text-white text-center">
+              <div className="bg-gradient-to-r from-coral-500 to-indigo-500 rounded-2xl shadow-xl p-6 text-white text-center">
                 <div className="text-5xl mb-3">✨💕✨</div>
                 <h2 className="text-2xl font-bold mb-2">You're Seeing Each Other!</h2>
-                <p className="text-pink-100">Your reflections bring you closer together</p>
+                <p className="text-coral-100">Your reflections bring you closer together</p>
               </div>
             )}
 
@@ -376,20 +376,20 @@ export default function WeeklyReflection() {
 
             {/* What I picked from partner's answers */}
             <div className="bg-white rounded-2xl shadow-xl p-6">
-              <h3 className="text-lg font-semibold text-pink-600 mb-4">
+              <h3 className="text-lg font-semibold text-coral-600 mb-4">
                 You picked from {partnerName}'s answers:
               </h3>
               {myFavoriteCheckin && (
-                <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl p-4 border-2 border-pink-200">
+                <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl p-4 border-2 border-coral-100">
                   <p className="text-sm text-gray-500 mb-2">{formatDate(myFavoriteCheckin.date)}</p>
                   <p className="text-sm text-gray-600 italic mb-3">"{myFavoriteCheckin.checkin_questions?.question}"</p>
-                  <div className="bg-purple-100 rounded-lg p-3 mb-3">
+                  <div className="bg-cream-100 rounded-lg p-3 mb-3">
                     <p className="text-gray-800 font-medium">{partnerName}'s answer:</p>
                     <p className="text-gray-700">{isUser1 ? myFavoriteCheckin.user2_answer : myFavoriteCheckin.user1_answer}</p>
                   </div>
                   {myReason && (
-                    <div className="bg-pink-100 rounded-lg p-3">
-                      <p className="text-sm text-pink-600 font-medium">Why you picked this:</p>
+                    <div className="bg-cream-100 rounded-lg p-3">
+                      <p className="text-sm text-coral-600 font-medium">Why you picked this:</p>
                       <p className="text-gray-700">{myReason}</p>
                     </div>
                   )}
@@ -399,20 +399,20 @@ export default function WeeklyReflection() {
 
             {/* What partner picked from my answers */}
             <div className="bg-white rounded-2xl shadow-xl p-6">
-              <h3 className="text-lg font-semibold text-purple-600 mb-4">
+              <h3 className="text-lg font-semibold text-indigo-500 mb-4">
                 {partnerName} picked from your answers:
               </h3>
               {partnerFavoriteCheckin && (
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border-2 border-purple-200">
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border-2 border-indigo-400">
                   <p className="text-sm text-gray-500 mb-2">{formatDate(partnerFavoriteCheckin.date)}</p>
                   <p className="text-sm text-gray-600 italic mb-3">"{partnerFavoriteCheckin.checkin_questions?.question}"</p>
-                  <div className="bg-pink-100 rounded-lg p-3 mb-3">
+                  <div className="bg-cream-100 rounded-lg p-3 mb-3">
                     <p className="text-gray-800 font-medium">Your answer:</p>
                     <p className="text-gray-700">{isUser1 ? partnerFavoriteCheckin.user1_answer : partnerFavoriteCheckin.user2_answer}</p>
                   </div>
                   {partnerReason && (
-                    <div className="bg-purple-100 rounded-lg p-3">
-                      <p className="text-sm text-purple-600 font-medium">Why {partnerName} picked this:</p>
+                    <div className="bg-cream-100 rounded-lg p-3">
+                      <p className="text-sm text-indigo-500 font-medium">Why {partnerName} picked this:</p>
                       <p className="text-gray-700">{partnerReason}</p>
                     </div>
                   )}
@@ -424,7 +424,7 @@ export default function WeeklyReflection() {
             <div className="text-center pt-4">
               <button
                 onClick={() => router.push('/dashboard')}
-                className="bg-gradient-to-r from-pink-400 to-purple-500 text-white px-8 py-3 rounded-full font-semibold hover:from-pink-500 hover:to-purple-600 transition-all transform hover:scale-105"
+                className="bg-gradient-to-r from-coral-400 to-indigo-400 text-white px-8 py-3 rounded-full font-semibold hover:from-coral-500 hover:to-indigo-600 transition-all transform hover:scale-105"
               >
                 Back to Dashboard
               </button>
@@ -442,26 +442,26 @@ export default function WeeklyReflection() {
                 Waiting for {partnerName} to complete their reflection...
               </p>
               <div className="flex justify-center gap-2">
-                <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                <div className="w-2 h-2 bg-coral-400 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-coral-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-2 h-2 bg-coral-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
               </div>
             </div>
 
             {/* Show what I picked */}
             <div className="bg-white rounded-2xl shadow-xl p-6">
-              <h3 className="text-lg font-semibold text-pink-600 mb-4">Your Selection:</h3>
+              <h3 className="text-lg font-semibold text-coral-600 mb-4">Your Selection:</h3>
               {myFavoriteCheckin && (
-                <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl p-4 border-2 border-pink-200">
+                <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl p-4 border-2 border-coral-100">
                   <p className="text-sm text-gray-500 mb-2">{formatDate(myFavoriteCheckin.date)}</p>
                   <p className="text-sm text-gray-600 italic mb-3">"{myFavoriteCheckin.checkin_questions?.question}"</p>
-                  <div className="bg-purple-100 rounded-lg p-3 mb-3">
+                  <div className="bg-cream-100 rounded-lg p-3 mb-3">
                     <p className="text-gray-800 font-medium">{partnerName}'s answer:</p>
                     <p className="text-gray-700">{isUser1 ? myFavoriteCheckin.user2_answer : myFavoriteCheckin.user1_answer}</p>
                   </div>
                   {myReason && (
-                    <div className="bg-pink-100 rounded-lg p-3">
-                      <p className="text-sm text-pink-600 font-medium">Why this stood out:</p>
+                    <div className="bg-cream-100 rounded-lg p-3">
+                      <p className="text-sm text-coral-600 font-medium">Why this stood out:</p>
                       <p className="text-gray-700">{myReason}</p>
                     </div>
                   )}
@@ -478,14 +478,14 @@ export default function WeeklyReflection() {
                     key={checkin.id}
                     className={`p-4 rounded-xl ${
                       checkin.id === myFavoriteId
-                        ? 'bg-pink-100 border-2 border-pink-300'
+                        ? 'bg-cream-100 border-2 border-coral-200'
                         : 'bg-gray-50'
                     }`}
                   >
                     <p className="text-sm text-gray-500 mb-1">{formatDate(checkin.date)}</p>
                     <p className="text-sm text-gray-600 italic">"{checkin.checkin_questions?.question}"</p>
                     {checkin.id === myFavoriteId && (
-                      <span className="inline-block mt-2 text-xs bg-pink-500 text-white px-2 py-1 rounded-full">
+                      <span className="inline-block mt-2 text-xs bg-coral-500 text-white px-2 py-1 rounded-full">
                         Your pick
                       </span>
                     )}
@@ -497,7 +497,7 @@ export default function WeeklyReflection() {
             <div className="text-center">
               <button
                 onClick={() => router.push('/dashboard')}
-                className="text-pink-600 hover:text-pink-700 font-medium"
+                className="text-coral-600 hover:text-coral-700 font-medium"
               >
                 Back to Dashboard
               </button>
@@ -528,14 +528,14 @@ export default function WeeklyReflection() {
                     onClick={() => setSelectedCheckinId(checkin.id)}
                     className={`bg-white rounded-2xl shadow-lg p-5 cursor-pointer transition-all transform hover:scale-[1.02] ${
                       isSelected
-                        ? 'border-3 border-pink-400 ring-2 ring-pink-200'
-                        : 'border border-gray-100 hover:border-pink-200'
+                        ? 'border-3 border-coral-400 ring-2 ring-coral-100'
+                        : 'border border-gray-100 hover:border-coral-100'
                     }`}
                   >
                     <div className="flex items-start gap-4">
                       {/* Radio button */}
                       <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 mt-1 flex items-center justify-center transition-all ${
-                        isSelected ? 'border-pink-500 bg-pink-500' : 'border-gray-300'
+                        isSelected ? 'border-coral-500 bg-coral-500' : 'border-gray-300'
                       }`}>
                         {isSelected && (
                           <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -549,8 +549,8 @@ export default function WeeklyReflection() {
                         <p className="text-sm text-gray-600 italic mb-3">"{checkin.checkin_questions?.question}"</p>
 
                         {/* Partner's answer - highlighted */}
-                        <div className={`rounded-xl p-3 mb-2 ${isSelected ? 'bg-purple-100' : 'bg-purple-50'}`}>
-                          <p className="text-xs text-purple-600 font-medium mb-1">{partnerName}'s answer:</p>
+                        <div className={`rounded-xl p-3 mb-2 ${isSelected ? 'bg-cream-100' : 'bg-cream-100'}`}>
+                          <p className="text-xs text-indigo-500 font-medium mb-1">{partnerName}'s answer:</p>
                           <p className="text-gray-800">{partnerAnswer}</p>
                         </div>
 
@@ -576,7 +576,7 @@ export default function WeeklyReflection() {
                   value={reasonText}
                   onChange={(e) => setReasonText(e.target.value)}
                   placeholder="What made this special?"
-                  className="w-full p-4 border-2 border-pink-200 rounded-xl focus:border-pink-400 focus:outline-none resize-none h-24 transition-colors"
+                  className="w-full p-4 border-2 border-coral-100 rounded-xl focus:border-coral-400 focus:outline-none resize-none h-24 transition-colors"
                 />
               </div>
             )}
@@ -586,7 +586,7 @@ export default function WeeklyReflection() {
               <button
                 onClick={handleSubmit}
                 disabled={!selectedCheckinId || submitting}
-                className="w-full bg-gradient-to-r from-pink-400 to-purple-500 text-white py-4 rounded-2xl font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed hover:from-pink-500 hover:to-purple-600 transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+                className="w-full bg-gradient-to-r from-coral-400 to-indigo-400 text-white py-4 rounded-2xl font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed hover:from-coral-500 hover:to-indigo-600 transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg"
               >
                 {submitting ? (
                   <span className="flex items-center justify-center gap-2">

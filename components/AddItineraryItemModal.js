@@ -114,7 +114,7 @@ export default function AddItineraryItemModal({
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end md:items-center justify-center">
       <div className="bg-white w-full md:w-[500px] md:max-h-[90vh] max-h-[85vh] rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden animate-slideUp">
         {/* Header */}
-        <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-6">
+        <div className="bg-gradient-to-r from-indigo-500 to-coral-500 text-white p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-3xl">📅</span>
@@ -156,7 +156,7 @@ export default function AddItineraryItemModal({
                     onClick={() => setSelectedDay(day)}
                     className={`w-10 h-10 rounded-full font-medium transition-all ${
                       selectedDay === day
-                        ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white'
+                        ? 'bg-gradient-to-r from-coral-500 to-indigo-500 text-white'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
@@ -179,13 +179,13 @@ export default function AddItineraryItemModal({
                     onClick={() => setActivityType(type.id)}
                     className={`p-3 rounded-xl border-2 transition-all text-center ${
                       activityType === type.id
-                        ? 'border-pink-500 bg-pink-50'
-                        : 'border-gray-200 hover:border-pink-300'
+                        ? 'border-coral-500 bg-cream-50'
+                        : 'border-gray-200 hover:border-coral-200'
                     }`}
                   >
                     <span className="text-xl">{type.icon}</span>
                     <p className={`text-xs mt-1 ${
-                      activityType === type.id ? 'text-pink-600' : 'text-gray-600'
+                      activityType === type.id ? 'text-coral-600' : 'text-gray-600'
                     }`}>
                       {type.label}
                     </p>
@@ -204,7 +204,7 @@ export default function AddItineraryItemModal({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g., Eiffel Tower Visit"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-coral-500 focus:outline-none transition-colors"
                 maxLength={100}
               />
             </div>
@@ -219,7 +219,7 @@ export default function AddItineraryItemModal({
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-coral-500 focus:outline-none transition-colors"
                 />
               </div>
               <div>
@@ -230,7 +230,7 @@ export default function AddItineraryItemModal({
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-coral-500 focus:outline-none transition-colors"
                 />
               </div>
             </div>
@@ -245,7 +245,7 @@ export default function AddItineraryItemModal({
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="Address or place name"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-coral-500 focus:outline-none transition-colors"
               />
             </div>
 
@@ -260,7 +260,7 @@ export default function AddItineraryItemModal({
                   value={confirmationNumber}
                   onChange={(e) => setConfirmationNumber(e.target.value)}
                   placeholder="ABC123"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors font-mono"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-coral-500 focus:outline-none transition-colors font-mono"
                 />
               </div>
             )}
@@ -275,7 +275,7 @@ export default function AddItineraryItemModal({
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Any additional details..."
                 rows={2}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors resize-none"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-coral-500 focus:outline-none transition-colors resize-none"
               />
             </div>
           </div>
@@ -286,7 +286,7 @@ export default function AddItineraryItemModal({
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-4 bg-gradient-to-r from-coral-500 to-indigo-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {saving ? (
               <>

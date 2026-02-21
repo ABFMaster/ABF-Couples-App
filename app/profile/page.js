@@ -235,7 +235,7 @@ export default function ProfileAssessmentPage() {
     return (
       <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#FF6B9D] border-t-transparent mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent mx-auto mb-4"></div>
           <p className="text-[#6B7280] text-lg">Loading your profile...</p>
         </div>
       </div>
@@ -249,7 +249,7 @@ export default function ProfileAssessmentPage() {
         {/* Progress bar */}
         <div className="fixed top-0 left-0 right-0 h-1 bg-[#E5E2DD] z-50">
           <div
-            className="h-full bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] transition-all duration-300"
+            className="h-full bg-gradient-to-r from-[#E8614D] to-[#C44A38] transition-all duration-300"
             style={{ width: `${progressPercentage}%` }}
           />
         </div>
@@ -305,7 +305,7 @@ export default function ProfileAssessmentPage() {
             {/* Start button */}
             <button
               onClick={() => setModuleIntroShown(true)}
-              className="bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white px-8 py-4 rounded-full font-bold text-lg hover:opacity-90 transition-opacity"
+              className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-8 py-4 rounded-full font-bold text-lg hover:opacity-90 transition-opacity"
             >
               Begin
             </button>
@@ -324,7 +324,7 @@ export default function ProfileAssessmentPage() {
         {/* Progress bar */}
         <div className="fixed top-0 left-0 right-0 h-1 bg-[#E5E2DD] z-50">
           <div
-            className="h-full bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] transition-all duration-300"
+            className="h-full bg-gradient-to-r from-[#E8614D] to-[#C44A38] transition-all duration-300"
             style={{ width: `${progressPercentage}%` }}
           />
         </div>
@@ -386,8 +386,8 @@ export default function ProfileAssessmentPage() {
                     onClick={() => handleAnswer(currentQuestion.id, option.value)}
                     className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
                       answers[currentQuestion.id] === option.value
-                        ? 'border-[#FF6B9D] bg-[#FFF4F8]'
-                        : 'border-[#E5E2DD] hover:border-[#FF6B9D]/50'
+                        ? 'border-[#E8614D] bg-[#FFF4F8]'
+                        : 'border-[#E5E2DD] hover:border-[#E8614D]/50'
                     }`}
                   >
                     <span className="text-[#2D3648]">{option.label}</span>
@@ -410,7 +410,7 @@ export default function ProfileAssessmentPage() {
             <button
               onClick={handleNext}
               disabled={!canProceed() || isSubmitting}
-              className="bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white px-8 py-4 rounded-full font-bold text-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-8 py-4 rounded-full font-bold text-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSubmitting ? (
                 <>
@@ -493,7 +493,7 @@ function RankingQuestion({ question, value, onChange }) {
             <select
               value={currentRank || ''}
               onChange={(e) => handleRankChange(option.value, e.target.value ? parseInt(e.target.value) : null)}
-              className="w-16 h-10 rounded-lg border border-[#E5E2DD] text-center text-[#2D3648] font-medium focus:outline-none focus:border-[#FF6B9D]"
+              className="w-16 h-10 rounded-lg border border-[#E5E2DD] text-center text-[#2D3648] font-medium focus:outline-none focus:border-[#E8614D]"
             >
               <option value="">-</option>
               {Array.from({ length: question.options.length }, (_, i) => i + 1).map((num) => (

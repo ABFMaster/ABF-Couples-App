@@ -174,7 +174,7 @@ export default function AddEventModal({ isOpen, onClose, coupleId, onEventAdded 
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end md:items-center justify-center">
       <div className="bg-white w-full md:w-[500px] md:max-h-[90vh] max-h-[85vh] rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden animate-slideUp">
         {/* Header */}
-        <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white p-6">
+        <div className="bg-gradient-to-r from-coral-500 to-indigo-500 text-white p-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold">Add Memory</h2>
             <button
@@ -186,7 +186,7 @@ export default function AddEventModal({ isOpen, onClose, coupleId, onEventAdded 
               </svg>
             </button>
           </div>
-          <p className="text-pink-100 mt-1">Capture a special moment together</p>
+          <p className="text-coral-100 mt-1">Capture a special moment together</p>
         </div>
 
         {/* Form */}
@@ -210,8 +210,8 @@ export default function AddEventModal({ isOpen, onClose, coupleId, onEventAdded 
                   onClick={() => setEventType(type.value)}
                   className={`p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1 ${
                     eventType === type.value
-                      ? 'border-pink-500 bg-pink-50'
-                      : 'border-gray-200 hover:border-pink-300'
+                      ? 'border-coral-500 bg-cream-50'
+                      : 'border-gray-200 hover:border-coral-200'
                   }`}
                 >
                   <span className="text-2xl">{type.icon}</span>
@@ -231,7 +231,7 @@ export default function AddEventModal({ isOpen, onClose, coupleId, onEventAdded 
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., Our first vacation together"
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-coral-500 focus:outline-none transition-colors"
               maxLength={100}
             />
           </div>
@@ -246,7 +246,7 @@ export default function AddEventModal({ isOpen, onClose, coupleId, onEventAdded 
               value={eventDate}
               onChange={(e) => setEventDate(e.target.value)}
               max={new Date().toISOString().split('T')[0]}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-coral-500 focus:outline-none transition-colors"
             />
           </div>
 
@@ -260,7 +260,7 @@ export default function AddEventModal({ isOpen, onClose, coupleId, onEventAdded 
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What made this moment special?"
               rows={3}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors resize-none"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-coral-500 focus:outline-none transition-colors resize-none"
               maxLength={500}
             />
           </div>
@@ -298,7 +298,7 @@ export default function AddEventModal({ isOpen, onClose, coupleId, onEventAdded 
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full py-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-pink-400 hover:text-pink-500 transition-colors flex items-center justify-center gap-2"
+                className="w-full py-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-coral-400 hover:text-coral-500 transition-colors flex items-center justify-center gap-2"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -321,7 +321,7 @@ export default function AddEventModal({ isOpen, onClose, coupleId, onEventAdded 
           <button
             type="submit"
             disabled={saving}
-            className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-4 bg-gradient-to-r from-coral-500 to-indigo-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {saving ? (
               <>

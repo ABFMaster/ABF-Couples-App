@@ -24,9 +24,9 @@ const MOOD_VALUES = {
 // Chart colors
 const CHART_COLORS = {
   user: {
-    line: '#C9184A',
+    line: '#C44A38',
     fill: 'rgba(201, 24, 74, 0.1)',
-    gradient: ['#FF6B9D', '#C9184A'],
+    gradient: ['#E8614D', '#C44A38'],
   },
   partner: {
     line: '#2563EB',
@@ -537,7 +537,7 @@ export default function WeeklyReviewPage() {
         {/* ================================================================== */}
         {/* SECTION 1: Hero - Week Overview */}
         {/* ================================================================== */}
-        <section className="bg-gradient-to-br from-[#C9184A] to-[#FF6B9D] rounded-2xl p-6 text-white">
+        <section className="bg-gradient-to-br from-[#C44A38] to-[#E8614D] rounded-2xl p-6 text-white">
           <h1 className="text-2xl font-bold mb-1">Week in Review</h1>
           <p className="text-white/80 text-sm mb-6">
             {formatDisplayDate(weekDates.start)} - {formatDisplayDate(weekDates.end)}
@@ -711,7 +711,7 @@ export default function WeeklyReviewPage() {
               <div className="space-y-3">
                 {/* Weekly summary insights */}
                 {weeklySummary?.moodDistribution && (
-                  <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-lg">
+                  <div className="flex items-center gap-3 p-3 bg-cream-100 rounded-lg">
                     <div className="text-lg">📈</div>
                     <p className="text-sm text-purple-800">
                       This week: {weeklySummary.moodDistribution.great || 0 + weeklySummary.moodDistribution.good || 0} good days,{' '}
@@ -764,11 +764,11 @@ export default function WeeklyReviewPage() {
                 {weeklySummary?.recommendedTopics?.map((topic, index) => (
                   <div
                     key={index}
-                    className="p-4 border-2 border-dashed border-gray-200 rounded-xl hover:border-[#C9184A] hover:bg-rose-50 transition-colors cursor-pointer"
+                    className="p-4 border-2 border-dashed border-gray-200 rounded-xl hover:border-[#C44A38] hover:bg-cream-50 transition-colors cursor-pointer"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 bg-[#C9184A]/10 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-[#C9184A] font-bold text-sm">{index + 1}</span>
+                      <div className="w-8 h-8 bg-[#C44A38]/10 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-[#C44A38] font-bold text-sm">{index + 1}</span>
                       </div>
                       <p className="text-sm text-[#2D3648] leading-relaxed">{topic}</p>
                     </div>
@@ -819,7 +819,7 @@ export default function WeeklyReviewPage() {
           {/* Back to Dashboard */}
           <button
             onClick={() => router.push('/dashboard')}
-            className="w-full py-3 bg-white text-[#2D3648] rounded-xl font-medium border-2 border-gray-200 hover:border-[#C9184A] transition-colors"
+            className="w-full py-3 bg-white text-[#2D3648] rounded-xl font-medium border-2 border-gray-200 hover:border-[#C44A38] transition-colors"
           >
             Back to Dashboard
           </button>

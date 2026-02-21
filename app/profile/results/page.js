@@ -21,13 +21,13 @@ function CircularProgress({ percentage, color, size = 80, strokeWidth = 6, anima
 
   const getGradientColors = (colorClass) => {
     const colorMap = {
-      'from-indigo-500 to-purple-500': ['#6366f1', '#a855f7'],
-      'from-rose-500 to-pink-500': ['#f43f5e', '#ec4899'],
+      'from-indigo-500 to-indigo-500': ['#6366f1', '#5D55A0'],
+      'from-coral-500 to-coral-500': ['#f43f5e', '#E8614D'],
       'from-teal-500 to-cyan-500': ['#14b8a6', '#06b6d4'],
       'from-amber-500 to-yellow-500': ['#f59e0b', '#eab308'],
-      'from-pink-500 to-red-500': ['#ec4899', '#ef4444'],
+      'from-coral-500 to-red-500': ['#E8614D', '#ef4444'],
     }
-    return colorMap[colorClass] || ['#FF6B9D', '#C9184A']
+    return colorMap[colorClass] || ['#E8614D', '#C44A38']
   }
 
   const [startColor, endColor] = getGradientColors(color)
@@ -117,7 +117,7 @@ export default function ProfileResultsPage() {
     return (
       <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#FF6B9D] border-t-transparent mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent mx-auto mb-4"></div>
           <p className="text-[#6B7280] text-lg">Loading your profile...</p>
         </div>
       </div>
@@ -135,7 +135,7 @@ export default function ProfileResultsPage() {
           <p className="text-[#6B7280] mb-8">Complete your individual profile to discover insights about yourself.</p>
           <button
             onClick={() => router.push('/profile')}
-            className="bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white px-8 py-4 rounded-full font-bold text-lg hover:opacity-90 transition-opacity"
+            className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-8 py-4 rounded-full font-bold text-lg hover:opacity-90 transition-opacity"
           >
             Start Profile
           </button>
@@ -155,7 +155,7 @@ export default function ProfileResultsPage() {
   return (
     <div className="min-h-screen bg-[#F8F6F3] pb-24">
       {/* Hero Header */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-12">
+      <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white py-12">
         <div className="max-w-4xl mx-auto px-4">
           <button
             onClick={() => router.push('/dashboard')}
@@ -295,7 +295,7 @@ export default function ProfileResultsPage() {
                           <ul className="space-y-2">
                             {moduleResult.insights.tips.map((tip, tipIndex) => (
                               <li key={tipIndex} className="flex items-start gap-3">
-                                <span className="text-[#FF6B9D] mt-1">•</span>
+                                <span className="text-[#E8614D] mt-1">•</span>
                                 <span className="text-[#6B7280]">{tip}</span>
                               </li>
                             ))}
@@ -314,13 +314,13 @@ export default function ProfileResultsPage() {
         <div className="mt-8 flex flex-col sm:flex-row gap-4">
           <button
             onClick={() => router.push('/profile')}
-            className="flex-1 border-2 border-[#FF6B9D] text-[#FF6B9D] px-6 py-4 rounded-xl font-semibold hover:bg-[#FFF4F8] transition-colors"
+            className="flex-1 border-2 border-[#E8614D] text-[#E8614D] px-6 py-4 rounded-xl font-semibold hover:bg-[#FFF4F8] transition-colors"
           >
             Retake Profile
           </button>
           <button
             onClick={() => router.push('/assessment')}
-            className="flex-1 bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white px-6 py-4 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+            className="flex-1 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-6 py-4 rounded-xl font-semibold hover:opacity-90 transition-opacity"
           >
             Take Relationship Assessment
           </button>

@@ -212,7 +212,7 @@ export default function TripDetail() {
     return (
       <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#FF6B9D] border-t-transparent mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent mx-auto mb-4"></div>
           <p className="text-[#6B7280] text-lg font-medium">Loading trip...</p>
         </div>
       </div>
@@ -227,7 +227,7 @@ export default function TripDetail() {
           <h2 className="text-3xl font-bold text-[#2D3648] mb-3">Trip not found</h2>
           <button
             onClick={() => router.push('/trips')}
-            className="text-[#FF6B9D] hover:text-[#C9184A] font-medium transition-colors"
+            className="text-[#E8614D] hover:text-[#C44A38] font-medium transition-colors"
           >
             Back to trips
           </button>
@@ -266,7 +266,7 @@ export default function TripDetail() {
   return (
     <div className="min-h-screen bg-[#F8F6F3] pb-24">
       {/* ===== HERO HEADER ===== */}
-      <div className="bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white py-16">
+      <div className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white py-16">
         <div className="max-w-4xl mx-auto px-4">
           {/* Back Button */}
           <button
@@ -328,7 +328,7 @@ export default function TripDetail() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-5 py-4 border-b-2 transition-colors whitespace-nowrap ${
                   activeTab === tab.id
-                    ? 'border-[#FF6B9D] text-[#FF6B9D]'
+                    ? 'border-[#E8614D] text-[#E8614D]'
                     : 'border-transparent text-[#6B7280] hover:text-[#2D3648]'
                 }`}
               >
@@ -355,26 +355,26 @@ export default function TripDetail() {
             {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-white rounded-2xl p-6 shadow-sm text-center border border-[#E5E2DD]">
-                <p className="text-3xl font-bold text-[#FF6B9D]">{tripDays}</p>
+                <p className="text-3xl font-bold text-[#E8614D]">{tripDays}</p>
                 <p className="text-[#6B7280] text-sm mt-1">days</p>
               </div>
               <div className="bg-white rounded-2xl p-6 shadow-sm text-center border border-[#E5E2DD]">
-                <p className="text-3xl font-bold text-[#FF6B9D]">{itinerary.length}</p>
+                <p className="text-3xl font-bold text-[#E8614D]">{itinerary.length}</p>
                 <p className="text-[#6B7280] text-sm mt-1">activities planned</p>
               </div>
               <div className="bg-white rounded-2xl p-6 shadow-sm text-center border border-[#E5E2DD]">
-                <p className="text-3xl font-bold text-[#FF6B9D]">{packingList.length}</p>
+                <p className="text-3xl font-bold text-[#E8614D]">{packingList.length}</p>
                 <p className="text-[#6B7280] text-sm mt-1">items to pack</p>
               </div>
               <div className="bg-white rounded-2xl p-6 shadow-sm text-center border border-[#E5E2DD]">
-                <p className="text-3xl font-bold text-[#FF6B9D]">{photos.length}</p>
+                <p className="text-3xl font-bold text-[#E8614D]">{photos.length}</p>
                 <p className="text-[#6B7280] text-sm mt-1">photos</p>
               </div>
             </div>
 
             {/* Description / Notes Section */}
             {trip.description && (
-              <div className="bg-[#FFF4F8] border-l-4 border-[#FF6B9D] rounded-2xl p-6 shadow-sm">
+              <div className="bg-[#FFF4F8] border-l-4 border-[#E8614D] rounded-2xl p-6 shadow-sm">
                 <h3 className="text-2xl font-bold text-[#2D3648] mb-3">About This Trip</h3>
                 <p className="text-[#6B7280] leading-relaxed">{trip.description}</p>
               </div>
@@ -393,7 +393,7 @@ export default function TripDetail() {
                       <span className="text-2xl">📅</span>
                     </div>
                     <div>
-                      <h4 className="text-lg font-semibold text-[#2D3648] group-hover:text-[#FF6B9D] transition-colors">Add Activity</h4>
+                      <h4 className="text-lg font-semibold text-[#2D3648] group-hover:text-[#E8614D] transition-colors">Add Activity</h4>
                       <p className="text-[#6B7280] text-sm">Plan your days</p>
                     </div>
                   </div>
@@ -408,7 +408,7 @@ export default function TripDetail() {
                       <span className="text-2xl">🎒</span>
                     </div>
                     <div>
-                      <h4 className="text-lg font-semibold text-[#2D3648] group-hover:text-[#FF6B9D] transition-colors">Add Packing Item</h4>
+                      <h4 className="text-lg font-semibold text-[#2D3648] group-hover:text-[#E8614D] transition-colors">Add Packing Item</h4>
                       <p className="text-[#6B7280] text-sm">Don't forget anything</p>
                     </div>
                   </div>
@@ -423,7 +423,7 @@ export default function TripDetail() {
                       <span className="text-2xl">📸</span>
                     </div>
                     <div>
-                      <h4 className="text-lg font-semibold text-[#2D3648] group-hover:text-[#FF6B9D] transition-colors">Add Photos</h4>
+                      <h4 className="text-lg font-semibold text-[#2D3648] group-hover:text-[#E8614D] transition-colors">Add Photos</h4>
                       <p className="text-[#6B7280] text-sm">Capture memories</p>
                     </div>
                   </div>
@@ -456,7 +456,7 @@ export default function TripDetail() {
                     </div>
                     <button
                       onClick={() => handleAddItineraryItem(dayNum)}
-                      className="bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white px-4 py-2 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity"
+                      className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-4 py-2 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity"
                     >
                       + Add
                     </button>
@@ -469,7 +469,7 @@ export default function TripDetail() {
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               {item.time && (
-                                <p className="text-sm font-semibold text-[#FF6B9D] mb-1">{item.time}</p>
+                                <p className="text-sm font-semibold text-[#E8614D] mb-1">{item.time}</p>
                               )}
                               <h4 className="text-lg font-semibold text-[#2D3648]">{item.activity}</h4>
                               {item.description && (
@@ -502,7 +502,7 @@ export default function TripDetail() {
                       <p className="text-[#9CA3AF]">No activities planned yet</p>
                       <button
                         onClick={() => handleAddItineraryItem(dayNum)}
-                        className="text-[#FF6B9D] hover:text-[#C9184A] font-medium mt-2 transition-colors"
+                        className="text-[#E8614D] hover:text-[#C44A38] font-medium mt-2 transition-colors"
                       >
                         Add your first activity
                       </button>
@@ -528,7 +528,7 @@ export default function TripDetail() {
               <div className="h-3 bg-[#F8F6F3] rounded-full overflow-hidden">
                 <div
                   className={`h-full transition-all duration-500 ${
-                    packingProgress === 100 ? 'bg-green-500' : 'bg-gradient-to-r from-[#FF6B9D] to-[#C9184A]'
+                    packingProgress === 100 ? 'bg-green-500' : 'bg-gradient-to-r from-[#E8614D] to-[#C44A38]'
                   }`}
                   style={{ width: `${packingProgress}%` }}
                 />
@@ -543,7 +543,7 @@ export default function TripDetail() {
             {/* Add Button */}
             <button
               onClick={() => setShowPackingModal(true)}
-              className="w-full bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all border-2 border-dashed border-[#E5E2DD] hover:border-[#FF6B9D] text-[#6B7280] hover:text-[#FF6B9D]"
+              className="w-full bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-all border-2 border-dashed border-[#E5E2DD] hover:border-[#E8614D] text-[#6B7280] hover:text-[#E8614D]"
             >
               + Add packing item
             </button>
@@ -573,7 +573,7 @@ export default function TripDetail() {
                             className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
                               item.is_packed
                                 ? 'bg-green-500 border-green-500 text-white'
-                                : 'border-[#E5E2DD] hover:border-[#FF6B9D]'
+                                : 'border-[#E5E2DD] hover:border-[#E8614D]'
                             }`}
                           >
                             {item.is_packed && (
@@ -606,7 +606,7 @@ export default function TripDetail() {
                 <p className="text-[#6B7280] mb-8 max-w-md mx-auto">Add items to your packing list to stay organized</p>
                 <button
                   onClick={() => setShowPackingModal(true)}
-                  className="bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white px-8 py-4 rounded-full font-bold text-lg hover:opacity-90 transition-opacity shadow-lg"
+                  className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-8 py-4 rounded-full font-bold text-lg hover:opacity-90 transition-opacity shadow-lg"
                 >
                   Add First Item
                 </button>

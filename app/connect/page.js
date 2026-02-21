@@ -176,7 +176,7 @@ export default function ConnectPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center">
-        <div className="text-pink-500 text-xl">Loading...</div>
+        <div className="text-coral-500 text-xl">Loading...</div>
       </div>
     )
   }
@@ -185,7 +185,7 @@ export default function ConnectPage() {
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 flex flex-col items-center justify-center p-4">
       {/* Logo */}
       <div className="mb-8 text-center">
-        <div className="inline-block bg-gradient-to-r from-pink-400 to-pink-500 text-white rounded-2xl px-8 py-4 shadow-lg mb-4">
+        <div className="inline-block bg-gradient-to-r from-coral-400 to-coral-500 text-white rounded-2xl px-8 py-4 shadow-lg mb-4">
           <h1 className="text-4xl font-bold tracking-wider">ABF</h1>
           <p className="text-xs tracking-wide opacity-90">ALWAYS BE FLIRTING</p>
         </div>
@@ -193,7 +193,7 @@ export default function ConnectPage() {
 
       {/* Main Card */}
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
-        <h2 className="text-2xl font-bold text-pink-600 mb-2 text-center">
+        <h2 className="text-2xl font-bold text-coral-600 mb-2 text-center">
           Connect with Your Partner 💕
         </h2>
         <p className="text-gray-600 text-center mb-6">
@@ -211,20 +211,20 @@ export default function ConnectPage() {
           <div className="space-y-4">
             <button
               onClick={() => setMode('create')}
-              className="w-full bg-pink-500 hover:bg-pink-600 text-white font-semibold py-4 px-6 rounded-lg shadow-lg transition-all transform hover:scale-105"
+              className="w-full bg-coral-500 hover:bg-coral-600 text-white font-semibold py-4 px-6 rounded-lg shadow-lg transition-all transform hover:scale-105"
             >
               Create Connect Code
             </button>
             <button
               onClick={() => setMode('enter')}
-              className="w-full bg-transparent border-2 border-pink-500 text-pink-500 hover:bg-pink-50 font-semibold py-4 px-6 rounded-lg transition-all"
+              className="w-full bg-transparent border-2 border-coral-500 text-coral-500 hover:bg-cream-50 font-semibold py-4 px-6 rounded-lg transition-all"
             >
               I Have a Code
             </button>
             <div className="pt-4 border-t border-gray-100">
               <button
                 onClick={() => router.push('/dashboard')}
-                className="w-full border-2 border-[#FF6B9D] text-[#FF6B9D] hover:bg-pink-50 font-semibold py-3 px-6 rounded-lg transition-all"
+                className="w-full border-2 border-[#E8614D] text-[#E8614D] hover:bg-cream-50 font-semibold py-3 px-6 rounded-lg transition-all"
               >
                 Explore First
               </button>
@@ -241,7 +241,7 @@ export default function ConnectPage() {
             <button
               onClick={handleCreateCode}
               disabled={submitting}
-              className="w-full bg-pink-500 hover:bg-pink-600 text-white font-semibold py-4 px-6 rounded-lg shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full bg-coral-500 hover:bg-coral-600 text-white font-semibold py-4 px-6 rounded-lg shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {submitting ? 'Generating...' : 'Generate Code'}
             </button>
@@ -258,13 +258,13 @@ export default function ConnectPage() {
         {mode === 'create' && connectCode && (
           <div className="text-center">
             <p className="text-gray-600 mb-4">Share this code with your partner:</p>
-            <div className="bg-pink-50 border-2 border-pink-200 rounded-xl p-6 mb-4">
-              <div className="text-5xl font-bold text-pink-500 tracking-widest mb-4">
+            <div className="bg-cream-50 border-2 border-coral-100 rounded-xl p-6 mb-4">
+              <div className="text-5xl font-bold text-coral-500 tracking-widest mb-4">
                 {connectCode}
               </div>
               <button
                 onClick={handleCopyCode}
-                className="bg-pink-500 hover:bg-pink-600 text-white font-semibold py-2 px-6 rounded-lg transition-all"
+                className="bg-coral-500 hover:bg-coral-600 text-white font-semibold py-2 px-6 rounded-lg transition-all"
               >
                 {copied ? '✓ Copied!' : 'Copy Code'}
               </button>
@@ -274,7 +274,7 @@ export default function ConnectPage() {
             </p>
             <button
               onClick={() => router.push('/dashboard')}
-              className="w-full border-2 border-[#FF6B9D] text-[#FF6B9D] hover:bg-pink-50 font-semibold py-3 px-6 rounded-lg transition-all"
+              className="w-full border-2 border-[#E8614D] text-[#E8614D] hover:bg-cream-50 font-semibold py-3 px-6 rounded-lg transition-all"
             >
               I'll Connect Later
             </button>
@@ -295,7 +295,7 @@ export default function ConnectPage() {
                 onChange={handleInputChange}
                 placeholder="ABC123"
                 maxLength={6}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent text-center text-2xl font-bold tracking-widest uppercase"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-coral-500 focus:border-transparent text-center text-2xl font-bold tracking-widest uppercase"
                 disabled={submitting}
                 autoFocus
               />
@@ -303,7 +303,7 @@ export default function ConnectPage() {
             <button
               type="submit"
               disabled={submitting || inputCode.length !== 6}
-              className="w-full bg-pink-500 hover:bg-pink-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full bg-coral-500 hover:bg-coral-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {submitting ? 'Connecting...' : 'Connect'}
             </button>

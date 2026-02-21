@@ -197,8 +197,8 @@ export default function FlirtView({ isOpen, onClose, flirt, senderName, coupleId
 
           {/* Existing reply */}
           {localFlirt.reply && (
-            <div className="bg-pink-50 rounded-xl p-3 mt-4">
-              <p className="text-xs text-pink-500 mb-1">Your reply:</p>
+            <div className="bg-cream-50 rounded-xl p-3 mt-4">
+              <p className="text-xs text-coral-500 mb-1">Your reply:</p>
               <p className="text-gray-700">{localFlirt.reply}</p>
             </div>
           )}
@@ -216,7 +216,7 @@ export default function FlirtView({ isOpen, onClose, flirt, senderName, coupleId
           >
             <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
               localFlirt.hearted
-                ? 'bg-pink-500 text-white'
+                ? 'bg-coral-500 text-white'
                 : 'bg-white/10 text-white hover:bg-white/20'
             }`}>
               <span className="text-2xl">{localFlirt.hearted ? '❤️' : '🤍'}</span>
@@ -233,7 +233,7 @@ export default function FlirtView({ isOpen, onClose, flirt, senderName, coupleId
               className="flex flex-col items-center gap-1 hover:scale-110 transition-all"
             >
               <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
-                showReplyInput ? 'bg-purple-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'
+                showReplyInput ? 'bg-indigo-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'
               }`}>
                 <span className="text-2xl">💬</span>
               </div>
@@ -251,13 +251,13 @@ export default function FlirtView({ isOpen, onClose, flirt, senderName, coupleId
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
                 placeholder="Write a reply..."
-                className="flex-1 px-4 py-2 border-2 border-pink-200 rounded-full focus:border-pink-400 focus:outline-none"
+                className="flex-1 px-4 py-2 border-2 border-coral-100 rounded-full focus:border-coral-400 focus:outline-none"
                 autoFocus
               />
               <button
                 onClick={handleReply}
                 disabled={!replyText.trim() || submitting}
-                className="px-4 py-2 bg-pink-500 text-white rounded-full font-medium disabled:opacity-50 hover:bg-pink-600 transition-colors"
+                className="px-4 py-2 bg-coral-500 text-white rounded-full font-medium disabled:opacity-50 hover:bg-coral-600 transition-colors"
               >
                 {submitting ? '...' : 'Send'}
               </button>

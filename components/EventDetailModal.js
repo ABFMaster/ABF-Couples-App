@@ -4,14 +4,14 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const eventTypeConfig = {
-  first_date: { icon: '💕', label: 'First Date', color: 'from-pink-400 to-rose-500' },
-  first_kiss: { icon: '💋', label: 'First Kiss', color: 'from-red-400 to-pink-500' },
-  anniversary: { icon: '💍', label: 'Anniversary', color: 'from-purple-400 to-pink-500' },
+  first_date: { icon: '💕', label: 'First Date', color: 'from-coral-400 to-coral-500' },
+  first_kiss: { icon: '💋', label: 'First Kiss', color: 'from-red-400 to-coral-500' },
+  anniversary: { icon: '💍', label: 'Anniversary', color: 'from-purple-400 to-coral-500' },
   milestone: { icon: '🎉', label: 'Milestone', color: 'from-yellow-400 to-orange-500' },
   trip: { icon: '✈️', label: 'Trip', color: 'from-blue-400 to-cyan-500' },
-  date_night: { icon: '🌙', label: 'Date Night', color: 'from-indigo-400 to-purple-500' },
+  date_night: { icon: '🌙', label: 'Date Night', color: 'from-indigo-400 to-indigo-500' },
   achievement: { icon: '🏆', label: 'Achievement', color: 'from-amber-400 to-yellow-500' },
-  custom: { icon: '✨', label: 'Memory', color: 'from-pink-400 to-purple-500' },
+  custom: { icon: '✨', label: 'Memory', color: 'from-coral-400 to-indigo-400' },
 }
 
 export default function EventDetailModal({
@@ -218,7 +218,7 @@ export default function EventDetailModal({
             </button>
             <button
               onClick={onClose}
-              className="flex-1 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-medium hover:shadow-lg transition-all"
+              className="flex-1 py-3 bg-gradient-to-r from-coral-500 to-indigo-500 text-white rounded-xl font-medium hover:shadow-lg transition-all"
             >
               Close
             </button>

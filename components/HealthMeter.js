@@ -139,13 +139,13 @@ export default function HealthMeter({ coupleId, onRefresh }) {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm border border-pink-100 p-6 mb-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-coral-50 p-6 mb-6">
         <div className="flex items-center justify-center py-8">
           <div className="animate-pulse flex items-center gap-4">
-            <div className="w-20 h-20 bg-pink-100 rounded-full"></div>
+            <div className="w-20 h-20 bg-cream-100 rounded-full"></div>
             <div className="space-y-2">
-              <div className="h-6 w-32 bg-pink-100 rounded"></div>
-              <div className="h-4 w-24 bg-pink-50 rounded"></div>
+              <div className="h-6 w-32 bg-cream-100 rounded"></div>
+              <div className="h-4 w-24 bg-cream-50 rounded"></div>
             </div>
           </div>
         </div>
@@ -157,11 +157,11 @@ export default function HealthMeter({ coupleId, onRefresh }) {
   const status = getStatusMessage(score);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-pink-100 overflow-hidden mb-6">
+    <div className="bg-white rounded-2xl shadow-sm border border-coral-50 overflow-hidden mb-6">
       {/* Collapsed State - Always Visible */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full p-6 flex items-center justify-between hover:bg-pink-50/30 transition-colors"
+        className="w-full p-6 flex items-center justify-between hover:bg-cream-50/30 transition-colors"
       >
         <div className="flex items-center gap-5">
           {/* Filling Heart */}
@@ -173,8 +173,8 @@ export default function HealthMeter({ coupleId, onRefresh }) {
                   <path d="M50 88.5C50 88.5 10 60 10 35C10 20 22 10 35 10C42 10 48 14 50 18C52 14 58 10 65 10C78 10 90 20 90 35C90 60 50 88.5 50 88.5Z" />
                 </clipPath>
                 <linearGradient id="heartGradient" x1="0%" y1="100%" x2="0%" y2="0%">
-                  <stop offset="0%" stopColor="#ec4899" />
-                  <stop offset="100%" stopColor="#f472b6" />
+                  <stop offset="0%" stopColor="#E8614D" />
+                  <stop offset="100%" stopColor="#F08070" />
                 </linearGradient>
               </defs>
 
@@ -202,14 +202,14 @@ export default function HealthMeter({ coupleId, onRefresh }) {
               <path
                 d="M50 88.5C50 88.5 10 60 10 35C10 20 22 10 35 10C42 10 48 14 50 18C52 14 58 10 65 10C78 10 90 20 90 35C90 60 50 88.5 50 88.5Z"
                 fill="none"
-                stroke="#ec4899"
+                stroke="#E8614D"
                 strokeWidth="2"
               />
             </svg>
 
             {/* Score number overlay */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className={`text-xl font-bold ${score >= 50 ? 'text-white' : 'text-pink-600'} drop-shadow-sm`}>
+              <span className={`text-xl font-bold ${score >= 50 ? 'text-white' : 'text-coral-600'} drop-shadow-sm`}>
                 {displayScore}%
               </span>
             </div>
@@ -227,7 +227,7 @@ export default function HealthMeter({ coupleId, onRefresh }) {
             <h3 className="text-xl font-semibold text-gray-800">
               Relationship Health
             </h3>
-            <p className="text-pink-600 font-medium flex items-center gap-2">
+            <p className="text-coral-600 font-medium flex items-center gap-2">
               <span>{status.emoji}</span>
               <span>{status.text}</span>
             </p>
@@ -254,7 +254,7 @@ export default function HealthMeter({ coupleId, onRefresh }) {
           expanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
-        <div className="px-6 pb-6 border-t border-pink-100">
+        <div className="px-6 pb-6 border-t border-coral-50">
           <div className="flex items-center justify-between mt-4 mb-4">
             <p className="text-sm text-gray-500">
               Your connection across different areas
@@ -265,7 +265,7 @@ export default function HealthMeter({ coupleId, onRefresh }) {
                 handleRefresh();
               }}
               disabled={refreshing}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-pink-600 bg-pink-50 hover:bg-pink-100 rounded-lg transition-colors disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-coral-600 bg-cream-50 hover:bg-cream-100 rounded-lg transition-colors disabled:opacity-50"
             >
               <svg
                 className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`}
@@ -294,13 +294,13 @@ export default function HealthMeter({ coupleId, onRefresh }) {
                       <span>{category.icon}</span>
                       {category.label}
                     </span>
-                    <span className="text-sm font-semibold text-pink-600">
+                    <span className="text-sm font-semibold text-coral-600">
                       {categoryScore}%
                     </span>
                   </div>
-                  <div className="h-2 bg-pink-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-cream-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-pink-400 to-pink-500 rounded-full transition-all duration-700 ease-out"
+                      className="h-full bg-gradient-to-r from-coral-400 to-coral-500 rounded-full transition-all duration-700 ease-out"
                       style={{ width: expanded ? `${categoryScore}%` : '0%' }}
                     />
                   </div>

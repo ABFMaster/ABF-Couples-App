@@ -196,8 +196,8 @@ export default function DateNight() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-pink-500 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-pink-500 text-lg">Loading date ideas...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-coral-500 text-lg">Loading date ideas...</p>
         </div>
       </div>
     )
@@ -211,19 +211,19 @@ export default function DateNight() {
           <div className="flex items-center justify-between">
             <button
               onClick={() => router.push('/dashboard')}
-              className="flex items-center gap-2 text-gray-600 hover:text-pink-500 transition-colors"
+              className="flex items-center gap-2 text-gray-600 hover:text-coral-500 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
               <span>Back</span>
             </button>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-coral-500 to-indigo-500 bg-clip-text text-transparent">
               Date Night
             </h1>
             <button
               onClick={handleCreateCustom}
-              className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-4 py-2 rounded-full text-sm font-medium hover:shadow-lg transition-all"
+              className="bg-gradient-to-r from-coral-500 to-indigo-500 text-white px-4 py-2 rounded-full text-sm font-medium hover:shadow-lg transition-all"
             >
               + New Date
             </button>
@@ -238,16 +238,16 @@ export default function DateNight() {
             {pendingSuggestions.map((plan) => (
               <div
                 key={plan.id}
-                className="bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-2xl p-5 mb-3 shadow-lg"
+                className="bg-gradient-to-r from-coral-500 to-indigo-500 text-white rounded-2xl p-5 mb-3 shadow-lg"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <p className="text-pink-100 text-sm mb-1">
+                    <p className="text-coral-100 text-sm mb-1">
                       {partnerName} suggested a date!
                     </p>
                     <h3 className="text-xl font-bold mb-1">{plan.title}</h3>
                     {plan.date_time && (
-                      <p className="text-pink-100 text-sm">
+                      <p className="text-coral-100 text-sm">
                         {new Date(plan.date_time).toLocaleDateString('en-US', {
                           weekday: 'long',
                           month: 'long',
@@ -265,7 +265,7 @@ export default function DateNight() {
                     </button>
                     <button
                       onClick={() => handleRespondToSuggestion(plan.id, true)}
-                      className="px-4 py-2 bg-white text-pink-500 rounded-full text-sm font-bold hover:shadow-lg transition-all"
+                      className="px-4 py-2 bg-white text-coral-500 rounded-full text-sm font-bold hover:shadow-lg transition-all"
                     >
                       Let's Do It!
                     </button>
@@ -286,17 +286,17 @@ export default function DateNight() {
           <div className="bg-white rounded-2xl shadow-lg p-5 mb-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div>
-                <p className="text-3xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                <p className="text-3xl font-bold bg-gradient-to-r from-coral-500 to-indigo-500 bg-clip-text text-transparent">
                   {stats.thisYear}
                 </p>
                 <p className="text-gray-500 text-sm">dates this year</p>
               </div>
               <div>
-                <p className="text-3xl font-bold text-pink-500">{stats.totalDates}</p>
+                <p className="text-3xl font-bold text-coral-500">{stats.totalDates}</p>
                 <p className="text-gray-500 text-sm">total dates</p>
               </div>
               <div>
-                <p className="text-3xl font-bold text-purple-500">{stats.userPlanned}</p>
+                <p className="text-3xl font-bold text-indigo-500">{stats.userPlanned}</p>
                 <p className="text-gray-500 text-sm">you planned</p>
               </div>
               <div>
@@ -314,7 +314,7 @@ export default function DateNight() {
                 {upcomingDates.map((date) => (
                   <div
                     key={date.id}
-                    className="bg-white rounded-xl p-4 shadow-md border-l-4 border-pink-500"
+                    className="bg-white rounded-xl p-4 shadow-md border-l-4 border-coral-500"
                   >
                     <div className="flex items-center justify-between">
                       <div>
@@ -331,7 +331,7 @@ export default function DateNight() {
                             : 'Date TBD'}
                         </p>
                       </div>
-                      <span className="bg-pink-100 text-pink-600 px-3 py-1 rounded-full text-xs font-medium">
+                      <span className="bg-cream-100 text-coral-600 px-3 py-1 rounded-full text-xs font-medium">
                         Planned
                       </span>
                     </div>
@@ -374,7 +374,7 @@ export default function DateNight() {
               </p>
               <button
                 onClick={handleCreateCustom}
-                className="bg-gradient-to-r from-pink-500 to-purple-500 text-white px-6 py-3 rounded-full font-semibold hover:shadow-lg transition-all"
+                className="bg-gradient-to-r from-coral-500 to-indigo-500 text-white px-6 py-3 rounded-full font-semibold hover:shadow-lg transition-all"
               >
                 Plan Your First Date
               </button>
@@ -396,7 +396,7 @@ export default function DateNight() {
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-full whitespace-nowrap transition-all ${
                   selectedCategory === cat.id
-                    ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-md'
+                    ? 'bg-gradient-to-r from-coral-500 to-indigo-500 text-white shadow-md'
                     : 'bg-white text-gray-600 hover:bg-gray-50'
                 }`}
               >
@@ -453,7 +453,7 @@ export default function DateNight() {
       {/* Floating Action Button */}
       <button
         onClick={handleCreateCustom}
-        className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-full shadow-2xl flex items-center justify-center text-3xl hover:scale-110 transition-transform z-50"
+        className="fixed bottom-6 right-6 w-16 h-16 bg-gradient-to-r from-coral-500 to-indigo-500 text-white rounded-full shadow-2xl flex items-center justify-center text-3xl hover:scale-110 transition-transform z-50"
       >
         +
       </button>
@@ -487,7 +487,7 @@ export default function DateNight() {
           width: 20px;
           height: 20px;
           border-radius: 50%;
-          background: linear-gradient(to right, #ec4899, #a855f7);
+          background: linear-gradient(to right, #E8614D, #5D55A0);
           cursor: pointer;
           box-shadow: 0 2px 6px rgba(0,0,0,0.2);
         }
@@ -495,7 +495,7 @@ export default function DateNight() {
           width: 20px;
           height: 20px;
           border-radius: 50%;
-          background: linear-gradient(to right, #ec4899, #a855f7);
+          background: linear-gradient(to right, #E8614D, #5D55A0);
           cursor: pointer;
           border: none;
           box-shadow: 0 2px 6px rgba(0,0,0,0.2);

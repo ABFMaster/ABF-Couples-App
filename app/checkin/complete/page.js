@@ -154,7 +154,7 @@ export default function CheckinCompletePage() {
     return Array.from({ length: 5 }, (_, i) => (
       <svg
         key={i}
-        className={`w-5 h-5 ${i < score ? 'text-[#C9184A]' : 'text-gray-200'}`}
+        className={`w-5 h-5 ${i < score ? 'text-[#C44A38]' : 'text-gray-200'}`}
         viewBox="0 0 24 24"
         fill={i < score ? 'currentColor' : 'none'}
         stroke="currentColor"
@@ -188,7 +188,7 @@ export default function CheckinCompletePage() {
   return (
     <div className="min-h-screen bg-[#F8F6F3]">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#FF6B9D] to-[#C9184A] text-white p-6 pb-16 text-center">
+      <div className="bg-gradient-to-br from-[#E8614D] to-[#C44A38] text-white p-6 pb-16 text-center">
         {/* Celebration icon */}
         <div className="text-6xl mb-4 animate-bounce">
           {bothCompleted ? '💕' : '✓'}
@@ -222,7 +222,7 @@ export default function CheckinCompletePage() {
               showComparison ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
             }`}>
               {/* Your Card */}
-              <div className="bg-white rounded-2xl shadow-sm p-4 border-2 border-[#FF6B9D]">
+              <div className="bg-white rounded-2xl shadow-sm p-4 border-2 border-[#E8614D]">
                 <p className="text-xs text-[#6B7280] mb-3 font-medium">{userName}</p>
 
                 {/* Mood */}
@@ -255,7 +255,7 @@ export default function CheckinCompletePage() {
               </div>
 
               {/* Partner Card */}
-              <div className="bg-white rounded-2xl shadow-sm p-4 border-2 border-[#C9184A]">
+              <div className="bg-white rounded-2xl shadow-sm p-4 border-2 border-[#C44A38]">
                 <p className="text-xs text-[#6B7280] mb-3 font-medium">{partnerName}</p>
 
                 {/* Mood */}
@@ -326,15 +326,15 @@ export default function CheckinCompletePage() {
               <p className="text-sm text-[#6B7280] mb-3">Take a moment to:</p>
               <ul className="space-y-2 mb-5">
                 <li className="flex items-start gap-2 text-sm text-[#2D3648]">
-                  <span className="text-[#FF6B9D]">•</span>
+                  <span className="text-[#E8614D]">•</span>
                   <span>Acknowledge how they're feeling</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm text-[#2D3648]">
-                  <span className="text-[#FF6B9D]">•</span>
+                  <span className="text-[#E8614D]">•</span>
                   <span>Share what you appreciate about them today</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm text-[#2D3648]">
-                  <span className="text-[#FF6B9D]">•</span>
+                  <span className="text-[#E8614D]">•</span>
                   <span>Check in with them in person</span>
                 </li>
               </ul>
@@ -357,7 +357,7 @@ export default function CheckinCompletePage() {
                   <p className="text-sm text-[#6B7280] mt-2">{userMood?.label}</p>
                 </div>
 
-                <div className="flex-1 h-px bg-gradient-to-r from-[#FF6B9D] to-[#C9184A]" />
+                <div className="flex-1 h-px bg-gradient-to-r from-[#E8614D] to-[#C44A38]" />
 
                 {/* Connection */}
                 <div className="text-center">
@@ -420,7 +420,7 @@ export default function CheckinCompletePage() {
                 key={milestone.days}
                 className={`relative w-12 h-12 rounded-full flex flex-col items-center justify-center transition-all ${
                   streak >= milestone.days
-                    ? 'bg-gradient-to-br from-[#FF6B9D] to-[#C9184A] text-white shadow-lg scale-105'
+                    ? 'bg-gradient-to-br from-[#E8614D] to-[#C44A38] text-white shadow-lg scale-105'
                     : 'bg-gray-100 text-gray-400'
                 }`}
               >
@@ -432,7 +432,7 @@ export default function CheckinCompletePage() {
           {/* Progress bar */}
           <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] transition-all duration-700 ease-out"
+              className="h-full bg-gradient-to-r from-[#E8614D] to-[#C44A38] transition-all duration-700 ease-out"
               style={{ width: `${Math.min(100, (streak / 30) * 100)}%` }}
             />
           </div>
@@ -450,7 +450,7 @@ export default function CheckinCompletePage() {
         {/* Back to Dashboard Button */}
         <button
           onClick={() => router.push('/dashboard')}
-          className="w-full py-4 rounded-full bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white font-medium hover:shadow-lg transition-all"
+          className="w-full py-4 rounded-full bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white font-medium hover:shadow-lg transition-all"
         >
           Back to Dashboard
         </button>

@@ -131,7 +131,7 @@ export default function CreateDateModal({
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end md:items-center justify-center">
       <div className="bg-white w-full md:w-[500px] md:max-h-[90vh] max-h-[85vh] rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden animate-slideUp">
         {/* Header */}
-        <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white p-6">
+        <div className="bg-gradient-to-r from-coral-500 to-indigo-500 text-white p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {config && <span className="text-3xl">{config.icon}</span>}
@@ -139,7 +139,7 @@ export default function CreateDateModal({
                 <h2 className="text-xl font-bold">
                   {suggestion ? 'Plan This Date' : 'Create a Date'}
                 </h2>
-                <p className="text-pink-100 text-sm">
+                <p className="text-coral-100 text-sm">
                   {suggestion ? config?.label : 'Something special for you two'}
                 </p>
               </div>
@@ -162,7 +162,7 @@ export default function CreateDateModal({
               onClick={() => setActiveTab('details')}
               className={`flex-1 py-3 text-sm font-medium transition-colors ${
                 activeTab === 'details'
-                  ? 'text-pink-600 border-b-2 border-pink-500'
+                  ? 'text-coral-600 border-b-2 border-coral-500'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -172,7 +172,7 @@ export default function CreateDateModal({
               onClick={() => setActiveTab('tips')}
               className={`flex-1 py-3 text-sm font-medium transition-colors ${
                 activeTab === 'tips'
-                  ? 'text-pink-600 border-b-2 border-pink-500'
+                  ? 'text-coral-600 border-b-2 border-coral-500'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -193,7 +193,7 @@ export default function CreateDateModal({
 
               {/* Suggestion description (read-only) */}
               {suggestion && (
-                <div className="bg-purple-50 rounded-xl p-4 mb-4">
+                <div className="bg-cream-100 rounded-xl p-4 mb-4">
                   <p className="text-gray-700 text-sm leading-relaxed">
                     {suggestion.description}
                   </p>
@@ -220,7 +220,7 @@ export default function CreateDateModal({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="What are you planning?"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-coral-500 focus:outline-none transition-colors"
                   maxLength={100}
                 />
               </div>
@@ -234,7 +234,7 @@ export default function CreateDateModal({
                   type="datetime-local"
                   value={dateTime}
                   onChange={(e) => setDateTime(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-coral-500 focus:outline-none transition-colors"
                 />
               </div>
 
@@ -248,7 +248,7 @@ export default function CreateDateModal({
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="Restaurant name, address, or 'home'"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-coral-500 focus:outline-none transition-colors"
                 />
               </div>
 
@@ -263,7 +263,7 @@ export default function CreateDateModal({
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Any details or ideas..."
                     rows={3}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors resize-none"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-coral-500 focus:outline-none transition-colors resize-none"
                   />
                 </div>
               )}
@@ -281,8 +281,8 @@ export default function CreateDateModal({
                       onClick={() => setBudgetLevel(option.value)}
                       className={`py-3 rounded-xl border-2 transition-all ${
                         budgetLevel === option.value
-                          ? 'border-pink-500 bg-pink-50 text-pink-600'
-                          : 'border-gray-200 text-gray-600 hover:border-pink-300'
+                          ? 'border-coral-500 bg-cream-50 text-coral-600'
+                          : 'border-gray-200 text-gray-600 hover:border-coral-200'
                       }`}
                     >
                       <span className="text-lg font-bold">{option.label}</span>
@@ -308,7 +308,7 @@ export default function CreateDateModal({
                   href={suggestion.external_link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-pink-300 transition-colors"
+                  className="block bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-coral-200 transition-colors"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -334,7 +334,7 @@ export default function CreateDateModal({
             <button
               onClick={() => handleSubmit(true)}
               disabled={saving}
-              className="flex-1 py-3 border-2 border-pink-500 text-pink-500 rounded-xl font-semibold hover:bg-pink-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              className="flex-1 py-3 border-2 border-coral-500 text-coral-500 rounded-xl font-semibold hover:bg-cream-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <span>💌</span>
               Suggest to {partnerName}
@@ -342,7 +342,7 @@ export default function CreateDateModal({
             <button
               onClick={() => handleSubmit(false)}
               disabled={saving}
-              className="flex-1 py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              className="flex-1 py-3 bg-gradient-to-r from-coral-500 to-indigo-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {saving ? (
                 <>

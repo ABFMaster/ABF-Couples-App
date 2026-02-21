@@ -197,7 +197,7 @@ export default function Trips() {
     return (
       <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#FF6B9D] border-t-transparent mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent mx-auto mb-4"></div>
           <p className="text-[#6B7280] text-lg font-medium">Loading trips...</p>
         </div>
       </div>
@@ -212,7 +212,7 @@ export default function Trips() {
     return (
       <button
         onClick={() => handleTripClick(trip)}
-        className={`bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all border border-[#E5E2DD] overflow-hidden text-left w-full animate-fadeInUp ${isActive ? 'ring-2 ring-[#FF6B9D] ring-offset-2' : ''}`}
+        className={`bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all border border-[#E5E2DD] overflow-hidden text-left w-full animate-fadeInUp ${isActive ? 'ring-2 ring-[#E8614D] ring-offset-2' : ''}`}
         style={{ animationDelay: `${index * 0.1}s` }}
       >
         <div className="flex flex-col md:flex-row">
@@ -225,7 +225,7 @@ export default function Trips() {
                 className="w-full h-full object-cover md:rounded-l-2xl"
               />
               {isActive && (
-                <div className="absolute top-3 left-3 bg-[#FF6B9D] text-white text-xs font-bold px-3 py-1 rounded-full">
+                <div className="absolute top-3 left-3 bg-[#E8614D] text-white text-xs font-bold px-3 py-1 rounded-full">
                   NOW TRAVELING
                 </div>
               )}
@@ -269,7 +269,7 @@ export default function Trips() {
             )}
 
             {/* View Details Link */}
-            <span className="text-[#FF6B9D] hover:text-[#C9184A] font-medium inline-flex items-center gap-1 transition-colors">
+            <span className="text-[#E8614D] hover:text-[#C44A38] font-medium inline-flex items-center gap-1 transition-colors">
               View Details
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -298,7 +298,7 @@ export default function Trips() {
             </button>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white px-6 py-2.5 rounded-xl font-semibold hover:shadow-xl hover:scale-105 transition-all"
+              className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-6 py-2.5 rounded-xl font-semibold hover:shadow-xl hover:scale-105 transition-all"
             >
               + Create New Trip
             </button>
@@ -332,7 +332,7 @@ export default function Trips() {
           <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-[#E5E2DD]">
             {stats.daysAway !== null ? (
               <>
-                <p className="text-3xl font-bold text-[#FF6B9D]">{stats.daysAway}</p>
+                <p className="text-3xl font-bold text-[#E8614D]">{stats.daysAway}</p>
                 <p className="text-sm text-[#9CA3AF] mt-1">Days to Next Trip</p>
               </>
             ) : (
@@ -353,7 +353,7 @@ export default function Trips() {
                 onClick={() => setSelectedType(type.id)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all text-sm font-medium ${
                   selectedType === type.id
-                    ? 'bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white shadow-md'
+                    ? 'bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white shadow-md'
                     : 'bg-white text-[#6B7280] hover:bg-gray-50 border border-[#E5E2DD]'
                 }`}
               >
@@ -416,7 +416,7 @@ export default function Trips() {
             </p>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-xl hover:scale-105 transition-all"
+              className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-xl hover:scale-105 transition-all"
             >
               Plan Your First Trip
             </button>
@@ -430,7 +430,7 @@ export default function Trips() {
             <p className="text-[#6B7280]">No {tripTypes.find(t => t.id === selectedType)?.label.toLowerCase()} trips found.</p>
             <button
               onClick={() => setSelectedType('all')}
-              className="mt-4 text-[#FF6B9D] hover:text-[#C9184A] font-medium transition-colors"
+              className="mt-4 text-[#E8614D] hover:text-[#C44A38] font-medium transition-colors"
             >
               View all trips
             </button>
@@ -441,7 +441,7 @@ export default function Trips() {
       {/* ===== FLOATING ACTION BUTTON ===== */}
       <button
         onClick={() => setShowCreateModal(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:scale-110 transition-all hover:shadow-xl z-50"
+        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:scale-110 transition-all hover:shadow-xl z-50"
         aria-label="Create new trip"
       >
         +

@@ -66,7 +66,7 @@ export default function AiChatMessage({ message, isTyping = false }) {
     return (
       <div className="flex items-start gap-3 mb-4">
         {/* AI Avatar */}
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-md">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-coral-500 flex items-center justify-center flex-shrink-0 shadow-md">
           <span className="text-lg">🤖</span>
         </div>
 
@@ -86,7 +86,7 @@ export default function AiChatMessage({ message, isTyping = false }) {
     <div className={`flex items-start gap-3 mb-4 ${isUser ? 'flex-row-reverse' : ''}`}>
       {/* Avatar */}
       {!isUser && (
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-md">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-coral-500 flex items-center justify-center flex-shrink-0 shadow-md">
           <span className="text-lg">🤖</span>
         </div>
       )}
@@ -96,7 +96,7 @@ export default function AiChatMessage({ message, isTyping = false }) {
         <div
           className={`rounded-2xl px-4 py-3 shadow-md ${
             isUser
-              ? 'bg-gradient-to-r from-pink-500 to-pink-400 text-white rounded-tr-sm'
+              ? 'bg-gradient-to-r from-coral-500 to-coral-400 text-white rounded-tr-sm'
               : 'bg-white text-gray-800 rounded-tl-sm'
           }`}
         >

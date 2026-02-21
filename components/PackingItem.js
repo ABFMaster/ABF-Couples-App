@@ -16,7 +16,7 @@ export default function PackingItem({ item, partnerName, partnerId, userId, onTo
         className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
           item.is_packed
             ? 'bg-green-500 border-green-500 text-white'
-            : 'border-gray-300 hover:border-pink-400'
+            : 'border-gray-300 hover:border-coral-400'
         }`}
       >
         {item.is_packed && (
@@ -39,8 +39,8 @@ export default function PackingItem({ item, partnerName, partnerId, userId, onTo
       <span
         className={`text-xs px-2 py-1 rounded-full ${
           isAssignedToMe
-            ? 'bg-pink-100 text-pink-600'
-            : 'bg-purple-100 text-purple-600'
+            ? 'bg-cream-100 text-coral-600'
+            : 'bg-cream-100 text-indigo-500'
         }`}
       >
         {assigneeName}

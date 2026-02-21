@@ -3,8 +3,8 @@
 const tripTypeConfig = {
   adventure: { icon: '🏔️', label: 'Adventure', color: 'bg-orange-100 text-orange-600' },
   relaxation: { icon: '🏖️', label: 'Relaxation', color: 'bg-blue-100 text-blue-600' },
-  cultural: { icon: '🏛️', label: 'Cultural', color: 'bg-purple-100 text-purple-600' },
-  romantic: { icon: '💕', label: 'Romantic', color: 'bg-pink-100 text-pink-600' },
+  cultural: { icon: '🏛️', label: 'Cultural', color: 'bg-cream-100 text-indigo-500' },
+  romantic: { icon: '💕', label: 'Romantic', color: 'bg-cream-100 text-coral-600' },
   mixed: { icon: '🌈', label: 'Mixed', color: 'bg-green-100 text-green-600' },
 }
 
@@ -23,7 +23,7 @@ export default function TripCard({ trip, onClick, isActive = false, isPast = fal
       onClick={onClick}
       className={`rounded-2xl shadow-lg overflow-hidden cursor-pointer transition-all hover:shadow-xl hover:scale-[1.02] ${
         isActive
-          ? 'bg-gradient-to-br from-pink-500 to-purple-500 text-white'
+          ? 'bg-gradient-to-br from-coral-500 to-indigo-500 text-white'
           : isPast
           ? 'bg-white/80'
           : 'bg-white'
@@ -93,7 +93,7 @@ export default function TripCard({ trip, onClick, isActive = false, isPast = fal
           )}
 
           {!isActive && !isPast && daysUntil > 0 && daysUntil <= 30 && (
-            <span className="bg-pink-100 text-pink-600 text-xs px-3 py-1 rounded-full">
+            <span className="bg-cream-100 text-coral-600 text-xs px-3 py-1 rounded-full">
               {daysUntil}d away
             </span>
           )}

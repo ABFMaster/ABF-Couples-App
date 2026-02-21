@@ -240,7 +240,7 @@ export default function FlirtComposer({ isOpen, onClose, coupleId, partnerId, pa
       <div className="relative bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden animate-slideUp">
         {/* Success overlay */}
         {showSuccess && (
-          <div className="absolute inset-0 bg-gradient-to-br from-pink-400 to-purple-500 z-10 flex items-center justify-center animate-fadeIn">
+          <div className="absolute inset-0 bg-gradient-to-br from-coral-400 to-indigo-400 z-10 flex items-center justify-center animate-fadeIn">
             <div className="text-center text-white">
               <div className="text-6xl mb-4 animate-bounce">💕</div>
               <p className="text-2xl font-bold">Sent to {partnerName}!</p>
@@ -270,7 +270,7 @@ export default function FlirtComposer({ isOpen, onClose, coupleId, partnerId, pa
               onClick={() => setActiveTab(tab.id)}
               className={`flex-1 py-3 text-sm font-medium transition-all ${
                 activeTab === tab.id
-                  ? 'text-pink-600 border-b-2 border-pink-500 bg-pink-50'
+                  ? 'text-coral-600 border-b-2 border-coral-500 bg-cream-50'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -294,8 +294,8 @@ export default function FlirtComposer({ isOpen, onClose, coupleId, partnerId, pa
                       onClick={() => setMessage(suggestion)}
                       className={`px-4 py-2 rounded-full text-sm transition-all ${
                         message === suggestion
-                          ? 'bg-pink-500 text-white'
-                          : 'bg-pink-100 text-pink-700 hover:bg-pink-200'
+                          ? 'bg-coral-500 text-white'
+                          : 'bg-cream-100 text-coral-700 hover:bg-pink-200'
                       }`}
                     >
                       {suggestion}
@@ -311,7 +311,7 @@ export default function FlirtComposer({ isOpen, onClose, coupleId, partnerId, pa
                   value={message}
                   onChange={(e) => setMessage(e.target.value.slice(0, 300))}
                   placeholder="What's on your mind?"
-                  className="w-full p-4 border-2 border-pink-200 rounded-xl focus:border-pink-400 focus:outline-none resize-none h-24 transition-colors"
+                  className="w-full p-4 border-2 border-coral-100 rounded-xl focus:border-coral-400 focus:outline-none resize-none h-24 transition-colors"
                 />
                 <p className="text-right text-xs text-gray-400 mt-1">{message.length}/300</p>
               </div>
@@ -336,11 +336,11 @@ export default function FlirtComposer({ isOpen, onClose, coupleId, partnerId, pa
                       value={gifSearch}
                       onChange={(e) => setGifSearch(e.target.value)}
                       placeholder="Search Giphy..."
-                      className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-full focus:border-pink-400 focus:outline-none"
+                      className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-full focus:border-coral-400 focus:outline-none"
                     />
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-pink-500 text-white rounded-full hover:bg-pink-600 transition-colors"
+                      className="px-4 py-2 bg-coral-500 text-white rounded-full hover:bg-coral-600 transition-colors"
                     >
                       Search
                     </button>
@@ -355,7 +355,7 @@ export default function FlirtComposer({ isOpen, onClose, coupleId, partnerId, pa
                           setGifSearch(cat.label);
                           loadGifs(cat.query);
                         }}
-                        className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm hover:bg-purple-200 transition-colors"
+                        className="px-3 py-1 bg-cream-100 text-purple-700 rounded-full text-sm hover:bg-purple-200 transition-colors"
                       >
                         {cat.label}
                       </button>
@@ -365,7 +365,7 @@ export default function FlirtComposer({ isOpen, onClose, coupleId, partnerId, pa
                   {/* GIF Grid */}
                   {gifLoading ? (
                     <div className="flex justify-center py-8">
-                      <div className="w-8 h-8 border-4 border-pink-500 border-t-transparent rounded-full animate-spin" />
+                      <div className="w-8 h-8 border-4 border-coral-500 border-t-transparent rounded-full animate-spin" />
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-64 overflow-y-auto">
@@ -375,8 +375,8 @@ export default function FlirtComposer({ isOpen, onClose, coupleId, partnerId, pa
                           onClick={() => setSelectedGif(selectedGif?.id === gif.id ? null : gif)}
                           className={`relative rounded-lg overflow-hidden aspect-square ${
                             selectedGif?.id === gif.id
-                              ? 'ring-4 ring-pink-500 ring-offset-2'
-                              : 'hover:ring-2 hover:ring-pink-300'
+                              ? 'ring-4 ring-coral-500 ring-offset-2'
+                              : 'hover:ring-2 hover:ring-coral-200'
                           }`}
                         >
                           <img
@@ -386,7 +386,7 @@ export default function FlirtComposer({ isOpen, onClose, coupleId, partnerId, pa
                             loading="lazy"
                           />
                           {selectedGif?.id === gif.id && (
-                            <div className="absolute inset-0 bg-pink-500/20 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-coral-500/20 flex items-center justify-center">
                               <span className="text-2xl">✓</span>
                             </div>
                           )}
@@ -403,7 +403,7 @@ export default function FlirtComposer({ isOpen, onClose, coupleId, partnerId, pa
                         value={message}
                         onChange={(e) => setMessage(e.target.value.slice(0, 150))}
                         placeholder="Add a message (optional)..."
-                        className="w-full px-4 py-2 border-2 border-pink-200 rounded-full focus:border-pink-400 focus:outline-none"
+                        className="w-full px-4 py-2 border-2 border-coral-100 rounded-full focus:border-coral-400 focus:outline-none"
                       />
                     </div>
                   )}
@@ -434,7 +434,7 @@ export default function FlirtComposer({ isOpen, onClose, coupleId, partnerId, pa
                     value={message}
                     onChange={(e) => setMessage(e.target.value.slice(0, 150))}
                     placeholder="Add a caption (optional)..."
-                    className="w-full px-4 py-2 border-2 border-pink-200 rounded-full focus:border-pink-400 focus:outline-none"
+                    className="w-full px-4 py-2 border-2 border-coral-100 rounded-full focus:border-coral-400 focus:outline-none"
                   />
                 </div>
               ) : (
@@ -444,7 +444,7 @@ export default function FlirtComposer({ isOpen, onClose, coupleId, partnerId, pa
                   <div className="flex flex-col gap-3">
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="w-full py-3 bg-gradient-to-r from-pink-400 to-pink-500 text-white rounded-xl font-medium hover:from-pink-500 hover:to-pink-600 transition-all"
+                      className="w-full py-3 bg-gradient-to-r from-coral-400 to-coral-500 text-white rounded-xl font-medium hover:from-coral-500 hover:to-coral-600 transition-all"
                     >
                       Choose from Library
                     </button>
@@ -521,7 +521,7 @@ export default function FlirtComposer({ isOpen, onClose, coupleId, partnerId, pa
           <button
             onClick={handleSend}
             disabled={!hasContent || sending}
-            className="w-full py-4 bg-gradient-to-r from-pink-400 to-pink-500 text-white rounded-2xl font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed hover:from-pink-500 hover:to-pink-600 transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+            className="w-full py-4 bg-gradient-to-r from-coral-400 to-coral-500 text-white rounded-2xl font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed hover:from-coral-500 hover:to-coral-600 transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg"
           >
             {sending ? (
               <span className="flex items-center justify-center gap-2">

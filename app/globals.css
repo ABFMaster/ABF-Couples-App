@@ -1,22 +1,76 @@
 @import "tailwindcss";
 
+/* ── Brand color tokens ─────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #FDF6EF;
+  --foreground: #1A1A2E;
+
+  /* Primary — Coral/Terracotta */
+  --color-primary: #E8614D;
+  --color-primary-light: #F08070;
+  --color-primary-dark: #C44A38;
+
+  /* Secondary — Deep Indigo */
+  --color-secondary: #3D3580;
+  --color-secondary-light: #5D55A0;
+  --color-secondary-dark: #2A2460;
+
+  /* Accent — Warm Amber/Gold */
+  --color-accent: #D4A843;
+  --color-accent-light: #E8C068;
+
+  /* Backgrounds — Warm Cream */
+  --color-bg-primary: #FDF6EF;
+  --color-bg-secondary: #F5EDE3;
+  --color-bg-card: #FFFFFF;
+
+  /* Text */
+  --color-text-primary: #1A1A2E;
+  --color-text-secondary: #4A4A6A;
+  --color-text-muted: #8A8A9A;
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #E8614D 0%, #3D3580 100%);
+  --gradient-warm: linear-gradient(135deg, #E8614D 0%, #D4A843 100%);
+  --gradient-cool: linear-gradient(135deg, #3D3580 0%, #5D55A0 100%);
+  --gradient-card: linear-gradient(135deg, #F08070 0%, #5D55A0 100%);
 }
 
+/* ── Tailwind v4 theme extension ────────────────────────────────────────── */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Coral (replaces pink) */
+  --color-coral-50:  #FEF0EE;
+  --color-coral-100: #FDD8D3;
+  --color-coral-400: #F08070;
+  --color-coral-500: #E8614D;
+  --color-coral-600: #C44A38;
+  --color-coral-700: #A03828;
+
+  /* Deep Indigo (overrides Tailwind's built-in indigo at these shades) */
+  --color-indigo-400: #5D55A0;
+  --color-indigo-500: #3D3580;
+  --color-indigo-600: #2A2460;
+  --color-indigo-700: #1A1640;
+
+  /* Amber (overrides Tailwind's amber at these shades) */
+  --color-amber-400: #E8C068;
+  --color-amber-500: #D4A843;
+  --color-amber-600: #B88A28;
+
+  /* Cream backgrounds */
+  --color-cream-50:  #FDF6EF;
+  --color-cream-100: #F5EDE3;
+  --color-cream-200: #EDE0D0;
+
+  /* Gradients */
+  --background-image-gradient-primary: linear-gradient(135deg, #E8614D 0%, #3D3580 100%);
+  --background-image-gradient-warm: linear-gradient(135deg, #E8614D 0%, #D4A843 100%);
+  --background-image-gradient-cool: linear-gradient(135deg, #3D3580 0%, #5D55A0 100%);
 }
 
 body {

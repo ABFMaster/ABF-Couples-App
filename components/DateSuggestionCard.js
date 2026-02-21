@@ -4,10 +4,10 @@
 const categoryConfig = {
   dinner: { icon: '🍽️', color: 'from-orange-400 to-red-400', label: 'Dinner' },
   museum: { icon: '🎨', color: 'from-purple-400 to-indigo-400', label: 'Culture' },
-  music: { icon: '🎵', color: 'from-pink-400 to-purple-400', label: 'Music' },
+  music: { icon: '🎵', color: 'from-coral-400 to-purple-400', label: 'Music' },
   outdoor: { icon: '🌲', color: 'from-green-400 to-teal-400', label: 'Outdoor' },
   activity: { icon: '🎯', color: 'from-blue-400 to-cyan-400', label: 'Activity' },
-  show: { icon: '🎭', color: 'from-red-400 to-pink-400', label: 'Show' },
+  show: { icon: '🎭', color: 'from-red-400 to-coral-400', label: 'Show' },
   cozy: { icon: '🏠', color: 'from-amber-400 to-orange-400', label: 'Cozy' },
   adventure: { icon: '🎢', color: 'from-cyan-400 to-blue-400', label: 'Adventure' },
   creative: { icon: '✨', color: 'from-violet-400 to-purple-400', label: 'Creative' },
@@ -60,7 +60,7 @@ export default function DateSuggestionCard({ suggestion, onClick }) {
 
       {/* Content */}
       <div className="p-4">
-        <h3 className="font-bold text-gray-800 text-lg mb-2 group-hover:text-pink-600 transition-colors line-clamp-2">
+        <h3 className="font-bold text-gray-800 text-lg mb-2 group-hover:text-coral-600 transition-colors line-clamp-2">
           {suggestion.title}
         </h3>
 
@@ -90,7 +90,7 @@ export default function DateSuggestionCard({ suggestion, onClick }) {
 
           {/* Arrow */}
           <svg
-            className="w-5 h-5 text-gray-300 group-hover:text-pink-500 group-hover:translate-x-1 transition-all"
+            className="w-5 h-5 text-gray-300 group-hover:text-coral-500 group-hover:translate-x-1 transition-all"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

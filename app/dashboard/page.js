@@ -64,7 +64,7 @@ function DashboardPlanModal({ place, onClose, onSubmit, submitting }) {
               type="datetime-local"
               value={scheduledDate}
               onChange={e => setScheduledDate(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-coral-200"
             />
           </div>
           <div className="mb-5">
@@ -76,13 +76,13 @@ function DashboardPlanModal({ place, onClose, onSubmit, submitting }) {
               onChange={e => setNotes(e.target.value)}
               placeholder="Any ideas, reservations to make, or things to bring…"
               rows={3}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-coral-200 resize-none"
             />
           </div>
           <button
             onClick={() => onSubmit({ place, scheduledDate, notes })}
             disabled={submitting || !scheduledDate}
-            className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white font-semibold py-3.5 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="w-full bg-gradient-to-r from-coral-500 to-coral-500 text-white font-semibold py-3.5 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             {submitting ? 'Scheduling…' : '💕 Schedule Date'}
           </button>
@@ -966,8 +966,8 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-pink-500 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-pink-600 text-lg font-medium">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-coral-600 text-lg font-medium">Loading...</p>
         </div>
       </div>
     )
@@ -989,10 +989,10 @@ export default function Dashboard() {
           ${celebration.type === 'streak' ? 'animate-pulse' : 'animate-fadeInDown'}`}
         >
           <div className={`px-6 py-3 rounded-full shadow-lg flex items-center gap-2
-            ${celebration.type === 'complete' ? 'bg-gradient-to-r from-pink-400 to-purple-400 text-white' : ''}
+            ${celebration.type === 'complete' ? 'bg-gradient-to-r from-coral-400 to-purple-400 text-white' : ''}
             ${celebration.type === 'streak' ? 'bg-gradient-to-r from-orange-400 to-red-400 text-white' : ''}
             ${celebration.type === 'comment' ? 'bg-gradient-to-r from-green-400 to-emerald-400 text-white' : ''}
-            ${celebration.type === 'flirt' ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white' : ''}
+            ${celebration.type === 'flirt' ? 'bg-gradient-to-r from-coral-500 to-coral-500 text-white' : ''}
           `}>
             <span className="text-xl">
               {celebration.type === 'complete' && '🎉'}
@@ -1056,7 +1056,7 @@ export default function Dashboard() {
       <div className="max-w-4xl mx-auto px-4 py-6">
         {/* ===== HEADER SECTION ===== */}
         <header className="flex justify-between items-center mb-8">
-          <div className="bg-gradient-to-r from-pink-400 to-pink-500 text-white rounded-2xl px-6 py-3 shadow-lg">
+          <div className="bg-gradient-to-r from-coral-400 to-coral-500 text-white rounded-2xl px-6 py-3 shadow-lg">
             <h1 className="text-2xl font-bold tracking-wider">ABF</h1>
           </div>
           <div className="flex items-center gap-3">
@@ -1082,19 +1082,19 @@ export default function Dashboard() {
         {/* ===== PARTNER CONNECTION BANNER ===== */}
         {!hasPartner && (
           <section className="mb-8">
-            <div className="bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] rounded-xl py-4 px-6 text-white shadow-lg">
+            <div className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] rounded-xl py-4 px-6 text-white shadow-lg">
               <div className="flex flex-col md:flex-row md:items-center gap-4">
                 <div className="flex items-center gap-3 flex-1">
                   <span className="text-3xl">💕</span>
                   <div>
                     <h3 className="font-bold text-lg">Connect with your partner to unlock all features!</h3>
-                    <p className="text-pink-100 text-sm">Share your code or enter theirs to get started together</p>
+                    <p className="text-coral-100 text-sm">Share your code or enter theirs to get started together</p>
                   </div>
                 </div>
                 {connectCode ? (
                   <div className="flex items-center gap-3">
                     <div className="bg-white/20 rounded-lg px-4 py-2">
-                      <p className="text-xs text-pink-100 mb-1">Your Code</p>
+                      <p className="text-xs text-coral-100 mb-1">Your Code</p>
                       <p className="text-2xl font-bold tracking-widest">{connectCode}</p>
                     </div>
                     <button
@@ -1105,7 +1105,7 @@ export default function Dashboard() {
                     </button>
                     <button
                       onClick={() => router.push('/connect')}
-                      className="bg-white text-[#FF6B9D] px-4 py-2 rounded-lg font-bold hover:bg-pink-50 transition-all"
+                      className="bg-white text-[#E8614D] px-4 py-2 rounded-lg font-bold hover:bg-cream-50 transition-all"
                     >
                       Connect Now
                     </button>
@@ -1113,7 +1113,7 @@ export default function Dashboard() {
                 ) : (
                   <button
                     onClick={() => router.push('/connect')}
-                    className="bg-white text-[#FF6B9D] px-6 py-3 rounded-lg font-bold hover:bg-pink-50 transition-all"
+                    className="bg-white text-[#E8614D] px-6 py-3 rounded-lg font-bold hover:bg-cream-50 transition-all"
                   >
                     Get Started
                   </button>
@@ -1129,7 +1129,7 @@ export default function Dashboard() {
             Hey {user?.user_metadata?.first_name || 'there'}! 💕
           </h2>
           <div className="flex items-start gap-2">
-            <span className="text-pink-400 flex-shrink-0">✨</span>
+            <span className="text-coral-400 flex-shrink-0">✨</span>
             <p className="text-gray-600 italic leading-relaxed">
               "{dailyQuote}"
             </p>
@@ -1170,7 +1170,7 @@ export default function Dashboard() {
                       <span className="text-xl">📅</span>
                       <h3 className="text-base font-bold text-[#2D3648]">Next Date Night</h3>
                     </div>
-                    <Link href="/dates" className="text-sm text-[#C9184A] font-medium hover:text-[#a01038]">
+                    <Link href="/dates" className="text-sm text-[#C44A38] font-medium hover:text-[#a01038]">
                       View All →
                     </Link>
                   </div>
@@ -1185,7 +1185,7 @@ export default function Dashboard() {
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-gray-900 leading-tight mb-1">{upcomingDate.title}</p>
                       {upcomingDate.date_time && (
-                        <p className="text-sm text-pink-600 font-medium">
+                        <p className="text-sm text-coral-600 font-medium">
                           {new Date(upcomingDate.date_time).toLocaleDateString('en-US', {
                             weekday: 'long', month: 'short', day: 'numeric',
                           })}{' '}at{' '}
@@ -1204,7 +1204,7 @@ export default function Dashboard() {
                   <div className="flex gap-2 mt-4">
                     <Link
                       href="/dates"
-                      className="flex-1 text-sm font-medium border border-pink-300 text-pink-600 rounded-full py-2 text-center hover:bg-pink-50 transition-colors"
+                      className="flex-1 text-sm font-medium border border-coral-200 text-coral-600 rounded-full py-2 text-center hover:bg-cream-50 transition-colors"
                     >
                       View Details
                     </Link>
@@ -1218,7 +1218,7 @@ export default function Dashboard() {
                         }
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1 text-sm font-medium bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full py-2 text-center hover:opacity-90 transition-opacity"
+                        className="flex-1 text-sm font-medium bg-gradient-to-r from-coral-500 to-coral-500 text-white rounded-full py-2 text-center hover:opacity-90 transition-opacity"
                       >
                         Get Directions
                       </a>
@@ -1234,7 +1234,7 @@ export default function Dashboard() {
                   <p className="text-sm text-gray-500 mb-4">You haven't scheduled a date night yet this month</p>
                   <Link
                     href="/dates"
-                    className="inline-flex items-center gap-1.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:opacity-90 transition-opacity"
+                    className="inline-flex items-center gap-1.5 bg-gradient-to-r from-coral-500 to-coral-500 text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:opacity-90 transition-opacity"
                   >
                     Browse Date Ideas <span>→</span>
                   </Link>
@@ -1257,7 +1257,7 @@ export default function Dashboard() {
                     </div>
                     <button
                       onClick={() => router.push('/checkin/weekly')}
-                      className="text-sm text-[#C9184A] hover:text-[#a01038] font-medium transition-colors"
+                      className="text-sm text-[#C44A38] hover:text-[#a01038] font-medium transition-colors"
                     >
                       View Weekly Summary →
                     </button>
@@ -1348,7 +1348,7 @@ export default function Dashboard() {
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] transition-all duration-500 rounded-full"
+                        className="h-full bg-gradient-to-r from-[#E8614D] to-[#C44A38] transition-all duration-500 rounded-full"
                         style={{ width: `${Math.min(((userPatterns?.totalCheckins || 0) / 3) * 100, 100)}%` }}
                       />
                     </div>
@@ -1372,7 +1372,7 @@ export default function Dashboard() {
 
                   <button
                     onClick={() => router.push('/checkin')}
-                    className="inline-flex items-center gap-2 bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+                    className="inline-flex items-center gap-2 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity"
                   >
                     Complete Today's Check-in
                     <span>→</span>
@@ -1386,15 +1386,15 @@ export default function Dashboard() {
         {/* ===== STATS ROW ===== */}
         <section className="grid grid-cols-4 gap-3 sm:gap-4 mb-8">
           <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-            <p className="text-2xl font-bold text-pink-600">{streak}</p>
+            <p className="text-2xl font-bold text-coral-600">{streak}</p>
             <p className="text-xs text-gray-500 mt-1">Day Streak</p>
           </div>
           <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-            <p className="text-2xl font-bold text-purple-600">{totalFlirtsSent}</p>
+            <p className="text-2xl font-bold text-indigo-500">{totalFlirtsSent}</p>
             <p className="text-xs text-gray-500 mt-1">Flirts Sent</p>
           </div>
           <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-            <p className="text-2xl font-bold text-rose-500">{unreadFlirts.length}</p>
+            <p className="text-2xl font-bold text-coral-500">{unreadFlirts.length}</p>
             <p className="text-xs text-gray-500 mt-1">New Flirts</p>
           </div>
           <div className="bg-white rounded-xl p-4 text-center shadow-sm">
@@ -1413,7 +1413,7 @@ export default function Dashboard() {
               onClick={() => router.push(individualProfileStatus.completed ? '/profile/results' : '/profile')}
               className={`rounded-2xl shadow-lg p-6 cursor-pointer transition-all hover:scale-[1.01] relative overflow-hidden h-full min-h-[160px] ${
                 individualProfileStatus.completed
-                  ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
+                  ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white'
                   : 'bg-white border-2 border-indigo-200 hover:border-indigo-400'
               }`}
             >
@@ -1469,8 +1469,8 @@ export default function Dashboard() {
                 !hasPartner
                   ? 'bg-gray-100 cursor-not-allowed'
                   : onboardingStatus.userCompleted
-                    ? 'bg-gradient-to-br from-pink-500 to-rose-600 text-white cursor-pointer hover:scale-[1.01]'
-                    : 'bg-white border-2 border-pink-200 hover:border-pink-400 cursor-pointer hover:scale-[1.01]'
+                    ? 'bg-gradient-to-br from-coral-500 to-rose-600 text-white cursor-pointer hover:scale-[1.01]'
+                    : 'bg-white border-2 border-coral-100 hover:border-coral-400 cursor-pointer hover:scale-[1.01]'
               } transition-all`}
             >
               <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
@@ -1480,7 +1480,7 @@ export default function Dashboard() {
                     ? 'bg-gray-200'
                     : onboardingStatus.userCompleted
                       ? 'bg-white/20'
-                      : 'bg-pink-100'
+                      : 'bg-cream-100'
                 }`}>
                   <span className="text-3xl">{hasPartner ? '❤️' : '🔗'}</span>
                 </div>
@@ -1498,7 +1498,7 @@ export default function Dashboard() {
                     !hasPartner
                       ? 'text-gray-400'
                       : onboardingStatus.userCompleted
-                        ? 'text-pink-100'
+                        ? 'text-coral-100'
                         : 'text-gray-600'
                   }`}>
                     {!hasPartner
@@ -1514,7 +1514,7 @@ export default function Dashboard() {
                       ? 'bg-gray-200 text-gray-500'
                       : onboardingStatus.userCompleted
                         ? 'bg-white/20 text-white'
-                        : 'bg-pink-500 text-white'
+                        : 'bg-coral-500 text-white'
                   }`}>
                     {!hasPartner
                       ? 'Partner Required'
@@ -1582,7 +1582,7 @@ export default function Dashboard() {
                           <span className="text-sm text-gray-600">You:</span>
                           <span className="text-2xl">{userMood?.emoji}</span>
                           <span className="text-sm text-gray-700">{userMood?.label}</span>
-                          <span className="text-sm text-[#C9184A]">
+                          <span className="text-sm text-[#C44A38]">
                             {'❤️'.repeat(v2Checkin.connection_score || 0)}
                           </span>
                         </div>
@@ -1686,7 +1686,7 @@ export default function Dashboard() {
               className={`rounded-2xl shadow-lg overflow-hidden cursor-pointer transition-all hover:shadow-xl hover:scale-[1.01] ${
                 weeklyReflection?.user1_completed_at && weeklyReflection?.user2_completed_at
                   ? 'bg-gradient-to-r from-green-400 to-emerald-500'
-                  : 'bg-gradient-to-r from-purple-500 to-pink-500'
+                  : 'bg-gradient-to-r from-indigo-500 to-coral-500'
               }`}
             >
               <div className="p-6">
@@ -1722,7 +1722,7 @@ export default function Dashboard() {
                         Waiting
                       </span>
                     ) : (
-                      <span className="bg-white text-purple-600 text-xs px-3 py-1 rounded-full font-semibold">
+                      <span className="bg-white text-indigo-500 text-xs px-3 py-1 rounded-full font-semibold">
                         Start Now
                       </span>
                     )}
@@ -1766,8 +1766,8 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-[#C9184A] font-medium">View Summary</span>
-                  <svg className="w-4 h-4 text-[#C9184A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <span className="text-sm text-[#C44A38] font-medium">View Summary</span>
+                  <svg className="w-4 h-4 text-[#C44A38]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
@@ -1784,15 +1784,15 @@ export default function Dashboard() {
             {/* Send a Flirt Card */}
             <div
               onClick={() => setShowFlirtComposer(true)}
-              className="bg-gradient-to-br from-rose-500 to-pink-500 rounded-xl p-6 shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-[1.01] text-white"
+              className="bg-gradient-to-br from-coral-500 to-coral-500 rounded-xl p-6 shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-[1.01] text-white"
             >
               <div className="text-3xl mb-3">💕</div>
               <h3 className="text-lg font-semibold mb-1">Send a Flirt</h3>
-              <p className="text-pink-100 text-sm mb-3">
+              <p className="text-coral-100 text-sm mb-3">
                 Brighten {onboardingStatus.partnerName}'s day
               </p>
               {lastSentFlirtTime && (
-                <p className="text-pink-200 text-xs">
+                <p className="text-coral-200 text-xs">
                   Last sent {formatTimeAgo(lastSentFlirtTime)}
                 </p>
               )}
@@ -1809,7 +1809,7 @@ export default function Dashboard() {
               }}
               className={`rounded-xl p-6 shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-[1.01] ${
                 unreadFlirts.length > 0
-                  ? 'bg-gradient-to-br from-purple-500 to-pink-500 text-white'
+                  ? 'bg-gradient-to-br from-indigo-500 to-coral-500 text-white'
                   : 'bg-white'
               }`}
             >
@@ -1820,7 +1820,7 @@ export default function Dashboard() {
                   : 'Flirt History'}
               </h3>
               {unreadFlirts.length > 0 && latestFlirt ? (
-                <p className="text-pink-100 text-sm line-clamp-2">
+                <p className="text-coral-100 text-sm line-clamp-2">
                   {latestFlirt.message
                     ? latestFlirt.message.substring(0, 40) + (latestFlirt.message.length > 40 ? '...' : '')
                     : latestFlirt.gif_url
@@ -1844,7 +1844,7 @@ export default function Dashboard() {
             {/* AI Coach Card */}
             <div
               onClick={() => router.push('/ai-coach')}
-              className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl p-6 shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-[1.01] text-white"
+              className="bg-gradient-to-br from-indigo-500 to-coral-500 rounded-xl p-6 shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-[1.01] text-white"
             >
               <div className="text-3xl mb-3">🤖</div>
               <h3 className="text-lg font-semibold mb-1">AI Coach</h3>
@@ -1856,7 +1856,7 @@ export default function Dashboard() {
             {/* Our Timeline Card */}
             <div
               onClick={() => router.push('/timeline')}
-              className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl p-6 shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-[1.01] text-white"
+              className="bg-gradient-to-br from-indigo-500 to-coral-500 rounded-xl p-6 shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-[1.01] text-white"
             >
               <div className="text-3xl mb-3">📅</div>
               <h3 className="text-lg font-semibold mb-1">Our Timeline</h3>
@@ -1870,16 +1870,16 @@ export default function Dashboard() {
             {/* Date Night Card */}
             <div
               onClick={() => router.push('/dates')}
-              className="bg-gradient-to-br from-rose-500 to-pink-500 rounded-xl p-6 shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-[1.01] text-white relative"
+              className="bg-gradient-to-br from-coral-500 to-coral-500 rounded-xl p-6 shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-[1.01] text-white relative"
             >
               {pendingDateSuggestions > 0 && (
-                <div className="absolute top-3 right-3 bg-white text-pink-500 text-xs px-2 py-1 rounded-full font-bold">
+                <div className="absolute top-3 right-3 bg-white text-coral-500 text-xs px-2 py-1 rounded-full font-bold">
                   {pendingDateSuggestions} new
                 </div>
               )}
               <div className="text-3xl mb-3">🎉</div>
               <h3 className="text-lg font-semibold mb-1">Date Night</h3>
-              <p className="text-pink-100 text-sm">
+              <p className="text-coral-100 text-sm">
                 {upcomingDate ? upcomingDate.title : 'Plan adventures'}
               </p>
             </div>
@@ -1915,7 +1915,7 @@ export default function Dashboard() {
                       }
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-pink-500 uppercase tracking-wide mb-0.5">Upcoming Date</p>
+                      <p className="text-xs font-semibold text-coral-500 uppercase tracking-wide mb-0.5">Upcoming Date</p>
                       <p className="font-semibold text-gray-900 text-sm truncate">{upcomingDate.title}</p>
                       {upcomingDate.date_time && (
                         <p className="text-xs text-gray-400 mt-0.5">
@@ -1923,16 +1923,16 @@ export default function Dashboard() {
                         </p>
                       )}
                     </div>
-                    <span className="text-xs font-semibold text-pink-500 flex-shrink-0">View →</span>
+                    <span className="text-xs font-semibold text-coral-500 flex-shrink-0">View →</span>
                   </div>
                 </Link>
               )}
 
               {/* Hardcoded idea card */}
               <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
-                <div className="bg-gradient-to-br from-orange-400 to-rose-500 px-4 pt-4 pb-5 relative">
+                <div className="bg-gradient-to-br from-orange-400 to-coral-500 px-4 pt-4 pb-5 relative">
                   <span className="absolute top-3 right-4 text-2xl opacity-75">🌅</span>
-                  <span className="inline-block text-xs font-semibold px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 mb-2">
+                  <span className="inline-block text-xs font-semibold px-2.5 py-1 rounded-full bg-cream-100 text-coral-700 mb-2">
                     Quality Time
                   </span>
                   <h3 className="font-bold text-white text-sm">Golden Hour Waterfront</h3>
@@ -1947,7 +1947,7 @@ export default function Dashboard() {
                   </div>
                   <Link
                     href="/dates"
-                    className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white text-xs font-bold rounded-xl hover:shadow-md transition-shadow"
+                    className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-gradient-to-r from-coral-500 to-indigo-500 text-white text-xs font-bold rounded-xl hover:shadow-md transition-shadow"
                   >
                     View All Ideas →
                   </Link>
@@ -1961,7 +1961,7 @@ export default function Dashboard() {
         {hasPartner && couple && (
           <section className="mb-8">
             <div className="bg-white/70 rounded-xl p-6 text-center shadow-sm">
-              <p className="text-lg font-semibold text-pink-600 mb-1">
+              <p className="text-lg font-semibold text-coral-600 mb-1">
                 💕 Connected with {onboardingStatus.partnerName}
               </p>
               <p className="text-gray-500 text-sm">
@@ -1979,7 +1979,7 @@ export default function Dashboard() {
         <footer className="text-center pb-8">
           {connectCode && (
             <p className="text-gray-500 text-sm">
-              Your Connect Code: <span className="font-mono font-bold text-pink-600">{connectCode}</span>
+              Your Connect Code: <span className="font-mono font-bold text-coral-600">{connectCode}</span>
             </p>
           )}
         </footer>

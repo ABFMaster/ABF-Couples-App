@@ -174,7 +174,7 @@ export default function Mixtape() {
 
       {/* Coming Soon Banner */}
       <div className="max-w-4xl mx-auto px-4 py-4">
-        <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/30 rounded-xl p-4">
+        <div className="bg-gradient-to-r from-indigo-600/20 to-coral-600/20 border border-purple-500/30 rounded-xl p-4">
           <div className="flex items-center gap-3">
             <span className="text-2xl">✨</span>
             <div>

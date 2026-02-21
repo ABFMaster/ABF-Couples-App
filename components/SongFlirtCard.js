@@ -69,7 +69,7 @@ export default function SongFlirtCard({
         <div
           className={`rounded-2xl overflow-hidden shadow-md ${
             isFromMe
-              ? 'bg-gradient-to-br from-pink-500 to-rose-500'
+              ? 'bg-gradient-to-br from-coral-500 to-coral-500'
               : 'bg-gradient-to-br from-gray-800 to-gray-900'
           }`}
         >
@@ -112,7 +112,7 @@ export default function SongFlirtCard({
               {/* Track Info */}
               <div className="flex-1 min-w-0 text-white">
                 <p className="font-bold truncate">{flirt.spotify_track_name}</p>
-                <p className={`text-sm truncate ${isFromMe ? 'text-pink-100' : 'text-gray-400'}`}>
+                <p className={`text-sm truncate ${isFromMe ? 'text-coral-100' : 'text-gray-400'}`}>
                   {flirt.spotify_artist}
                 </p>
 
@@ -123,7 +123,7 @@ export default function SongFlirtCard({
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`inline-flex items-center gap-1 text-xs mt-1 ${
-                      isFromMe ? 'text-pink-200 hover:text-white' : 'text-[#1DB954] hover:text-[#1ed760]'
+                      isFromMe ? 'text-coral-200 hover:text-white' : 'text-[#1DB954] hover:text-[#1ed760]'
                     } transition-colors`}
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -168,7 +168,7 @@ export default function SongFlirtCard({
           {!isFromMe && !flirt.reaction && onReact && (
             <button
               onClick={() => onReact(flirt.id, '❤️')}
-              className="text-gray-400 hover:text-pink-500 transition-colors"
+              className="text-gray-400 hover:text-coral-500 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />

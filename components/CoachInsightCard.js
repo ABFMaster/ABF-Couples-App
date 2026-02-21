@@ -102,15 +102,15 @@ export default function CoachInsightCard({
     <div
       className="rounded-2xl px-4 py-3.5 flex items-center gap-3"
       style={{
-        background: 'linear-gradient(135deg, #fdf2f8 0%, #f3e8ff 100%)',
-        border: '1px solid rgba(236, 72, 153, 0.12)',
+        background: 'linear-gradient(135deg, #FEF0EE 0%, #EDE0D0 100%)',
+        borderLeft: '3px solid #E8614D',
       }}
     >
       <span className="text-xl flex-shrink-0">💡</span>
       <p className="flex-1 text-sm text-gray-700 leading-snug">{insight.text}</p>
       <button
         onClick={() => router.push('/ai-coach')}
-        className="flex-shrink-0 text-sm font-semibold text-pink-600 hover:text-pink-700 transition-colors whitespace-nowrap"
+        className="flex-shrink-0 text-sm font-semibold text-coral-600 hover:text-coral-700 transition-colors whitespace-nowrap"
       >
         {insight.cta}
       </button>

@@ -99,7 +99,7 @@ export default function AddPackingItemModal({
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end md:items-center justify-center">
       <div className="bg-white w-full md:w-[400px] md:max-h-[90vh] max-h-[85vh] rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden animate-slideUp">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-6">
+        <div className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-3xl">🎒</span>
@@ -138,7 +138,7 @@ export default function AddPackingItemModal({
                 value={item}
                 onChange={(e) => setItem(e.target.value)}
                 placeholder="e.g., Sunscreen, Passport, Camera"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-coral-500 focus:outline-none transition-colors"
                 maxLength={100}
                 autoFocus
               />
@@ -157,13 +157,13 @@ export default function AddPackingItemModal({
                     onClick={() => setCategory(cat.id)}
                     className={`p-3 rounded-xl border-2 transition-all text-center ${
                       category === cat.id
-                        ? 'border-pink-500 bg-pink-50'
-                        : 'border-gray-200 hover:border-pink-300'
+                        ? 'border-coral-500 bg-cream-50'
+                        : 'border-gray-200 hover:border-coral-200'
                     }`}
                   >
                     <span className="text-xl">{cat.icon}</span>
                     <p className={`text-xs mt-1 ${
-                      category === cat.id ? 'text-pink-600' : 'text-gray-600'
+                      category === cat.id ? 'text-coral-600' : 'text-gray-600'
                     }`}>
                       {cat.label}
                     </p>
@@ -183,13 +183,13 @@ export default function AddPackingItemModal({
                   onClick={() => setAssignedTo('me')}
                   className={`p-4 rounded-xl border-2 transition-all text-center ${
                     assignedTo === 'me'
-                      ? 'border-pink-500 bg-pink-50'
-                      : 'border-gray-200 hover:border-pink-300'
+                      ? 'border-coral-500 bg-cream-50'
+                      : 'border-gray-200 hover:border-coral-200'
                   }`}
                 >
                   <span className="text-2xl">🙋</span>
                   <p className={`text-sm font-medium mt-1 ${
-                    assignedTo === 'me' ? 'text-pink-600' : 'text-gray-700'
+                    assignedTo === 'me' ? 'text-coral-600' : 'text-gray-700'
                   }`}>
                     Me
                   </p>
@@ -199,13 +199,13 @@ export default function AddPackingItemModal({
                   onClick={() => setAssignedTo('partner')}
                   className={`p-4 rounded-xl border-2 transition-all text-center ${
                     assignedTo === 'partner'
-                      ? 'border-pink-500 bg-pink-50'
-                      : 'border-gray-200 hover:border-pink-300'
+                      ? 'border-coral-500 bg-cream-50'
+                      : 'border-gray-200 hover:border-coral-200'
                   }`}
                 >
                   <span className="text-2xl">💕</span>
                   <p className={`text-sm font-medium mt-1 ${
-                    assignedTo === 'partner' ? 'text-pink-600' : 'text-gray-700'
+                    assignedTo === 'partner' ? 'text-coral-600' : 'text-gray-700'
                   }`}>
                     {partnerName}
                   </p>
@@ -220,7 +220,7 @@ export default function AddPackingItemModal({
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-4 bg-gradient-to-r from-coral-500 to-indigo-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {saving ? (
               <>

@@ -298,7 +298,7 @@ export default function DailyCheckinPage() {
         </p>
         <button
           onClick={() => router.push('/dashboard')}
-          className="px-6 py-3 rounded-full bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white font-medium"
+          className="px-6 py-3 rounded-full bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white font-medium"
         >
           Back to Dashboard
         </button>
@@ -309,7 +309,7 @@ export default function DailyCheckinPage() {
   return (
     <div className="min-h-screen bg-[#F8F6F3]">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#FF6B9D] to-[#C9184A] text-white p-6 pb-8">
+      <div className="bg-gradient-to-br from-[#E8614D] to-[#C44A38] text-white p-6 pb-8">
         <button
           onClick={() => router.push('/dashboard')}
           className="flex items-center gap-2 text-white/80 hover:text-white mb-4 transition-colors"
@@ -374,7 +374,7 @@ export default function DailyCheckinPage() {
                     onClick={() => handleMoodSelect(option.value)}
                     className={`flex flex-col items-center p-3 rounded-xl transition-all duration-200 ${
                       mood === option.value
-                        ? 'bg-gradient-to-br from-[#FF6B9D] to-[#C9184A] scale-105 shadow-lg'
+                        ? 'bg-gradient-to-br from-[#E8614D] to-[#C44A38] scale-105 shadow-lg'
                         : 'bg-gray-50 hover:bg-gray-100 hover:scale-105'
                     }`}
                   >
@@ -417,14 +417,14 @@ export default function DailyCheckinPage() {
                       viewBox="0 0 24 24"
                       className={`w-full h-full transition-all duration-200 ${
                         connectionScore !== null && score <= connectionScore
-                          ? 'fill-[#C9184A]'
+                          ? 'fill-[#C44A38]'
                           : 'fill-gray-200 hover:fill-gray-300'
                       }`}
                     >
                       <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
                     </svg>
                     {connectionScore === score && (
-                      <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs font-medium text-[#C9184A]">
+                      <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs font-medium text-[#C44A38]">
                         {score === 1 && 'Distant'}
                         {score === 2 && 'A bit off'}
                         {score === 3 && 'Okay'}
@@ -472,7 +472,7 @@ export default function DailyCheckinPage() {
                   value={rotatingAnswer}
                   onChange={(e) => setRotatingAnswer(e.target.value)}
                   placeholder={activeQuestion.placeholder || 'Type your response...'}
-                  className="w-full h-32 p-4 border border-gray-200 rounded-xl text-[#2D3648] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#FF6B9D] focus:border-transparent resize-none"
+                  className="w-full h-32 p-4 border border-gray-200 rounded-xl text-[#2D3648] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#E8614D] focus:border-transparent resize-none"
                 />
               )}
 
@@ -485,7 +485,7 @@ export default function DailyCheckinPage() {
                       onClick={() => setRotatingAnswer(option.value)}
                       className={`w-full p-4 rounded-xl text-left transition-all ${
                         rotatingAnswer === option.value
-                          ? 'bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white'
+                          ? 'bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white'
                           : 'bg-gray-50 text-[#2D3648] hover:bg-gray-100'
                       }`}
                     >
@@ -508,7 +508,7 @@ export default function DailyCheckinPage() {
                         onClick={() => setRotatingAnswer(String(value))}
                         className={`w-12 h-12 rounded-full font-bold transition-all ${
                           rotatingAnswer === String(value)
-                            ? 'bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white scale-110'
+                            ? 'bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white scale-110'
                             : 'bg-gray-100 text-[#6B7280] hover:bg-gray-200 hover:scale-105'
                         }`}
                       >
@@ -538,7 +538,7 @@ export default function DailyCheckinPage() {
                 <button
                   onClick={handleSubmit}
                   disabled={submitting}
-                  className="px-8 py-3 rounded-full bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
+                  className="px-8 py-3 rounded-full bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
                 >
                   {submitting ? (
                     <span className="flex items-center gap-2">
@@ -590,7 +590,7 @@ export default function DailyCheckinPage() {
             )}
             {connectionScore && (
               <div className="flex items-center gap-1">
-                <span className="text-[#C9184A]">{'❤️'.repeat(connectionScore)}</span>
+                <span className="text-[#C44A38]">{'❤️'.repeat(connectionScore)}</span>
               </div>
             )}
           </div>

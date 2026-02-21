@@ -51,7 +51,7 @@ function StopCard({ stop, index, total, travelTime, onMoveUp, onMoveDown, onRemo
       )}
       <div className="flex items-start gap-3">
         {/* Badge */}
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 mt-0.5 shadow-sm">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-coral-400 to-indigo-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 mt-0.5 shadow-sm">
           {index + 1}
         </div>
         {/* Info */}
@@ -63,7 +63,7 @@ function StopCard({ stop, index, total, travelTime, onMoveUp, onMoveDown, onRemo
             value={stop.note || ''}
             onChange={e => onNoteChange(e.target.value)}
             placeholder="Add a note… (e.g. make a reservation)"
-            className="mt-2 w-full text-xs bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-gray-700 placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-pink-200 focus:bg-white transition-colors"
+            className="mt-2 w-full text-xs bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-gray-700 placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-coral-100 focus:bg-white transition-colors"
           />
         </div>
         {/* Controls */}
@@ -108,7 +108,7 @@ function PreviewCard({ place, onAdd, alreadyAdded }) {
           className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
             alreadyAdded
               ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              : 'bg-gradient-to-r from-pink-500 to-purple-500 text-white hover:shadow-md active:scale-95'
+              : 'bg-gradient-to-r from-coral-500 to-indigo-500 text-white hover:shadow-md active:scale-95'
           }`}
         >
           {alreadyAdded ? '✓ Added' : '+ Add'}
@@ -139,7 +139,7 @@ function NearbyCard({ place, onAdd, alreadyAdded, userLocation }) {
           onClick={() => onAdd(place)}
           disabled={alreadyAdded}
           className={`w-full py-1.5 rounded-xl text-xs font-semibold transition-all ${
-            alreadyAdded ? 'bg-gray-100 text-gray-400' : 'bg-gradient-to-r from-pink-500 to-purple-500 text-white active:scale-95'
+            alreadyAdded ? 'bg-gray-100 text-gray-400' : 'bg-gradient-to-r from-coral-500 to-indigo-500 text-white active:scale-95'
           }`}
         >
           {alreadyAdded ? '✓ Added' : '+ Add'}
@@ -259,7 +259,7 @@ export default function CustomDateBuilderPage() {
 
     dirRenderer.current = new window.google.maps.DirectionsRenderer({
       suppressMarkers: true,
-      polylineOptions: { strokeColor: '#ec4899', strokeWeight: 4, strokeOpacity: 0.75 },
+      polylineOptions: { strokeColor: '#E8614D', strokeWeight: 4, strokeOpacity: 0.75 },
     })
     dirRenderer.current.setMap(map)
 
@@ -313,7 +313,7 @@ export default function CustomDateBuilderPage() {
         icon: {
           path: window.google.maps.SymbolPath.CIRCLE,
           scale: 14,
-          fillColor: i === 0 ? '#ec4899' : '#a855f7',
+          fillColor: i === 0 ? '#E8614D' : '#5D55A0',
           fillOpacity: 1,
           strokeColor: 'white',
           strokeWeight: 2,
@@ -553,7 +553,7 @@ export default function CustomDateBuilderPage() {
             onChange={e => handleQueryChange(e.target.value)}
             onFocus={() => predictions.length > 0 && setShowDropdown(true)}
             placeholder="Search restaurants, bars, parks…"
-            className="w-full pl-10 pr-8 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-300 focus:bg-white transition-colors"
+            className="w-full pl-10 pr-8 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-coral-200 focus:bg-white transition-colors"
           />
           {searching && (
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 text-xs animate-pulse">●●●</span>
@@ -565,7 +565,7 @@ export default function CustomDateBuilderPage() {
                 <button
                   key={pred.place_id}
                   onMouseDown={e => { e.preventDefault(); handleSelectPrediction(pred) }}
-                  className="w-full px-4 py-3 text-left hover:bg-pink-50 flex items-start gap-3 border-b border-gray-50 last:border-0 transition-colors"
+                  className="w-full px-4 py-3 text-left hover:bg-cream-50 flex items-start gap-3 border-b border-gray-50 last:border-0 transition-colors"
                 >
                   <span className="flex-shrink-0 mt-0.5 text-sm">📍</span>
                   <div className="min-w-0">
@@ -625,8 +625,8 @@ export default function CustomDateBuilderPage() {
                       onClick={() => handleChipClick(chip)}
                       className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold border transition-all ${
                         activeChip === chip.label
-                          ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white border-transparent shadow-sm'
-                          : 'bg-white text-gray-600 border-gray-200 hover:border-pink-300'
+                          ? 'bg-gradient-to-r from-coral-500 to-indigo-500 text-white border-transparent shadow-sm'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-coral-200'
                       }`}
                     >
                       <span>{chip.emoji}</span>
@@ -716,13 +716,13 @@ export default function CustomDateBuilderPage() {
                 value={dateName}
                 onChange={e => setDateName(e.target.value)}
                 placeholder="Name your date…"
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-300 focus:bg-white transition-colors"
+                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-coral-200 focus:bg-white transition-colors"
               />
               {saveError && <p className="text-xs text-red-500 text-center">{saveError}</p>}
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold rounded-2xl shadow-md hover:shadow-lg hover:from-pink-600 hover:to-purple-600 transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-60"
+                className="w-full py-4 bg-gradient-to-r from-coral-500 to-indigo-500 text-white font-bold rounded-2xl shadow-md hover:shadow-lg hover:from-coral-600 hover:to-indigo-600 transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-60"
               >
                 {saving ? 'Saving…' : <>Save Date <span>→</span></>}
               </button>

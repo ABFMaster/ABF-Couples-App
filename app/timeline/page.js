@@ -8,16 +8,16 @@ import EventDetailModal from '@/components/EventDetailModal'
 
 // Event type icons and accent colors
 const eventTypeConfig = {
-  first_date: { icon: '💕', label: 'First Date', bg: 'bg-rose-50', border: 'border-rose-200', accent: 'text-rose-600' },
-  first_kiss: { icon: '💋', label: 'First Kiss', bg: 'bg-rose-50', border: 'border-rose-200', accent: 'text-rose-600' },
+  first_date: { icon: '💕', label: 'First Date', bg: 'bg-cream-50', border: 'border-coral-100', accent: 'text-coral-600' },
+  first_kiss: { icon: '💋', label: 'First Kiss', bg: 'bg-cream-50', border: 'border-coral-100', accent: 'text-coral-600' },
   anniversary: { icon: '💍', label: 'Anniversary', bg: 'bg-amber-50', border: 'border-amber-200', accent: 'text-amber-600' },
   milestone: { icon: '🎉', label: 'Milestone', bg: 'bg-amber-50', border: 'border-amber-200', accent: 'text-amber-600' },
   trip: { icon: '✈️', label: 'Trip', bg: 'bg-blue-50', border: 'border-blue-200', accent: 'text-blue-600' },
-  date_night: { icon: '🌙', label: 'Date Night', bg: 'bg-purple-50', border: 'border-purple-200', accent: 'text-purple-600' },
+  date_night: { icon: '🌙', label: 'Date Night', bg: 'bg-cream-100', border: 'border-indigo-400', accent: 'text-indigo-500' },
   achievement: { icon: '🏆', label: 'Achievement', bg: 'bg-amber-50', border: 'border-amber-200', accent: 'text-amber-600' },
-  conversation: { icon: '💬', label: 'Conversation', bg: 'bg-purple-50', border: 'border-purple-200', accent: 'text-purple-600' },
+  conversation: { icon: '💬', label: 'Conversation', bg: 'bg-cream-100', border: 'border-indigo-400', accent: 'text-indigo-500' },
   song: { icon: '🎵', label: 'Song', bg: 'bg-green-50', border: 'border-green-200', accent: 'text-green-600' },
-  custom: { icon: '✨', label: 'Memory', bg: 'bg-purple-50', border: 'border-purple-200', accent: 'text-purple-600' },
+  custom: { icon: '✨', label: 'Memory', bg: 'bg-cream-100', border: 'border-indigo-400', accent: 'text-indigo-500' },
 }
 
 export default function Timeline() {
@@ -160,7 +160,7 @@ export default function Timeline() {
     return (
       <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#FF6B9D] border-t-transparent mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent mx-auto mb-4"></div>
           <p className="text-[#6B7280] text-lg font-medium">Loading your memories...</p>
         </div>
       </div>
@@ -184,7 +184,7 @@ export default function Timeline() {
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white px-5 py-2 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
+              className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-5 py-2 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
             >
               + Add Memory
             </button>
@@ -237,7 +237,7 @@ export default function Timeline() {
             </p>
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white px-8 py-4 rounded-full font-bold text-lg hover:opacity-90 transition-opacity shadow-lg"
+              className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-8 py-4 rounded-full font-bold text-lg hover:opacity-90 transition-opacity shadow-lg"
             >
               Add First Memory
             </button>
@@ -268,7 +268,7 @@ export default function Timeline() {
                           {event.title}
                         </h3>
                         {/* Activity Type Badge */}
-                        <span className="bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white text-xs font-medium px-3 py-1 rounded-full flex-shrink-0">
+                        <span className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white text-xs font-medium px-3 py-1 rounded-full flex-shrink-0">
                           {config.label}
                         </span>
                       </div>
@@ -322,13 +322,13 @@ export default function Timeline() {
             {/* Add More Card */}
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all border-2 border-dashed border-[#E5E7EB] hover:border-[#FF6B9D] group"
+              className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all border-2 border-dashed border-[#E5E7EB] hover:border-[#E8614D] group"
             >
               <div className="flex items-center justify-center gap-4">
-                <div className="w-14 h-14 bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] rounded-full flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                <div className="w-14 h-14 bg-gradient-to-r from-[#E8614D] to-[#C44A38] rounded-full flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
                   <span className="text-white text-2xl font-bold">+</span>
                 </div>
-                <span className="text-[#6B7280] font-medium group-hover:text-[#FF6B9D] transition-colors">
+                <span className="text-[#6B7280] font-medium group-hover:text-[#E8614D] transition-colors">
                   Add Another Memory
                 </span>
               </div>
@@ -340,7 +340,7 @@ export default function Timeline() {
       {/* ===== FLOATING ADD BUTTON ===== */}
       <button
         onClick={() => setShowAddModal(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:scale-110 transition-all hover:shadow-xl z-50"
+        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:scale-110 transition-all hover:shadow-xl z-50"
         aria-label="Add memory"
       >
         +

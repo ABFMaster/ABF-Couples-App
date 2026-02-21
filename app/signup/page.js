@@ -43,10 +43,10 @@ export default function SignupPage() {
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 flex flex-col items-center justify-center p-4">
       {/* Header */}
       <div className="mb-8 text-center">
-        <div className="inline-block bg-gradient-to-r from-pink-400 to-pink-500 text-white rounded-2xl px-6 py-3 shadow-lg mb-4">
+        <div className="inline-block bg-gradient-to-r from-coral-400 to-coral-500 text-white rounded-2xl px-6 py-3 shadow-lg mb-4">
           <h1 className="text-3xl font-bold tracking-wider">ABF</h1>
         </div>
-        <h2 className="text-2xl font-bold text-pink-600">Let's get you set up!</h2>
+        <h2 className="text-2xl font-bold text-coral-600">Let's get you set up!</h2>
       </div>
 
       {/* Signup Form */}
@@ -63,7 +63,7 @@ export default function SignupPage() {
               onChange={(e) => setName(e.target.value)}
               placeholder="Your first name"
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent outline-none"
             />
           </div>
 
@@ -78,7 +78,7 @@ export default function SignupPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent outline-none"
             />
           </div>
 
@@ -94,7 +94,7 @@ export default function SignupPage() {
               placeholder="At least 6 characters"
               required
               minLength={6}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent outline-none"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent outline-none"
             />
           </div>
 
@@ -109,7 +109,7 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-pink-500 hover:bg-pink-600 disabled:bg-pink-300 text-white font-semibold py-4 rounded-full shadow-lg transition-all transform hover:scale-105 disabled:transform-none"
+            className="w-full bg-coral-500 hover:bg-coral-600 disabled:bg-pink-300 text-white font-semibold py-4 rounded-full shadow-lg transition-all transform hover:scale-105 disabled:transform-none"
           >
             {loading ? 'Creating Account...' : 'Create Account'}
           </button>
@@ -119,7 +119,7 @@ export default function SignupPage() {
       {/* Sign In Link */}
       <p className="text-gray-600 text-sm mt-6">
         Already have an account?{' '}
-        <a href="/login" className="text-pink-500 hover:text-pink-600 font-semibold">
+        <a href="/login" className="text-coral-500 hover:text-coral-600 font-semibold">
           Sign In
         </a>
       </p>

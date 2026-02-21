@@ -47,10 +47,10 @@ const CURATED_IDEAS = [
     id: 'golden-hour',
     title: 'Golden Hour Waterfront',
     tag: 'Quality Time',
-    tagColor: 'bg-rose-100 text-rose-700',
+    tagColor: 'bg-cream-100 text-coral-700',
     emoji: '🌅',
     from: 'from-orange-400',
-    to: 'to-rose-500',
+    to: 'to-coral-500',
     stops: [
       { name: 'Pike Place Market',    address: 'Pike Place Market, Seattle, WA 98101' },
       { name: 'Seattle Great Wheel',  address: '1301 Alaskan Way, Seattle, WA 98101' },
@@ -61,9 +61,9 @@ const CURATED_IDEAS = [
     id: 'capitol-hill',
     title: 'Capitol Hill After Dark',
     tag: 'Adventure',
-    tagColor: 'bg-purple-100 text-purple-700',
+    tagColor: 'bg-cream-100 text-purple-700',
     emoji: '🌙',
-    from: 'from-purple-500',
+    from: 'from-indigo-500',
     to: 'to-indigo-600',
     stops: [
       { name: 'Eltana Bagels', address: '1520 15th Ave, Seattle, WA 98122' },
@@ -99,7 +99,7 @@ function UpcomingHeroCard({ plan, onClick }) {
     >
       {mapUrl
         ? <img src={mapUrl} alt="Map" className="absolute inset-0 w-full h-full object-cover" />
-        : <div className="absolute inset-0 bg-gradient-to-br from-pink-400 to-purple-500" />
+        : <div className="absolute inset-0 bg-gradient-to-br from-coral-400 to-indigo-400" />
       }
       <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
       <div className="relative px-5 pb-5 pt-24 sm:pt-32 flex items-end justify-between gap-4">
@@ -115,7 +115,7 @@ function UpcomingHeroCard({ plan, onClick }) {
         </div>
         <button
           onClick={e => { e.stopPropagation(); onClick() }}
-          className="flex-shrink-0 bg-white text-gray-900 text-xs font-bold px-4 py-2.5 rounded-full hover:bg-pink-50 transition-colors shadow-sm"
+          className="flex-shrink-0 bg-white text-gray-900 text-xs font-bold px-4 py-2.5 rounded-full hover:bg-cream-50 transition-colors shadow-sm"
         >
           View Details
         </button>
@@ -175,7 +175,7 @@ function IdeaCard({ idea, onBuild }) {
         <div className="space-y-2">
           {idea.stops.map((stop, i) => (
             <div key={i} className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-gradient-to-br from-pink-400 to-purple-400 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+              <span className="w-5 h-5 rounded-full bg-gradient-to-br from-coral-400 to-purple-400 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                 {i + 1}
               </span>
               <p className="text-xs text-gray-700 truncate">{stop.name}</p>
@@ -186,7 +186,7 @@ function IdeaCard({ idea, onBuild }) {
       <div className="px-4 pb-4">
         <button
           onClick={() => onBuild(idea)}
-          className="w-full py-2.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white text-sm font-semibold rounded-xl hover:shadow-md hover:from-pink-600 hover:to-purple-600 transition-all active:scale-95"
+          className="w-full py-2.5 bg-gradient-to-r from-coral-500 to-indigo-500 text-white text-sm font-semibold rounded-xl hover:shadow-md hover:from-coral-600 hover:to-indigo-600 transition-all active:scale-95"
         >
           Build This Date →
         </button>
@@ -304,7 +304,7 @@ export default function DatesPage() {
     <div className="min-h-screen bg-[#F8F6F3] pb-24">
 
       {/* ── Header ──────────────────────────────────────────────── */}
-      <div className="bg-gradient-to-br from-pink-500 via-rose-500 to-purple-600 px-5 pt-14 pb-8">
+      <div className="bg-gradient-to-br from-coral-500 via-coral-500 to-indigo-500 px-5 pt-14 pb-8">
         <button
           onClick={() => router.back()}
           className="text-white/70 text-sm mb-5 flex items-center gap-1 hover:text-white transition-colors"
@@ -312,11 +312,11 @@ export default function DatesPage() {
         <div className="flex items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-white">Date Night</h1>
-            <p className="text-pink-200 text-sm mt-1">Plan something special</p>
+            <p className="text-coral-200 text-sm mt-1">Plan something special</p>
           </div>
           <button
             onClick={() => router.push('/dates/custom')}
-            className="flex-shrink-0 bg-white text-pink-600 font-bold text-sm px-4 py-3 rounded-2xl shadow-lg hover:bg-pink-50 transition-colors flex items-center gap-1.5"
+            className="flex-shrink-0 bg-white text-coral-600 font-bold text-sm px-4 py-3 rounded-2xl shadow-lg hover:bg-cream-50 transition-colors flex items-center gap-1.5"
           >
             <span>✨</span><span>Plan a Date</span>
           </button>
@@ -340,7 +340,7 @@ export default function DatesPage() {
               <p className="text-gray-400 text-sm mb-5">Let's change that — plan something special</p>
               <button
                 onClick={() => router.push('/dates/custom')}
-                className="bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold px-6 py-3 rounded-2xl text-sm shadow-md hover:shadow-lg transition-shadow"
+                className="bg-gradient-to-r from-coral-500 to-indigo-500 text-white font-semibold px-6 py-3 rounded-2xl text-sm shadow-md hover:shadow-lg transition-shadow"
               >
                 Plan Your First Date
               </button>

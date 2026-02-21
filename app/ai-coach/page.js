@@ -282,8 +282,8 @@ function AiCoachContent() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-pink-500 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-pink-500 text-lg">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-coral-500 text-lg">Loading...</p>
         </div>
       </div>
     );
@@ -296,7 +296,7 @@ function AiCoachContent() {
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <button
             onClick={() => router.push('/dashboard')}
-            className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-pink-600 transition-colors"
+            className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-coral-600 transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -304,13 +304,13 @@ function AiCoachContent() {
           </button>
 
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-coral-500 flex items-center justify-center">
               <span className="text-sm">🤖</span>
             </div>
             <div>
               <h1 className="text-lg font-bold text-gray-800">AI Coach</h1>
               {isPremium ? (
-                <p className="text-xs text-purple-600 font-medium flex items-center gap-1">
+                <p className="text-xs text-indigo-500 font-medium flex items-center gap-1">
                   ✨ Premium — unlimited messages
                 </p>
               ) : messagesRemaining <= 5 ? (
@@ -327,7 +327,7 @@ function AiCoachContent() {
 
           <button
             onClick={startNewConversation}
-            className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-pink-600 transition-colors"
+            className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-coral-600 transition-colors"
             title="New conversation"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -343,7 +343,7 @@ function AiCoachContent() {
           {/* Empty state / Welcome message */}
           {messages.length === 0 && (
             <div className="text-center py-12">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 to-coral-500 flex items-center justify-center mx-auto mb-6 shadow-lg">
                 <span className="text-4xl">🤖</span>
               </div>
               <h2 className="text-2xl font-bold text-gray-800 mb-3">Hi! I'm your AI Coach</h2>
@@ -360,7 +360,7 @@ function AiCoachContent() {
                   <button
                     key={suggestion}
                     onClick={() => setInputMessage(suggestion)}
-                    className="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-pink-50 hover:text-pink-600 transition-colors shadow-sm"
+                    className="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-cream-50 hover:text-coral-600 transition-colors shadow-sm"
                   >
                     {suggestion}
                   </button>
@@ -371,7 +371,7 @@ function AiCoachContent() {
 
           {/* Proactive Prompt Suggestion */}
           {proactivePrompt && !dismissedProactivePrompt && messages.length === 0 && (
-            <div className="mb-6 bg-gradient-to-r from-pink-50 to-purple-50 rounded-2xl p-4 border border-pink-200 shadow-sm">
+            <div className="mb-6 bg-gradient-to-r from-pink-50 to-purple-50 rounded-2xl p-4 border border-coral-100 shadow-sm">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0">
                   <span className="text-lg">💡</span>
@@ -385,7 +385,7 @@ function AiCoachContent() {
                         setInputMessage(proactivePrompt.message);
                         setDismissedProactivePrompt(true);
                       }}
-                      className="px-4 py-2 bg-gradient-to-r from-pink-400 to-purple-500 text-white text-sm font-medium rounded-full hover:from-pink-500 hover:to-purple-600 transition-all shadow-sm"
+                      className="px-4 py-2 bg-gradient-to-r from-coral-400 to-indigo-400 text-white text-sm font-medium rounded-full hover:from-coral-500 hover:to-indigo-600 transition-all shadow-sm"
                     >
                       Let's talk about this
                     </button>
@@ -424,12 +424,12 @@ function AiCoachContent() {
 
       {/* Limit Reached Banner */}
       {!isPremium && limitReached && (
-        <div className="bg-pink-50 border-t border-pink-200 px-4 py-3 flex-shrink-0">
+        <div className="bg-cream-50 border-t border-coral-100 px-4 py-3 flex-shrink-0">
           <div className="max-w-2xl mx-auto text-center">
-            <p className="text-pink-700 text-sm mb-2">
+            <p className="text-coral-700 text-sm mb-2">
               You've used your 20 free messages this week. Upgrade for unlimited coaching.
             </p>
-            <button className="text-pink-600 text-sm font-medium hover:text-pink-700">
+            <button className="text-coral-600 text-sm font-medium hover:text-coral-700">
               Upgrade for unlimited access
             </button>
           </div>
@@ -449,14 +449,14 @@ function AiCoachContent() {
                 placeholder={!isPremium && limitReached ? 'Weekly limit reached...' : 'Type your message...'}
                 disabled={sending || (!isPremium && limitReached)}
                 rows={1}
-                className="w-full px-4 py-3 pr-12 border-2 border-pink-200 rounded-2xl focus:border-pink-400 focus:outline-none resize-none disabled:bg-gray-50 disabled:text-gray-400"
+                className="w-full px-4 py-3 pr-12 border-2 border-coral-100 rounded-2xl focus:border-coral-400 focus:outline-none resize-none disabled:bg-gray-50 disabled:text-gray-400"
                 style={{ minHeight: '48px', maxHeight: '120px' }}
               />
             </div>
             <button
               onClick={handleSend}
               disabled={!inputMessage.trim() || sending || (!isPremium && limitReached)}
-              className="w-12 h-12 bg-gradient-to-r from-pink-400 to-purple-500 text-white rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:from-pink-500 hover:to-purple-600 transition-all shadow-md"
+              className="w-12 h-12 bg-gradient-to-r from-coral-400 to-indigo-400 text-white rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:from-coral-500 hover:to-indigo-600 transition-all shadow-md"
             >
               {sending ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -483,8 +483,8 @@ export default function AiCoach() {
     <Suspense fallback={
       <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-pink-500 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-pink-500 text-lg">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-coral-500 text-lg">Loading...</p>
         </div>
       </div>
     }>

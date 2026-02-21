@@ -104,7 +104,7 @@ export default function DateDetailPage({ params }) {
           <p className="text-gray-400 text-sm mb-5">It may have been deleted or the link is invalid.</p>
           <button
             onClick={() => router.push('/dates')}
-            className="text-pink-500 font-semibold text-sm"
+            className="text-coral-500 font-semibold text-sm"
           >
             ← Back to Date Night
           </button>
@@ -140,7 +140,7 @@ export default function DateDetailPage({ params }) {
           </span>
         )}
         {isPlan && date.status === 'planned' && (
-          <span className="flex-shrink-0 text-xs bg-pink-100 text-pink-700 px-2.5 py-1 rounded-full font-semibold">
+          <span className="flex-shrink-0 text-xs bg-cream-100 text-coral-700 px-2.5 py-1 rounded-full font-semibold">
             Upcoming
           </span>
         )}
@@ -154,7 +154,7 @@ export default function DateDetailPage({ params }) {
       )}
 
       {!mapUrl && (
-        <div className="h-24 bg-gradient-to-br from-pink-400 to-purple-500" />
+        <div className="h-24 bg-gradient-to-br from-coral-400 to-indigo-400" />
       )}
 
       <div className="px-5 py-5 space-y-4 max-w-2xl mx-auto">
@@ -182,7 +182,7 @@ export default function DateDetailPage({ params }) {
                 href={`https://www.google.com/maps/dir/?api=1&destination=${date.latitude},${date.longitude}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-pink-500 font-semibold mt-2 inline-block hover:text-pink-600"
+                className="text-xs text-coral-500 font-semibold mt-2 inline-block hover:text-coral-600"
               >
                 📍 Get Directions →
               </a>
@@ -199,7 +199,7 @@ export default function DateDetailPage({ params }) {
             <div className="space-y-4">
               {date.stops.map((stop, i) => (
                 <div key={i} className="flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-400 to-purple-400 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-coral-400 to-purple-400 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm">
                     {i + 1}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -215,7 +215,7 @@ export default function DateDetailPage({ params }) {
                         href={`https://www.google.com/maps/dir/?api=1&destination=${stop.lat},${stop.lng}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-pink-400 font-medium mt-1 inline-block hover:text-pink-500"
+                        className="text-xs text-coral-400 font-medium mt-1 inline-block hover:text-coral-500"
                       >
                         Directions →
                       </a>
@@ -251,7 +251,7 @@ export default function DateDetailPage({ params }) {
         {/* ── Plan again CTA ────────────────────────────────── */}
         <button
           onClick={() => router.push('/dates/custom')}
-          className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-bold rounded-2xl shadow-md hover:shadow-lg transition-shadow text-sm flex items-center justify-center gap-2"
+          className="w-full py-4 bg-gradient-to-r from-coral-500 to-indigo-500 text-white font-bold rounded-2xl shadow-md hover:shadow-lg transition-shadow text-sm flex items-center justify-center gap-2"
         >
           <span>✨</span> Plan Another Date
         </button>

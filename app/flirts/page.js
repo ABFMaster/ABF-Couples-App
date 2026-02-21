@@ -146,8 +146,8 @@ export default function FlirtsHistory() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-pink-500 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-pink-600 text-lg font-medium">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-coral-600 text-lg font-medium">Loading...</p>
         </div>
       </div>
     )
@@ -160,14 +160,14 @@ export default function FlirtsHistory() {
         <header className="flex items-center justify-between mb-8">
           <button
             onClick={() => router.push('/dashboard')}
-            className="flex items-center gap-2 text-pink-600 hover:text-pink-700 font-medium transition-colors"
+            className="flex items-center gap-2 text-coral-600 hover:text-coral-700 font-medium transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
             Back
           </button>
-          <div className="bg-gradient-to-r from-pink-400 to-pink-500 text-white rounded-2xl px-6 py-3 shadow-lg">
+          <div className="bg-gradient-to-r from-coral-400 to-coral-500 text-white rounded-2xl px-6 py-3 shadow-lg">
             <span className="text-xl font-bold tracking-wider">ABF</span>
           </div>
           <div className="flex items-center gap-2">
@@ -182,7 +182,7 @@ export default function FlirtsHistory() {
             )}
             <button
               onClick={() => setShowFlirtComposer(true)}
-              className="bg-gradient-to-r from-pink-400 to-pink-500 text-white px-5 py-2.5 rounded-full font-semibold hover:from-pink-500 hover:to-pink-600 transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-sm"
+              className="bg-gradient-to-r from-coral-400 to-coral-500 text-white px-5 py-2.5 rounded-full font-semibold hover:from-coral-500 hover:to-coral-600 transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-sm"
             >
               + New
             </button>
@@ -198,15 +198,15 @@ export default function FlirtsHistory() {
         {/* ===== STATS ROW ===== */}
         <section className="grid grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-            <p className="text-2xl font-bold text-pink-600">{totalSent}</p>
+            <p className="text-2xl font-bold text-coral-600">{totalSent}</p>
             <p className="text-xs text-gray-500 mt-1">Sent</p>
           </div>
           <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-            <p className="text-2xl font-bold text-purple-600">{totalReceived}</p>
+            <p className="text-2xl font-bold text-indigo-500">{totalReceived}</p>
             <p className="text-xs text-gray-500 mt-1">Received</p>
           </div>
           <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-            <p className="text-2xl font-bold text-rose-500">{totalHearted}</p>
+            <p className="text-2xl font-bold text-coral-500">{totalHearted}</p>
             <p className="text-xs text-gray-500 mt-1">Hearted</p>
           </div>
           <div className="bg-white rounded-xl p-4 text-center shadow-sm">
@@ -263,8 +263,8 @@ export default function FlirtsHistory() {
                 onClick={() => setFilter(tab.id)}
                 className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
                   filter === tab.id
-                    ? 'bg-pink-500 text-white shadow-sm'
-                    : 'bg-white text-gray-700 hover:bg-pink-50 shadow-sm'
+                    ? 'bg-coral-500 text-white shadow-sm'
+                    : 'bg-white text-gray-700 hover:bg-cream-50 shadow-sm'
                 }`}
               >
                 {tab.label}
@@ -308,7 +308,7 @@ export default function FlirtsHistory() {
               ) : (filter === 'all' || filter === 'sent') && (
                 <button
                   onClick={() => setShowFlirtComposer(true)}
-                  className="bg-gradient-to-r from-pink-400 to-pink-500 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:from-pink-500 hover:to-pink-600 transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+                  className="bg-gradient-to-r from-coral-400 to-coral-500 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:from-coral-500 hover:to-coral-600 transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg"
                 >
                   Send a Flirt
                 </button>
@@ -338,7 +338,7 @@ export default function FlirtsHistory() {
                     key={flirt.id}
                     onClick={() => handleViewFlirt(flirt)}
                     className={`bg-white rounded-xl p-4 shadow-sm cursor-pointer transition-all hover:shadow-lg hover:scale-[1.01] ${
-                      !flirt.is_read && !isSent ? 'ring-2 ring-pink-300 ring-offset-2' : ''
+                      !flirt.is_read && !isSent ? 'ring-2 ring-coral-200 ring-offset-2' : ''
                     }`}
                   >
                     <div className="flex items-start gap-4">
@@ -347,8 +347,8 @@ export default function FlirtsHistory() {
                         flirt.type === 'song'
                           ? 'bg-[#1DB954]/10'
                           : isSent
-                            ? 'bg-pink-100'
-                            : 'bg-purple-100'
+                            ? 'bg-cream-100'
+                            : 'bg-cream-100'
                       }`}>
                         <span className="text-xl">
                           {flirt.type === 'song' ? '🎵' : flirt.type === 'gif' ? '🎉' : flirt.type === 'photo' ? '📸' : flirt.type === 'combo' ? '💬' : '💬'}
@@ -359,13 +359,13 @@ export default function FlirtsHistory() {
                       <div className="flex-1 min-w-0">
                         {/* Sender & Metadata */}
                         <div className="flex items-center gap-2 mb-2">
-                          <span className={`text-sm font-semibold ${isSent ? 'text-pink-600' : 'text-purple-600'}`}>
+                          <span className={`text-sm font-semibold ${isSent ? 'text-coral-600' : 'text-indigo-500'}`}>
                             {isSent ? 'You' : partnerName}
                           </span>
                           <span className="text-xs text-gray-400">{formatTime(flirt.created_at)}</span>
-                          {flirt.hearted && <span className="text-rose-500">❤️</span>}
+                          {flirt.hearted && <span className="text-coral-500">❤️</span>}
                           {!flirt.is_read && !isSent && (
-                            <span className="bg-pink-500 text-white text-xs px-2 py-0.5 rounded-full font-medium">New</span>
+                            <span className="bg-coral-500 text-white text-xs px-2 py-0.5 rounded-full font-medium">New</span>
                           )}
                         </div>
 

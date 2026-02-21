@@ -222,8 +222,8 @@ export default function Settings() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-pink-500 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-pink-500 text-lg">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-coral-500 text-lg">Loading...</p>
         </div>
       </div>
     )
@@ -236,13 +236,13 @@ export default function Settings() {
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <button
             onClick={() => router.push('/dashboard')}
-            className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-pink-600 transition-colors"
+            className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-coral-600 transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h1 className="text-xl font-bold text-pink-600">
+          <h1 className="text-xl font-bold text-coral-600">
             {displayName ? `${displayName}'s Settings` : 'Settings'}
           </h1>
           <div className="w-10"></div>
@@ -254,7 +254,7 @@ export default function Settings() {
         <div className="bg-white rounded-2xl shadow-lg mb-6 overflow-hidden">
           <div className="p-6">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-pink-400 to-purple-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+              <div className="w-16 h-16 bg-gradient-to-br from-coral-400 to-indigo-400 rounded-full flex items-center justify-center text-white text-2xl font-bold">
                 {formData.first_name?.[0]?.toUpperCase() || '?'}
               </div>
               <div className="flex-1">
@@ -271,7 +271,7 @@ export default function Settings() {
         {!profileCompleted && (
           <div className="bg-white rounded-2xl shadow-lg mb-6 overflow-hidden">
             <div className="p-8 text-center">
-              <div className="w-20 h-20 bg-gradient-to-br from-pink-400 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-20 h-20 bg-gradient-to-br from-coral-400 to-indigo-400 rounded-full flex items-center justify-center mx-auto mb-6">
                 <span className="text-4xl">💕</span>
               </div>
               <h2 className="text-2xl font-bold text-gray-800 mb-3">Complete Your Profile</h2>
@@ -281,7 +281,7 @@ export default function Settings() {
               <div className="space-y-4">
                 <button
                   onClick={() => router.push('/assessment')}
-                  className="w-full py-4 bg-gradient-to-r from-pink-400 to-purple-500 text-white rounded-2xl font-bold text-lg hover:from-pink-500 hover:to-purple-600 transition-all transform hover:scale-[1.02] shadow-lg"
+                  className="w-full py-4 bg-gradient-to-r from-coral-400 to-indigo-400 text-white rounded-2xl font-bold text-lg hover:from-coral-500 hover:to-indigo-600 transition-all transform hover:scale-[1.02] shadow-lg"
                 >
                   Start Assessment
                 </button>
@@ -345,7 +345,7 @@ export default function Settings() {
                     type="text"
                     value={formData.first_name}
                     onChange={(e) => setFormData(prev => ({ ...prev, first_name: e.target.value }))}
-                    className="w-full p-3 border-2 border-pink-200 rounded-xl focus:border-pink-400 focus:outline-none"
+                    className="w-full p-3 border-2 border-coral-100 rounded-xl focus:border-coral-400 focus:outline-none"
                     placeholder="Your name"
                   />
                 </div>
@@ -388,8 +388,8 @@ export default function Settings() {
                           }))}
                           className={`px-3 py-2 rounded-full text-sm transition-all ${
                             formData.love_language_primary === lang.value
-                              ? 'bg-pink-500 text-white'
-                              : 'bg-white text-gray-700 hover:bg-pink-100'
+                              ? 'bg-coral-500 text-white'
+                              : 'bg-white text-gray-700 hover:bg-cream-100'
                           }`}
                         >
                           {lang.icon} {lang.label}
@@ -409,8 +409,8 @@ export default function Settings() {
                           }))}
                           className={`px-3 py-2 rounded-full text-sm transition-all ${
                             formData.love_language_secondary === lang.value
-                              ? 'bg-purple-500 text-white'
-                              : 'bg-white text-gray-700 hover:bg-purple-100'
+                              ? 'bg-indigo-500 text-white'
+                              : 'bg-white text-gray-700 hover:bg-cream-100'
                           }`}
                         >
                           {lang.icon} {lang.label}
@@ -452,8 +452,8 @@ export default function Settings() {
                         onClick={() => handleMultiSelect('communication_style', style.value)}
                         className={`px-3 py-2 rounded-full text-sm transition-all ${
                           formData.communication_style.includes(style.value)
-                            ? 'bg-pink-500 text-white'
-                            : 'bg-white text-gray-700 hover:bg-pink-100'
+                            ? 'bg-coral-500 text-white'
+                            : 'bg-white text-gray-700 hover:bg-cream-100'
                         }`}
                       >
                         {style.label}
@@ -494,8 +494,8 @@ export default function Settings() {
                         onClick={() => setFormData(prev => ({ ...prev, conflict_style: style.value }))}
                         className={`w-full p-3 rounded-xl text-left transition-all ${
                           formData.conflict_style === style.value
-                            ? 'bg-pink-500 text-white'
-                            : 'bg-white text-gray-700 hover:bg-pink-100'
+                            ? 'bg-coral-500 text-white'
+                            : 'bg-white text-gray-700 hover:bg-cream-100'
                         }`}
                       >
                         {style.label}
@@ -541,10 +541,10 @@ export default function Settings() {
                           disabled={isDisabled}
                           className={`px-3 py-2 rounded-full text-sm capitalize transition-all ${
                             isSelected
-                              ? 'bg-pink-500 text-white'
+                              ? 'bg-coral-500 text-white'
                               : isDisabled
                                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                : 'bg-white text-gray-700 hover:bg-pink-100'
+                                : 'bg-white text-gray-700 hover:bg-cream-100'
                           }`}
                         >
                           {value}
@@ -586,8 +586,8 @@ export default function Settings() {
                         onClick={() => handleMultiSelect('hobbies', hobby.value)}
                         className={`px-3 py-2 rounded-full text-sm transition-all ${
                           formData.hobbies.includes(hobby.value)
-                            ? 'bg-pink-500 text-white'
-                            : 'bg-white text-gray-700 hover:bg-pink-100'
+                            ? 'bg-coral-500 text-white'
+                            : 'bg-white text-gray-700 hover:bg-cream-100'
                         }`}
                       >
                         {hobby.label}
@@ -628,8 +628,8 @@ export default function Settings() {
                         onClick={() => handleMultiSelect('date_preferences', pref.value)}
                         className={`px-3 py-2 rounded-full text-sm transition-all ${
                           formData.date_preferences.includes(pref.value)
-                            ? 'bg-pink-500 text-white'
-                            : 'bg-white text-gray-700 hover:bg-pink-100'
+                            ? 'bg-coral-500 text-white'
+                            : 'bg-white text-gray-700 hover:bg-cream-100'
                         }`}
                       >
                         {pref.label}
@@ -670,8 +670,8 @@ export default function Settings() {
                         onClick={() => setFormData(prev => ({ ...prev, preferred_checkin_time: time.value }))}
                         className={`p-3 rounded-xl text-sm transition-all ${
                           formData.preferred_checkin_time === time.value
-                            ? 'bg-pink-500 text-white'
-                            : 'bg-white text-gray-700 hover:bg-pink-100'
+                            ? 'bg-coral-500 text-white'
+                            : 'bg-white text-gray-700 hover:bg-cream-100'
                         }`}
                       >
                         {time.label}
@@ -707,7 +707,7 @@ export default function Settings() {
                     value={formData.stress_response}
                     onChange={(e) => setFormData(prev => ({ ...prev, stress_response: e.target.value }))}
                     placeholder="What helps you most when stressed? e.g., A hug, space to decompress..."
-                    className="w-full p-3 border-2 border-pink-200 rounded-xl focus:border-pink-400 focus:outline-none resize-none h-24"
+                    className="w-full p-3 border-2 border-coral-100 rounded-xl focus:border-coral-400 focus:outline-none resize-none h-24"
                   />
                 </div>
               )}
@@ -745,7 +745,7 @@ export default function Settings() {
               className={`w-full py-4 rounded-2xl font-bold text-lg transition-all ${
                 saved
                   ? 'bg-green-500 text-white'
-                  : 'bg-gradient-to-r from-pink-400 to-pink-500 text-white hover:from-pink-500 hover:to-pink-600'
+                  : 'bg-gradient-to-r from-coral-400 to-coral-500 text-white hover:from-coral-500 hover:to-coral-600'
               }`}
             >
               {saving ? (

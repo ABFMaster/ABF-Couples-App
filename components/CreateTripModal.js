@@ -138,13 +138,13 @@ export default function CreateTripModal({ isOpen, onClose, coupleId, partnerName
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end md:items-center justify-center">
       <div className="bg-white w-full md:w-[500px] md:max-h-[90vh] max-h-[85vh] rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden animate-slideUp">
         {/* Header */}
-        <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white p-6">
+        <div className="bg-gradient-to-r from-coral-500 to-indigo-500 text-white p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-3xl">✈️</span>
               <div>
                 <h2 className="text-xl font-bold">Plan a Trip</h2>
-                <p className="text-pink-100 text-sm">Adventure awaits you and {partnerName}</p>
+                <p className="text-coral-100 text-sm">Adventure awaits you and {partnerName}</p>
               </div>
             </div>
             <button
@@ -177,7 +177,7 @@ export default function CreateTripModal({ isOpen, onClose, coupleId, partnerName
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
                 placeholder="Paris, France"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-coral-500 focus:outline-none transition-colors"
                 maxLength={100}
               />
             </div>
@@ -192,7 +192,7 @@ export default function CreateTripModal({ isOpen, onClose, coupleId, partnerName
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-coral-500 focus:outline-none transition-colors"
                 />
               </div>
               <div>
@@ -204,7 +204,7 @@ export default function CreateTripModal({ isOpen, onClose, coupleId, partnerName
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   min={startDate}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-coral-500 focus:outline-none transition-colors"
                 />
               </div>
             </div>
@@ -222,13 +222,13 @@ export default function CreateTripModal({ isOpen, onClose, coupleId, partnerName
                     onClick={() => setTripType(type.id)}
                     className={`p-3 rounded-xl border-2 transition-all text-left ${
                       tripType === type.id
-                        ? 'border-pink-500 bg-pink-50'
-                        : 'border-gray-200 hover:border-pink-300'
+                        ? 'border-coral-500 bg-cream-50'
+                        : 'border-gray-200 hover:border-coral-200'
                     }`}
                   >
                     <span className="text-xl">{type.icon}</span>
                     <p className={`text-sm font-medium mt-1 ${
-                      tripType === type.id ? 'text-pink-600' : 'text-gray-700'
+                      tripType === type.id ? 'text-coral-600' : 'text-gray-700'
                     }`}>
                       {type.label}
                     </p>
@@ -250,8 +250,8 @@ export default function CreateTripModal({ isOpen, onClose, coupleId, partnerName
                     onClick={() => setBudgetLevel(option.value)}
                     className={`py-3 rounded-xl border-2 transition-all ${
                       budgetLevel === option.value
-                        ? 'border-pink-500 bg-pink-50 text-pink-600'
-                        : 'border-gray-200 text-gray-600 hover:border-pink-300'
+                        ? 'border-coral-500 bg-cream-50 text-coral-600'
+                        : 'border-gray-200 text-gray-600 hover:border-coral-200'
                     }`}
                   >
                     <span className="text-lg font-bold">{option.label}</span>
@@ -270,7 +270,7 @@ export default function CreateTripModal({ isOpen, onClose, coupleId, partnerName
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Any special plans or ideas for this trip..."
                 rows={3}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-pink-500 focus:outline-none transition-colors resize-none"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-coral-500 focus:outline-none transition-colors resize-none"
               />
             </div>
           </div>
@@ -281,7 +281,7 @@ export default function CreateTripModal({ isOpen, onClose, coupleId, partnerName
           <button
             onClick={handleSubmit}
             disabled={saving}
-            className="w-full py-4 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-4 bg-gradient-to-r from-coral-500 to-indigo-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {saving ? (
               <>

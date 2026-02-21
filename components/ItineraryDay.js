@@ -2,11 +2,11 @@
 
 const activityTypeConfig = {
   flight: { icon: '✈️', label: 'Flight', color: 'bg-blue-100 text-blue-600' },
-  hotel: { icon: '🏨', label: 'Hotel', color: 'bg-purple-100 text-purple-600' },
+  hotel: { icon: '🏨', label: 'Hotel', color: 'bg-cream-100 text-indigo-500' },
   restaurant: { icon: '🍽️', label: 'Restaurant', color: 'bg-orange-100 text-orange-600' },
   activity: { icon: '🎯', label: 'Activity', color: 'bg-green-100 text-green-600' },
   transport: { icon: '🚗', label: 'Transport', color: 'bg-gray-100 text-gray-600' },
-  other: { icon: '📍', label: 'Other', color: 'bg-pink-100 text-pink-600' },
+  other: { icon: '📍', label: 'Other', color: 'bg-cream-100 text-coral-600' },
 }
 
 export default function ItineraryDay({ dayNumber, date, items, onAddItem, onDeleteItem }) {
@@ -22,11 +22,11 @@ export default function ItineraryDay({ dayNumber, date, items, onAddItem, onDele
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
       {/* Day Header */}
-      <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white p-4">
+      <div className="bg-gradient-to-r from-coral-500 to-indigo-500 text-white p-4">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-bold">Day {dayNumber}</h3>
-            <p className="text-pink-100 text-sm">
+            <p className="text-coral-100 text-sm">
               {date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
             </p>
           </div>
@@ -103,7 +103,7 @@ export default function ItineraryDay({ dayNumber, date, items, onAddItem, onDele
             <p className="text-gray-400 mb-3">No activities planned yet</p>
             <button
               onClick={onAddItem}
-              className="text-pink-500 hover:text-pink-600 text-sm font-medium"
+              className="text-coral-500 hover:text-coral-600 text-sm font-medium"
             >
               + Add your first activity
             </button>

@@ -85,11 +85,11 @@ export default function TripPhotoGrid({ tripId, coupleId, photos, onPhotosChange
       <button
         onClick={handleUploadClick}
         disabled={uploading}
-        className="w-full bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all border-2 border-dashed border-gray-200 hover:border-pink-300"
+        className="w-full bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all border-2 border-dashed border-gray-200 hover:border-coral-200"
       >
         {uploading ? (
-          <div className="flex items-center justify-center gap-3 text-pink-500">
-            <span className="w-5 h-5 border-2 border-pink-500 border-t-transparent rounded-full animate-spin"></span>
+          <div className="flex items-center justify-center gap-3 text-coral-500">
+            <span className="w-5 h-5 border-2 border-coral-500 border-t-transparent rounded-full animate-spin"></span>
             Uploading...
           </div>
         ) : (

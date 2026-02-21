@@ -251,7 +251,7 @@ export default function AssessmentPage() {
     return (
       <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#FF6B9D] border-t-transparent mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent mx-auto mb-4"></div>
           <p className="text-[#6B7280] text-lg">Loading assessment...</p>
         </div>
       </div>
@@ -265,7 +265,7 @@ export default function AssessmentPage() {
         {/* Progress bar */}
         <div className="fixed top-0 left-0 right-0 h-1 bg-[#E5E2DD] z-50">
           <div
-            className="h-full bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] transition-all duration-500"
+            className="h-full bg-gradient-to-r from-[#E8614D] to-[#C44A38] transition-all duration-500"
             style={{ width: `${progressPercentage}%` }}
           />
         </div>
@@ -305,7 +305,7 @@ export default function AssessmentPage() {
                 </span>
                 <button
                   onClick={() => setModuleIntroShown(true)}
-                  className="bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white px-8 py-4 rounded-full font-bold text-lg hover:opacity-90 transition-opacity shadow-lg"
+                  className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-8 py-4 rounded-full font-bold text-lg hover:opacity-90 transition-opacity shadow-lg"
                 >
                   Begin
                 </button>
@@ -320,9 +320,9 @@ export default function AssessmentPage() {
                 key={mod.id}
                 className={`w-3 h-3 rounded-full transition-all ${
                   idx === currentModuleIndex
-                    ? 'bg-[#FF6B9D] scale-125'
+                    ? 'bg-[#E8614D] scale-125'
                     : idx < currentModuleIndex
-                    ? 'bg-[#FF6B9D]/50'
+                    ? 'bg-[#E8614D]/50'
                     : 'bg-[#E5E2DD]'
                 }`}
               />
@@ -340,7 +340,7 @@ export default function AssessmentPage() {
         {/* Progress bar */}
         <div className="fixed top-0 left-0 right-0 h-1 bg-[#E5E2DD] z-50">
           <div
-            className="h-full bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] transition-all duration-500"
+            className="h-full bg-gradient-to-r from-[#E8614D] to-[#C44A38] transition-all duration-500"
             style={{ width: `${progressPercentage}%` }}
           />
         </div>
@@ -386,15 +386,15 @@ export default function AssessmentPage() {
                       onClick={() => handleAnswer(currentQuestion.id, option.value)}
                       className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                         isSelected
-                          ? 'border-[#FF6B9D] bg-[#FFF4F8]'
-                          : 'border-[#E5E2DD] hover:border-[#FF6B9D]/50 hover:bg-[#F8F6F3]'
+                          ? 'border-[#E8614D] bg-[#FFF4F8]'
+                          : 'border-[#E5E2DD] hover:border-[#E8614D]/50 hover:bg-[#F8F6F3]'
                       }`}
                     >
                       <div className="flex items-center gap-4">
                         <div
                           className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
                             isSelected
-                              ? 'border-[#FF6B9D] bg-[#FF6B9D]'
+                              ? 'border-[#E8614D] bg-[#E8614D]'
                               : 'border-[#E5E2DD]'
                           }`}
                         >
@@ -437,7 +437,7 @@ export default function AssessmentPage() {
             <button
               onClick={handleNext}
               disabled={!canProceed() || isSubmitting}
-              className="flex items-center gap-2 bg-gradient-to-r from-[#FF6B9D] to-[#C9184A] text-white px-6 py-3 rounded-full font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+              className="flex items-center gap-2 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-6 py-3 rounded-full font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
             >
               {isSubmitting ? (
                 <>
@@ -520,13 +520,13 @@ function RankingQuestion({ question, value, onChange }) {
             <div
               key={option.value}
               className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
-                rank ? 'border-[#FF6B9D] bg-[#FFF4F8]' : 'border-[#E5E2DD]'
+                rank ? 'border-[#E8614D] bg-[#FFF4F8]' : 'border-[#E5E2DD]'
               }`}
             >
               <select
                 value={rank || ''}
                 onChange={(e) => handleRankChange(option.value, e.target.value ? parseInt(e.target.value) : null)}
-                className="w-16 h-10 text-center rounded-lg border border-[#E5E2DD] bg-white text-[#2D3648] font-semibold focus:outline-none focus:border-[#FF6B9D]"
+                className="w-16 h-10 text-center rounded-lg border border-[#E5E2DD] bg-white text-[#2D3648] font-semibold focus:outline-none focus:border-[#E8614D]"
               >
                 <option value="">-</option>
                 {question.options.map((_, idx) => (
