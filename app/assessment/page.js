@@ -25,6 +25,7 @@ function AssessmentContent() {
   const [moduleIntroShown, setModuleIntroShown] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [existingAssessment, setExistingAssessment] = useState(null)
+  const [saveError, setSaveError] = useState(null)
 
   const checkAuth = async () => {
     try {
@@ -174,6 +175,12 @@ function AssessmentContent() {
 
   const completeAssessment = async (currentQuestionId, currentAnswer) => {
     setIsSubmitting(true)
+    setSaveError(null)
+
+    if (isOnboarding) {
+      console.log('[Assessment] onboarding=true detected')
+      console.log('[Assessment] Saving assessment for user:', user?.id, '| couple:', couple?.id ?? 'none')
+    }
 
     try {
       // Merge current answer to avoid race condition where state hasn't updated yet
@@ -206,10 +213,6 @@ function AssessmentContent() {
 
       const completedAt = new Date().toISOString()
 
-      if (isOnboarding) {
-        console.log('[Assessment] Completed, saving for user:', user?.id)
-      }
-
       // Single database operation - either update or insert with ALL data
       if (existingAssessment) {
         // Update existing assessment with all data at once
@@ -223,12 +226,11 @@ function AssessmentContent() {
           })
           .eq('id', existingAssessment.id)
 
-        if (error) {
-          console.error('Error updating assessment:', error)
-          throw error
-        }
+        if (isOnboarding) console.log('[Assessment] Save result (update):', error ?? 'OK')
+        if (error) throw error
+
       } else if (user && couple) {
-        // Insert new assessment with all data at once
+        // Insert with couple_id when couple exists
         const { error } = await supabase
           .from('relationship_assessments')
           .insert({
@@ -239,19 +241,40 @@ function AssessmentContent() {
             completed_at: completedAt,
           })
 
-        if (error) {
-          console.error('Error inserting assessment:', error)
-          throw error
-        }
+        if (isOnboarding) console.log('[Assessment] Save result (insert with couple):', error ?? 'OK')
+        if (error) throw error
+
+      } else if (user && isOnboarding) {
+        // Onboarding path: no couple yet — save without couple_id so the
+        // assessment row exists before partner is invited
+        const { error } = await supabase
+          .from('relationship_assessments')
+          .insert({
+            user_id: user.id,
+            answers: finalAnswers,
+            results,
+            completed_at: completedAt,
+          })
+
+        if (isOnboarding) console.log('[Assessment] Save result (insert solo/onboarding):', error ?? 'OK')
+        if (error) throw error
+
+      } else {
+        // No user or no couple and not in onboarding — shouldn't happen, log it
+        console.warn('[Assessment] Skipped save: user=', !!user, 'couple=', !!couple, 'onboarding=', isOnboarding)
       }
 
-      // Redirect only after save is confirmed complete
+      // Redirect ONLY after save is confirmed complete (no throw above)
       if (isOnboarding) {
-        console.log('[Assessment] Redirecting to onboarding step 3')
+        console.log('[Assessment] Redirecting to /onboarding?step=3')
       }
       router.push(isOnboarding ? '/onboarding?step=3' : '/assessment/results')
+
     } catch (err) {
-      console.error('Error completing assessment:', err)
+      console.error('[Assessment] Error completing assessment:', err)
+      if (isOnboarding) {
+        setSaveError('Failed to save your assessment. Please try again.')
+      }
       setIsSubmitting(false)
     }
   }
@@ -489,6 +512,13 @@ function AssessmentContent() {
               )}
             </button>
           </div>
+
+          {/* Save error (onboarding mode) */}
+          {saveError && (
+            <div className="mt-4 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl text-center">
+              {saveError}
+            </div>
+          )}
 
           {/* Attribution */}
           <p className="text-center text-[#9CA3AF] text-xs mt-12">

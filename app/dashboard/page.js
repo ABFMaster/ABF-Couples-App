@@ -39,7 +39,7 @@ function DashboardPlanModal({ place, onClose, onSubmit, submitting }) {
         onClick={e => e.stopPropagation()}
       >
         {/* Place preview */}
-        <div className="relative h-36 bg-gradient-to-br from-pink-100 to-purple-100">
+        <div className="relative h-36 bg-gradient-to-br from-cream-100 to-indigo-100">
           {place.photo_url ? (
             <img src={place.photo_url} alt={place.title} className="w-full h-full object-cover" />
           ) : (
@@ -995,7 +995,7 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center">
+      <div className="min-h-screen bg-cream-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent mx-auto mb-4"></div>
           <p className="text-coral-600 text-lg font-medium">Loading...</p>
@@ -1006,14 +1006,14 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center">
+      <div className="min-h-screen bg-cream-50 flex items-center justify-center">
         <div className="text-red-600 font-medium">{error}</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100">
+    <div className="min-h-screen bg-cream-50">
       {/* Celebration Notifications */}
       {celebration && (
         <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 transition-all duration-300
@@ -1286,7 +1286,7 @@ export default function Dashboard() {
                     </Link>
                   </div>
                   <div className="flex gap-4">
-                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-pink-100 to-purple-100 flex-shrink-0 overflow-hidden">
+                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-cream-100 to-indigo-100 flex-shrink-0 overflow-hidden">
                       {upcomingDate.photo_url ? (
                         <img src={upcomingDate.photo_url} alt={upcomingDate.title} className="w-full h-full object-cover" />
                       ) : (
@@ -1437,7 +1437,7 @@ export default function Dashboard() {
               ) : (
                 /* Empty State - Unlock Insights */
                 <div className="text-center py-8">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-pink-100 to-rose-100 rounded-full mb-4">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-coral-50 to-cream-100 rounded-full mb-4">
                     <span className="text-3xl">💓</span>
                   </div>
 
@@ -1861,7 +1861,7 @@ export default function Dashboard() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl flex items-center justify-center">
+                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-100 to-cream-100 rounded-xl flex items-center justify-center">
                     <span className="text-2xl">📊</span>
                   </div>
                   <div>
@@ -2019,7 +2019,7 @@ export default function Dashboard() {
               {upcomingDate && (
                 <Link href="/dates" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-pink-100 to-purple-100 flex-shrink-0 flex items-center justify-center text-xl overflow-hidden">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cream-100 to-indigo-100 flex-shrink-0 flex items-center justify-center text-xl overflow-hidden">
                       {upcomingDate.photo_url
                         ? <img src={upcomingDate.photo_url} alt={upcomingDate.title} className="w-full h-full object-cover" />
                         : '📅'
