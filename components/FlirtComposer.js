@@ -72,7 +72,7 @@ export default function FlirtComposer({ isOpen, onClose, coupleId, partnerId, pa
         .from('onboarding_responses')
         .select('answers')
         .eq('user_id', partnerId)
-        .single();
+        .maybeSingle();
 
       if (data?.answers) {
         // Q8 is about love languages - index 7 (0-based)

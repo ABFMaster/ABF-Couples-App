@@ -483,7 +483,7 @@ export default function CustomDateBuilderPage() {
         .from('couple_members')
         .select('couple_id')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
       sessionStorage.setItem('customDateItinerary', JSON.stringify(itinerary))
 

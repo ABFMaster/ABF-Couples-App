@@ -34,19 +34,19 @@ export default function OnboardingRedirect() {
         return
       }
 
-      // Check individual profile status FIRST
+      // Check if user has completed their individual profile assessment
       setStatus('Loading your profile...')
       const { data: individualProfile } = await supabase
-        .from('individual_profiles')
+        .from('relationship_assessments')
         .select('completed_at')
         .eq('user_id', user.id)
         .not('completed_at', 'is', null)
-        .order('created_at', { ascending: false })
+        .order('completed_at', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
 
       if (!individualProfile) {
-        // No completed individual profile - start here first
+        // No completed assessment - go to profile first
         router.push('/profile')
         return
       }
@@ -57,7 +57,7 @@ export default function OnboardingRedirect() {
         .from('couples')
         .select('*')
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-        .single()
+        .maybeSingle()
 
       if (coupleError || !coupleData) {
         // No couple yet - go to dashboard (they can explore and connect later)
@@ -85,7 +85,7 @@ export default function OnboardingRedirect() {
         .not('completed_at', 'is', null)
         .order('completed_at', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
 
       if (!assessment) {
         // Partner connected but no completed relationship assessment

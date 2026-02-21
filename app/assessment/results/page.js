@@ -100,7 +100,7 @@ export default function AssessmentResultsPage() {
         .from('couples')
         .select('*')
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-        .single()
+        .maybeSingle()
 
       if (coupleData) {
         const partnerId = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id
@@ -108,12 +108,12 @@ export default function AssessmentResultsPage() {
         // Get partner name
         if (partnerId) {
           const { data: partnerProfile } = await supabase
-            .from('profiles')
-            .select('first_name')
-            .eq('id', partnerId)
-            .single()
+            .from('user_profiles')
+            .select('display_name')
+            .eq('user_id', partnerId)
+            .maybeSingle()
 
-          setPartnerName(partnerProfile?.first_name || 'Partner')
+          setPartnerName(partnerProfile?.display_name || 'Partner')
 
           // Get partner's assessment
           const { data: partnerData } = await supabase
@@ -124,7 +124,7 @@ export default function AssessmentResultsPage() {
             .not('completed_at', 'is', null)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single()
+            .maybeSingle()
 
           if (partnerData) {
             setPartnerAssessment(partnerData)
@@ -140,7 +140,7 @@ export default function AssessmentResultsPage() {
           .not('completed_at', 'is', null)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single()
+          .maybeSingle()
 
         if (assessmentData) {
           setAssessment(assessmentData)
@@ -154,7 +154,7 @@ export default function AssessmentResultsPage() {
             .is('completed_at', null)
             .order('created_at', { ascending: false })
             .limit(1)
-            .single()
+            .maybeSingle()
 
           if (incompleteData) {
             setIncompleteAssessment(incompleteData)

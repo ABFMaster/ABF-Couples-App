@@ -45,7 +45,7 @@ export default function WeeklyReflection() {
         .from('couples')
         .select('*')
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-        .single()
+        .maybeSingle()
 
       if (coupleError || !coupleData) {
         router.push('/connect')
@@ -59,12 +59,12 @@ export default function WeeklyReflection() {
       const partnerId = userIsUser1 ? coupleData.user2_id : coupleData.user1_id
 
       const { data: partnerProfile } = await supabase
-        .from('profiles')
-        .select('first_name')
-        .eq('id', partnerId)
-        .single()
+        .from('user_profiles')
+        .select('display_name')
+        .eq('user_id', partnerId)
+        .maybeSingle()
 
-      setPartnerName(partnerProfile?.first_name || 'Partner')
+      setPartnerName(partnerProfile?.display_name || 'Partner')
 
       // Calculate week start (Monday)
       const today = new Date()
@@ -99,7 +99,7 @@ export default function WeeklyReflection() {
         .select('*')
         .eq('couple_id', coupleData.id)
         .eq('week_start', weekStartString)
-        .single()
+        .maybeSingle()
 
       setWeeklyReflection(reflection)
 
@@ -154,7 +154,7 @@ export default function WeeklyReflection() {
           .update(updateData)
           .eq('id', weeklyReflection.id)
           .select()
-          .single()
+          .maybeSingle()
 
         if (error) throw error
         updatedReflection = data
@@ -168,7 +168,7 @@ export default function WeeklyReflection() {
             ...updateData
           })
           .select()
-          .single()
+          .maybeSingle()
 
         if (error) throw error
         updatedReflection = data

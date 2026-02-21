@@ -259,7 +259,7 @@ export default function Dashboard() {
       .select('*, checkin_questions(*)')
       .eq('couple_id', coupleData.id)
       .eq('date', today)
-      .single()
+      .maybeSingle()
 
     if (!checkin) {
       const questionId = await selectQuestion(coupleData.id)
@@ -272,7 +272,7 @@ export default function Dashboard() {
             date: today,
           })
           .select('*, checkin_questions(*)')
-          .single()
+          .maybeSingle()
         checkin = newCheckin
       }
     }
@@ -346,7 +346,7 @@ export default function Dashboard() {
         .select('user1_answer, user2_answer')
         .eq('couple_id', coupleId)
         .eq('date', dateStr)
-        .single()
+        .maybeSingle()
 
       if (data && data.user1_answer && data.user2_answer) {
         currentStreak++
@@ -387,7 +387,7 @@ export default function Dashboard() {
       .select('*')
       .eq('couple_id', coupleId)
       .eq('week_start', weekStartStr)
-      .single()
+      .maybeSingle()
 
     setWeeklyReflection(reflection)
   }
@@ -424,7 +424,7 @@ export default function Dashboard() {
       .eq('sender_id', userId)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
     if (lastSent) {
       setLastSentFlirtTime(new Date(lastSent.created_at))
@@ -474,7 +474,7 @@ export default function Dashboard() {
         .from('relationship_health')
         .select('overall_score')
         .eq('couple_id', coupleId)
-        .single()
+        .maybeSingle()
       if (health) setCoachHealthScore(health.overall_score)
     } catch (e) { /* graceful */ }
 
@@ -488,7 +488,7 @@ export default function Dashboard() {
           .eq('user_id', authUser.id)
           .order('check_date', { ascending: false })
           .limit(1)
-          .single()
+          .maybeSingle()
         if (lastCheckin) setCoachLastCheckinDate(lastCheckin.check_date)
       }
     } catch (e) { /* graceful */ }
@@ -531,7 +531,7 @@ export default function Dashboard() {
       .gte('start_date', new Date().toISOString().split('T')[0])
       .order('start_date', { ascending: true })
       .limit(1)
-      .single()
+      .maybeSingle()
 
     setUpcomingTrip(data)
   }, [])
@@ -546,7 +546,7 @@ export default function Dashboard() {
       .select('*')
       .eq('user_id', userId)
       .eq('check_date', today)
-      .single()
+      .maybeSingle()
 
     setV2Checkin(userCheckin)
 
@@ -557,7 +557,7 @@ export default function Dashboard() {
         .select('*')
         .eq('user_id', partnerId)
         .eq('check_date', today)
-        .single()
+        .maybeSingle()
 
       setV2PartnerCheckin(partnerCheckin)
     }
@@ -633,7 +633,7 @@ export default function Dashboard() {
         .from('couples')
         .select('*')
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-        .single()
+        .maybeSingle()
 
       // Allow users without a couple to view dashboard with limited features
       if (coupleError || !coupleData) {
@@ -659,7 +659,7 @@ export default function Dashboard() {
         .eq('user_id', user.id)
         .eq('couple_id', coupleData.id)
         .not('completed_at', 'is', null)
-        .single()
+        .maybeSingle()
 
       const { data: partnerResponse } = await supabase
         .from('relationship_assessments')
@@ -667,18 +667,18 @@ export default function Dashboard() {
         .eq('user_id', partnerUserId)
         .eq('couple_id', coupleData.id)
         .not('completed_at', 'is', null)
-        .single()
+        .maybeSingle()
 
       const { data: partnerProfile } = await supabase
-        .from('profiles')
-        .select('first_name')
-        .eq('id', partnerUserId)
-        .single()
+        .from('user_profiles')
+        .select('display_name')
+        .eq('user_id', partnerUserId)
+        .maybeSingle()
 
       setOnboardingStatus({
         userCompleted: !!userResponse,
         partnerCompleted: !!partnerResponse,
-        partnerName: partnerProfile?.first_name || 'Partner',
+        partnerName: partnerProfile?.display_name || 'Partner',
       })
 
       // Check if user has completed their relationship assessment (also grab results for carousel)
@@ -690,23 +690,23 @@ export default function Dashboard() {
         .not('completed_at', 'is', null)
         .order('completed_at', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
 
       // Profile is completed if they have a completed assessment
       setProfileCompleted(!!userAssessment?.completed_at)
 
-      // Check individual profile status
-      const { data: individualProfile } = await supabase
-        .from('individual_profiles')
+      // Check individual profile status via relationship_assessments (single source of truth)
+      const { data: individualProfileCheck } = await supabase
+        .from('relationship_assessments')
         .select('completed_at')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+        .order('completed_at', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
 
       setIndividualProfileStatus({
-        completed: !!individualProfile?.completed_at,
-        inProgress: !!individualProfile && !individualProfile.completed_at,
+        completed: !!individualProfileCheck?.completed_at,
+        inProgress: false, // relationship_assessments only stores completed rows
       })
 
       await fetchDailyCheckin(coupleData, user.id)
@@ -757,7 +757,7 @@ export default function Dashboard() {
       .update(updateData)
       .eq('id', todayCheckin.id)
       .select('*, checkin_questions(*)')
-      .single()
+      .maybeSingle()
 
     if (!error && updatedCheckin) {
       setTodayCheckin(updatedCheckin)
@@ -816,7 +816,7 @@ export default function Dashboard() {
       .update(updateData)
       .eq('id', todayCheckin.id)
       .select('*, checkin_questions(*)')
-      .single()
+      .maybeSingle()
 
     if (updatedCheckin) {
       setTodayCheckin(updatedCheckin)
@@ -847,7 +847,7 @@ export default function Dashboard() {
       .update(updateData)
       .eq('id', todayCheckin.id)
       .select('*, checkin_questions(*)')
-      .single()
+      .maybeSingle()
 
     if (updatedCheckin) {
       setTodayCheckin(updatedCheckin)

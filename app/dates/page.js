@@ -214,7 +214,7 @@ export default function DatesPage() {
       .from('couples')
       .select('id')
       .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-      .single()
+      .maybeSingle()
 
     const cid = coupleData?.id ?? null
 

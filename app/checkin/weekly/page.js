@@ -328,7 +328,7 @@ export default function WeeklyReviewPage() {
         .from('couples')
         .select('*')
         .or(`user1_id.eq.${authUser.id},user2_id.eq.${authUser.id}`)
-        .single()
+        .maybeSingle()
 
       if (!coupleData) {
         router.push('/dashboard')
@@ -345,15 +345,14 @@ export default function WeeklyReviewPage() {
       setPartnerId(partnerUserId)
 
       if (partnerUserId) {
-        // Try profiles table first (like dashboard uses)
         const { data: partnerProfile } = await supabase
-          .from('profiles')
-          .select('first_name')
-          .eq('id', partnerUserId)
-          .single()
+          .from('user_profiles')
+          .select('display_name')
+          .eq('user_id', partnerUserId)
+          .maybeSingle()
 
-        if (partnerProfile?.first_name) {
-          setPartnerName(partnerProfile.first_name)
+        if (partnerProfile?.display_name) {
+          setPartnerName(partnerProfile.display_name)
         }
       }
     } catch (err) {

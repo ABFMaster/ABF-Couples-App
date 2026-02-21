@@ -142,7 +142,7 @@ export default function AddEventModal({ isOpen, onClose, coupleId, onEventAdded 
           photo_urls: photoUrls,
         })
         .select()
-        .single()
+        .maybeSingle()
 
       // Debug logging after insert
       console.log('Insert result:', { data, error: insertError })

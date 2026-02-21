@@ -57,7 +57,7 @@ export default function Timeline() {
         .from('couples')
         .select('*')
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-        .single()
+        .maybeSingle()
 
       if (coupleError || !coupleData) {
         router.push('/connect')

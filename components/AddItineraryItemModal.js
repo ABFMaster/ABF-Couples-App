@@ -87,7 +87,7 @@ export default function AddItineraryItemModal({
         .from('trip_itinerary')
         .insert(insertData)
         .select()
-        .single()
+        .maybeSingle()
 
       console.log('Insert result:', { data, error: insertError })
 

@@ -111,7 +111,7 @@ export default function CreateTripModal({ isOpen, onClose, coupleId, partnerName
         .from('trips')
         .insert(insertData)
         .select()
-        .single()
+        .maybeSingle()
 
       console.log('Insert result:', { data, error: insertError })
 

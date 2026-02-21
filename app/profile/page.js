@@ -34,14 +34,14 @@ export default function ProfileAssessmentPage() {
 
       setUser(user)
 
-      // Check for existing profile assessment
+      // Check for existing profile assessment (single source of truth)
       const { data: existing } = await supabase
-        .from('individual_profiles')
+        .from('relationship_assessments')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+        .order('completed_at', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
 
       if (existing) {
         setExistingProfile(existing)
@@ -135,18 +135,18 @@ export default function ProfileAssessmentPage() {
     try {
       if (existingProfile && !existingProfile.completed_at) {
         await supabase
-          .from('individual_profiles')
+          .from('relationship_assessments')
           .update({ answers, updated_at: new Date().toISOString() })
           .eq('id', existingProfile.id)
       } else {
         const { data } = await supabase
-          .from('individual_profiles')
+          .from('relationship_assessments')
           .insert({
             user_id: user.id,
             answers,
           })
           .select()
-          .single()
+          .maybeSingle()
 
         if (data) setExistingProfile(data)
       }
@@ -191,9 +191,9 @@ export default function ProfileAssessmentPage() {
 
       // Single database operation - either update or insert
       if (existingProfile) {
-        // Update existing profile with all data at once
+        // Update existing assessment with all data at once
         const { error } = await supabase
-          .from('individual_profiles')
+          .from('relationship_assessments')
           .update({
             answers: finalAnswers,
             results,
@@ -203,13 +203,13 @@ export default function ProfileAssessmentPage() {
           .eq('id', existingProfile.id)
 
         if (error) {
-          console.error('Error updating profile:', error)
+          console.error('[Profile] Error updating assessment:', error)
           throw error
         }
       } else if (user) {
-        // Insert new profile with all data at once
+        // Insert new assessment with all data at once
         const { error } = await supabase
-          .from('individual_profiles')
+          .from('relationship_assessments')
           .insert({
             user_id: user.id,
             answers: finalAnswers,
@@ -218,7 +218,7 @@ export default function ProfileAssessmentPage() {
           })
 
         if (error) {
-          console.error('Error inserting profile:', error)
+          console.error('[Profile] Error inserting assessment:', error)
           throw error
         }
       }

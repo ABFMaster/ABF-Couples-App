@@ -72,7 +72,7 @@ export default function AddPackingItemModal({
         .from('trip_packing')
         .insert(insertData)
         .select()
-        .single()
+        .maybeSingle()
 
       console.log('Insert result:', { data, error: insertError })
 

@@ -101,7 +101,7 @@ export default function CreateDateModal({
         .from('date_plans')
         .insert(insertData)
         .select()
-        .single()
+        .maybeSingle()
 
       console.log('Insert result:', { data, error: insertError })
 

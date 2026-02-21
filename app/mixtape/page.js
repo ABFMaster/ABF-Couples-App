@@ -38,7 +38,7 @@ export default function Mixtape() {
         .from('couples')
         .select('*')
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-        .single()
+        .maybeSingle()
 
       if (coupleError || !coupleData) {
         router.push('/connect')
@@ -50,12 +50,12 @@ export default function Mixtape() {
       const partnerUserId = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id
 
       const { data: partnerProfile } = await supabase
-        .from('profiles')
-        .select('first_name')
-        .eq('id', partnerUserId)
-        .single()
+        .from('user_profiles')
+        .select('display_name')
+        .eq('user_id', partnerUserId)
+        .maybeSingle()
 
-      setPartnerName(partnerProfile?.first_name || 'Partner')
+      setPartnerName(partnerProfile?.display_name || 'Partner')
 
       await fetchSongs(coupleData.id)
       setLoading(false)

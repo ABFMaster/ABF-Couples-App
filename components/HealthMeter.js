@@ -56,7 +56,7 @@ export default function HealthMeter({ coupleId, onRefresh }) {
         .from('relationship_health')
         .select('*')
         .eq('couple_id', coupleId)
-        .single();
+        .maybeSingle();
 
       if (fetchError && fetchError.code !== 'PGRST116') {
         console.error('[HealthMeter] Error fetching health:', fetchError);

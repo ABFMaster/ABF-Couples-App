@@ -39,7 +39,7 @@ export default function AssessmentPage() {
         .from('couples')
         .select('*')
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-        .single()
+        .maybeSingle()
 
       if (coupleData) {
         setCouple(coupleData)
@@ -52,7 +52,7 @@ export default function AssessmentPage() {
           .eq('couple_id', coupleData.id)
           .order('created_at', { ascending: false })
           .limit(1)
-          .single()
+          .maybeSingle()
 
         if (existing) {
           setExistingAssessment(existing)
@@ -161,7 +161,7 @@ export default function AssessmentPage() {
             answers,
           })
           .select()
-          .single()
+          .maybeSingle()
 
         if (data) setExistingAssessment(data)
       }

@@ -39,13 +39,13 @@ export default function CheckinCompletePage() {
 
       // Get user's name
       const { data: userData } = await supabase
-        .from('users')
-        .select('name')
-        .eq('id', user.id)
-        .single()
+        .from('user_profiles')
+        .select('display_name')
+        .eq('user_id', user.id)
+        .maybeSingle()
 
-      if (userData?.name) {
-        setUserName(userData.name.split(' ')[0])
+      if (userData?.display_name) {
+        setUserName(userData.display_name.split(' ')[0])
       }
 
       // Get today's check-in
@@ -55,7 +55,7 @@ export default function CheckinCompletePage() {
         .select('*')
         .eq('user_id', user.id)
         .eq('check_date', today)
-        .single()
+        .maybeSingle()
 
       if (!todayCheckin) {
         router.push('/checkin')
@@ -69,7 +69,7 @@ export default function CheckinCompletePage() {
         .from('couples')
         .select('*')
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-        .single()
+        .maybeSingle()
 
       if (coupleData) {
         const partnerId = coupleData.user1_id === user.id
@@ -79,13 +79,13 @@ export default function CheckinCompletePage() {
         if (partnerId) {
           // Get partner name
           const { data: partnerData } = await supabase
-            .from('users')
-            .select('name')
-            .eq('id', partnerId)
-            .single()
+            .from('user_profiles')
+            .select('display_name')
+            .eq('user_id', partnerId)
+            .maybeSingle()
 
-          if (partnerData?.name) {
-            setPartnerName(partnerData.name.split(' ')[0])
+          if (partnerData?.display_name) {
+            setPartnerName(partnerData.display_name.split(' ')[0])
           }
 
           // Check if partner has checked in today
@@ -94,7 +94,7 @@ export default function CheckinCompletePage() {
             .select('*')
             .eq('user_id', partnerId)
             .eq('check_date', today)
-            .single()
+            .maybeSingle()
 
           if (partnerCheckinData) {
             setPartnerCheckin(partnerCheckinData)

@@ -87,7 +87,7 @@ export async function GET(request) {
       .from('user_spotify_connections')
       .select('*')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     if (connectionError || !connection) {
       return NextResponse.json({ error: 'Spotify not connected' }, { status: 400 })

@@ -117,7 +117,7 @@ export default function Settings() {
   const profileCompleted = userProfile?.completed_at != null
 
   // Get display name for header
-  const displayName = formData.first_name || profile?.first_name || null
+  const displayName = formData.first_name || userProfile?.display_name || null
 
   useEffect(() => {
     checkAuth()
@@ -133,27 +133,18 @@ export default function Settings() {
 
     setUser(user)
 
-    // Get basic profile
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-
-    setProfile(profileData)
-
     // Get user profile
     const { data: userProfileData } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     setUserProfile(userProfileData)
 
     // Populate form
     setFormData({
-      first_name: profileData?.first_name || '',
+      first_name: userProfileData?.display_name || '',
       love_language_primary: userProfileData?.love_language_primary || null,
       love_language_secondary: userProfileData?.love_language_secondary || null,
       communication_style: userProfileData?.communication_style || [],
@@ -173,12 +164,11 @@ export default function Settings() {
     setSaved(false)
 
     try {
-      // Update basic profile name
-      if (formData.first_name !== profile?.first_name) {
+      // Update display name
+      if (formData.first_name !== userProfile?.display_name) {
         await supabase
-          .from('profiles')
-          .update({ first_name: formData.first_name })
-          .eq('id', user.id)
+          .from('user_profiles')
+          .upsert({ user_id: user.id, display_name: formData.first_name }, { onConflict: 'user_id' })
       }
 
       // Update user profile

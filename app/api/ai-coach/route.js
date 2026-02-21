@@ -49,7 +49,7 @@ async function incrementWeeklyUsage(supabase, userId) {
     .select('message_count')
     .eq('user_id', userId)
     .eq('week_start', weekStart)
-    .single();
+    .maybeSingle();
 
   return { count: data?.message_count ?? 1, error: fetchError };
 }
@@ -64,7 +64,7 @@ async function getWeeklyUsage(supabase, userId) {
     .select('message_count')
     .eq('user_id', userId)
     .eq('week_start', weekStart)
-    .single();
+    .maybeSingle();
   return data?.message_count || 0;
 }
 
@@ -74,10 +74,10 @@ async function getWeeklyUsage(supabase, userId) {
 async function isPremiumUser(supabase, userId) {
   try {
     const { data } = await supabase
-      .from('profiles')
+      .from('user_profiles')
       .select('is_premium')
-      .eq('id', userId)
-      .single();
+      .eq('user_id', userId)
+      .maybeSingle();
     return !!data?.is_premium;
   } catch {
     return false;
@@ -138,7 +138,7 @@ export async function POST(request) {
         .from('ai_conversations')
         .insert({ user_id: user.id, couple_id: coupleId, type: 'solo' })
         .select('id')
-        .single();
+        .maybeSingle();
 
       if (createError) {
         console.error('Error creating conversation:', createError);
@@ -234,7 +234,7 @@ You are a coach, not a therapist. For serious mental health concerns, recommend 
       .from('ai_messages')
       .insert({ conversation_id: activeConversationId, role: 'assistant', content: aiResponse })
       .select('*')
-      .single();
+      .maybeSingle();
 
     if (aiMsgError) {
       console.error('Error saving AI response:', aiMsgError);

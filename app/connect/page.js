@@ -37,7 +37,7 @@ export default function ConnectPage() {
         .from('couples')
         .select('*')
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-        .single()
+        .maybeSingle()
 
       if (couples && couples.connected_at) {
         // User is already connected, redirect to dashboard
@@ -79,7 +79,7 @@ export default function ConnectPage() {
         .from('couples')
         .select('connect_code')
         .eq('connect_code', code)
-        .single()
+        .maybeSingle()
 
       if (existing) {
         // Try again with a new code
@@ -123,7 +123,7 @@ export default function ConnectPage() {
         .from('couples')
         .select('*')
         .eq('connect_code', code)
-        .single()
+        .maybeSingle()
 
       if (findError || !couple) {
         throw new Error('Invalid connect code')

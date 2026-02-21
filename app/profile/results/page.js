@@ -86,15 +86,15 @@ export default function ProfileResultsPage() {
         return
       }
 
-      // Get user's completed profile
+      // Get user's completed assessment (single source of truth)
       const { data: profileData } = await supabase
-        .from('individual_profiles')
+        .from('relationship_assessments')
         .select('*')
         .eq('user_id', user.id)
         .not('completed_at', 'is', null)
-        .order('created_at', { ascending: false })
+        .order('completed_at', { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
 
       if (profileData) {
         setProfile(profileData)

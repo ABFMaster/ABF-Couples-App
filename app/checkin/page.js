@@ -57,7 +57,7 @@ export default function DailyCheckinPage() {
         .from('couples')
         .select('*')
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-        .single()
+        .maybeSingle()
 
       if (!coupleData) {
         // No couple - can't do check-in
@@ -74,13 +74,13 @@ export default function DailyCheckinPage() {
 
       if (partnerId) {
         const { data: partnerData } = await supabase
-          .from('users')
-          .select('name')
-          .eq('id', partnerId)
-          .single()
+          .from('user_profiles')
+          .select('display_name')
+          .eq('user_id', partnerId)
+          .maybeSingle()
 
-        if (partnerData?.name) {
-          setPartnerName(partnerData.name.split(' ')[0])
+        if (partnerData?.display_name) {
+          setPartnerName(partnerData.display_name.split(' ')[0])
         }
       }
 
@@ -93,7 +93,7 @@ export default function DailyCheckinPage() {
         .select('id')
         .eq('user_id', user.id)
         .eq('check_date', today)
-        .single()
+        .maybeSingle()
 
       if (existingCheckin) {
         router.push('/checkin/complete')
@@ -160,15 +160,19 @@ export default function DailyCheckinPage() {
         .eq('user_id', userId)
         .eq('couple_id', coupleId)
         .not('completed_at', 'is', null)
-        .single()
+        .order('completed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
-      // Fetch user's profile
+      // Fetch user's profile from relationship_assessments (single source of truth)
       const { data: profile } = await supabase
-        .from('individual_profiles')
+        .from('relationship_assessments')
         .select('results')
         .eq('user_id', userId)
         .not('completed_at', 'is', null)
-        .single()
+        .order('completed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
       // Fetch recent check-ins for context
       const sevenDaysAgo = new Date()

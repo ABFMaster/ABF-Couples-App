@@ -74,7 +74,7 @@ export default function DateNight() {
         .from('couples')
         .select('*')
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-        .single()
+        .maybeSingle()
 
       if (coupleError || !coupleData) {
         router.push('/connect')
@@ -88,12 +88,12 @@ export default function DateNight() {
 
       // Get partner name
       const { data: partnerProfile } = await supabase
-        .from('profiles')
-        .select('first_name')
-        .eq('id', partnerUserId)
-        .single()
+        .from('user_profiles')
+        .select('display_name')
+        .eq('user_id', partnerUserId)
+        .maybeSingle()
 
-      setPartnerName(partnerProfile?.first_name || 'Partner')
+      setPartnerName(partnerProfile?.display_name || 'Partner')
 
       await Promise.all([
         fetchSuggestions(),
@@ -108,15 +108,7 @@ export default function DateNight() {
   }
 
   const fetchSuggestions = async () => {
-    const { data, error } = await supabase
-      .from('date_suggestions')
-      .select('*')
-      .eq('is_active', true)
-      .order('title')
-
-    if (!error && data) {
-      setSuggestions(data)
-    }
+    // TODO: date_suggestions table dormant pending Maps fix — removed query
   }
 
   const fetchDatePlans = async (coupleId, userId) => {
