@@ -305,7 +305,7 @@ function OnboardingFlow() {
           display_name: displayName.trim(),
           partner_display_name: partnerDisplayName.trim() || null,
           updated_at: new Date().toISOString(),
-        })
+        }, { onConflict: 'user_id' })
 
       if (error) throw error
 
@@ -338,7 +338,7 @@ function OnboardingFlow() {
           preferred_checkin_time: checkinTime,
           stress_response: stressResponse,
           updated_at: new Date().toISOString(),
-        })
+        }, { onConflict: 'user_id' })
 
       if (error) throw error
 
