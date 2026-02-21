@@ -184,6 +184,25 @@ export default function Dashboard() {
   const [connectCode, setConnectCode] = useState('')
   const [codeCopied, setCodeCopied] = useState(false)
 
+  // Invite banner dismiss state (persisted in localStorage)
+  const [inviteBannerDismissed, setInviteBannerDismissed] = useState(false)
+  const [waitingBannerDismissed, setWaitingBannerDismissed] = useState(false)
+
+  useEffect(() => {
+    setInviteBannerDismissed(localStorage.getItem('abf_invite_dismissed') === '1')
+    setWaitingBannerDismissed(localStorage.getItem('abf_waiting_dismissed') === '1')
+  }, [])
+
+  const dismissInviteBanner = () => {
+    localStorage.setItem('abf_invite_dismissed', '1')
+    setInviteBannerDismissed(true)
+  }
+
+  const dismissWaitingBanner = () => {
+    localStorage.setItem('abf_waiting_dismissed', '1')
+    setWaitingBannerDismissed(true)
+  }
+
   // Daily relationship quotes/affirmations
   const dailyQuotes = [
     "The best relationships are built on small moments of connection.",
@@ -962,6 +981,18 @@ export default function Dashboard() {
     }
   }
 
+  // Share or copy connect code (Web Share API with clipboard fallback)
+  const handleShareConnectCode = async () => {
+    const shareText = `Join me on ABF! Use code ${connectCode} at abf.app/connect`
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Join me on ABF!', text: shareText })
+      } catch {}
+    } else {
+      handleCopyConnectCode()
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center">
@@ -1043,6 +1074,86 @@ export default function Dashboard() {
                   aria-label="Dismiss"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Banner A — no partner connected yet */}
+      {!hasPartner && connectCode && !inviteBannerDismissed && (
+        <div className="bg-gradient-to-r from-coral-50 to-cream-100 border-b border-coral-100">
+          <div className="max-w-4xl mx-auto px-4 py-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-xl flex-shrink-0">💌</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-coral-800 text-sm">
+                  Invite {onboardingStatus.partnerName !== 'Partner' ? onboardingStatus.partnerName : 'your partner'} to unlock shared features
+                </p>
+                <p className="text-coral-600 font-bold tracking-widest text-sm">
+                  Code: {connectCode}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={handleCopyConnectCode}
+                  className="bg-white border border-coral-200 text-coral-600 hover:bg-cream-50 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                >
+                  {codeCopied ? '✓ Copied' : 'Copy'}
+                </button>
+                <button
+                  onClick={handleShareConnectCode}
+                  className="bg-coral-500 hover:bg-coral-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                >
+                  Share
+                </button>
+                <button
+                  onClick={dismissInviteBanner}
+                  className="text-coral-300 hover:text-coral-500 p-1 transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Banner B — partner connected but hasn't completed assessment */}
+      {hasPartner && !onboardingStatus.partnerCompleted && !waitingBannerDismissed && (
+        <div className="bg-gradient-to-r from-amber-50 to-cream-100 border-b border-amber-100">
+          <div className="max-w-4xl mx-auto px-4 py-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-xl flex-shrink-0">⏳</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-amber-800 text-sm">
+                  Waiting for {onboardingStatus.partnerName} to complete their profile
+                </p>
+                <p className="text-amber-600 text-xs">
+                  Some shared features are limited until they finish setup.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {connectCode && (
+                  <button
+                    onClick={handleCopyConnectCode}
+                    className="bg-white border border-amber-200 text-amber-700 hover:bg-amber-50 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                  >
+                    {codeCopied ? '✓ Copied invite' : 'Copy invite'}
+                  </button>
+                )}
+                <button
+                  onClick={dismissWaitingBanner}
+                  className="text-amber-300 hover:text-amber-500 p-1 transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>

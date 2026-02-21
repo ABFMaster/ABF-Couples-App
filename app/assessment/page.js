@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
   ASSESSMENT_MODULES,
@@ -10,8 +10,10 @@ import {
   ASSESSMENT_ATTRIBUTION,
 } from '@/lib/relationship-questions'
 
-export default function AssessmentPage() {
+function AssessmentContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isOnboarding = searchParams.get('onboarding') === 'true'
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState(null)
   const [couple, setCouple] = useState(null)
@@ -239,8 +241,8 @@ export default function AssessmentPage() {
         }
       }
 
-      // Navigate to results
-      router.push('/assessment/results')
+      // Navigate to results or back to onboarding
+      router.push(isOnboarding ? '/onboarding?step=3' : '/assessment/results')
     } catch (err) {
       console.error('Error completing assessment:', err)
       setIsSubmitting(false)
@@ -271,9 +273,18 @@ export default function AssessmentPage() {
         </div>
 
         <div className="max-w-2xl mx-auto px-4 py-12">
+          {/* Onboarding step indicator */}
+          {isOnboarding && (
+            <div className="text-center mb-4">
+              <span className="inline-block bg-coral-100 text-coral-700 text-xs font-semibold px-3 py-1 rounded-full tracking-wide">
+                STEP 2 OF 4 — ASSESSMENT
+              </span>
+            </div>
+          )}
+
           {/* Back button */}
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push(isOnboarding ? '/onboarding' : '/dashboard')}
             className="flex items-center gap-2 text-[#6B7280] hover:text-[#2D3648] mb-8 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -346,6 +357,15 @@ export default function AssessmentPage() {
         </div>
 
         <div className="max-w-2xl mx-auto px-4 py-12">
+          {/* Onboarding step indicator */}
+          {isOnboarding && (
+            <div className="text-center mb-4">
+              <span className="inline-block bg-coral-100 text-coral-700 text-xs font-semibold px-3 py-1 rounded-full tracking-wide">
+                STEP 2 OF 4 — ASSESSMENT
+              </span>
+            </div>
+          )}
+
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
@@ -362,7 +382,7 @@ export default function AssessmentPage() {
               </div>
             </div>
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push(isOnboarding ? '/onboarding' : '/dashboard')}
               className="text-[#9CA3AF] hover:text-[#6B7280] text-sm transition-colors"
             >
               Save & Exit
@@ -473,6 +493,24 @@ export default function AssessmentPage() {
   }
 
   return null
+}
+
+// Page export — wraps AssessmentContent in Suspense (required for useSearchParams)
+export default function AssessmentPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent mx-auto mb-4" />
+            <p className="text-[#6B7280] text-lg">Loading assessment...</p>
+          </div>
+        </div>
+      }
+    >
+      <AssessmentContent />
+    </Suspense>
+  )
 }
 
 // Ranking Question Component

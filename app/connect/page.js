@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-export default function ConnectPage() {
+function ConnectContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [mode, setMode] = useState(null) // null, 'create', or 'enter'
@@ -18,6 +19,19 @@ export default function ConnectPage() {
   // Check authentication and couple status on mount
   useEffect(() => {
     checkAuthAndCoupleStatus()
+  }, [])
+
+  // Pre-fill code from URL param ?code=XXXXXX
+  useEffect(() => {
+    const urlCode = searchParams.get('code')
+    if (urlCode) {
+      const cleaned = urlCode.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)
+      if (cleaned.length === 6) {
+        setInputCode(cleaned)
+        setMode('enter')
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const checkAuthAndCoupleStatus = async () => {
@@ -318,5 +332,19 @@ export default function ConnectPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function ConnectPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center">
+          <div className="text-coral-500 text-xl">Loading...</div>
+        </div>
+      }
+    >
+      <ConnectContent />
+    </Suspense>
   )
 }
