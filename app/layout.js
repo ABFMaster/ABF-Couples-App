@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import OnboardingGuard from "@/components/OnboardingGuard";
+import BottomNav from "@/components/BottomNav";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,7 +24,10 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <OnboardingGuard>{children}</OnboardingGuard>
+        <OnboardingGuard>
+          <div className="pb-20">{children}</div>
+          <BottomNav />
+        </OnboardingGuard>
       </body>
     </html>
   );

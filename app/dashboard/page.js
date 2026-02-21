@@ -1,2175 +1,576 @@
-// Dashboard page
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import HealthMeter from '@/components/HealthMeter'
-import CoachInsightCard from '@/components/CoachInsightCard'
-import FlirtComposer from '@/components/FlirtComposer'
-import FlirtView from '@/components/FlirtView'
-import { MOOD_OPTIONS } from '@/lib/checkin-questions'
-import { analyzeUserPatterns, analyzeCouplePatterns } from '@/lib/checkin-patterns'
-import { CATEGORY_CONFIG } from '@/lib/date-suggestions'
 
-// Default datetime for scheduling modal: tomorrow at 7pm
-function defaultDatetime() {
-  const d = new Date()
-  d.setDate(d.getDate() + 1)
-  d.setHours(19, 0, 0, 0)
-  return d.toISOString().slice(0, 16)
+// ── CONSTANTS ────────────────────────────────────────────────────────────────
+
+const ITEM_TYPES = {
+  movie:      { emoji: '🎬', label: 'Movie' },
+  show:       { emoji: '📺', label: 'Show' },
+  song:       { emoji: '🎵', label: 'Song' },
+  restaurant: { emoji: '🍽️', label: 'Restaurant' },
+  date_idea:  { emoji: '💡', label: 'Date Idea' },
 }
 
-// ============================================
-// PLAN MODAL (dashboard inline)
-// ============================================
-function DashboardPlanModal({ place, onClose, onSubmit, submitting }) {
-  const [scheduledDate, setScheduledDate] = React.useState(defaultDatetime())
-  const [notes, setNotes] = React.useState('')
-  const config = CATEGORY_CONFIG[place?.category] || { label: 'Date', emoji: '💕' }
+// ── HELPERS ──────────────────────────────────────────────────────────────────
 
-  if (!place) return null
+function getGreeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
+function getCoachInsight({ streak, healthScore, flirtsThisWeek, daysTogether }) {
+  if (streak >= 7)          return "Seven days in a row — you two are building something beautiful."
+  if (streak >= 3)          return "Consistent check-ins are one of the strongest predictors of relationship health."
+  if (flirtsThisWeek >= 3)  return "You've been sending the love lately. That spark matters."
+  if (healthScore >= 80)    return "Your relationship health is looking strong. Keep doing what you're doing."
+  if (daysTogether < 30)    return "Every early habit you build now will shape the relationship you have."
+  if (!flirtsThisWeek)      return "A small flirt can go a long way — even a simple message makes a difference."
+  return "Daily connection, no matter how small, adds up to something profound."
+}
+
+function buildFeatureCards({ todayCheckinDone, nextDate, lastFlirtDaysAgo, memoryCount, activeTrip }) {
+  return [
+    {
+      emoji: '💬',
+      label: 'Daily Check-in',
+      status: todayCheckinDone ? 'Done today ✓' : 'Not done yet',
+      statusColor: todayCheckinDone ? 'text-green-500' : 'text-[#9CA3AF]',
+      href: '/checkin',
+      accent: 'border-coral-200',
+    },
+    {
+      emoji: '🗓️',
+      label: 'Date Night',
+      status: nextDate ? nextDate.title : 'Plan something special',
+      statusColor: nextDate ? 'text-[#3D3580]' : 'text-[#9CA3AF]',
+      href: '/dates',
+      accent: 'border-indigo-200',
+    },
+    {
+      emoji: '💌',
+      label: 'Send a Flirt',
+      status: lastFlirtDaysAgo === null
+        ? 'Send one now'
+        : lastFlirtDaysAgo === 0
+          ? 'Sent today ✓'
+          : `Sent ${lastFlirtDaysAgo}d ago`,
+      statusColor: lastFlirtDaysAgo === 0 ? 'text-green-500' : 'text-[#9CA3AF]',
+      href: '/flirts',
+      accent: 'border-coral-200',
+    },
+    {
+      emoji: '🧠',
+      label: 'AI Coach',
+      status: 'Chat now',
+      statusColor: 'text-[#3D3580]',
+      href: '/ai-coach',
+      accent: 'border-indigo-200',
+    },
+    {
+      emoji: '🗺️',
+      label: 'Trip Planning',
+      status: activeTrip || 'Plan a trip',
+      statusColor: activeTrip ? 'text-[#3D3580]' : 'text-[#9CA3AF]',
+      href: '/trips',
+      accent: 'border-blue-200',
+    },
+    {
+      emoji: '📸',
+      label: 'Our Timeline',
+      status: memoryCount > 0 ? `${memoryCount} memories` : 'Add your first memory',
+      statusColor: memoryCount > 0 ? 'text-[#3D3580]' : 'text-[#9CA3AF]',
+      href: '/timeline',
+      accent: 'border-amber-200',
+    },
+  ]
+}
+
+// ── QUICK-ADD MODAL ──────────────────────────────────────────────────────────
+
+function AddItemModal({ isOpen, onClose, coupleId, userId, onAdded }) {
+  const [type, setType]     = useState('movie')
+  const [title, setTitle]   = useState('')
+  const [note, setNote]     = useState('')
+  const [saving, setSaving] = useState(false)
+
+  if (!isOpen) return null
+
+  const handleSave = async () => {
+    if (!title.trim() || saving) return
+    setSaving(true)
+    try {
+      const { error } = await supabase.from('shared_items').insert({
+        couple_id: coupleId,
+        user_id:   userId,
+        type,
+        title: title.trim(),
+        note:  note.trim() || null,
+      })
+      if (!error) {
+        setTitle('')
+        setNote('')
+        setType('movie')
+        onAdded()
+        onClose()
+      }
+    } catch (e) {
+      console.error('Failed to add item:', e)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={onClose}>
       <div
-        className="relative bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl"
+        className="w-full max-w-lg mx-auto bg-white rounded-t-3xl p-6 pb-10 animate-slideUp"
         onClick={e => e.stopPropagation()}
       >
-        {/* Place preview */}
-        <div className="relative h-36 bg-gradient-to-br from-cream-100 to-indigo-100">
-          {place.photo_url ? (
-            <img src={place.photo_url} alt={place.title} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-6xl">{config.emoji}</div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-          <div className="absolute bottom-3 left-4 right-10">
-            <p className="text-white font-bold text-lg leading-tight">{place.title}</p>
-            {place.address && <p className="text-white/80 text-xs mt-0.5 line-clamp-1">{place.address}</p>}
-          </div>
-          <button
-            onClick={onClose}
-            className="absolute top-3 right-3 bg-black/40 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm hover:bg-black/60"
-          >✕</button>
+        <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
+        <h3 className="text-xl font-bold text-[#2D3648] mb-5">Add to Our Space</h3>
+
+        <div className="flex gap-2 mb-5 overflow-x-auto pb-1">
+          {Object.entries(ITEM_TYPES).map(([key, { emoji, label }]) => (
+            <button
+              key={key}
+              onClick={() => setType(key)}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium transition-all ${
+                type === key ? 'bg-[#E8614D] text-white' : 'bg-gray-100 text-gray-600'
+              }`}
+            >
+              <span>{emoji}</span><span>{label}</span>
+            </button>
+          ))}
         </div>
-        {/* Form */}
-        <div className="p-5">
-          <h2 className="font-bold text-gray-900 text-lg mb-4">Schedule this date</h2>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">When?</label>
-            <input
-              type="datetime-local"
-              value={scheduledDate}
-              onChange={e => setScheduledDate(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-coral-200"
-            />
-          </div>
-          <div className="mb-5">
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Notes <span className="text-gray-400 font-normal">(optional)</span>
-            </label>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="Any ideas, reservations to make, or things to bring…"
-              rows={3}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-coral-200 resize-none"
-            />
-          </div>
-          <button
-            onClick={() => onSubmit({ place, scheduledDate, notes })}
-            disabled={submitting || !scheduledDate}
-            className="w-full bg-gradient-to-r from-coral-500 to-coral-500 text-white font-semibold py-3.5 rounded-2xl hover:opacity-90 transition-opacity disabled:opacity-50"
-          >
-            {submitting ? 'Scheduling…' : '💕 Schedule Date'}
-          </button>
-          <button onClick={onClose} className="w-full mt-2 text-gray-500 text-sm py-2 hover:text-gray-700">
-            Cancel
-          </button>
-        </div>
+
+        <input
+          type="text"
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSave()}
+          placeholder={`${ITEM_TYPES[type].emoji} ${ITEM_TYPES[type].label} title…`}
+          className="w-full px-4 py-3 rounded-2xl border-2 border-gray-100 focus:border-[#E8614D] focus:outline-none text-[#2D3648] mb-3"
+          autoFocus
+        />
+        <input
+          type="text"
+          value={note}
+          onChange={e => setNote(e.target.value)}
+          placeholder="Add a note (optional)"
+          className="w-full px-4 py-3 rounded-2xl border-2 border-gray-100 focus:border-[#E8614D] focus:outline-none text-[#2D3648] mb-5"
+        />
+
+        <button
+          onClick={handleSave}
+          disabled={!title.trim() || saving}
+          className="w-full py-4 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white rounded-2xl font-bold text-lg disabled:opacity-50 transition-opacity"
+        >
+          {saving ? 'Saving…' : 'Add to Our Space'}
+        </button>
       </div>
     </div>
   )
 }
 
-import React from 'react'
+// ── MAIN DASHBOARD ───────────────────────────────────────────────────────────
 
 export default function Dashboard() {
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState(null)
-  const [couple, setCouple] = useState(null)
-  const [error, setError] = useState('')
-  const [onboardingStatus, setOnboardingStatus] = useState({
-    userCompleted: false,
-    partnerCompleted: false,
-    partnerName: 'Partner',
-  })
-  const healthMeterRef = useRef(null)
 
-  // Daily Check-in State (legacy - old system)
-  const [checkinExpanded, setCheckinExpanded] = useState(false)
-  const [todayCheckin, setTodayCheckin] = useState(null)
-  const [todayQuestion, setTodayQuestion] = useState(null)
-  const [myAnswer, setMyAnswer] = useState('')
-  const [submittingAnswer, setSubmittingAnswer] = useState(false)
-  const [isUser1, setIsUser1] = useState(true)
-  const [commentText, setCommentText] = useState('')
-  const [showCommentInput, setShowCommentInput] = useState(false)
-  const [streak, setStreak] = useState(0)
+  const [loading, setLoading]                   = useState(true)
+  const [user, setUser]                         = useState(null)
+  const [userName, setUserName]                 = useState('there')
+  const [couple, setCouple]                     = useState(null)
+  const [partnerName, setPartnerName]           = useState('your partner')
+  const [hasPartner, setHasPartner]             = useState(false)
+  const [connectCode, setConnectCode]           = useState(null)
+  const [inviteDismissed, setInviteDismissed]   = useState(true)
+  const [codeCopied, setCodeCopied]             = useState(false)
 
-  // Daily Check-in State (v2 - new mood/connection system)
-  const [v2Checkin, setV2Checkin] = useState(null)
-  const [v2PartnerCheckin, setV2PartnerCheckin] = useState(null)
-  const [v2Streak, setV2Streak] = useState(0)
+  const [healthScore, setHealthScore]           = useState(null)
+  const [streak, setStreak]                     = useState(0)
+  const [flirtsThisWeek, setFlirtsThisWeek]     = useState(0)
+  const [daysTogether, setDaysTogether]         = useState(0)
+  const [todayCheckinDone, setTodayCheckinDone] = useState(false)
+  const [nextDate, setNextDate]                 = useState(null)
+  const [lastFlirtDaysAgo, setLastFlirtDaysAgo] = useState(null)
+  const [memoryCount, setMemoryCount]           = useState(0)
+  const [activeTrip]                            = useState(null)
 
-  // Pattern Detection State
-  const [userPatterns, setUserPatterns] = useState(null)
-  const [couplePatterns, setCouplePatterns] = useState(null)
-  const [patternsLoading, setPatternsLoading] = useState(false)
-  const [dismissedConcernBanner, setDismissedConcernBanner] = useState(false)
+  const [sharedPreview, setSharedPreview]       = useState([])
+  const [showAddModal, setShowAddModal]         = useState(false)
 
-  // Celebration State (organic feedback, not gamified)
-  const [celebration, setCelebration] = useState(null)
-  const [showHeartBurst, setShowHeartBurst] = useState(false)
-  const [answerSubmitSuccess, setAnswerSubmitSuccess] = useState(false)
-  const [commentSubmitSuccess, setCommentSubmitSuccess] = useState(false)
-
-  // Weekly Reflection State
-  const [weeklyReflection, setWeeklyReflection] = useState(null)
-  const [isReflectionWindow, setIsReflectionWindow] = useState(false)
-  const [weekCheckins, setWeekCheckins] = useState([])
-
-  // Flirts State
-  const [showFlirtComposer, setShowFlirtComposer] = useState(false)
-  const [unreadFlirts, setUnreadFlirts] = useState([])
-  const [latestFlirt, setLatestFlirt] = useState(null)
-  const [selectedFlirt, setSelectedFlirt] = useState(null)
-  const [showFlirtView, setShowFlirtView] = useState(false)
-  const [partnerId, setPartnerId] = useState(null)
-  const [lastSentFlirtTime, setLastSentFlirtTime] = useState(null)
-  const [profileCompleted, setProfileCompleted] = useState(true)
-  const [totalFlirtsSent, setTotalFlirtsSent] = useState(0)
-  const [individualProfileStatus, setIndividualProfileStatus] = useState({
-    completed: false,
-    inProgress: false,
-  })
-
-  // Timeline State
-  const [recentTimelineEvents, setRecentTimelineEvents] = useState([])
-
-  // Date Night State
-  const [upcomingDate, setUpcomingDate] = useState(null)
-  const [pendingDateSuggestions, setPendingDateSuggestions] = useState(0)
-
-  // Plan Modal
-
-  const [planModalPlace, setPlanModalPlace] = useState(null)
-  const [submittingPlan, setSubmittingPlan] = useState(false)
-  const [planSuccessMsg, setPlanSuccessMsg] = useState(null)
-
-  // Trip Planning State
-  const [upcomingTrip, setUpcomingTrip] = useState(null)
-
-  // Coach Insight Card State
-  const [coachHealthScore, setCoachHealthScore] = useState(null)
-  const [coachLastCheckinDate, setCoachLastCheckinDate] = useState(null)
-  const [coachLastCompletedDate, setCoachLastCompletedDate] = useState(null)
-
-  // Partner Connection State
-  const [hasPartner, setHasPartner] = useState(true)
-  const [connectCode, setConnectCode] = useState('')
-  const [codeCopied, setCodeCopied] = useState(false)
-
-  // Invite banner dismiss state (persisted in localStorage)
-  const [inviteBannerDismissed, setInviteBannerDismissed] = useState(false)
-  const [waitingBannerDismissed, setWaitingBannerDismissed] = useState(false)
-
+  // Hydrate localStorage on client only
   useEffect(() => {
-    setInviteBannerDismissed(localStorage.getItem('abf_invite_dismissed') === '1')
-    setWaitingBannerDismissed(localStorage.getItem('abf_waiting_dismissed') === '1')
+    setInviteDismissed(localStorage.getItem('abf_invite_dismissed') === 'true')
   }, [])
 
-  const dismissInviteBanner = () => {
-    localStorage.setItem('abf_invite_dismissed', '1')
-    setInviteBannerDismissed(true)
-  }
-
-  const dismissWaitingBanner = () => {
-    localStorage.setItem('abf_waiting_dismissed', '1')
-    setWaitingBannerDismissed(true)
-  }
-
-  // Daily relationship quotes/affirmations
-  const dailyQuotes = [
-    "The best relationships are built on small moments of connection.",
-    "Love grows stronger when you choose each other every day.",
-    "Being heard is so close to being loved that they are almost indistinguishable.",
-    "The little things are the big things in a relationship.",
-    "Love is not just looking at each other, it's looking in the same direction.",
-    "A strong relationship requires choosing to love each other, even on those days when you struggle to like each other.",
-    "The goal isn't to be the perfect couple—it's to be the perfect team.",
-    "Small gestures of love create lasting bonds.",
-    "In a relationship, you're each other's safe place to land.",
-    "The best thing to hold onto in life is each other.",
-    "Love is friendship that has caught fire.",
-    "Being deeply loved gives you strength; loving deeply gives you courage.",
-    "A successful relationship requires falling in love many times, always with the same person.",
-    "The greatest relationships are the ones you never expected to be in.",
-    "Love isn't finding the perfect person—it's seeing an imperfect person perfectly.",
-    "Every love story is beautiful, but ours is my favorite.",
-    "The real power of love is showing up consistently.",
-    "Connection happens in the quiet moments between the busy ones.",
-    "Your relationship is a garden—tend to it daily.",
-    "The best conversations happen when you truly listen.",
-    "Love is what you've been through together.",
-    "Appreciation is the fuel that keeps love alive.",
-    "In the arithmetic of love, one plus one equals everything.",
-    "The most important thing in communication is hearing what isn't said.",
-    "A gentle word can soften any heart.",
-    "Love is an action, never simply a feeling.",
-    "The couples who play together, stay together.",
-    "Behind every great relationship is a pair of people who chose each other.",
-    "Love is not about how many days you've been together—it's about how much you love each other every single day.",
-    "The secret to a happy relationship? Never stop dating each other.",
-    "Real love stories never have endings.",
-    "A loving relationship is one in which you feel free to be yourself.",
-    "The best partner is one who makes you want to be a better person.",
-    "Love is being stupid together.",
-    "What counts in a relationship is not avoiding conflict, but learning to repair.",
-    "The greatest gift you can give someone is your undivided attention.",
-    "In love, you don't just find the right person—you become the right person.",
-    "Laughter is the spark that keeps love alive.",
-    "Home is wherever I'm with you.",
-    "The art of love is largely the art of persistence.",
-    "A relationship is like a house—it needs constant maintenance.",
-    "Love is not about possession; it's about appreciation.",
-    "The most precious gift is presence.",
-    "Every moment together is a memory in the making.",
-    "Trust is the foundation of every great love story.",
-  ]
-
-  // Get today's quote using date-based seeding
-  const getDailyQuote = () => {
-    const today = new Date()
-    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate()
-    const index = seed % dailyQuotes.length
-    return dailyQuotes[index]
-  }
-
-  const dailyQuote = getDailyQuote()
-
-  // Show celebration with auto-dismiss
-  const showCelebration = (type, message, duration = 2000) => {
-    setCelebration({ type, message })
-    setTimeout(() => setCelebration(null), duration)
-  }
-
-  const fetchDailyCheckin = useCallback(async (coupleData, userId) => {
-    const today = new Date().toISOString().split('T')[0]
-    const userIsUser1 = coupleData.user1_id === userId
-    setIsUser1(userIsUser1)
-
-    let { data: checkin } = await supabase
-      .from('daily_checkins')
-      .select('*')
-      .eq('couple_id', coupleData.id)
-      .eq('check_date', today)
-      .maybeSingle()
-
-    if (!checkin) {
-      const questionId = await selectQuestion(coupleData.id)
-      if (questionId) {
-        const { data: newCheckin } = await supabase
-          .from('daily_checkins')
-          .insert({
-            couple_id: coupleData.id,
-            question_id: questionId,
-            check_date: today,
-          })
-          .select('*')
-          .maybeSingle()
-        checkin = newCheckin
-      }
-    }
-
-    if (checkin) {
-      setTodayCheckin(checkin)
-      setTodayQuestion(checkin.question_text || null)
-
-      const existingAnswer = checkin.question_response
-      if (existingAnswer) {
-        setMyAnswer(existingAnswer)
-      }
-    }
-
-    await fetchStreak(coupleData.id)
-
-    const dayOfWeek = new Date().getDay()
-    if (dayOfWeek >= 5 || dayOfWeek === 0) {
-      setIsReflectionWindow(true)
-      await fetchWeeklyData(coupleData.id, userId, userIsUser1)
-    }
-  }, [])
-
-  const selectQuestion = async (coupleId) => {
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-    const { data: recentCheckins } = await supabase
-      .from('daily_checkins')
-      .select('question_id')
-      .eq('couple_id', coupleId)
-      .gte('check_date', thirtyDaysAgo.toISOString().split('T')[0])
-
-    const usedQuestionIds = recentCheckins?.map(c => c.question_id) || []
-
-    const { data: allQuestions } = await supabase
-      .from('checkin_questions')
-      .select('*')
-
-    if (!allQuestions || allQuestions.length === 0) return null
-
-    let availableQuestions = allQuestions.filter(q => !usedQuestionIds.includes(q.id))
-
-    if (availableQuestions.length === 0) {
-      availableQuestions = allQuestions
-    }
-
-    const weightedQuestions = []
-    availableQuestions.forEach(q => {
-      if (q.tone === 'gratitude' || q.tone === 'fun') {
-        weightedQuestions.push(q, q)
-      } else if (q.tone === 'meaningful') {
-        weightedQuestions.push(q, q)
-      } else {
-        weightedQuestions.push(q)
-      }
-    })
-
-    const randomIndex = Math.floor(Math.random() * weightedQuestions.length)
-    return weightedQuestions[randomIndex]?.id
-  }
-
-  const fetchStreak = async (coupleId) => {
-    let currentStreak = 0
-    let checkDate = new Date()
-
-    while (true) {
-      const dateStr = checkDate.toISOString().split('T')[0]
-      const { data } = await supabase
-        .from('daily_checkins')
-        .select('question_response')
-        .eq('couple_id', coupleId)
-        .eq('check_date', dateStr)
-        .maybeSingle()
-
-      if (data && data.question_response) {
-        currentStreak++
-        checkDate.setDate(checkDate.getDate() - 1)
-      } else {
-        break
-      }
-
-      if (currentStreak > 365) break
-    }
-
-    setStreak(currentStreak)
-  }
-
-  const fetchWeeklyData = async (coupleId, userId, userIsUser1) => {
-    const today = new Date()
-    const dayOfWeek = today.getDay()
-    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-    const weekStart = new Date(today)
-    weekStart.setDate(today.getDate() + mondayOffset)
-    const weekStartStr = weekStart.toISOString().split('T')[0]
-
-    const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekStart.getDate() + 6)
-
-    const { data: checkins } = await supabase
-      .from('daily_checkins')
-      .select('*')
-      .eq('couple_id', coupleId)
-      .gte('check_date', weekStartStr)
-      .lte('check_date', weekEnd.toISOString().split('T')[0])
-      .order('check_date', { ascending: true })
-
-    setWeekCheckins(checkins || [])
-
-    const { data: reflection } = await supabase
-      .from('weekly_reflections')
-      .select('*')
-      .eq('couple_id', coupleId)
-      .eq('week_start', weekStartStr)
-      .maybeSingle()
-
-    setWeeklyReflection(reflection)
-  }
-
-  const fetchFlirts = useCallback(async (coupleId, userId) => {
-    // Get unread flirts for this user
-    const { data: unread } = await supabase
-      .from('flirts')
-      .select('*')
-      .eq('couple_id', coupleId)
-      .eq('receiver_id', userId)
-      .eq('is_read', false)
-      .order('created_at', { ascending: false })
-
-    setUnreadFlirts(unread || [])
-    if (unread && unread.length > 0) {
-      setLatestFlirt(unread[0])
-    }
-
-    // Get total sent count
-    const { count: sentCount } = await supabase
-      .from('flirts')
-      .select('*', { count: 'exact', head: true })
-      .eq('couple_id', coupleId)
-      .eq('sender_id', userId)
-
-    setTotalFlirtsSent(sentCount || 0)
-
-    // Get last sent time
-    const { data: lastSent } = await supabase
-      .from('flirts')
-      .select('created_at')
-      .eq('couple_id', coupleId)
-      .eq('sender_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (lastSent) {
-      setLastSentFlirtTime(new Date(lastSent.created_at))
-    }
-  }, [])
-
-  const fetchTimelineEvents = useCallback(async (coupleId) => {
-    const { data } = await supabase
-      .from('timeline_events')
-      .select('*')
-      .eq('couple_id', coupleId)
-      .order('event_date', { ascending: false })
-      .limit(3)
-
-    setRecentTimelineEvents(data || [])
-  }, [])
-
-  const fetchDatePlans = useCallback(async (coupleId, userId) => {
-    // Get next upcoming date
-    const { data: upcoming } = await supabase
-      .from('date_plans')
-      .select('*')
-      .eq('couple_id', coupleId)
-      .in('status', ['planned', 'accepted'])
-      .gte('date_time', new Date().toISOString())
-      .order('date_time', { ascending: true })
-      .limit(1)
-
-    setUpcomingDate(upcoming?.[0] || null)
-
-    // Count pending suggestions for this user
-    const { count } = await supabase
-      .from('date_plans')
-      .select('*', { count: 'exact', head: true })
-      .eq('couple_id', coupleId)
-      .eq('status', 'suggested')
-      .eq('suggested_to', userId)
-
-    setPendingDateSuggestions(count || 0)
-  }, [])
-
-
-  const fetchCoachData = useCallback(async (coupleId) => {
-    try {
-      // Health score
-      const { data: health } = await supabase
-        .from('relationship_health')
-        .select('overall_score')
-        .eq('couple_id', coupleId)
-        .maybeSingle()
-      if (health) setCoachHealthScore(health.overall_score)
-    } catch (e) { /* graceful */ }
-
-    try {
-      // Last check-in date for current user (most recent)
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (authUser) {
-        const { data: lastCheckin } = await supabase
-          .from('daily_checkins')
-          .select('check_date')
-          .eq('user_id', authUser.id)
-          .order('check_date', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-        if (lastCheckin) setCoachLastCheckinDate(lastCheckin.check_date)
-      }
-    } catch (e) { /* graceful */ }
-
-    try {
-      // Last completed date (past planned date or custom date)
-      const now = new Date().toISOString()
-
-      const { data: pastPlanned } = await supabase
-        .from('date_plans')
-        .select('title, date_time, notes')
-        .eq('couple_id', coupleId)
-        .in('status', ['planned', 'accepted'])
-        .lt('date_time', now)
-        .order('date_time', { ascending: false })
-        .limit(1)
-
-      const { data: pastCustom } = await supabase
-        .from('custom_dates')
-        .select('title, created_at')
-        .eq('couple_id', coupleId)
-        .lt('created_at', now)
-        .order('created_at', { ascending: false })
-        .limit(1)
-
-      const candidates = [
-        ...(pastPlanned || []).map(d => ({ title: d.title, date: d.date_time, hasReview: false })),
-        ...(pastCustom || []).map(d => ({ title: d.title, date: d.created_at, hasReview: false })),
-      ].sort((a, b) => new Date(b.date) - new Date(a.date))
-
-      if (candidates[0]) setCoachLastCompletedDate(candidates[0])
-    } catch (e) { /* graceful */ }
-  }, [])
-
-  const fetchUpcomingTrip = useCallback(async (coupleId) => {
-    const { data } = await supabase
-      .from('trips')
-      .select('*')
-      .eq('couple_id', coupleId)
-      .gte('start_date', new Date().toISOString().split('T')[0])
-      .order('start_date', { ascending: true })
-      .limit(1)
-      .maybeSingle()
-
-    setUpcomingTrip(data)
-  }, [])
-
-  // Fetch v2 daily check-ins (mood/connection system)
-  const fetchV2Checkins = useCallback(async (userId, partnerId, coupleId) => {
-    const today = new Date().toISOString().split('T')[0]
-
-    // Get user's check-in for today
-    const { data: userCheckin } = await supabase
-      .from('daily_checkins')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('check_date', today)
-      .maybeSingle()
-
-    setV2Checkin(userCheckin)
-
-    // Get partner's check-in for today
-    if (partnerId) {
-      const { data: partnerCheckin } = await supabase
-        .from('daily_checkins')
-        .select('*')
-        .eq('user_id', partnerId)
-        .eq('check_date', today)
-        .maybeSingle()
-
-      setV2PartnerCheckin(partnerCheckin)
-    }
-
-    // Calculate v2 streak
-    const { data: checkins } = await supabase
-      .from('daily_checkins')
-      .select('check_date')
-      .eq('user_id', userId)
-      .order('check_date', { ascending: false })
-      .limit(30)
-
-    if (checkins && checkins.length > 0) {
-      let currentStreak = 0
-      const todayDate = new Date(today)
-
-      // Check if checked in today
-      const checkedInToday = checkins.some(c => c.check_date === today)
-      if (checkedInToday) {
-        currentStreak = 1
-        let checkDate = new Date(todayDate)
-        checkDate.setDate(checkDate.getDate() - 1)
-
-        for (let i = 1; i < checkins.length; i++) {
-          const checkinDate = new Date(checkins[i].check_date)
-          checkinDate.setHours(0, 0, 0, 0)
-          checkDate.setHours(0, 0, 0, 0)
-
-          if (checkinDate.getTime() === checkDate.getTime()) {
-            currentStreak++
-            checkDate.setDate(checkDate.getDate() - 1)
-          } else {
-            break
-          }
-        }
-      }
-
-      setV2Streak(currentStreak)
-    }
-  }, [])
-
-  // Fetch check-in patterns for insights
-  const fetchPatterns = useCallback(async (userId, coupleId) => {
-    setPatternsLoading(true)
-    try {
-      // Fetch user patterns
-      const userPatternsData = await analyzeUserPatterns(userId, 14) // Last 2 weeks
-      setUserPatterns(userPatternsData)
-
-      // Fetch couple patterns
-      if (coupleId) {
-        const couplePatternsData = await analyzeCouplePatterns(coupleId, 14)
-        setCouplePatterns(couplePatternsData)
-      }
-    } catch (err) {
-      console.error('Error fetching patterns:', err)
-    }
-    setPatternsLoading(false)
-  }, [])
-
-  const checkAuth = async () => {
+  const fetchAll = useCallback(async () => {
     try {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-      if (authError || !user) {
-        router.push('/login')
-        return
-      }
-
+      if (authError || !user) { router.push('/login'); return }
       setUser(user)
 
-      const { data: coupleData, error: coupleError } = await supabase
+      const { data: coupleData } = await supabase
         .from('couples')
         .select('*')
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
         .maybeSingle()
 
-      // Allow users without a couple to view dashboard with limited features
-      if (coupleError || !coupleData) {
-        setHasPartner(false)
-        setLoading(false)
-        return
-      }
-
+      if (!coupleData) { router.push('/connect'); return }
       setCouple(coupleData)
-      setConnectCode(coupleData.connect_code || '')
 
-      const partnerUserId = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id
-      setPartnerId(partnerUserId)
+      const partnerId = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id
+      setHasPartner(!!partnerId)
+      setConnectCode(coupleData.connect_code || null)
+      setDaysTogether(Math.floor((Date.now() - new Date(coupleData.created_at).getTime()) / 86400000))
 
-      // Check if partner is actually connected
-      if (!partnerUserId) {
-        setHasPartner(false)
-      }
+      await Promise.allSettled([
 
-      const { data: userResponse } = await supabase
-        .from('relationship_assessments')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('couple_id', coupleData.id)
-        .not('completed_at', 'is', null)
-        .maybeSingle()
+        // User display name
+        (async () => {
+          const { data } = await supabase
+            .from('user_profiles')
+            .select('display_name')
+            .eq('user_id', user.id)
+            .maybeSingle()
+          if (data?.display_name) setUserName(data.display_name)
+        })(),
 
-      const { data: partnerResponse } = await supabase
-        .from('relationship_assessments')
-        .select('id')
-        .eq('user_id', partnerUserId)
-        .eq('couple_id', coupleData.id)
-        .not('completed_at', 'is', null)
-        .maybeSingle()
+        // Partner display name
+        partnerId ? (async () => {
+          const { data } = await supabase
+            .from('user_profiles')
+            .select('display_name')
+            .eq('user_id', partnerId)
+            .maybeSingle()
+          if (data?.display_name) setPartnerName(data.display_name)
+        })() : Promise.resolve(),
 
-      const { data: partnerProfile } = await supabase
-        .from('user_profiles')
-        .select('display_name')
-        .eq('user_id', partnerUserId)
-        .maybeSingle()
+        // Relationship health score
+        (async () => {
+          const { data } = await supabase
+            .from('relationship_health')
+            .select('overall_score, score')
+            .eq('couple_id', coupleData.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          if (data) setHealthScore(data.overall_score ?? data.score ?? null)
+        })(),
 
-      setOnboardingStatus({
-        userCompleted: !!userResponse,
-        partnerCompleted: !!partnerResponse,
-        partnerName: partnerProfile?.display_name || 'Partner',
-      })
+        // Check-in streak + today status
+        (async () => {
+          const today = new Date().toISOString().split('T')[0]
+          const { data } = await supabase
+            .from('daily_checkins')
+            .select('check_date')
+            .eq('user_id', user.id)
+            .eq('couple_id', coupleData.id)
+            .not('question_response', 'is', null)
+            .order('check_date', { ascending: false })
+            .limit(60)
+          if (!data?.length) return
+          setTodayCheckinDone(data[0].check_date === today)
+          let count = 0
+          const cursor = new Date(today)
+          for (const row of data) {
+            if (row.check_date === cursor.toISOString().split('T')[0]) {
+              count++
+              cursor.setDate(cursor.getDate() - 1)
+            } else break
+          }
+          setStreak(count)
+        })(),
 
-      // Check if user has completed their relationship assessment (also grab results for carousel)
-      const { data: userAssessment } = await supabase
-        .from('relationship_assessments')
-        .select('completed_at, results')
-        .eq('user_id', user.id)
-        .eq('couple_id', coupleData.id)
-        .not('completed_at', 'is', null)
-        .order('completed_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+        // Flirts this week
+        (async () => {
+          const weekStart = new Date()
+          weekStart.setDate(weekStart.getDate() - weekStart.getDay())
+          weekStart.setHours(0, 0, 0, 0)
+          const { data } = await supabase
+            .from('flirts')
+            .select('sender_id, created_at')
+            .eq('couple_id', coupleData.id)
+            .gte('created_at', weekStart.toISOString())
+            .order('created_at', { ascending: false })
+          const mine = (data || []).filter(f => f.sender_id === user.id)
+          setFlirtsThisWeek(mine.length)
+          if (mine.length > 0) {
+            setLastFlirtDaysAgo(Math.floor((Date.now() - new Date(mine[0].created_at).getTime()) / 86400000))
+          }
+        })(),
 
-      // Profile is completed if they have a completed assessment
-      setProfileCompleted(!!userAssessment?.completed_at)
+        // Next upcoming date
+        (async () => {
+          const { data } = await supabase
+            .from('date_plans')
+            .select('title, date_time')
+            .eq('couple_id', coupleData.id)
+            .in('status', ['planned', 'accepted'])
+            .gte('date_time', new Date().toISOString())
+            .order('date_time', { ascending: true })
+            .limit(1)
+          if (data?.[0]) setNextDate(data[0])
+        })(),
 
-      // Check individual profile status via relationship_assessments (single source of truth)
-      const { data: individualProfileCheck } = await supabase
-        .from('relationship_assessments')
-        .select('completed_at')
-        .eq('user_id', user.id)
-        .order('completed_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+        // Timeline memory count
+        (async () => {
+          const { count } = await supabase
+            .from('timeline_events')
+            .select('id', { count: 'exact', head: true })
+            .eq('couple_id', coupleData.id)
+          setMemoryCount(count || 0)
+        })(),
 
-      setIndividualProfileStatus({
-        completed: !!individualProfileCheck?.completed_at,
-        inProgress: false, // relationship_assessments only stores completed rows
-      })
+        // Shared items preview
+        (async () => {
+          try {
+            const { data } = await supabase
+              .from('shared_items')
+              .select('id, type, title')
+              .eq('couple_id', coupleData.id)
+              .eq('completed', false)
+              .order('created_at', { ascending: false })
+              .limit(5)
+            setSharedPreview(data || [])
+          } catch { /* table may not exist yet */ }
+        })(),
 
-      await fetchDailyCheckin(coupleData, user.id)
-      await fetchFlirts(coupleData.id, user.id)
-      await fetchTimelineEvents(coupleData.id)
-      await fetchDatePlans(coupleData.id, user.id)
-      await fetchUpcomingTrip(coupleData.id)
-      await fetchV2Checkins(user.id, partnerUserId, coupleData.id)
-      fetchCoachData(coupleData.id)
-
-      // Fetch patterns in background (non-blocking)
-      fetchPatterns(user.id, coupleData.id)
+      ])
 
       setLoading(false)
     } catch (err) {
-      setError('Something went wrong')
+      console.error('Dashboard error:', err)
       setLoading(false)
     }
-  }
+  }, [router])
 
-  useEffect(() => {
-    checkAuth()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  useEffect(() => { fetchAll() }, [fetchAll])
 
-  // Track points silently in the background
-  const trackPoints = async (action, points, referenceId) => {
-    await supabase.from('relationship_points').insert({
-      couple_id: couple.id,
-      user_id: user.id,
-      points,
-      action,
-      reference_id: referenceId,
-    })
-  }
-
-  const handleSubmitAnswer = async () => {
-    if (!myAnswer.trim() || !todayCheckin) return
-
-    setSubmittingAnswer(true)
-
-    const updateData = { question_response: myAnswer.trim() }
-
-    const { data: updatedCheckin, error } = await supabase
-      .from('daily_checkins')
-      .update(updateData)
-      .eq('id', todayCheckin.id)
-      .select('*')
-      .maybeSingle()
-
-    if (!error && updatedCheckin) {
-      setTodayCheckin(updatedCheckin)
-
-      // Show success checkmark animation
-      setAnswerSubmitSuccess(true)
-      setTimeout(() => setAnswerSubmitSuccess(false), 1500)
-
-      const bothAnswered = !!updatedCheckin.question_response
-      if (bothAnswered) {
-        // Track points silently
-        await trackPoints('checkin_complete', 5, todayCheckin.id)
-
-        // Show warm celebration
-        showCelebration('complete', "You're connecting daily", 2500)
-
-        // Check for 7-day streak milestone
-        const newStreak = streak + 1
-        if (newStreak >= 7 && newStreak % 7 === 0) {
-          await trackPoints('streak_bonus', 20, todayCheckin.id)
-          setTimeout(() => {
-            showCelebration('streak', `${newStreak} days together!`, 3000)
-          }, 3000)
-        }
-
-        setStreak(newStreak)
-
-        // Refresh health meter after completing check-in
-        if (healthMeterRef.current) {
-          setTimeout(() => {
-            healthMeterRef.current()
-          }, 1500)
-        }
-      }
-    }
-
-    setSubmittingAnswer(false)
-  }
-
-  const handleHeartPartner = async () => {
-    if (!todayCheckin) return
-
-    const currentHearted = isUser1 ? todayCheckin.user1_hearted : todayCheckin.user2_hearted
-    const updateData = isUser1
-      ? { user1_hearted: !currentHearted }
-      : { user2_hearted: !currentHearted }
-
-    // Trigger heart burst animation
-    if (!currentHearted) {
-      setShowHeartBurst(true)
-      setTimeout(() => setShowHeartBurst(false), 600)
-    }
-
-    const { data: updatedCheckin } = await supabase
-      .from('daily_checkins')
-      .update(updateData)
-      .eq('id', todayCheckin.id)
-      .select('*')
-      .maybeSingle()
-
-    if (updatedCheckin) {
-      setTodayCheckin(updatedCheckin)
-
-      // Track points for partner silently
-      if (!currentHearted) {
-        const partnerId = isUser1 ? couple.user2_id : couple.user1_id
-        await supabase.from('relationship_points').insert({
-          couple_id: couple.id,
-          user_id: partnerId,
-          points: 10,
-          action: 'received_heart',
-          reference_id: todayCheckin.id,
-        })
-      }
-    }
-  }
-
-  const handleSubmitComment = async () => {
-    if (!commentText.trim() || !todayCheckin) return
-
-    const updateData = isUser1
-      ? { user1_comment: commentText.trim() }
-      : { user2_comment: commentText.trim() }
-
-    const { data: updatedCheckin } = await supabase
-      .from('daily_checkins')
-      .update(updateData)
-      .eq('id', todayCheckin.id)
-      .select('*')
-      .maybeSingle()
-
-    if (updatedCheckin) {
-      setTodayCheckin(updatedCheckin)
-      setShowCommentInput(false)
-      setCommentText('')
-
-      // Show success animation
-      setCommentSubmitSuccess(true)
-      setTimeout(() => setCommentSubmitSuccess(false), 1500)
-
-      // Show warm message
-      showCelebration('comment', 'Building connection', 2000)
-
-      // Track points for partner silently
-      const partnerId = isUser1 ? couple.user2_id : couple.user1_id
-      await supabase.from('relationship_points').insert({
-        couple_id: couple.id,
-        user_id: partnerId,
-        points: 15,
-        action: 'received_comment',
-        reference_id: todayCheckin.id,
-      })
-    }
-  }
-
-  // Check-in state helpers (new schema: question_response is per-user row)
-  const myAnswerSubmitted = todayCheckin && !!todayCheckin.question_response
-  const partnerAnswerSubmitted = v2PartnerCheckin && !!v2PartnerCheckin.question_response
-  const bothAnswered = myAnswerSubmitted && partnerAnswerSubmitted
-  const partnerAnswer = v2PartnerCheckin?.question_response || null
-  const partnerHearted = null  // no equivalent in new schema
-  const partnerComment = null  // no equivalent in new schema
-  const iHearted = null        // no equivalent in new schema
-  const myComment = null       // no equivalent in new schema
-
-  // Flirt helpers
-  const formatTimeAgo = (date) => {
-    if (!date) return null
-    const now = new Date()
-    const diffMs = now - date
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMs / 3600000)
-    const diffDays = Math.floor(diffMs / 86400000)
-
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins}m ago`
-    if (diffHours < 24) return `${diffHours}h ago`
-    if (diffDays < 7) return `${diffDays}d ago`
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  }
-
-  const handleViewFlirt = (flirt) => {
-    setSelectedFlirt(flirt)
-    setShowFlirtView(true)
-  }
-
-  const handleFlirtSent = () => {
-    if (couple && user) {
-      fetchFlirts(couple.id, user.id)
-    }
-    showCelebration('flirt', 'Sent with love!', 2000)
-  }
-
-  const handleFlirtUpdated = () => {
-    if (couple && user) {
-      fetchFlirts(couple.id, user.id)
-    }
-  }
-
-  const handleScheduleDate = async ({ place, scheduledDate, notes }) => {
-    if (!couple || !user) return
-    setSubmittingPlan(true)
-    const { error } = await supabase.from('date_plans').insert({
-      couple_id: couple.id,
-      created_by: user.id,
-      title: place.title,
-      description: notes || null,
-      date_time: scheduledDate ? new Date(scheduledDate).toISOString() : null,
-      location: place.address || place.location_name || null,
-      location_name: place.location_name,
-      address: place.address,
-      latitude: place.latitude,
-      longitude: place.longitude,
-      photo_url: place.photo_url,
-      maps_url: place.maps_url,
-      place_id: place.place_id,
-      status: 'planned',
-    })
-    setSubmittingPlan(false)
-    if (!error) {
-      setPlanModalPlace(null)
-      setPlanSuccessMsg(`${place.title} scheduled! 💕`)
-      setTimeout(() => setPlanSuccessMsg(null), 2500)
-      fetchDatePlans(couple.id, user.id)
-    }
-  }
-
-  // Calculate days together
-  const daysTogether = couple?.created_at
-    ? Math.floor((new Date() - new Date(couple.created_at)) / (1000 * 60 * 60 * 24))
-    : 0
-
-  // Copy connect code to clipboard
-  const handleCopyConnectCode = async () => {
-    if (!connectCode) return
+  const handleCopyCode = async () => {
     try {
       await navigator.clipboard.writeText(connectCode)
       setCodeCopied(true)
       setTimeout(() => setCodeCopied(false), 2000)
-    } catch (err) {
-      console.error('Failed to copy:', err)
-    }
+    } catch { /* clipboard unavailable */ }
   }
 
-  // Share or copy connect code (Web Share API with clipboard fallback)
-  const handleShareConnectCode = async () => {
-    const shareText = `Join me on ABF! Use code ${connectCode} at abf.app/connect`
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'Join me on ABF!', text: shareText })
-      } catch {}
-    } else {
-      handleCopyConnectCode()
-    }
+  const handleDismissInvite = () => {
+    localStorage.setItem('abf_invite_dismissed', 'true')
+    setInviteDismissed(true)
   }
+
+  // ── Loading ───────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-cream-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-coral-600 text-lg font-medium">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent mx-auto mb-4" />
+          <p className="text-[#6B7280] font-medium">Loading your dashboard…</p>
         </div>
       </div>
     )
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-cream-50 flex items-center justify-center">
-        <div className="text-red-600 font-medium">{error}</div>
-      </div>
-    )
-  }
+  // ── Computed ──────────────────────────────────────────────────────────────
+
+  const coachInsight = getCoachInsight({ streak, healthScore, flirtsThisWeek, daysTogether })
+  const healthColor  = healthScore === null
+    ? 'text-[#9CA3AF]'
+    : healthScore >= 70 ? 'text-[#E8614D]'
+    : healthScore >= 50 ? 'text-amber-500'
+    : 'text-[#9CA3AF]'
+  const featureCards = buildFeatureCards({ todayCheckinDone, nextDate, lastFlirtDaysAgo, memoryCount, activeTrip })
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-cream-50">
-      {/* Celebration Notifications */}
-      {celebration && (
-        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 transition-all duration-300
-          ${celebration.type === 'streak' ? 'animate-pulse' : 'animate-fadeInDown'}`}
-        >
-          <div className={`px-6 py-3 rounded-full shadow-lg flex items-center gap-2
-            ${celebration.type === 'complete' ? 'bg-gradient-to-r from-coral-400 to-purple-400 text-white' : ''}
-            ${celebration.type === 'streak' ? 'bg-gradient-to-r from-orange-400 to-red-400 text-white' : ''}
-            ${celebration.type === 'comment' ? 'bg-gradient-to-r from-green-400 to-emerald-400 text-white' : ''}
-            ${celebration.type === 'flirt' ? 'bg-gradient-to-r from-coral-500 to-coral-500 text-white' : ''}
-          `}>
-            <span className="text-xl">
-              {celebration.type === 'complete' && '🎉'}
-              {celebration.type === 'streak' && '🔥'}
-              {celebration.type === 'comment' && '🌱'}
-              {celebration.type === 'flirt' && '💕'}
-            </span>
-            <span className="font-medium">{celebration.message}</span>
-          </div>
-        </div>
-      )}
+    <div className="min-h-screen bg-[#F8F6F3]">
 
-      {/* Heart Burst Animation */}
-      {showHeartBurst && (
-        <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
-          <div className="text-6xl animate-heartBurst">💕</div>
-        </div>
-      )}
-
-      {/* Concern Insights Banner */}
-      {!dismissedConcernBanner && userPatterns?.concernFlags?.some(c => c.severity === 'high') && (
-        <div className="fixed top-0 left-0 right-0 z-40 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200 shadow-sm">
-          <div className="max-w-4xl mx-auto px-4 py-3">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl flex-shrink-0">💭</span>
-              <div className="flex-1">
-                <p className="font-medium text-amber-800">I've noticed something...</p>
-                <p className="text-sm text-amber-700">
-                  {userPatterns.concernFlags.find(c => c.severity === 'high')?.description || 'You might benefit from some support.'}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+      {/* ===== INVITE BANNER ===== */}
+      {!hasPartner && !inviteDismissed && connectCode && (
+        <div className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] px-4 py-3">
+          <div className="max-w-lg mx-auto flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-semibold">
+                💌 Invite {partnerName} to unlock shared features
+              </p>
+              <div className="flex items-center gap-2 mt-1.5">
+                <span className="text-white/80 font-mono text-sm tracking-[0.2em]">{connectCode}</span>
                 <button
-                  onClick={() => router.push('/ai-coach')}
-                  className="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                  onClick={handleCopyCode}
+                  className="text-white/90 text-xs border border-white/40 px-2 py-0.5 rounded-full hover:bg-white/20 transition-colors"
                 >
-                  Talk to Coach
-                </button>
-                <button
-                  onClick={() => router.push('/checkin/weekly')}
-                  className="bg-white hover:bg-amber-50 text-amber-700 px-3 py-1.5 rounded-lg text-sm font-medium border border-amber-200 transition-colors"
-                >
-                  View Patterns
-                </button>
-                <button
-                  onClick={() => setDismissedConcernBanner(true)}
-                  className="text-amber-400 hover:text-amber-600 p-1 transition-colors"
-                  aria-label="Dismiss"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  {codeCopied ? 'Copied!' : 'Copy'}
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Banner A — no partner connected yet */}
-      {!hasPartner && connectCode && !inviteBannerDismissed && (
-        <div className="bg-gradient-to-r from-coral-50 to-cream-100 border-b border-coral-100">
-          <div className="max-w-4xl mx-auto px-4 py-3">
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-xl flex-shrink-0">💌</span>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-coral-800 text-sm">
-                  Invite {onboardingStatus.partnerName !== 'Partner' ? onboardingStatus.partnerName : 'your partner'} to unlock shared features
-                </p>
-                <p className="text-coral-600 font-bold tracking-widest text-sm">
-                  Code: {connectCode}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                  onClick={handleCopyConnectCode}
-                  className="bg-white border border-coral-200 text-coral-600 hover:bg-cream-50 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-                >
-                  {codeCopied ? '✓ Copied' : 'Copy'}
-                </button>
-                <button
-                  onClick={handleShareConnectCode}
-                  className="bg-coral-500 hover:bg-coral-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-                >
-                  Share
-                </button>
-                <button
-                  onClick={dismissInviteBanner}
-                  className="text-coral-300 hover:text-coral-500 p-1 transition-colors"
-                  aria-label="Dismiss"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Banner B — partner connected but hasn't completed assessment */}
-      {hasPartner && !onboardingStatus.partnerCompleted && !waitingBannerDismissed && (
-        <div className="bg-gradient-to-r from-amber-50 to-cream-100 border-b border-amber-100">
-          <div className="max-w-4xl mx-auto px-4 py-3">
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-xl flex-shrink-0">⏳</span>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-amber-800 text-sm">
-                  Waiting for {onboardingStatus.partnerName} to complete their profile
-                </p>
-                <p className="text-amber-600 text-xs">
-                  Some shared features are limited until they finish setup.
-                </p>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {connectCode && (
-                  <button
-                    onClick={handleCopyConnectCode}
-                    className="bg-white border border-amber-200 text-amber-700 hover:bg-amber-50 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-                  >
-                    {codeCopied ? '✓ Copied invite' : 'Copy invite'}
-                  </button>
-                )}
-                <button
-                  onClick={dismissWaitingBanner}
-                  className="text-amber-300 hover:text-amber-500 p-1 transition-colors"
-                  aria-label="Dismiss"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Main Content Container */}
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* ===== HEADER SECTION ===== */}
-        <header className="flex justify-between items-center mb-8">
-          <div className="bg-gradient-to-r from-coral-400 to-coral-500 text-white rounded-2xl px-6 py-3 shadow-lg">
-            <h1 className="text-2xl font-bold tracking-wider">ABF</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            {streak > 0 && (
-              <div className="bg-gradient-to-r from-orange-100 to-red-100 text-orange-600 px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 shadow-sm">
-                <span className={streak >= 7 ? 'animate-pulse' : ''}>🔥</span>
-                <span>{streak} day{streak !== 1 ? 's' : ''}</span>
-              </div>
-            )}
             <button
-              onClick={() => router.push('/settings')}
-              className="bg-white text-gray-600 w-10 h-10 rounded-full hover:bg-gray-50 transition-colors flex items-center justify-center shadow-sm"
-              aria-label="Settings"
+              onClick={handleDismissInvite}
+              className="text-white/60 hover:text-white text-2xl leading-none flex-shrink-0"
+              aria-label="Dismiss"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
+              ×
             </button>
           </div>
-        </header>
-
-        {/* ===== PARTNER CONNECTION BANNER ===== */}
-        {!hasPartner && (
-          <section className="mb-8">
-            <div className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] rounded-xl py-4 px-6 text-white shadow-lg">
-              <div className="flex flex-col md:flex-row md:items-center gap-4">
-                <div className="flex items-center gap-3 flex-1">
-                  <span className="text-3xl">💕</span>
-                  <div>
-                    <h3 className="font-bold text-lg">Connect with your partner to unlock all features!</h3>
-                    <p className="text-coral-100 text-sm">Share your code or enter theirs to get started together</p>
-                  </div>
-                </div>
-                {connectCode ? (
-                  <div className="flex items-center gap-3">
-                    <div className="bg-white/20 rounded-lg px-4 py-2">
-                      <p className="text-xs text-coral-100 mb-1">Your Code</p>
-                      <p className="text-2xl font-bold tracking-widest">{connectCode}</p>
-                    </div>
-                    <button
-                      onClick={handleCopyConnectCode}
-                      className="bg-white/20 hover:bg-white/30 border border-white/30 text-white px-4 py-2 rounded-lg font-medium transition-all"
-                    >
-                      {codeCopied ? '✓ Copied!' : 'Copy'}
-                    </button>
-                    <button
-                      onClick={() => router.push('/connect')}
-                      className="bg-white text-[#E8614D] px-4 py-2 rounded-lg font-bold hover:bg-cream-50 transition-all"
-                    >
-                      Connect Now
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => router.push('/connect')}
-                    className="bg-white text-[#E8614D] px-6 py-3 rounded-lg font-bold hover:bg-cream-50 transition-all"
-                  >
-                    Get Started
-                  </button>
-                )}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* ===== GREETING SECTION ===== */}
-        <section className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-2">
-            Hey {user?.user_metadata?.first_name || 'there'}! 💕
-          </h2>
-          <div className="flex items-start gap-2">
-            <span className="text-coral-400 flex-shrink-0">✨</span>
-            <p className="text-gray-600 italic leading-relaxed">
-              "{dailyQuote}"
-            </p>
-          </div>
-        </section>
-
-        {/* ===== HERO CARD: RELATIONSHIP HEALTH ===== */}
-        {couple && hasPartner && (
-          <section className="mb-8">
-            <HealthMeter
-              coupleId={couple.id}
-              onRefresh={healthMeterRef}
-            />
-          </section>
-        )}
-
-        {/* ===== COACH INSIGHT CARD ===== */}
-        {hasPartner && (
-          <section className="mb-6">
-            <CoachInsightCard
-              healthScore={coachHealthScore}
-              lastCheckinDate={coachLastCheckinDate}
-              upcomingDate={upcomingDate ? { title: upcomingDate.title, date: upcomingDate.date_time } : null}
-              lastCompletedDate={coachLastCompletedDate}
-              lastFlirtDate={lastSentFlirtTime ? lastSentFlirtTime.toISOString() : null}
-            />
-          </section>
-        )}
-
-        {/* ===== NEXT DATE NIGHT WIDGET ===== */}
-        {hasPartner && (
-          <section className="mb-8">
-            <div className="bg-white rounded-2xl shadow-sm p-5 border border-gray-100">
-              {upcomingDate ? (
-                <>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">📅</span>
-                      <h3 className="text-base font-bold text-[#2D3648]">Next Date Night</h3>
-                    </div>
-                    <Link href="/dates" className="text-sm text-[#C44A38] font-medium hover:text-[#a01038]">
-                      View All →
-                    </Link>
-                  </div>
-                  <div className="flex gap-4">
-                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-cream-100 to-indigo-100 flex-shrink-0 overflow-hidden">
-                      {upcomingDate.photo_url ? (
-                        <img src={upcomingDate.photo_url} alt={upcomingDate.title} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-2xl">💕</div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900 leading-tight mb-1">{upcomingDate.title}</p>
-                      {upcomingDate.date_time && (
-                        <p className="text-sm text-coral-600 font-medium">
-                          {new Date(upcomingDate.date_time).toLocaleDateString('en-US', {
-                            weekday: 'long', month: 'short', day: 'numeric',
-                          })}{' '}at{' '}
-                          {new Date(upcomingDate.date_time).toLocaleTimeString('en-US', {
-                            hour: 'numeric', minute: '2-digit',
-                          })}
-                        </p>
-                      )}
-                      {(upcomingDate.address || upcomingDate.location) && (
-                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
-                          {upcomingDate.address || upcomingDate.location}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-4">
-                    <Link
-                      href="/dates"
-                      className="flex-1 text-sm font-medium border border-coral-200 text-coral-600 rounded-full py-2 text-center hover:bg-cream-50 transition-colors"
-                    >
-                      View Details
-                    </Link>
-                    {(upcomingDate.latitude || upcomingDate.maps_url || upcomingDate.address || upcomingDate.location) && (
-                      <a
-                        href={
-                          upcomingDate.latitude && upcomingDate.longitude
-                            ? `https://www.google.com/maps/dir/?api=1&destination=${upcomingDate.latitude},${upcomingDate.longitude}`
-                            : upcomingDate.maps_url
-                              || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(upcomingDate.address || upcomingDate.location || '')}`
-                        }
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 text-sm font-medium bg-gradient-to-r from-coral-500 to-coral-500 text-white rounded-full py-2 text-center hover:opacity-90 transition-opacity"
-                      >
-                        Get Directions
-                      </a>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xl">📅</span>
-                    <h3 className="text-base font-bold text-[#2D3648]">Plan Your Next Date</h3>
-                  </div>
-                  <p className="text-sm text-gray-500 mb-4">You haven't scheduled a date night yet this month</p>
-                  <Link
-                    href="/dates"
-                    className="inline-flex items-center gap-1.5 bg-gradient-to-r from-coral-500 to-coral-500 text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:opacity-90 transition-opacity"
-                  >
-                    Browse Date Ideas <span>→</span>
-                  </Link>
-                </>
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* ===== RELATIONSHIP PULSE WIDGET ===== */}
-        {hasPartner && (
-          <section className="mb-8">
-            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
-              {userPatterns && userPatterns.totalCheckins >= 3 ? (
-                <>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">💓</span>
-                      <h3 className="text-lg font-bold text-[#2D3648]">Relationship Pulse</h3>
-                    </div>
-                    <button
-                      onClick={() => router.push('/checkin/weekly')}
-                      className="text-sm text-[#C44A38] hover:text-[#a01038] font-medium transition-colors"
-                    >
-                      View Weekly Summary →
-                    </button>
-                  </div>
-
-                  {/* Quick Stats */}
-                  <div className="grid grid-cols-3 gap-4 mb-4">
-                    <div className="text-center p-3 bg-gray-50 rounded-xl">
-                      <p className="text-2xl font-bold text-[#2D3648]">{userPatterns.connectionAverage || '—'}</p>
-                      <p className="text-xs text-gray-500">Avg Connection</p>
-                    </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-xl">
-                      <p className="text-2xl font-bold text-[#2D3648]">
-                        {userPatterns.moodTrend === 'improving' ? '📈' : userPatterns.moodTrend === 'declining' ? '📉' : '➡️'}
-                      </p>
-                      <p className="text-xs text-gray-500">Mood Trend</p>
-                    </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-xl">
-                      <p className="text-2xl font-bold text-[#2D3648]">{userPatterns.streakDays || 0}</p>
-                      <p className="text-xs text-gray-500">Day Streak 🔥</p>
-                    </div>
-                  </div>
-
-                  {/* Positive Patterns */}
-                  {userPatterns.positivePatterns?.length > 0 && (
-                    <div className="space-y-2 mb-4">
-                      {userPatterns.positivePatterns.slice(0, 2).map((pattern, i) => (
-                        <div key={i} className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 px-3 py-2 rounded-lg">
-                          <span>✓</span>
-                          <span>{pattern.description}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Couple Alignment */}
-                  {couplePatterns && couplePatterns.alignmentScore > 0 && (
-                    <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-50 px-3 py-2 rounded-lg mb-4">
-                      <span>💑</span>
-                      <span>You and {onboardingStatus.partnerName} are {couplePatterns.alignmentScore}% aligned this week</span>
-                    </div>
-                  )}
-
-                  {/* Concerns (if any, but not high severity - those show in banner) */}
-                  {userPatterns.concernFlags?.filter(c => c.severity === 'medium').length > 0 && (
-                    <div className="border-t border-gray-100 pt-4 mt-4">
-                      <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
-                        <span>⚠️</span> Worth Noting:
-                      </p>
-                      <div className="space-y-1">
-                        {userPatterns.concernFlags.filter(c => c.severity === 'medium').slice(0, 2).map((concern, i) => (
-                          <p key={i} className="text-sm text-amber-700">{concern.description}</p>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Insights */}
-                  {userPatterns.insights?.length > 0 && !userPatterns.concernFlags?.some(c => c.severity === 'medium') && (
-                    <div className="border-t border-gray-100 pt-4 mt-4">
-                      <p className="text-xs text-gray-500 mb-2">💡 Insight:</p>
-                      <p className="text-sm text-[#2D3648]">{userPatterns.insights[0]}</p>
-                    </div>
-                  )}
-                </>
-              ) : (
-                /* Empty State - Unlock Insights */
-                <div className="text-center py-8">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-coral-50 to-cream-100 rounded-full mb-4">
-                    <span className="text-3xl">💓</span>
-                  </div>
-
-                  <h3 className="text-xl font-bold text-[#2D3648] mb-2">
-                    Unlock Relationship Insights
-                  </h3>
-
-                  <p className="text-[#6B7280] mb-6 max-w-md mx-auto">
-                    Complete daily check-ins to see patterns, trends, and personalized insights about your relationship.
-                  </p>
-
-                  {/* Progress Bar */}
-                  <div className="max-w-xs mx-auto mb-6">
-                    <div className="flex items-center justify-between text-sm text-[#6B7280] mb-2">
-                      <span>Progress</span>
-                      <span className="font-semibold">
-                        {userPatterns?.totalCheckins || 0}/3 check-ins
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#E8614D] to-[#C44A38] transition-all duration-500 rounded-full"
-                        style={{ width: `${Math.min(((userPatterns?.totalCheckins || 0) / 3) * 100, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* What you'll unlock */}
-                  <div className="grid grid-cols-3 gap-4 mb-6 text-left">
-                    <div className="bg-[#F8F6F3] rounded-xl p-4">
-                      <span className="text-2xl mb-2 block">📈</span>
-                      <p className="text-xs font-medium text-[#2D3648]">Mood & Connection Trends</p>
-                    </div>
-                    <div className="bg-[#F8F6F3] rounded-xl p-4">
-                      <span className="text-2xl mb-2 block">💡</span>
-                      <p className="text-xs font-medium text-[#2D3648]">Pattern Detection</p>
-                    </div>
-                    <div className="bg-[#F8F6F3] rounded-xl p-4">
-                      <span className="text-2xl mb-2 block">🎯</span>
-                      <p className="text-xs font-medium text-[#2D3648]">Personalized Tips</p>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => router.push('/checkin')}
-                    className="inline-flex items-center gap-2 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90 transition-opacity"
-                  >
-                    Complete Today's Check-in
-                    <span>→</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* ===== STATS ROW ===== */}
-        <section className="grid grid-cols-4 gap-3 sm:gap-4 mb-8">
-          <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-            <p className="text-2xl font-bold text-coral-600">{streak}</p>
-            <p className="text-xs text-gray-500 mt-1">Day Streak</p>
-          </div>
-          <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-            <p className="text-2xl font-bold text-indigo-500">{totalFlirtsSent}</p>
-            <p className="text-xs text-gray-500 mt-1">Flirts Sent</p>
-          </div>
-          <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-            <p className="text-2xl font-bold text-coral-500">{unreadFlirts.length}</p>
-            <p className="text-xs text-gray-500 mt-1">New Flirts</p>
-          </div>
-          <div className="bg-white rounded-xl p-4 text-center shadow-sm">
-            <p className="text-2xl font-bold text-amber-500">{daysTogether}</p>
-            <p className="text-xs text-gray-500 mt-1">Days</p>
-          </div>
-        </section>
-
-        {/* ===== ASSESSMENT CARDS - 2 CLEAR OPTIONS ===== */}
-        <section className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Know Yourself & Your Relationship</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-
-            {/* Individual Profile Card - Always Available */}
-            <div
-              onClick={() => router.push(individualProfileStatus.completed ? '/profile/results' : '/profile')}
-              className={`rounded-2xl shadow-lg p-6 cursor-pointer transition-all hover:scale-[1.01] relative overflow-hidden h-full min-h-[160px] ${
-                individualProfileStatus.completed
-                  ? 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white'
-                  : 'bg-white border-2 border-indigo-200 hover:border-indigo-400'
-              }`}
-            >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-              <div className="flex items-start gap-4">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
-                  individualProfileStatus.completed ? 'bg-white/20' : 'bg-indigo-100'
-                }`}>
-                  <span className="text-3xl">🪞</span>
-                </div>
-                <div className="flex-1">
-                  <h3 className={`text-xl font-bold mb-1 ${
-                    individualProfileStatus.completed ? 'text-white' : 'text-gray-800'
-                  }`}>
-                    Your Profile
-                  </h3>
-                  <p className={`text-sm mb-3 ${
-                    individualProfileStatus.completed ? 'text-indigo-100' : 'text-gray-600'
-                  }`}>
-                    {individualProfileStatus.completed
-                      ? 'Discover insights about who you are'
-                      : 'Understand your personality, values & needs'}
-                  </p>
-                  <span className={`inline-block text-sm px-4 py-1.5 rounded-full font-medium ${
-                    individualProfileStatus.completed
-                      ? 'bg-white/20 text-white'
-                      : individualProfileStatus.inProgress
-                        ? 'bg-amber-100 text-amber-700'
-                        : 'bg-indigo-500 text-white'
-                  }`}>
-                    {individualProfileStatus.completed
-                      ? 'View Results'
-                      : individualProfileStatus.inProgress
-                        ? 'Continue'
-                        : 'Start Profile'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Relationship Health Card - Requires Partner */}
-            <div
-              onClick={() => {
-                if (!hasPartner) return
-                if (onboardingStatus.userCompleted) {
-                  // User can view their results even if partner hasn't completed
-                  router.push('/assessment/results')
-                } else {
-                  router.push('/assessment')
-                }
-              }}
-              className={`rounded-2xl shadow-lg p-6 relative overflow-hidden h-full min-h-[160px] ${
-                !hasPartner
-                  ? 'bg-gray-100 cursor-not-allowed'
-                  : onboardingStatus.userCompleted
-                    ? 'bg-gradient-to-br from-coral-500 to-coral-600 text-white cursor-pointer hover:scale-[1.01]'
-                    : 'bg-white border-2 border-coral-100 hover:border-coral-400 cursor-pointer hover:scale-[1.01]'
-              } transition-all`}
-            >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-              <div className="flex items-start gap-4">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
-                  !hasPartner
-                    ? 'bg-gray-200'
-                    : onboardingStatus.userCompleted
-                      ? 'bg-white/20'
-                      : 'bg-cream-100'
-                }`}>
-                  <span className="text-3xl">{hasPartner ? '❤️' : '🔗'}</span>
-                </div>
-                <div className="flex-1">
-                  <h3 className={`text-xl font-bold mb-1 ${
-                    !hasPartner
-                      ? 'text-gray-400'
-                      : onboardingStatus.userCompleted
-                        ? 'text-white'
-                        : 'text-gray-800'
-                  }`}>
-                    Relationship Health
-                  </h3>
-                  <p className={`text-sm mb-3 ${
-                    !hasPartner
-                      ? 'text-gray-400'
-                      : onboardingStatus.userCompleted
-                        ? 'text-coral-100'
-                        : 'text-gray-600'
-                  }`}>
-                    {!hasPartner
-                      ? 'Connect with your partner first'
-                      : onboardingStatus.userCompleted && onboardingStatus.partnerCompleted
-                        ? `Your insights with ${onboardingStatus.partnerName}`
-                        : onboardingStatus.userCompleted
-                          ? `View your insights (waiting for ${onboardingStatus.partnerName})`
-                          : `Understand your dynamic with ${onboardingStatus.partnerName}`}
-                  </p>
-                  <span className={`inline-block text-sm px-4 py-1.5 rounded-full font-medium ${
-                    !hasPartner
-                      ? 'bg-gray-200 text-gray-500'
-                      : onboardingStatus.userCompleted
-                        ? 'bg-white/20 text-white'
-                        : 'bg-coral-500 text-white'
-                  }`}>
-                    {!hasPartner
-                      ? 'Partner Required'
-                      : onboardingStatus.userCompleted
-                        ? 'View Results'
-                        : 'Start Assessment'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ===== DAILY CHECK-IN CARD (V2) ===== */}
-        {hasPartner && (
-          <section className="mb-8">
-            {(() => {
-              const userMood = v2Checkin ? MOOD_OPTIONS.find(m => m.value === v2Checkin.mood) : null
-              const partnerMood = v2PartnerCheckin ? MOOD_OPTIONS.find(m => m.value === v2PartnerCheckin.mood) : null
-
-              // STATE 1: Not checked in today
-              if (!v2Checkin) {
-                return (
-                  <div
-                    onClick={() => router.push('/checkin')}
-                    className="bg-gradient-to-br from-amber-400 via-orange-400 to-coral-400 rounded-2xl shadow-lg p-6 cursor-pointer hover:shadow-xl hover:scale-[1.01] transition-all"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="text-5xl">☀️</div>
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-white mb-1">Daily Check-in</h3>
-                        <p className="text-white/90">How are you feeling today?</p>
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <span className="bg-white text-orange-600 px-4 py-2 rounded-full font-bold text-sm shadow-sm">
-                          Check In Now
-                        </span>
-                        {v2Streak > 0 && (
-                          <span className="text-white/90 text-sm flex items-center gap-1">
-                            <span>🔥</span> {v2Streak} day{v2Streak !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              }
-
-              // STATE 2: Checked in, waiting for partner
-              if (v2Checkin && !v2PartnerCheckin) {
-                return (
-                  <div
-                    onClick={() => router.push('/checkin/complete')}
-                    className="bg-white rounded-2xl shadow-lg p-6 cursor-pointer hover:shadow-xl transition-all border-2 border-green-200"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <span className="text-2xl">✓</span>
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-lg font-bold text-gray-800 mb-2">Daily Check-in</h3>
-
-                        {/* Your check-in summary */}
-                        <div className="flex items-center gap-3 mb-3">
-                          <span className="text-sm text-gray-600">You:</span>
-                          <span className="text-2xl">{userMood?.emoji}</span>
-                          <span className="text-sm text-gray-700">{userMood?.label}</span>
-                          <span className="text-sm text-[#C44A38]">
-                            {'❤️'.repeat(v2Checkin.connection_score || 0)}
-                          </span>
-                        </div>
-
-                        {/* Waiting for partner */}
-                        <div className="flex items-center gap-2 text-amber-600">
-                          <div className="flex gap-1">
-                            <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce"></div>
-                            <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                            <div className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                          </div>
-                          <span className="text-sm">Waiting for {onboardingStatus.partnerName}...</span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col items-end gap-2">
-                        <span className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full text-sm font-medium">
-                          View Details
-                        </span>
-                        {v2Streak > 0 && (
-                          <span className="text-gray-500 text-sm flex items-center gap-1">
-                            <span>🔥</span> {v2Streak} day{v2Streak !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              }
-
-              // STATE 3: Both checked in
-              // Calculate connection trend for display
-              const connectionTrendText = userPatterns?.connectionTrend === 'improving'
-                ? `📈 Connection is stronger than last week`
-                : userPatterns?.connectionTrend === 'declining'
-                  ? `📉 Connection dipped this week`
-                  : null
-
-              return (
-                <div
-                  onClick={() => router.push('/checkin/complete')}
-                  className="bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl shadow-lg p-6 cursor-pointer hover:shadow-xl hover:scale-[1.01] transition-all text-white"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                      <span className="text-2xl">💕</span>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold mb-3">Daily Check-in</h3>
-
-                      {/* Both check-in summaries */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm text-white/80 w-20">You:</span>
-                          <span className="text-2xl">{userMood?.emoji}</span>
-                          <span className="text-sm">{userMood?.label}</span>
-                          <span className="text-sm">
-                            {'❤️'.repeat(v2Checkin.connection_score || 0)}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm text-white/80 w-20">{onboardingStatus.partnerName}:</span>
-                          <span className="text-2xl">{partnerMood?.emoji}</span>
-                          <span className="text-sm">{partnerMood?.label}</span>
-                          <span className="text-sm">
-                            {'❤️'.repeat(v2PartnerCheckin.connection_score || 0)}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Trend indicator */}
-                      {connectionTrendText && userPatterns?.totalCheckins >= 5 && (
-                        <div className="mt-3 pt-3 border-t border-white/20">
-                          <p className="text-sm text-white/90">{connectionTrendText}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col items-end gap-2">
-                      <span className="bg-white/20 text-white px-3 py-1.5 rounded-full text-sm font-medium">
-                        See How You're Both Doing
-                      </span>
-                      {v2Streak > 0 && (
-                        <span className="text-white/90 text-sm flex items-center gap-1">
-                          <span>🔥</span> {v2Streak} day{v2Streak !== 1 ? 's' : ''}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })()}
-          </section>
-        )}
-
-        {/* ===== WEEK IN REVIEW CARD ===== */}
-        {hasPartner && isReflectionWindow && (
-          <section className="mb-8">
-            <div
-              onClick={() => router.push('/weekly-reflection')}
-              className={`rounded-2xl shadow-lg overflow-hidden cursor-pointer transition-all hover:shadow-xl hover:scale-[1.01] ${
-                weeklyReflection?.user1_completed_at && weeklyReflection?.user2_completed_at
-                  ? 'bg-gradient-to-r from-green-400 to-emerald-500'
-                  : 'bg-gradient-to-r from-indigo-500 to-coral-500'
-              }`}
-            >
-              <div className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="text-4xl">
-                      {weeklyReflection?.user1_completed_at && weeklyReflection?.user2_completed_at
-                        ? '✨'
-                        : '💕'}
-                    </div>
-                    <div className="text-white">
-                      <h3 className="text-lg font-semibold">
-                        {weeklyReflection?.user1_completed_at && weeklyReflection?.user2_completed_at
-                          ? 'Reflection Complete!'
-                          : 'Week in Review'}
-                      </h3>
-                      <p className="text-white/80 text-sm">
-                        {weeklyReflection?.user1_completed_at && weeklyReflection?.user2_completed_at
-                          ? 'See what you both picked as favorites'
-                          : (isUser1 ? weeklyReflection?.user1_completed_at : weeklyReflection?.user2_completed_at)
-                            ? `Waiting for ${onboardingStatus.partnerName}...`
-                            : 'Reflect on your connection this week'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {weeklyReflection?.user1_completed_at && weeklyReflection?.user2_completed_at ? (
-                      <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full font-medium">
-                        View Results
-                      </span>
-                    ) : (isUser1 ? weeklyReflection?.user1_completed_at : weeklyReflection?.user2_completed_at) ? (
-                      <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full animate-pulse font-medium">
-                        Waiting
-                      </span>
-                    ) : (
-                      <span className="bg-white text-indigo-500 text-xs px-3 py-1 rounded-full font-semibold">
-                        Start Now
-                      </span>
-                    )}
-                    <svg
-                      className="w-5 h-5 text-white/60"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* ===== WEEKLY SUMMARY CARD (Pattern-based) ===== */}
-        {hasPartner && userPatterns && userPatterns.totalCheckins >= 3 && !isReflectionWindow && (
-          <section className="mb-8">
-            <div
-              onClick={() => router.push('/checkin/weekly')}
-              className="bg-white rounded-2xl shadow-sm p-5 cursor-pointer hover:shadow-md transition-all border border-gray-100"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-100 to-cream-100 rounded-xl flex items-center justify-center">
-                    <span className="text-2xl">📊</span>
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-[#2D3648]">Your Week</h3>
-                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                      <span className="flex items-center gap-1">
-                        {userPatterns.moodTrend === 'improving' ? '📈' : userPatterns.moodTrend === 'declining' ? '📉' : '😌'}
-                        {userPatterns.moodTrend === 'improving' ? 'Mood up' : userPatterns.moodTrend === 'declining' ? 'Mood down' : 'Stable'}
-                      </span>
-                      <span>•</span>
-                      <span>{userPatterns.totalCheckins}/7 check-ins</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-[#C44A38] font-medium">View Summary</span>
-                  <svg className="w-4 h-4 text-[#C44A38]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* ===== FLIRTS SECTION ===== */}
-        {hasPartner && (
-        <section className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">💕 Flirts</h2>
-          <div className="grid grid-cols-2 gap-4">
-            {/* Send a Flirt Card */}
-            <div
-              onClick={() => setShowFlirtComposer(true)}
-              className="bg-gradient-to-br from-coral-500 to-coral-500 rounded-xl p-6 shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-[1.01] text-white"
-            >
-              <div className="text-3xl mb-3">💕</div>
-              <h3 className="text-lg font-semibold mb-1">Send a Flirt</h3>
-              <p className="text-coral-100 text-sm mb-3">
-                Brighten {onboardingStatus.partnerName}'s day
-              </p>
-              {lastSentFlirtTime && (
-                <p className="text-coral-200 text-xs">
-                  Last sent {formatTimeAgo(lastSentFlirtTime)}
-                </p>
-              )}
-            </div>
-
-            {/* Received Flirts Card */}
-            <div
-              onClick={() => {
-                if (unreadFlirts.length > 0) {
-                  handleViewFlirt(unreadFlirts[0])
-                } else {
-                  router.push('/flirts')
-                }
-              }}
-              className={`rounded-xl p-6 shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-[1.01] ${
-                unreadFlirts.length > 0
-                  ? 'bg-gradient-to-br from-indigo-500 to-coral-500 text-white'
-                  : 'bg-white'
-              }`}
-            >
-              <div className="text-3xl mb-3">{unreadFlirts.length > 0 ? '💌' : '📬'}</div>
-              <h3 className={`text-lg font-semibold mb-1 ${unreadFlirts.length > 0 ? 'text-white' : 'text-gray-800'}`}>
-                {unreadFlirts.length > 0
-                  ? `${unreadFlirts.length} New Flirt${unreadFlirts.length > 1 ? 's' : ''}`
-                  : 'Flirt History'}
-              </h3>
-              {unreadFlirts.length > 0 && latestFlirt ? (
-                <p className="text-coral-100 text-sm line-clamp-2">
-                  {latestFlirt.message
-                    ? latestFlirt.message.substring(0, 40) + (latestFlirt.message.length > 40 ? '...' : '')
-                    : latestFlirt.gif_url
-                      ? 'Sent you a GIF 🎉'
-                      : 'Sent you a photo 📸'}
-                </p>
-              ) : (
-                <p className="text-gray-600 text-sm">
-                  View your love notes
-                </p>
-              )}
-            </div>
-          </div>
-        </section>
-        )}
-
-        {/* ===== FEATURE CARDS GRID ===== */}
-        <section className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Explore</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {/* AI Coach Card */}
-            <div
-              onClick={() => router.push('/ai-coach')}
-              className="bg-gradient-to-br from-indigo-500 to-coral-500 rounded-xl p-6 shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-[1.01] text-white"
-            >
-              <div className="text-3xl mb-3">🤖</div>
-              <h3 className="text-lg font-semibold mb-1">AI Coach</h3>
-              <p className="text-purple-100 text-sm">
-                Personalized guidance
-              </p>
-            </div>
-
-            {/* Our Timeline Card */}
-            <div
-              onClick={() => router.push('/timeline')}
-              className="bg-gradient-to-br from-indigo-500 to-coral-500 rounded-xl p-6 shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-[1.01] text-white"
-            >
-              <div className="text-3xl mb-3">📅</div>
-              <h3 className="text-lg font-semibold mb-1">Our Timeline</h3>
-              <p className="text-purple-100 text-sm">
-                {recentTimelineEvents.length > 0
-                  ? `${recentTimelineEvents.length} memories`
-                  : 'Capture memories'}
-              </p>
-            </div>
-
-            {/* Date Night Card */}
-            <div
-              onClick={() => router.push('/dates')}
-              className="bg-gradient-to-br from-coral-500 to-coral-500 rounded-xl p-6 shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-[1.01] text-white relative"
-            >
-              {pendingDateSuggestions > 0 && (
-                <div className="absolute top-3 right-3 bg-white text-coral-500 text-xs px-2 py-1 rounded-full font-bold">
-                  {pendingDateSuggestions} new
-                </div>
-              )}
-              <div className="text-3xl mb-3">🎉</div>
-              <h3 className="text-lg font-semibold mb-1">Date Night</h3>
-              <p className="text-coral-100 text-sm">
-                {upcomingDate ? upcomingDate.title : 'Plan adventures'}
-              </p>
-            </div>
-
-            {/* Trip Planning Card */}
-            <div
-              onClick={() => router.push('/trips')}
-              className="bg-white rounded-xl p-6 shadow-sm transition-all hover:shadow-md cursor-pointer hover:scale-[1.01]"
-            >
-              <div className="text-3xl mb-3">🧳</div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-1">Trip Planning</h3>
-              <p className="text-gray-600 text-sm">
-                {upcomingTrip ? upcomingTrip.destination : 'Plan your next trip'}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* ===== DATE IDEAS FOR YOU ===== */}
-        {hasPartner && (
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">💡 Date Ideas for You</h2>
-
-            <div className="space-y-3">
-              {/* Upcoming date teaser */}
-              {upcomingDate && (
-                <Link href="/dates" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                  <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-cream-100 to-indigo-100 flex-shrink-0 flex items-center justify-center text-xl overflow-hidden">
-                      {upcomingDate.photo_url
-                        ? <img src={upcomingDate.photo_url} alt={upcomingDate.title} className="w-full h-full object-cover" />
-                        : '📅'
-                      }
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-coral-500 uppercase tracking-wide mb-0.5">Upcoming Date</p>
-                      <p className="font-semibold text-gray-900 text-sm truncate">{upcomingDate.title}</p>
-                      {upcomingDate.date_time && (
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {new Date(upcomingDate.date_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                        </p>
-                      )}
-                    </div>
-                    <span className="text-xs font-semibold text-coral-500 flex-shrink-0">View →</span>
-                  </div>
-                </Link>
-              )}
-
-              {/* Hardcoded idea card */}
-              <div className="bg-white rounded-2xl overflow-hidden shadow-sm">
-                <div className="bg-gradient-to-br from-orange-400 to-coral-500 px-4 pt-4 pb-5 relative">
-                  <span className="absolute top-3 right-4 text-2xl opacity-75">🌅</span>
-                  <span className="inline-block text-xs font-semibold px-2.5 py-1 rounded-full bg-cream-100 text-coral-700 mb-2">
-                    Quality Time
-                  </span>
-                  <h3 className="font-bold text-white text-sm">Golden Hour Waterfront</h3>
-                </div>
-                <div className="px-4 py-3">
-                  <div className="flex items-center gap-1 text-xs text-gray-500 mb-3 flex-wrap">
-                    <span>Pike Place Market</span>
-                    <span className="text-gray-300">→</span>
-                    <span>Seattle Great Wheel</span>
-                    <span className="text-gray-300">→</span>
-                    <span>Aqua Verde</span>
-                  </div>
-                  <Link
-                    href="/dates"
-                    className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-gradient-to-r from-coral-500 to-indigo-500 text-white text-xs font-bold rounded-xl hover:shadow-md transition-shadow"
-                  >
-                    View All Ideas →
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* ===== CONNECTION STATUS ===== */}
-        {hasPartner && couple && (
-          <section className="mb-8">
-            <div className="bg-white/70 rounded-xl p-6 text-center shadow-sm">
-              <p className="text-lg font-semibold text-coral-600 mb-1">
-                💕 Connected with {onboardingStatus.partnerName}
-              </p>
-              <p className="text-gray-500 text-sm">
-                Since {new Date(couple?.created_at).toLocaleDateString('en-US', {
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric'
-                })}
-              </p>
-            </div>
-          </section>
-        )}
-
-        {/* ===== FOOTER ===== */}
-        <footer className="text-center pb-8">
-          {connectCode && (
-            <p className="text-gray-500 text-sm">
-              Your Connect Code: <span className="font-mono font-bold text-coral-600">{connectCode}</span>
-            </p>
-          )}
-        </footer>
-      </div>
-
-      {/* ===== DATE PLAN MODAL ===== */}
-      <DashboardPlanModal
-        place={planModalPlace}
-        onClose={() => setPlanModalPlace(null)}
-        onSubmit={handleScheduleDate}
-        submitting={submittingPlan}
-      />
-
-      {/* Plan success toast */}
-      {planSuccessMsg && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white text-sm px-4 py-2 rounded-full shadow-lg whitespace-nowrap">
-          ✓ {planSuccessMsg}
         </div>
       )}
 
-      {/* ===== MODALS ===== */}
-      <FlirtComposer
-        isOpen={showFlirtComposer}
-        onClose={() => setShowFlirtComposer(false)}
+      <div className="max-w-lg mx-auto px-4 py-6 space-y-7">
+
+        {/* ===== SECTION 1: HERO ===== */}
+        <section className="relative bg-gradient-to-br from-[#E8614D] to-[#3D3580] rounded-3xl p-6 text-white overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-36 h-36 bg-white/10 rounded-full pointer-events-none" />
+          <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full pointer-events-none" />
+          <div className="relative">
+            <p className="text-white/60 text-xs font-medium uppercase tracking-wide mb-1">
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </p>
+            <h1 className="text-3xl font-bold mb-3">{getGreeting()}, {userName} 👋</h1>
+            <p className="text-white/85 text-sm leading-relaxed mb-5">{coachInsight}</p>
+            <Link
+              href="/ai-coach"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full transition-colors"
+            >
+              Talk to Coach →
+            </Link>
+          </div>
+        </section>
+
+        {/* ===== SECTION 2: RELATIONSHIP PULSE ===== */}
+        <section>
+          <h2 className="text-lg font-bold text-[#2D3648] mb-3">Relationship Pulse</h2>
+          <div className="grid grid-cols-2 gap-3">
+
+            <button
+              onClick={() => router.push('/profile/results')}
+              className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow text-left"
+            >
+              <p className={`text-3xl font-bold ${healthColor}`}>
+                {healthScore !== null ? healthScore : '—'}
+                <span className="text-base font-normal text-gray-200">/100</span>
+              </p>
+              <p className="text-xs text-[#9CA3AF] mt-1.5 font-medium">Relationship Health</p>
+            </button>
+
+            <button
+              onClick={() => router.push('/checkin')}
+              className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow text-left"
+            >
+              <p className="text-3xl font-bold text-[#E8614D]">
+                {streak}{streak > 3 ? ' 🔥' : ''}
+              </p>
+              <p className="text-xs text-[#9CA3AF] mt-1.5 font-medium">Day Streak</p>
+            </button>
+
+            <button
+              onClick={() => router.push('/flirts')}
+              className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow text-left"
+            >
+              <p className="text-3xl font-bold text-[#E8614D]">{flirtsThisWeek} 💌</p>
+              <p className="text-xs text-[#9CA3AF] mt-1.5 font-medium">Flirts This Week</p>
+            </button>
+
+            <button
+              onClick={() => router.push('/timeline')}
+              className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow text-left"
+            >
+              <p className="text-3xl font-bold text-[#3D3580]">{daysTogether} ❤️</p>
+              <p className="text-xs text-[#9CA3AF] mt-1.5 font-medium">Days Together</p>
+            </button>
+
+          </div>
+        </section>
+
+        {/* ===== SECTION 3: SHARED SPACE PREVIEW ===== */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-bold text-[#2D3648]">Our Space 💑</h2>
+            <Link href="/shared" className="text-sm text-[#E8614D] font-semibold">See All →</Link>
+          </div>
+
+          {sharedPreview.length === 0 ? (
+            <div className="bg-white rounded-2xl p-8 shadow-sm text-center">
+              <p className="text-4xl mb-3">🎬📺🎵</p>
+              <p className="text-[#6B7280] text-sm mb-4 max-w-xs mx-auto">
+                Start building your shared list — movies, shows, songs, and more
+              </p>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity"
+              >
+                + Add Something
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
+              {sharedPreview.map(item => (
+                <Link
+                  key={item.id}
+                  href="/shared"
+                  className="flex-shrink-0 bg-white rounded-2xl p-4 shadow-sm w-36 hover:shadow-md transition-shadow"
+                >
+                  <span className="text-3xl block mb-2">{ITEM_TYPES[item.type]?.emoji || '✨'}</span>
+                  <p className="text-[#2D3648] font-semibold text-sm line-clamp-2 leading-tight mb-1">{item.title}</p>
+                  <p className="text-[#9CA3AF] text-xs">{ITEM_TYPES[item.type]?.label}</p>
+                </Link>
+              ))}
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="flex-shrink-0 w-36 bg-white rounded-2xl p-4 shadow-sm border-2 border-dashed border-gray-200 hover:border-[#E8614D] flex flex-col items-center justify-center gap-2 transition-colors group"
+              >
+                <span className="text-2xl text-gray-300 group-hover:text-[#E8614D] transition-colors">+</span>
+                <span className="text-xs text-gray-400 group-hover:text-[#E8614D] transition-colors font-medium text-center">
+                  Add Something
+                </span>
+              </button>
+            </div>
+          )}
+        </section>
+
+        {/* ===== SECTION 4: FEATURE NAVIGATION ===== */}
+        <section>
+          <h2 className="text-lg font-bold text-[#2D3648] mb-3">Everything else</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {featureCards.map(card => (
+              <button
+                key={card.href}
+                onClick={() => router.push(card.href)}
+                className={`bg-[#FDF6EF] border-l-4 ${card.accent} rounded-2xl p-4 text-left shadow-sm hover:shadow-md transition-shadow`}
+              >
+                <span className="text-3xl block mb-2">{card.emoji}</span>
+                <p className="text-[#2D3648] font-semibold text-sm mb-0.5">{card.label}</p>
+                <p className={`text-xs ${card.statusColor}`}>{card.status}</p>
+              </button>
+            ))}
+          </div>
+        </section>
+
+      </div>
+
+      {/* ===== QUICK-ADD MODAL ===== */}
+      <AddItemModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
         coupleId={couple?.id}
-        partnerId={partnerId}
-        partnerName={onboardingStatus.partnerName}
-        onSent={handleFlirtSent}
+        userId={user?.id}
+        onAdded={fetchAll}
       />
 
-      <FlirtView
-        isOpen={showFlirtView}
-        onClose={() => {
-          setShowFlirtView(false)
-          setSelectedFlirt(null)
-        }}
-        flirt={selectedFlirt}
-        senderName={onboardingStatus.partnerName}
-        coupleId={couple?.id}
-        onUpdate={handleFlirtUpdated}
-      />
-
-      {/* Custom animations */}
       <style jsx>{`
-        @keyframes fadeInDown {
-          from {
-            opacity: 0;
-            transform: translate(-50%, -20px);
-          }
-          to {
-            opacity: 1;
-            transform: translate(-50%, 0);
-          }
+        @keyframes slideUp {
+          from { transform: translateY(100%); }
+          to   { transform: translateY(0); }
         }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes heartBurst {
-          0% {
-            opacity: 1;
-            transform: scale(0.5);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1.5);
-          }
-          100% {
-            opacity: 0;
-            transform: scale(2);
-          }
-        }
-        .animate-fadeInDown {
-          animation: fadeInDown 0.3s ease-out forwards;
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.3s ease-out forwards;
-        }
-        .animate-heartBurst {
-          animation: heartBurst 0.6s ease-out forwards;
-        }
+        .animate-slideUp { animation: slideUp 0.3s ease-out; }
       `}</style>
     </div>
   )
