@@ -108,8 +108,7 @@ export default function Timeline() {
       .from('daily_checkins')
       .select('*', { count: 'exact', head: true })
       .eq('couple_id', coupleData.id)
-      .not('user1_answer', 'is', null)
-      .not('user2_answer', 'is', null)
+      .not('question_response', 'is', null)
 
     setStats({
       totalDays,

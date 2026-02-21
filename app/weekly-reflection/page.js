@@ -81,15 +81,15 @@ export default function WeeklyReflection() {
       // Fetch week's check-ins
       const { data: checkins } = await supabase
         .from('daily_checkins')
-        .select('*, checkin_questions(*)')
+        .select('*')
         .eq('couple_id', coupleData.id)
-        .gte('date', weekStartString)
-        .lte('date', weekEnd.toISOString().split('T')[0])
-        .order('date', { ascending: true })
+        .gte('check_date', weekStartString)
+        .lte('check_date', weekEnd.toISOString().split('T')[0])
+        .order('check_date', { ascending: true })
 
-      // Filter to only completed check-ins (both answered)
+      // Filter to only completed check-ins (answered)
       const completedCheckins = (checkins || []).filter(
-        c => c.user1_answer && c.user2_answer
+        c => c.question_response
       )
       setWeekCheckins(completedCheckins)
 
@@ -231,6 +231,13 @@ export default function WeeklyReflection() {
 
   const myFavoriteCheckin = weekCheckins.find(c => c.id === myFavoriteId)
   const partnerFavoriteCheckin = weekCheckins.find(c => c.id === partnerFavoriteId)
+
+  // Split checkins by user for the new per-user schema
+  const partnerId = couple ? (isUser1 ? couple.user2_id : couple.user1_id) : null
+  const partnerWeekCheckins = weekCheckins.filter(c => c.user_id === partnerId)
+  const myCheckinsMap = weekCheckins
+    .filter(c => c.user_id === user?.id)
+    .reduce((map, c) => { map[c.check_date] = c; return map; }, {})
 
   if (loading) {
     return (
@@ -381,11 +388,11 @@ export default function WeeklyReflection() {
               </h3>
               {myFavoriteCheckin && (
                 <div className="bg-gradient-to-r from-cream-50 to-purple-50 rounded-xl p-4 border-2 border-coral-100">
-                  <p className="text-sm text-gray-500 mb-2">{formatDate(myFavoriteCheckin.date)}</p>
-                  <p className="text-sm text-gray-600 italic mb-3">"{myFavoriteCheckin.checkin_questions?.question}"</p>
+                  <p className="text-sm text-gray-500 mb-2">{formatDate(myFavoriteCheckin.check_date)}</p>
+                  <p className="text-sm text-gray-600 italic mb-3">"{myFavoriteCheckin.question_text}"</p>
                   <div className="bg-cream-100 rounded-lg p-3 mb-3">
                     <p className="text-gray-800 font-medium">{partnerName}'s answer:</p>
-                    <p className="text-gray-700">{isUser1 ? myFavoriteCheckin.user2_answer : myFavoriteCheckin.user1_answer}</p>
+                    <p className="text-gray-700">{myFavoriteCheckin.question_response}</p>
                   </div>
                   {myReason && (
                     <div className="bg-cream-100 rounded-lg p-3">
@@ -404,11 +411,11 @@ export default function WeeklyReflection() {
               </h3>
               {partnerFavoriteCheckin && (
                 <div className="bg-gradient-to-r from-purple-50 to-cream-50 rounded-xl p-4 border-2 border-indigo-400">
-                  <p className="text-sm text-gray-500 mb-2">{formatDate(partnerFavoriteCheckin.date)}</p>
-                  <p className="text-sm text-gray-600 italic mb-3">"{partnerFavoriteCheckin.checkin_questions?.question}"</p>
+                  <p className="text-sm text-gray-500 mb-2">{formatDate(partnerFavoriteCheckin.check_date)}</p>
+                  <p className="text-sm text-gray-600 italic mb-3">"{partnerFavoriteCheckin.question_text}"</p>
                   <div className="bg-cream-100 rounded-lg p-3 mb-3">
                     <p className="text-gray-800 font-medium">Your answer:</p>
-                    <p className="text-gray-700">{isUser1 ? partnerFavoriteCheckin.user1_answer : partnerFavoriteCheckin.user2_answer}</p>
+                    <p className="text-gray-700">{partnerFavoriteCheckin.question_response}</p>
                   </div>
                   {partnerReason && (
                     <div className="bg-cream-100 rounded-lg p-3">
@@ -453,11 +460,11 @@ export default function WeeklyReflection() {
               <h3 className="text-lg font-semibold text-coral-600 mb-4">Your Selection:</h3>
               {myFavoriteCheckin && (
                 <div className="bg-gradient-to-r from-cream-50 to-purple-50 rounded-xl p-4 border-2 border-coral-100">
-                  <p className="text-sm text-gray-500 mb-2">{formatDate(myFavoriteCheckin.date)}</p>
-                  <p className="text-sm text-gray-600 italic mb-3">"{myFavoriteCheckin.checkin_questions?.question}"</p>
+                  <p className="text-sm text-gray-500 mb-2">{formatDate(myFavoriteCheckin.check_date)}</p>
+                  <p className="text-sm text-gray-600 italic mb-3">"{myFavoriteCheckin.question_text}"</p>
                   <div className="bg-cream-100 rounded-lg p-3 mb-3">
                     <p className="text-gray-800 font-medium">{partnerName}'s answer:</p>
-                    <p className="text-gray-700">{isUser1 ? myFavoriteCheckin.user2_answer : myFavoriteCheckin.user1_answer}</p>
+                    <p className="text-gray-700">{myFavoriteCheckin.question_response}</p>
                   </div>
                   {myReason && (
                     <div className="bg-cream-100 rounded-lg p-3">
@@ -473,7 +480,7 @@ export default function WeeklyReflection() {
             <div className="bg-white rounded-2xl shadow-xl p-6">
               <h3 className="text-lg font-semibold text-gray-700 mb-4">This Week's Moments</h3>
               <div className="space-y-3">
-                {weekCheckins.map(checkin => (
+                {partnerWeekCheckins.map(checkin => (
                   <div
                     key={checkin.id}
                     className={`p-4 rounded-xl ${
@@ -482,8 +489,8 @@ export default function WeeklyReflection() {
                         : 'bg-gray-50'
                     }`}
                   >
-                    <p className="text-sm text-gray-500 mb-1">{formatDate(checkin.date)}</p>
-                    <p className="text-sm text-gray-600 italic">"{checkin.checkin_questions?.question}"</p>
+                    <p className="text-sm text-gray-500 mb-1">{formatDate(checkin.check_date)}</p>
+                    <p className="text-sm text-gray-600 italic">"{checkin.question_text}"</p>
                     {checkin.id === myFavoriteId && (
                       <span className="inline-block mt-2 text-xs bg-coral-500 text-white px-2 py-1 rounded-full">
                         Your pick
@@ -517,9 +524,9 @@ export default function WeeklyReflection() {
 
             {/* Check-in cards */}
             <div className="space-y-4">
-              {weekCheckins.map(checkin => {
-                const partnerAnswer = isUser1 ? checkin.user2_answer : checkin.user1_answer
-                const myAnswer = isUser1 ? checkin.user1_answer : checkin.user2_answer
+              {partnerWeekCheckins.map(checkin => {
+                const partnerAnswer = checkin.question_response
+                const myAnswer = myCheckinsMap[checkin.check_date]?.question_response
                 const isSelected = selectedCheckinId === checkin.id
 
                 return (
@@ -545,20 +552,22 @@ export default function WeeklyReflection() {
                       </div>
 
                       <div className="flex-1">
-                        <p className="text-sm text-gray-500 mb-2">{formatDate(checkin.date)}</p>
-                        <p className="text-sm text-gray-600 italic mb-3">"{checkin.checkin_questions?.question}"</p>
+                        <p className="text-sm text-gray-500 mb-2">{formatDate(checkin.check_date)}</p>
+                        <p className="text-sm text-gray-600 italic mb-3">"{checkin.question_text}"</p>
 
                         {/* Partner's answer - highlighted */}
-                        <div className={`rounded-xl p-3 mb-2 ${isSelected ? 'bg-cream-100' : 'bg-cream-100'}`}>
+                        <div className="rounded-xl p-3 mb-2 bg-cream-100">
                           <p className="text-xs text-indigo-500 font-medium mb-1">{partnerName}'s answer:</p>
                           <p className="text-gray-800">{partnerAnswer}</p>
                         </div>
 
                         {/* My answer - smaller, gray */}
-                        <div className="bg-gray-50 rounded-lg p-2">
-                          <p className="text-xs text-gray-500 mb-1">Your answer:</p>
-                          <p className="text-gray-600 text-sm">{myAnswer}</p>
-                        </div>
+                        {myAnswer && (
+                          <div className="bg-gray-50 rounded-lg p-2">
+                            <p className="text-xs text-gray-500 mb-1">Your answer:</p>
+                            <p className="text-gray-600 text-sm">{myAnswer}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

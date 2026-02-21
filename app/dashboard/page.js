@@ -275,9 +275,9 @@ export default function Dashboard() {
 
     let { data: checkin } = await supabase
       .from('daily_checkins')
-      .select('*, checkin_questions(*)')
+      .select('*')
       .eq('couple_id', coupleData.id)
-      .eq('date', today)
+      .eq('check_date', today)
       .maybeSingle()
 
     if (!checkin) {
@@ -288,9 +288,9 @@ export default function Dashboard() {
           .insert({
             couple_id: coupleData.id,
             question_id: questionId,
-            date: today,
+            check_date: today,
           })
-          .select('*, checkin_questions(*)')
+          .select('*')
           .maybeSingle()
         checkin = newCheckin
       }
@@ -298,9 +298,9 @@ export default function Dashboard() {
 
     if (checkin) {
       setTodayCheckin(checkin)
-      setTodayQuestion(checkin.checkin_questions)
+      setTodayQuestion(checkin.question_text || null)
 
-      const existingAnswer = userIsUser1 ? checkin.user1_answer : checkin.user2_answer
+      const existingAnswer = checkin.question_response
       if (existingAnswer) {
         setMyAnswer(existingAnswer)
       }
@@ -323,7 +323,7 @@ export default function Dashboard() {
       .from('daily_checkins')
       .select('question_id')
       .eq('couple_id', coupleId)
-      .gte('date', thirtyDaysAgo.toISOString().split('T')[0])
+      .gte('check_date', thirtyDaysAgo.toISOString().split('T')[0])
 
     const usedQuestionIds = recentCheckins?.map(c => c.question_id) || []
 
@@ -362,12 +362,12 @@ export default function Dashboard() {
       const dateStr = checkDate.toISOString().split('T')[0]
       const { data } = await supabase
         .from('daily_checkins')
-        .select('user1_answer, user2_answer')
+        .select('question_response')
         .eq('couple_id', coupleId)
-        .eq('date', dateStr)
+        .eq('check_date', dateStr)
         .maybeSingle()
 
-      if (data && data.user1_answer && data.user2_answer) {
+      if (data && data.question_response) {
         currentStreak++
         checkDate.setDate(checkDate.getDate() - 1)
       } else {
@@ -393,11 +393,11 @@ export default function Dashboard() {
 
     const { data: checkins } = await supabase
       .from('daily_checkins')
-      .select('*, checkin_questions(*)')
+      .select('*')
       .eq('couple_id', coupleId)
-      .gte('date', weekStartStr)
-      .lte('date', weekEnd.toISOString().split('T')[0])
-      .order('date', { ascending: true })
+      .gte('check_date', weekStartStr)
+      .lte('check_date', weekEnd.toISOString().split('T')[0])
+      .order('check_date', { ascending: true })
 
     setWeekCheckins(checkins || [])
 
@@ -527,15 +527,15 @@ export default function Dashboard() {
 
       const { data: pastCustom } = await supabase
         .from('custom_dates')
-        .select('title, date_time, rating, review')
+        .select('title, created_at')
         .eq('couple_id', coupleId)
-        .lt('date_time', now)
-        .order('date_time', { ascending: false })
+        .lt('created_at', now)
+        .order('created_at', { ascending: false })
         .limit(1)
 
       const candidates = [
         ...(pastPlanned || []).map(d => ({ title: d.title, date: d.date_time, hasReview: false })),
-        ...(pastCustom || []).map(d => ({ title: d.title, date: d.date_time, hasReview: !!(d.review || d.rating) })),
+        ...(pastCustom || []).map(d => ({ title: d.title, date: d.created_at, hasReview: false })),
       ].sort((a, b) => new Date(b.date) - new Date(a.date))
 
       if (candidates[0]) setCoachLastCompletedDate(candidates[0])
@@ -767,15 +767,13 @@ export default function Dashboard() {
 
     setSubmittingAnswer(true)
 
-    const updateData = isUser1
-      ? { user1_answer: myAnswer.trim(), user1_answered_at: new Date().toISOString() }
-      : { user2_answer: myAnswer.trim(), user2_answered_at: new Date().toISOString() }
+    const updateData = { question_response: myAnswer.trim() }
 
     const { data: updatedCheckin, error } = await supabase
       .from('daily_checkins')
       .update(updateData)
       .eq('id', todayCheckin.id)
-      .select('*, checkin_questions(*)')
+      .select('*')
       .maybeSingle()
 
     if (!error && updatedCheckin) {
@@ -785,7 +783,7 @@ export default function Dashboard() {
       setAnswerSubmitSuccess(true)
       setTimeout(() => setAnswerSubmitSuccess(false), 1500)
 
-      const bothAnswered = updatedCheckin.user1_answer && updatedCheckin.user2_answer
+      const bothAnswered = !!updatedCheckin.question_response
       if (bothAnswered) {
         // Track points silently
         await trackPoints('checkin_complete', 5, todayCheckin.id)
@@ -834,7 +832,7 @@ export default function Dashboard() {
       .from('daily_checkins')
       .update(updateData)
       .eq('id', todayCheckin.id)
-      .select('*, checkin_questions(*)')
+      .select('*')
       .maybeSingle()
 
     if (updatedCheckin) {
@@ -865,7 +863,7 @@ export default function Dashboard() {
       .from('daily_checkins')
       .update(updateData)
       .eq('id', todayCheckin.id)
-      .select('*, checkin_questions(*)')
+      .select('*')
       .maybeSingle()
 
     if (updatedCheckin) {
@@ -892,15 +890,15 @@ export default function Dashboard() {
     }
   }
 
-  // Check-in state helpers
-  const myAnswerSubmitted = todayCheckin && (isUser1 ? todayCheckin.user1_answer : todayCheckin.user2_answer)
-  const partnerAnswerSubmitted = todayCheckin && (isUser1 ? todayCheckin.user2_answer : todayCheckin.user1_answer)
+  // Check-in state helpers (new schema: question_response is per-user row)
+  const myAnswerSubmitted = todayCheckin && !!todayCheckin.question_response
+  const partnerAnswerSubmitted = v2PartnerCheckin && !!v2PartnerCheckin.question_response
   const bothAnswered = myAnswerSubmitted && partnerAnswerSubmitted
-  const partnerAnswer = isUser1 ? todayCheckin?.user2_answer : todayCheckin?.user1_answer
-  const partnerHearted = isUser1 ? todayCheckin?.user2_hearted : todayCheckin?.user1_hearted
-  const partnerComment = isUser1 ? todayCheckin?.user2_comment : todayCheckin?.user1_comment
-  const iHearted = isUser1 ? todayCheckin?.user1_hearted : todayCheckin?.user2_hearted
-  const myComment = isUser1 ? todayCheckin?.user1_comment : todayCheckin?.user2_comment
+  const partnerAnswer = v2PartnerCheckin?.question_response || null
+  const partnerHearted = null  // no equivalent in new schema
+  const partnerComment = null  // no equivalent in new schema
+  const iHearted = null        // no equivalent in new schema
+  const myComment = null       // no equivalent in new schema
 
   // Flirt helpers
   const formatTimeAgo = (date) => {
