@@ -206,6 +206,10 @@ function AssessmentContent() {
 
       const completedAt = new Date().toISOString()
 
+      if (isOnboarding) {
+        console.log('[Assessment] Completed, saving for user:', user?.id)
+      }
+
       // Single database operation - either update or insert with ALL data
       if (existingAssessment) {
         // Update existing assessment with all data at once
@@ -241,7 +245,10 @@ function AssessmentContent() {
         }
       }
 
-      // Navigate to results or back to onboarding
+      // Redirect only after save is confirmed complete
+      if (isOnboarding) {
+        console.log('[Assessment] Redirecting to onboarding step 3')
+      }
       router.push(isOnboarding ? '/onboarding?step=3' : '/assessment/results')
     } catch (err) {
       console.error('Error completing assessment:', err)
