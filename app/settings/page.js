@@ -220,7 +220,7 @@ export default function Settings() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-cream-50 to-cream-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent mx-auto mb-4"></div>
           <p className="text-coral-500 text-lg">Loading...</p>
@@ -230,7 +230,7 @@ export default function Settings() {
   }
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 ${profileCompleted ? 'pb-24' : 'pb-6'}`}>
+    <div className={`min-h-screen bg-gradient-to-br from-cream-50 to-cream-100 ${profileCompleted ? 'pb-24' : 'pb-6'}`}>
       {/* Header */}
       <div className="sticky top-0 bg-white/90 backdrop-blur-sm shadow-sm z-10">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">

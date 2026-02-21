@@ -194,7 +194,7 @@ export default function DateNight() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-cream-50 to-purple-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent mx-auto mb-4"></div>
           <p className="text-coral-500 text-lg">Loading date ideas...</p>
@@ -204,7 +204,7 @@ export default function DateNight() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-pink-100 pb-24">
+    <div className="min-h-screen bg-gradient-to-br from-cream-50 via-purple-50 to-cream-100 pb-24">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 py-4">

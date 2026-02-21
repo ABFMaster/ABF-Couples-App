@@ -374,7 +374,7 @@ export default function TripDetail() {
 
             {/* Description / Notes Section */}
             {trip.description && (
-              <div className="bg-[#FFF4F8] border-l-4 border-[#E8614D] rounded-2xl p-6 shadow-sm">
+              <div className="bg-[#FDF6EF] border-l-4 border-[#E8614D] rounded-2xl p-6 shadow-sm">
                 <h3 className="text-2xl font-bold text-[#2D3648] mb-3">About This Trip</h3>
                 <p className="text-[#6B7280] leading-relaxed">{trip.description}</p>
               </div>

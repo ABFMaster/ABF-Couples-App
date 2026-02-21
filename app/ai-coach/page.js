@@ -280,7 +280,7 @@ function AiCoachContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-cream-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent mx-auto mb-4"></div>
           <p className="text-coral-500 text-lg">Loading...</p>
@@ -290,7 +290,7 @@ function AiCoachContent() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-pink-50 to-purple-50">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-cream-50 to-purple-50">
       {/* Header */}
       <div className="bg-white shadow-sm z-10 flex-shrink-0">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -371,7 +371,7 @@ function AiCoachContent() {
 
           {/* Proactive Prompt Suggestion */}
           {proactivePrompt && !dismissedProactivePrompt && messages.length === 0 && (
-            <div className="mb-6 bg-gradient-to-r from-pink-50 to-purple-50 rounded-2xl p-4 border border-coral-100 shadow-sm">
+            <div className="mb-6 bg-gradient-to-r from-cream-50 to-purple-50 rounded-2xl p-4 border border-coral-100 shadow-sm">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0">
                   <span className="text-lg">💡</span>
@@ -481,7 +481,7 @@ function AiCoachContent() {
 export default function AiCoach() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-cream-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent mx-auto mb-4"></div>
           <p className="text-coral-500 text-lg">Loading...</p>

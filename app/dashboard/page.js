@@ -1580,7 +1580,7 @@ export default function Dashboard() {
                 !hasPartner
                   ? 'bg-gray-100 cursor-not-allowed'
                   : onboardingStatus.userCompleted
-                    ? 'bg-gradient-to-br from-coral-500 to-rose-600 text-white cursor-pointer hover:scale-[1.01]'
+                    ? 'bg-gradient-to-br from-coral-500 to-coral-600 text-white cursor-pointer hover:scale-[1.01]'
                     : 'bg-white border-2 border-coral-100 hover:border-coral-400 cursor-pointer hover:scale-[1.01]'
               } transition-all`}
             >
@@ -1651,7 +1651,7 @@ export default function Dashboard() {
                 return (
                   <div
                     onClick={() => router.push('/checkin')}
-                    className="bg-gradient-to-br from-amber-400 via-orange-400 to-rose-400 rounded-2xl shadow-lg p-6 cursor-pointer hover:shadow-xl hover:scale-[1.01] transition-all"
+                    className="bg-gradient-to-br from-amber-400 via-orange-400 to-coral-400 rounded-2xl shadow-lg p-6 cursor-pointer hover:shadow-xl hover:scale-[1.01] transition-all"
                   >
                     <div className="flex items-center gap-4">
                       <div className="text-5xl">☀️</div>

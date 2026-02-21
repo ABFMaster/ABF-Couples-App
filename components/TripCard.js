@@ -50,7 +50,7 @@ export default function TripCard({ trip, onClick, isActive = false, isPast = fal
             ? 'from-white/20 to-white/10'
             : isPast
             ? 'from-gray-100 to-gray-200'
-            : 'from-pink-100 to-purple-100'
+            : 'from-cream-100 to-indigo-100'
         } flex items-center justify-center relative`}>
           <span className="text-5xl">{typeConfig.icon}</span>
           {!isActive && (

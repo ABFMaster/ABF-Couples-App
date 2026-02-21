@@ -294,7 +294,7 @@ export default function CreateDateModal({
           ) : (
             /* Tips Tab */
             <div className="space-y-4">
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-5">
+              <div className="bg-gradient-to-r from-purple-50 to-cream-50 rounded-xl p-5">
                 <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                   <span>💡</span> Pro Tips
                 </h3>

@@ -181,7 +181,7 @@ export default function HealthMeter({ coupleId, onRefresh }) {
               {/* Background heart (empty) */}
               <path
                 d="M50 88.5C50 88.5 10 60 10 35C10 20 22 10 35 10C42 10 48 14 50 18C52 14 58 10 65 10C78 10 90 20 90 35C90 60 50 88.5 50 88.5Z"
-                fill="#fce7f3"
+                fill="#FDF6EF"
                 stroke="#f9a8d4"
                 strokeWidth="2"
               />
@@ -310,7 +310,7 @@ export default function HealthMeter({ coupleId, onRefresh }) {
           </div>
 
           {/* Encouragement message */}
-          <div className="mt-5 p-3 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg">
+          <div className="mt-5 p-3 bg-gradient-to-r from-cream-50 to-purple-50 rounded-lg">
             <p className="text-sm text-gray-600">
               {score < 30 && "Start with daily check-ins to grow your connection together."}
               {score >= 30 && score < 60 && "You're building great habits! Keep checking in with each other."}

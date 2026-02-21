@@ -386,7 +386,7 @@ export default function ProfileAssessmentPage() {
                     onClick={() => handleAnswer(currentQuestion.id, option.value)}
                     className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
                       answers[currentQuestion.id] === option.value
-                        ? 'border-[#E8614D] bg-[#FFF4F8]'
+                        ? 'border-[#E8614D] bg-[#FDF6EF]'
                         : 'border-[#E5E2DD] hover:border-[#E8614D]/50'
                     }`}
                   >

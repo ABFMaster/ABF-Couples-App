@@ -295,7 +295,7 @@ export default function FlirtComposer({ isOpen, onClose, coupleId, partnerId, pa
                       className={`px-4 py-2 rounded-full text-sm transition-all ${
                         message === suggestion
                           ? 'bg-coral-500 text-white'
-                          : 'bg-cream-100 text-coral-700 hover:bg-pink-200'
+                          : 'bg-cream-100 text-coral-700 hover:bg-cream-100'
                       }`}
                     >
                       {suggestion}

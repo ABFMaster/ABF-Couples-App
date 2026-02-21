@@ -144,7 +144,7 @@ export default function FlirtsHistory() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-cream-50 to-cream-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent mx-auto mb-4"></div>
           <p className="text-coral-600 text-lg font-medium">Loading...</p>
@@ -154,7 +154,7 @@ export default function FlirtsHistory() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100">
+    <div className="min-h-screen bg-gradient-to-br from-cream-50 to-cream-100">
       <div className="max-w-2xl mx-auto px-4 py-6">
         {/* ===== HEADER ===== */}
         <header className="flex items-center justify-between mb-8">

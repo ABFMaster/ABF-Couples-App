@@ -340,7 +340,7 @@ export default function ProfileOnboarding() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-cream-50 to-cream-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-pink-500 border-t-transparent mx-auto mb-4"></div>
           <p className="text-pink-500 text-lg">Loading...</p>
@@ -350,11 +350,11 @@ export default function ProfileOnboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-cream-50 to-purple-50 p-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <div className="bg-gradient-to-r from-pink-400 to-pink-500 text-white rounded-xl px-4 py-2 shadow-lg">
+          <div className="bg-gradient-to-r from-pink-400 to-cream-500 text-white rounded-xl px-4 py-2 shadow-lg">
             <span className="font-bold">ABF</span>
           </div>
           <button
@@ -371,7 +371,7 @@ export default function ProfileOnboarding() {
             <span>Your Profile</span>
             <span>{currentStep + 1} of {totalSteps}</span>
           </div>
-          <div className="h-2 bg-pink-100 rounded-full overflow-hidden">
+          <div className="h-2 bg-cream-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-pink-400 to-purple-500 transition-all duration-500"
               style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
@@ -399,7 +399,7 @@ export default function ProfileOnboarding() {
                       onClick={() => handleLoveLanguageSelect(option.value, true)}
                       className={`p-4 rounded-xl border-2 text-left transition-all ${
                         answers.love_language_primary === option.value
-                          ? 'border-pink-500 bg-pink-50'
+                          ? 'border-pink-500 bg-cream-50'
                           : 'border-gray-200 hover:border-pink-300'
                       }`}
                     >
@@ -455,7 +455,7 @@ export default function ProfileOnboarding() {
                     onClick={() => handleSingleSelect(field, option.value)}
                     className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
                       isSelected
-                        ? 'border-pink-500 bg-pink-50'
+                        ? 'border-pink-500 bg-cream-50'
                         : 'border-gray-200 hover:border-pink-300'
                     }`}
                   >
@@ -495,10 +495,10 @@ export default function ProfileOnboarding() {
                       disabled={isDisabled}
                       className={`px-4 py-2 rounded-full text-sm transition-all ${
                         isSelected
-                          ? 'bg-pink-500 text-white'
+                          ? 'bg-cream-500 text-white'
                           : isDisabled
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-gray-100 text-gray-700 hover:bg-pink-100'
+                            : 'bg-gray-100 text-gray-700 hover:bg-cream-100'
                       }`}
                     >
                       {option.label}
@@ -536,7 +536,7 @@ export default function ProfileOnboarding() {
           {currentStep > 0 && (
             <button
               onClick={handleBack}
-              className="flex-1 py-4 border-2 border-pink-300 text-pink-600 rounded-2xl font-semibold hover:bg-pink-50 transition-colors"
+              className="flex-1 py-4 border-2 border-pink-300 text-pink-600 rounded-2xl font-semibold hover:bg-cream-50 transition-colors"
             >
               Back
             </button>
@@ -544,7 +544,7 @@ export default function ProfileOnboarding() {
           <button
             onClick={handleNext}
             disabled={!canProceed() || submitting}
-            className="flex-1 py-4 bg-gradient-to-r from-pink-400 to-pink-500 text-white rounded-2xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:from-pink-500 hover:to-pink-600 transition-all"
+            className="flex-1 py-4 bg-gradient-to-r from-pink-400 to-cream-500 text-white rounded-2xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:from-cream-500 hover:to-pink-600 transition-all"
           >
             {submitting ? (
               <span className="flex items-center justify-center gap-2">

@@ -605,7 +605,7 @@ export default function AssessmentResultsPage() {
         <div className="mt-8 flex flex-col sm:flex-row gap-4">
           <button
             onClick={() => router.push('/assessment')}
-            className="flex-1 border-2 border-[#E8614D] text-[#E8614D] px-6 py-4 rounded-xl font-semibold hover:bg-[#FFF4F8] transition-colors"
+            className="flex-1 border-2 border-[#E8614D] text-[#E8614D] px-6 py-4 rounded-xl font-semibold hover:bg-[#FDF6EF] transition-colors"
           >
             Retake Assessment
           </button>

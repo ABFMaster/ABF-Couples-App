@@ -5,7 +5,7 @@ import Link from 'next/link'
 
 export default function WelcomePage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-cream-50 to-cream-100 flex flex-col items-center justify-center p-4">
       {/* Logo Section */}
       <div className="mb-8 text-center">
         <div className="inline-block bg-gradient-to-r from-coral-400 to-coral-500 text-white rounded-2xl px-8 py-4 shadow-lg mb-4">

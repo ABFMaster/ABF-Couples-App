@@ -135,7 +135,7 @@ function PastDateCard({ date, onClick }) {
       className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
       onClick={onClick}
     >
-      <div className="relative h-28 bg-gradient-to-br from-pink-100 to-purple-100 overflow-hidden">
+      <div className="relative h-28 bg-gradient-to-br from-cream-100 to-indigo-100 overflow-hidden">
         {mapUrl && <img src={mapUrl} alt="Map" className="w-full h-full object-cover" />}
         {date.source === 'custom' && stopCount > 0 && (
           <div className="absolute top-2 left-2 bg-white/90 text-xs font-medium text-purple-700 px-2 py-0.5 rounded-full">

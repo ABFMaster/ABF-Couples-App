@@ -45,7 +45,7 @@ function StopCard({ stop, index, total, travelTime, onMoveUp, onMoveDown, onRemo
       {/* Travel time connector */}
       {index > 0 && travelTime && (
         <div className="flex items-center gap-2 mb-3 pl-4">
-          <div className="w-0.5 h-4 bg-pink-200 ml-3" />
+          <div className="w-0.5 h-4 bg-cream-100 ml-3" />
           <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full ml-1">🚗 {travelTime}</span>
         </div>
       )}
@@ -127,7 +127,7 @@ function NearbyCard({ place, onAdd, alreadyAdded, userLocation }) {
     <div className="flex-shrink-0 w-40 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       {place.photo_url
         ? <div className="h-24"><img src={place.photo_url} alt={place.name} className="w-full h-full object-cover" /></div>
-        : <div className="h-16 bg-gradient-to-br from-pink-100 to-purple-100" />
+        : <div className="h-16 bg-gradient-to-br from-cream-100 to-indigo-100" />
       }
       <div className="p-3">
         <p className="font-semibold text-gray-900 text-xs leading-tight line-clamp-2 mb-1">{place.name}</p>

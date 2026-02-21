@@ -40,7 +40,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-pink-100 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-cream-50 to-cream-100 flex flex-col items-center justify-center p-4">
       {/* Header */}
       <div className="mb-8 text-center">
         <div className="inline-block bg-gradient-to-r from-coral-400 to-coral-500 text-white rounded-2xl px-6 py-3 shadow-lg mb-4">
@@ -109,7 +109,7 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-coral-500 hover:bg-coral-600 disabled:bg-pink-300 text-white font-semibold py-4 rounded-full shadow-lg transition-all transform hover:scale-105 disabled:transform-none"
+            className="w-full bg-coral-500 hover:bg-coral-600 disabled:bg-coral-300 text-white font-semibold py-4 rounded-full shadow-lg transition-all transform hover:scale-105 disabled:transform-none"
           >
             {loading ? 'Creating Account...' : 'Create Account'}
           </button>

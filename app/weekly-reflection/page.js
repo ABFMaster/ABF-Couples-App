@@ -234,7 +234,7 @@ export default function WeeklyReflection() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-cream-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent mx-auto mb-4"></div>
           <p className="text-coral-500 text-lg">Loading...</p>
@@ -246,7 +246,7 @@ export default function WeeklyReflection() {
   // Outside reflection window
   if (!isReflectionWindow()) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-cream-100 p-4">
         <div className="max-w-2xl mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
@@ -285,7 +285,7 @@ export default function WeeklyReflection() {
   // No check-ins this week
   if (weekCheckins.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-cream-100 p-4">
         <div className="max-w-2xl mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
@@ -322,7 +322,7 @@ export default function WeeklyReflection() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4 relative">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-cream-100 p-4 relative">
       {/* Confetti Animation */}
       {showConfetti && (
         <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
@@ -380,7 +380,7 @@ export default function WeeklyReflection() {
                 You picked from {partnerName}'s answers:
               </h3>
               {myFavoriteCheckin && (
-                <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl p-4 border-2 border-coral-100">
+                <div className="bg-gradient-to-r from-cream-50 to-purple-50 rounded-xl p-4 border-2 border-coral-100">
                   <p className="text-sm text-gray-500 mb-2">{formatDate(myFavoriteCheckin.date)}</p>
                   <p className="text-sm text-gray-600 italic mb-3">"{myFavoriteCheckin.checkin_questions?.question}"</p>
                   <div className="bg-cream-100 rounded-lg p-3 mb-3">
@@ -403,7 +403,7 @@ export default function WeeklyReflection() {
                 {partnerName} picked from your answers:
               </h3>
               {partnerFavoriteCheckin && (
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border-2 border-indigo-400">
+                <div className="bg-gradient-to-r from-purple-50 to-cream-50 rounded-xl p-4 border-2 border-indigo-400">
                   <p className="text-sm text-gray-500 mb-2">{formatDate(partnerFavoriteCheckin.date)}</p>
                   <p className="text-sm text-gray-600 italic mb-3">"{partnerFavoriteCheckin.checkin_questions?.question}"</p>
                   <div className="bg-cream-100 rounded-lg p-3 mb-3">
@@ -452,7 +452,7 @@ export default function WeeklyReflection() {
             <div className="bg-white rounded-2xl shadow-xl p-6">
               <h3 className="text-lg font-semibold text-coral-600 mb-4">Your Selection:</h3>
               {myFavoriteCheckin && (
-                <div className="bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl p-4 border-2 border-coral-100">
+                <div className="bg-gradient-to-r from-cream-50 to-purple-50 rounded-xl p-4 border-2 border-coral-100">
                   <p className="text-sm text-gray-500 mb-2">{formatDate(myFavoriteCheckin.date)}</p>
                   <p className="text-sm text-gray-600 italic mb-3">"{myFavoriteCheckin.checkin_questions?.question}"</p>
                   <div className="bg-cream-100 rounded-lg p-3 mb-3">

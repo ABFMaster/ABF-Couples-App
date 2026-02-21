@@ -436,7 +436,7 @@ function AssessmentContent() {
                       onClick={() => handleAnswer(currentQuestion.id, option.value)}
                       className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                         isSelected
-                          ? 'border-[#E8614D] bg-[#FFF4F8]'
+                          ? 'border-[#E8614D] bg-[#FDF6EF]'
                           : 'border-[#E5E2DD] hover:border-[#E8614D]/50 hover:bg-[#F8F6F3]'
                       }`}
                     >
@@ -595,7 +595,7 @@ function RankingQuestion({ question, value, onChange }) {
             <div
               key={option.value}
               className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
-                rank ? 'border-[#E8614D] bg-[#FFF4F8]' : 'border-[#E5E2DD]'
+                rank ? 'border-[#E8614D] bg-[#FDF6EF]' : 'border-[#E5E2DD]'
               }`}
             >
               <select
