@@ -42,7 +42,7 @@ function buildFeatureCards({ todayCheckinDone, nextDate, lastFlirtDaysAgo, memor
       status: todayCheckinDone ? 'Done today ✓' : 'Not done yet',
       statusColor: todayCheckinDone ? 'text-green-500' : 'text-[#9CA3AF]',
       href: '/checkin',
-      accent: 'border-coral-200',
+      accent: 'border-[#E8614D]',
     },
     {
       emoji: '🗓️',
@@ -50,7 +50,7 @@ function buildFeatureCards({ todayCheckinDone, nextDate, lastFlirtDaysAgo, memor
       status: nextDate ? nextDate.title : 'Plan something special',
       statusColor: nextDate ? 'text-[#3D3580]' : 'text-[#9CA3AF]',
       href: '/dates',
-      accent: 'border-indigo-200',
+      accent: 'border-[#E8614D]',
     },
     {
       emoji: '💌',
@@ -62,7 +62,7 @@ function buildFeatureCards({ todayCheckinDone, nextDate, lastFlirtDaysAgo, memor
           : `Sent ${lastFlirtDaysAgo}d ago`,
       statusColor: lastFlirtDaysAgo === 0 ? 'text-green-500' : 'text-[#9CA3AF]',
       href: '/flirts',
-      accent: 'border-coral-200',
+      accent: 'border-[#E8614D]',
     },
     {
       emoji: '🧠',
@@ -70,7 +70,7 @@ function buildFeatureCards({ todayCheckinDone, nextDate, lastFlirtDaysAgo, memor
       status: 'Chat now',
       statusColor: 'text-[#3D3580]',
       href: '/ai-coach',
-      accent: 'border-indigo-200',
+      accent: 'border-[#E8614D]',
     },
     {
       emoji: '🗺️',
@@ -78,7 +78,7 @@ function buildFeatureCards({ todayCheckinDone, nextDate, lastFlirtDaysAgo, memor
       status: activeTrip || 'Plan a trip',
       statusColor: activeTrip ? 'text-[#3D3580]' : 'text-[#9CA3AF]',
       href: '/trips',
-      accent: 'border-blue-200',
+      accent: 'border-[#E8614D]',
     },
     {
       emoji: '📸',
@@ -86,7 +86,7 @@ function buildFeatureCards({ todayCheckinDone, nextDate, lastFlirtDaysAgo, memor
       status: memoryCount > 0 ? `${memoryCount} memories` : 'Add your first memory',
       statusColor: memoryCount > 0 ? 'text-[#3D3580]' : 'text-[#9CA3AF]',
       href: '/timeline',
-      accent: 'border-amber-200',
+      accent: 'border-[#E8614D]',
     },
   ]
 }
@@ -98,6 +98,12 @@ function AddItemModal({ isOpen, onClose, coupleId, userId, onAdded }) {
   const [title, setTitle]   = useState('')
   const [note, setNote]     = useState('')
   const [saving, setSaving] = useState(false)
+
+  // Scroll the focused input into view after the keyboard opens (~300ms delay)
+  const handleInputFocus = (e) => {
+    const el = e.target
+    setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 320)
+  }
 
   if (!isOpen) return null
 
@@ -129,7 +135,8 @@ function AddItemModal({ isOpen, onClose, coupleId, userId, onAdded }) {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end" onClick={onClose}>
       <div
-        className="w-full max-w-lg mx-auto bg-white rounded-t-3xl p-6 pb-10 animate-slideUp"
+        className="w-full max-w-lg mx-auto bg-white rounded-t-3xl p-6 animate-slideUp overflow-y-auto"
+        style={{ maxHeight: '90vh', paddingBottom: 'env(safe-area-inset-bottom, 24px)' }}
         onClick={e => e.stopPropagation()}
       >
         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
@@ -153,6 +160,7 @@ function AddItemModal({ isOpen, onClose, coupleId, userId, onAdded }) {
           type="text"
           value={title}
           onChange={e => setTitle(e.target.value)}
+          onFocus={handleInputFocus}
           onKeyDown={e => e.key === 'Enter' && handleSave()}
           placeholder={`${ITEM_TYPES[type].emoji} ${ITEM_TYPES[type].label} title…`}
           className="w-full px-4 py-3 rounded-2xl border-2 border-gray-100 focus:border-[#E8614D] focus:outline-none text-[#2D3648] mb-3"
@@ -162,6 +170,7 @@ function AddItemModal({ isOpen, onClose, coupleId, userId, onAdded }) {
           type="text"
           value={note}
           onChange={e => setNote(e.target.value)}
+          onFocus={handleInputFocus}
           placeholder="Add a note (optional)"
           className="w-full px-4 py-3 rounded-2xl border-2 border-gray-100 focus:border-[#E8614D] focus:outline-none text-[#2D3648] mb-5"
         />
@@ -257,12 +266,12 @@ export default function Dashboard() {
         (async () => {
           const { data } = await supabase
             .from('relationship_health')
-            .select('overall_score, score')
+            .select('overall_score')
             .eq('couple_id', coupleData.id)
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle()
-          if (data) setHealthScore(data.overall_score ?? data.score ?? null)
+          if (data) setHealthScore(data.overall_score ?? null)
         })(),
 
         // Check-in streak + today status
@@ -438,7 +447,7 @@ export default function Dashboard() {
             <p className="text-white/85 text-sm leading-relaxed mb-5">{coachInsight}</p>
             <Link
               href="/ai-coach"
-              className="inline-flex items-center gap-1.5 text-sm font-semibold bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full transition-colors"
+              className="inline-flex items-center gap-1.5 bg-white text-[#E8614D] font-semibold px-4 py-2 rounded-full text-sm hover:bg-white/90 transition-colors"
             >
               Talk to Coach →
             </Link>
@@ -538,7 +547,7 @@ export default function Dashboard() {
 
         {/* ===== SECTION 4: FEATURE NAVIGATION ===== */}
         <section>
-          <h2 className="text-lg font-bold text-[#2D3648] mb-3">Everything else</h2>
+          <h2 className="text-lg font-bold text-[#2D3648] mb-3">Explore</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {featureCards.map(card => (
               <button
