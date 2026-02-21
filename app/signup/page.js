@@ -31,7 +31,7 @@ export default function SignupPage() {
       if (error) throw error
 
       // Success! Redirect to partner connection
-      router.push('/connect')
+      router.push(`/onboarding`)
     } catch (error) {
       setError(error.message)
     } finally {
