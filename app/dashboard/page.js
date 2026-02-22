@@ -343,6 +343,7 @@ export default function Dashboard() {
           <div className="absolute -top-10 -right-10 w-36 h-36 bg-white/10 rounded-full pointer-events-none" />
           <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full pointer-events-none" />
           <div className="relative">
+            <img src="/logo-wordmark.png" alt="ABF" className="h-8 w-auto mb-4" />
             <p className="text-white/60 text-xs font-medium uppercase tracking-wide mb-1">
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </p>
