@@ -399,6 +399,16 @@ export default function FlirtsHistory() {
                             <div className="flex-1 min-w-0">
                               <p className="text-gray-800 font-medium truncate">{flirt.spotify_track_name}</p>
                               <p className="text-gray-500 text-sm truncate">{flirt.spotify_artist}</p>
+                              {flirt.spotify_track_url && (
+                                
+                                  href={flirt.spotify_track_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-[#1DB954] font-medium flex items-center gap-1 mt-1"
+                                >
+                                  ▶ Open in Spotify
+                                </a>
+                              )}
                             </div>
                           ) : flirt.message ? (
                             <p className="text-gray-600 line-clamp-2 flex-1">
