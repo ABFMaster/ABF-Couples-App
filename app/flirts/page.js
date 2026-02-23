@@ -196,7 +196,7 @@ export default function FlirtsHistory() {
         </section>
 
         {/* ===== STATS ROW ===== */}
-        <section className="grid grid-cols-4 gap-4 mb-8">
+        <section className="grid grid-cols-2 gap-2 mb-8">
           <div className="bg-white rounded-xl p-4 text-center shadow-sm">
             <p className="text-2xl font-bold text-coral-600">{totalSent}</p>
             <p className="text-xs text-gray-500 mt-1">Sent</p>
@@ -383,7 +383,7 @@ export default function FlirtsHistory() {
                             <img
                               src={flirt.gif_url}
                               alt="GIF"
-                              className="w-14 h-14 rounded-lg object-cover shadow-sm"
+                              className="w-full h-auto rounded-lg object-cover"
                             />
                           )}
                           {flirt.photo_url && (
