@@ -400,12 +400,7 @@ export default function FlirtsHistory() {
                               <p className="text-gray-800 font-medium truncate">{flirt.spotify_track_name}</p>
                               <p className="text-gray-500 text-sm truncate">{flirt.spotify_artist}</p>
                               {flirt.spotify_track_url && (
-                                
-                                  href={flirt.spotify_track_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-[#1DB954] font-medium flex items-center gap-1 mt-1"
-                                >
+                                <a href={flirt.spotify_track_url} target="_blank" rel="noopener noreferrer" className="text-xs font-medium flex items-center gap-1 mt-1" style={{color: '#1DB954'}}>
                                   ▶ Open in Spotify
                                 </a>
                               )}
