@@ -104,6 +104,16 @@ Coach personalization suffers when data is missing.
 **Priority:** Medium
 **Status:** Known risk — verify `daily_checkins` column names match before enabling weekly reflection feature.
 
+## Giphy API — upgrade beta key to production
+**Priority:** Medium
+**Status:** Known improvement
+Go to developers.giphy.com, create production app, get new API key, update
+`NEXT_PUBLIC_GIPHY_API_KEY` in Vercel environment variables (and `.env.local`
+for local dev). The current key is a beta/dev key with rate limits and
+attribution requirements that differ from production.
+
+---
+
 ### FlirtComposer reads from onboarding_responses — table may be obsolete
 **Finding:** `components/FlirtComposer.js` reads love language from `onboarding_responses.answers.q8`. This table may be deprecated in favor of `relationship_assessments`.
 **Priority:** Low

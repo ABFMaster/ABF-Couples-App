@@ -394,6 +394,13 @@ export default function FlirtComposer({ isOpen, onClose, coupleId, partnerId, pa
                       ))}
                     </div>
                   )}
+                  <div className="flex items-center justify-end mt-1">
+                    <img
+                      src="/powered-by-giphy.png"
+                      alt="Powered by GIPHY"
+                      className="h-4 w-auto opacity-70"
+                    />
+                  </div>
 
                   {/* Optional message with GIF */}
                   {selectedGif && (
