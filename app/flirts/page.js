@@ -16,6 +16,7 @@ export default function FlirtsHistory() {
   const [couple, setCouple] = useState(null)
   const [partnerId, setPartnerId] = useState(null)
   const [partnerName, setPartnerName] = useState('Partner')
+  const [userName, setUserName] = useState('You')
   const [flirts, setFlirts] = useState([])
   const [filter, setFilter] = useState('all')
   const [selectedFlirt, setSelectedFlirt] = useState(null)
@@ -58,6 +59,13 @@ export default function FlirtsHistory() {
 
       setPartnerName(partnerProfile?.display_name || 'Partner')
 
+      const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select('display_name')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      setUserName(userProfile?.display_name || 'You')
+
       // Check Spotify connection
       const { data: spotifyConnection } = await supabase
         .from('user_spotify_connections')
@@ -93,6 +101,18 @@ export default function FlirtsHistory() {
 
   const handleFlirtUpdated = () => {
     fetchData()
+  }
+
+  const deleteFlirt = async (flirtId) => {
+    if (!confirm('Delete this flirt?')) return
+    const { error } = await supabase
+      .from('flirts')
+      .delete()
+      .eq('id', flirtId)
+      .eq('sender_id', user.id)
+    if (!error) {
+      setFlirts(prev => prev.filter(f => f.id !== flirtId))
+    }
   }
 
   const formatTime = (dateStr) => {
@@ -360,7 +380,7 @@ export default function FlirtsHistory() {
                         {/* Sender & Metadata */}
                         <div className="flex items-center gap-2 mb-2">
                           <span className={`text-sm font-semibold ${isSent ? 'text-coral-600' : 'text-indigo-500'}`}>
-                            {isSent ? 'You' : partnerName}
+                            {isSent ? userName : partnerName}
                           </span>
                           <span className="text-xs text-gray-400">{formatTime(flirt.created_at)}</span>
                           {flirt.hearted && <span className="text-coral-500">❤️</span>}
@@ -418,16 +438,27 @@ export default function FlirtsHistory() {
                         {flirt.reply && (
                           <div className="mt-3 bg-gray-50 rounded-xl p-3">
                             <p className="text-xs text-gray-500">
-                              <span className="font-medium">{isSent ? partnerName : 'You'}:</span> {flirt.reply}
+                              <span className="font-medium">{isSent ? partnerName : userName}:</span> {flirt.reply}
                             </p>
                           </div>
                         )}
                       </div>
 
-                      {/* Arrow Indicator */}
-                      <svg className="w-5 h-5 text-gray-300 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
+                      {/* Actions */}
+                      <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                        {isSent && (
+                          <button
+                            onClick={e => { e.stopPropagation(); deleteFlirt(flirt.id) }}
+                            className="text-gray-300 hover:text-red-400 transition-colors p-1"
+                            aria-label="Delete flirt"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                        <svg className="w-5 h-5 text-gray-300 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
                 )
@@ -462,7 +493,7 @@ export default function FlirtsHistory() {
           setSelectedFlirt(null)
         }}
         flirt={selectedFlirt}
-        senderName={selectedFlirt?.sender_id === user?.id ? 'You' : partnerName}
+        senderName={selectedFlirt?.sender_id === user?.id ? userName : partnerName}
         coupleId={couple?.id}
         onUpdate={handleFlirtUpdated}
       />
