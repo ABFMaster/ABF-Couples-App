@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { searchMovies, searchShows, getDetails } from '@/lib/omdb'
 
 const ITEM_TYPES = {
   movie:      { emoji: '🎬', label: 'Movie' },
@@ -12,17 +13,31 @@ const ITEM_TYPES = {
   date_idea:  { emoji: '💡', label: 'Date Idea' },
 }
 
+// Types that use OMDB search instead of a plain text input
+const OMDB_TYPES = ['movie', 'show']
+
 export default function AddSharedItemPage() {
   const router = useRouter()
 
   const [type, setType]     = useState('movie')
-  const [title, setTitle]   = useState('')
   const [note, setNote]     = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState(null)
 
   const [coupleId, setCoupleId] = useState(null)
   const [userId, setUserId]     = useState(null)
+
+  // Plain text mode (song, restaurant, date_idea)
+  const [title, setTitle] = useState('')
+
+  // OMDB search mode (movie, show)
+  const [query, setQuery]               = useState('')
+  const [results, setResults]           = useState([])
+  const [searching, setSearching]       = useState(false)
+  const [selected, setSelected]         = useState(null) // full detail object from getDetails
+  const [loadingDetail, setLoadingDetail] = useState(false)
+
+  const debounceRef = useRef(null)
 
   useEffect(() => {
     const load = async () => {
@@ -42,18 +57,72 @@ export default function AddSharedItemPage() {
     load()
   }, [router])
 
+  // Reset all input state when type changes
+  useEffect(() => {
+    setQuery('')
+    setResults([])
+    setSelected(null)
+    setTitle('')
+    setNote('')
+    setError(null)
+    clearTimeout(debounceRef.current)
+  }, [type])
+
+  // Debounced OMDB search
+  useEffect(() => {
+    if (!OMDB_TYPES.includes(type) || !query.trim()) {
+      setResults([])
+      return
+    }
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const fn = type === 'movie' ? searchMovies : searchShows
+        const res = await fn(query)
+        setResults(res)
+      } catch { /* network error — leave results empty */ }
+      setSearching(false)
+    }, 500)
+    return () => clearTimeout(debounceRef.current)
+  }, [query, type])
+
+  const handleSelect = async (result) => {
+    setResults([])
+    setQuery('')
+    setLoadingDetail(true)
+    try {
+      const detail = await getDetails(result.imdbID)
+      setSelected(detail)
+    } catch {
+      // Fallback: use search result fields only
+      setSelected({ Title: result.Title, Year: result.Year, Poster: result.Poster, imdbID: result.imdbID })
+    }
+    setLoadingDetail(false)
+  }
+
   const handleSave = async () => {
-    if (!title.trim() || saving || !coupleId) return
+    const isOmdb = OMDB_TYPES.includes(type)
+    const effectiveTitle = isOmdb ? selected?.Title : title.trim()
+    if (!effectiveTitle || saving || !coupleId) return
     setSaving(true)
     setError(null)
     try {
-      const { error: err } = await supabase.from('shared_items').insert({
+      const payload = {
         couple_id: coupleId,
         user_id:   userId,
         type,
-        title: title.trim(),
+        title: effectiveTitle,
         note:  note.trim() || null,
-      })
+      }
+      if (isOmdb && selected) {
+        payload.imdb_id    = selected.imdbID   || null
+        payload.poster_url = selected.Poster && selected.Poster !== 'N/A' ? selected.Poster : null
+        payload.year       = selected.Year     || null
+        payload.rating     = selected.imdbRating && selected.imdbRating !== 'N/A' ? selected.imdbRating : null
+        payload.plot       = selected.Plot     && selected.Plot     !== 'N/A' ? selected.Plot     : null
+      }
+      const { error: err } = await supabase.from('shared_items').insert(payload)
       if (err) { setError(err.message); return }
       router.push('/shared')
     } catch (e) {
@@ -63,6 +132,9 @@ export default function AddSharedItemPage() {
       setSaving(false)
     }
   }
+
+  const isOmdb  = OMDB_TYPES.includes(type)
+  const canSave = isOmdb ? !!selected : !!title.trim()
 
   return (
     <div className="min-h-screen bg-[#F8F6F3] flex flex-col">
@@ -98,15 +170,104 @@ export default function AddSharedItemPage() {
           ))}
         </div>
 
-        <input
-          type="text"
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSave()}
-          placeholder={`${ITEM_TYPES[type].emoji} ${ITEM_TYPES[type].label} title…`}
-          className="w-full px-4 py-3.5 rounded-2xl border-2 border-gray-100 focus:border-[#E8614D] focus:outline-none text-[#2D3648] bg-white mb-3 text-base"
-          autoFocus
-        />
+        {isOmdb ? (
+          /* ── OMDB search flow ─────────────────────────────────────────── */
+          <>
+            {selected ? (
+              /* Selected movie/show card */
+              <div className="bg-white rounded-2xl overflow-hidden shadow-sm mb-4">
+                <div className="flex gap-3 p-4">
+                  {selected.Poster && selected.Poster !== 'N/A' ? (
+                    <img
+                      src={selected.Poster}
+                      alt={selected.Title}
+                      className="w-16 h-24 object-cover rounded-lg flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-16 h-24 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <span className="text-2xl">{ITEM_TYPES[type].emoji}</span>
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0 py-0.5">
+                    <p className="font-bold text-[#2D3648] text-base leading-snug">{selected.Title}</p>
+                    <p className="text-[#9CA3AF] text-xs mt-0.5">{selected.Year}</p>
+                    {selected.imdbRating && selected.imdbRating !== 'N/A' && (
+                      <p className="text-sm text-[#6B7280] mt-1">⭐ {selected.imdbRating}/10</p>
+                    )}
+                    {selected.Plot && selected.Plot !== 'N/A' && (
+                      <p className="text-[#6B7280] text-xs mt-1.5 leading-relaxed line-clamp-3">{selected.Plot}</p>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelected(null)}
+                  className="w-full py-2.5 border-t border-gray-100 text-sm text-[#E8614D] font-medium hover:bg-gray-50 transition-colors"
+                >
+                  Change
+                </button>
+              </div>
+            ) : (
+              /* Search input + results dropdown */
+              <div className="mb-4">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                    placeholder={`Search for a ${ITEM_TYPES[type].label.toLowerCase()}…`}
+                    className="w-full px-4 py-3.5 rounded-2xl border-2 border-gray-100 focus:border-[#E8614D] focus:outline-none text-[#2D3648] bg-white text-base"
+                    autoFocus
+                    disabled={loadingDetail}
+                  />
+                  {(searching || loadingDetail) && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                      <div className="w-4 h-4 border-2 border-[#E8614D] border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                </div>
+
+                {results.length > 0 && (
+                  <div className="mt-2 bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+                    {results.map(result => (
+                      <button
+                        key={result.imdbID}
+                        onClick={() => handleSelect(result)}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#FDF6EF] transition-colors border-b border-gray-50 last:border-0 text-left"
+                      >
+                        {result.Poster && result.Poster !== 'N/A' ? (
+                          <img
+                            src={result.Poster}
+                            alt={result.Title}
+                            className="w-10 h-14 object-cover rounded flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-14 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
+                            <span className="text-lg">{ITEM_TYPES[type].emoji}</span>
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[#2D3648] font-semibold text-sm leading-tight">{result.Title}</p>
+                          <p className="text-[#9CA3AF] text-xs mt-0.5">{result.Year}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        ) : (
+          /* ── Plain text flow ──────────────────────────────────────────── */
+          <input
+            type="text"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSave()}
+            placeholder={`${ITEM_TYPES[type].emoji} ${ITEM_TYPES[type].label} title…`}
+            className="w-full px-4 py-3.5 rounded-2xl border-2 border-gray-100 focus:border-[#E8614D] focus:outline-none text-[#2D3648] bg-white mb-3 text-base"
+            autoFocus
+          />
+        )}
 
         <input
           type="text"
@@ -122,7 +283,7 @@ export default function AddSharedItemPage() {
 
       </div>
 
-      {/* Fixed submit button above safe area */}
+      {/* Fixed submit button */}
       <div
         className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 pt-4"
         style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
@@ -130,7 +291,7 @@ export default function AddSharedItemPage() {
         <div className="max-w-lg mx-auto">
           <button
             onClick={handleSave}
-            disabled={!title.trim() || saving || !coupleId}
+            disabled={!canSave || saving || !coupleId}
             className="w-full py-4 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white rounded-2xl font-bold text-lg disabled:opacity-50 transition-opacity"
           >
             {saving ? 'Saving…' : 'Add to Our Space'}

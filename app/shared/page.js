@@ -40,18 +40,34 @@ function relativeTime(dateStr) {
 function ItemCard({ item, userId, userName, onToggleDone, onDelete }) {
   const isOwner   = item.user_id === userId
   const typeEmoji = TABS[item.type]?.emoji || '✨'
+  const hasPoster = !!item.poster_url
 
   return (
-    <div className={`bg-white rounded-2xl p-5 shadow-sm transition-all ${item.completed ? 'opacity-60' : ''}`}>
-      <div className="flex items-start gap-4">
-        <span className="text-3xl flex-shrink-0 mt-0.5">{typeEmoji}</span>
-        <div className="flex-1 min-w-0">
+    <div className={`bg-white rounded-2xl overflow-hidden shadow-sm transition-all ${item.completed ? 'opacity-60' : ''}`}>
+      <div className={`flex items-start gap-3 ${hasPoster ? 'p-3' : 'p-5'}`}>
+        {hasPoster ? (
+          <img
+            src={item.poster_url}
+            alt={item.title}
+            className="w-14 h-20 object-cover rounded-lg flex-shrink-0"
+          />
+        ) : (
+          <span className="text-3xl flex-shrink-0 mt-0.5">{typeEmoji}</span>
+        )}
+        <div className="flex-1 min-w-0 py-0.5">
           <p className={`text-[#2D3648] font-semibold text-base leading-tight ${item.completed ? 'line-through text-[#9CA3AF]' : ''}`}>
             {item.title}
           </p>
-          {item.note && (
-            <p className="text-[#6B7280] text-sm mt-0.5 italic">"{item.note}"</p>
+          {(item.year || item.rating) && (
+            <p className="text-[#9CA3AF] text-xs mt-0.5">
+              {item.year}{item.year && item.rating ? ' · ' : ''}{item.rating ? `⭐ ${item.rating}/10` : ''}
+            </p>
           )}
+          {item.note ? (
+            <p className="text-[#6B7280] text-sm mt-1 italic">"{item.note}"</p>
+          ) : item.plot ? (
+            <p className="text-[#9CA3AF] text-xs mt-1 leading-relaxed line-clamp-2">{item.plot}</p>
+          ) : null}
           <p className="text-[#9CA3AF] text-xs mt-1.5">
             {userName} · {relativeTime(item.created_at)}
           </p>
@@ -72,17 +88,19 @@ function ItemCard({ item, userId, userName, onToggleDone, onDelete }) {
       {!item.completed ? (
         <button
           onClick={() => onToggleDone(item)}
-          className="mt-4 w-full py-2.5 border-2 border-gray-100 hover:border-green-300 rounded-xl text-sm font-medium text-[#9CA3AF] hover:text-green-600 transition-all"
+          className="w-full py-2.5 border-t border-gray-100 hover:bg-green-50 text-sm font-medium text-[#9CA3AF] hover:text-green-600 transition-all"
         >
           ✓ Mark as Done
         </button>
       ) : (
-        <button
-          onClick={() => onToggleDone(item)}
-          className="mt-3 text-xs text-[#9CA3AF] hover:text-[#E8614D] transition-colors"
-        >
-          Undo
-        </button>
+        <div className="px-5 pb-3">
+          <button
+            onClick={() => onToggleDone(item)}
+            className="text-xs text-[#9CA3AF] hover:text-[#E8614D] transition-colors"
+          >
+            Undo
+          </button>
+        </div>
       )}
     </div>
   )
