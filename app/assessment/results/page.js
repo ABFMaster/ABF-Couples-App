@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ASSESSMENT_MODULES, ASSESSMENT_ATTRIBUTION } from '@/lib/relationship-questions'
+import BottomNav from '@/components/BottomNav'
 
 // Circular Progress Component with gradient
 function CircularProgress({ percentage, color, size = 80, strokeWidth = 6, animate = true }) {
@@ -83,6 +84,9 @@ export default function AssessmentResultsPage() {
   const [showShareMenu, setShowShareMenu] = useState(false)
   const [animateCards, setAnimateCards] = useState(false)
   const [incompleteAssessment, setIncompleteAssessment] = useState(null)
+  const [userName, setUserName] = useState('You')
+  const [coupleInsight, setCoupleInsight] = useState(null)
+  const [loadingInsight, setLoadingInsight] = useState(false)
 
   // Check if both partners have completed for language switching
   const bothCompleted = assessment && partnerAssessment
@@ -104,6 +108,14 @@ export default function AssessmentResultsPage() {
 
       if (coupleData) {
         const partnerId = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id
+
+        // Get current user's display name
+        const { data: userProfile } = await supabase
+          .from('user_profiles')
+          .select('display_name')
+          .eq('user_id', user.id)
+          .maybeSingle()
+        if (userProfile?.display_name) setUserName(userProfile.display_name)
 
         // Get partner name
         if (partnerId) {
@@ -175,6 +187,39 @@ export default function AssessmentResultsPage() {
     checkAuth()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (!bothCompleted || coupleInsight) return
+    const generateInsight = async () => {
+      setLoadingInsight(true)
+      try {
+        const partnerResults = partnerAssessment?.results || partnerAssessment?.module_results
+        const modules = (assessment?.results?.modules || assessment?.module_results?.modules || []).map(m => {
+          const partnerModule = partnerResults?.modules?.find(p => p.moduleId === m.moduleId)
+          return {
+            title: m.title,
+            userPct: m.percentage,
+            partnerPct: partnerModule?.percentage || 0,
+          }
+        })
+        const res = await fetch('/api/assessment/insight', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user1Name: userName || 'You',
+            user2Name: partnerName,
+            modules,
+          }),
+        })
+        const data = await res.json()
+        if (data.insight) setCoupleInsight(data.insight)
+      } catch (err) {
+        console.error('Insight error:', err)
+      }
+      setLoadingInsight(false)
+    }
+    generateInsight()
+  }, [bothCompleted])
 
   const handleShare = async () => {
     const shareData = {
@@ -448,6 +493,27 @@ export default function AssessmentResultsPage() {
         </div>
       )}
 
+      {/* Couple Insight — only shown when both completed */}
+      {bothCompleted && (
+        <div className="max-w-4xl mx-auto px-4 mt-4">
+          {loadingInsight ? (
+            <div className="bg-gradient-to-r from-[#E8614D] to-[#3D3580] rounded-2xl p-6 text-white text-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-white border-t-transparent mx-auto mb-2" />
+              <p className="text-white/80 text-sm">
+                Generating your couple insight...
+              </p>
+            </div>
+          ) : coupleInsight ? (
+            <div className="bg-gradient-to-r from-[#E8614D] to-[#3D3580] rounded-2xl p-6 text-white">
+              <p className="text-xs font-medium opacity-75 mb-2">
+                💡 Your Couple Insight
+              </p>
+              <p className="text-white leading-relaxed">{coupleInsight}</p>
+            </div>
+          ) : null}
+        </div>
+      )}
+
       {/* Module Results */}
       <div className="max-w-4xl mx-auto px-4 py-8">
         <h2 className="text-2xl font-bold text-[#2D3648] mb-6">
@@ -587,7 +653,7 @@ export default function AssessmentResultsPage() {
                             </div>
                           </div>
                           {Math.abs(moduleResult.percentage - partnerModuleResult.percentage) > 20 && (
-                            <p className="mt-3 text-sm text-purple-700">
+                            <p className="mt-3 text-sm text-[#3D3580]">
                               You have different perspectives in this area—a great opportunity for understanding each other better!
                             </p>
                           )}
@@ -622,6 +688,8 @@ export default function AssessmentResultsPage() {
           {ASSESSMENT_ATTRIBUTION}
         </p>
       </div>
+
+      <BottomNav />
     </div>
   )
 }
