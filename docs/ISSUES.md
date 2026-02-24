@@ -118,3 +118,28 @@ attribution requirements that differ from production.
 **Finding:** `components/FlirtComposer.js` reads love language from `onboarding_responses.answers.q8`. This table may be deprecated in favor of `relationship_assessments`.
 **Priority:** Low
 **Status:** Known risk — validate `onboarding_responses` still exists in DB, or migrate read to `relationship_assessments.answers.le_1`.
+
+## Affiliate Programs — Background Revenue
+Apply to both programs now (free, ~20 mins each). Add affiliate 
+tokens to all streaming links throughout the app once approved.
+Expected revenue: small but passive — catches new signups only.
+
+### Spotify Affiliate Program
+- Commission: $7.35 per new Premium signup
+- Cookie: 45 days
+- Apply: sovrn.com (search "Spotify" in advertiser directory)
+- Requires: live website with custom domain
+- Token goes on: all spotify_track_url links in FlirtView, flirts page, Our Space
+
+### Apple Music Affiliate Program  
+- Commission: 7% on purchases + one-time on new memberships
+- Cookie: 30 days
+- Apply: performance-partners.apple.com
+- More selective — apply when ABF has more traction
+- Token goes on: all Apple Music links when we build that integration
+
+### Implementation (when approved)
+In lib/affiliates.js, create helper functions:
+  appendSpotifyAffiliate(url) — appends affiliate token to Spotify URLs
+  appendAppleAffiliate(url) — appends affiliate token to Apple Music URLs
+Use these helpers everywhere streaming URLs are rendered.
