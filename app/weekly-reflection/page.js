@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import BottomNav from '@/components/BottomNav'
 
 export default function WeeklyReflection() {
   const router = useRouter()
@@ -10,6 +11,7 @@ export default function WeeklyReflection() {
   const [user, setUser] = useState(null)
   const [couple, setCouple] = useState(null)
   const [isUser1, setIsUser1] = useState(true)
+  const [userName, setUserName] = useState('You')
   const [partnerName, setPartnerName] = useState('Partner')
   const [weekCheckins, setWeekCheckins] = useState([])
   const [weeklyReflection, setWeeklyReflection] = useState(null)
@@ -23,6 +25,11 @@ export default function WeeklyReflection() {
   // Celebration state
   const [showConfetti, setShowConfetti] = useState(false)
   const [showCelebration, setShowCelebration] = useState(false)
+
+  // Enhancement state (Parts 2, 3, 4)
+  const [healthDelta, setHealthDelta] = useState(null)
+  const [nudgeSent, setNudgeSent] = useState(false)
+  const [aiInsight, setAiInsight] = useState(null)
 
   // Check if within reflection window (Friday-Sunday)
   const isReflectionWindow = () => {
@@ -57,6 +64,14 @@ export default function WeeklyReflection() {
       setIsUser1(userIsUser1)
 
       const partnerId = userIsUser1 ? coupleData.user2_id : coupleData.user1_id
+
+      // Fetch current user's display name
+      const { data: myProfile } = await supabase
+        .from('user_profiles')
+        .select('display_name')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      setUserName(myProfile?.display_name || 'You')
 
       const { data: partnerProfile } = await supabase
         .from('user_profiles')
@@ -105,7 +120,6 @@ export default function WeeklyReflection() {
 
       // Check if both just completed and show celebration
       if (reflection?.user1_completed_at && reflection?.user2_completed_at) {
-        // Check if this is a fresh completion (within last 30 seconds)
         const myCompletedAt = userIsUser1 ? reflection.user1_completed_at : reflection.user2_completed_at
         const completedTime = new Date(myCompletedAt).getTime()
         const now = Date.now()
@@ -126,6 +140,57 @@ export default function WeeklyReflection() {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  // Part 4 — AI insight generator
+  const generateInsight = async (reflection, checkins) => {
+    try {
+      const user1Pick = checkins.find(
+        c => c.id === reflection.user1_favorite_checkin_id
+      )?.question_response
+      const user2Pick = checkins.find(
+        c => c.id === reflection.user2_favorite_checkin_id
+      )?.question_response
+
+      const res = await fetch('/api/weekly-reflection/insight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reflectionId: reflection.id,
+          coupleId: couple.id,
+          user1Name: isUser1 ? userName : partnerName,
+          user2Name: isUser1 ? partnerName : userName,
+          user1Pick,
+          user2Pick,
+          user1Reason: reflection.user1_reason,
+          user2Reason: reflection.user2_reason,
+        }),
+      })
+      const data = await res.json()
+      if (data.insight) setAiInsight(data.insight)
+    } catch (err) {
+      console.error('Insight generation error:', err)
+    }
+  }
+
+  // Part 3 — nudge partner via flirt
+  const sendNudge = async () => {
+    if (nudgeSent) return
+    const partnerId = couple ? (isUser1 ? couple.user2_id : couple.user1_id) : null
+    try {
+      await supabase
+        .from('flirts')
+        .insert({
+          couple_id: couple.id,
+          sender_id: user.id,
+          recipient_id: partnerId,
+          message: `I finished my weekly reflection — your turn! 👀💕`,
+          type: 'text',
+        })
+      setNudgeSent(true)
+    } catch (err) {
+      console.error('Nudge error:', err)
+    }
+  }
 
   const handleSubmit = async () => {
     if (!selectedCheckinId || submitting) return
@@ -148,7 +213,6 @@ export default function WeeklyReflection() {
       let updatedReflection
 
       if (weeklyReflection) {
-        // Update existing record
         const { data, error } = await supabase
           .from('weekly_reflections')
           .update(updateData)
@@ -159,7 +223,6 @@ export default function WeeklyReflection() {
         if (error) throw error
         updatedReflection = data
       } else {
-        // Create new record
         const { data, error } = await supabase
           .from('weekly_reflections')
           .insert({
@@ -176,7 +239,6 @@ export default function WeeklyReflection() {
 
       setWeeklyReflection(updatedReflection)
 
-      // Check if both completed
       const bothCompleted = updatedReflection.user1_completed_at && updatedReflection.user2_completed_at
 
       if (bothCompleted) {
@@ -198,8 +260,35 @@ export default function WeeklyReflection() {
           }
         ])
 
+        // Part 2 — fetch health score before RPC
+        const { data: healthBefore } = await supabase
+          .from('relationship_health')
+          .select('overall_score')
+          .eq('couple_id', couple.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
         // Trigger health recalculation
         await supabase.rpc('calculate_relationship_health', { p_couple_id: couple.id })
+
+        // Part 2 — fetch health score after RPC
+        const { data: healthAfter } = await supabase
+          .from('relationship_health')
+          .select('overall_score')
+          .eq('couple_id', couple.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (healthBefore?.overall_score && healthAfter?.overall_score) {
+          setHealthDelta(healthAfter.overall_score - healthBefore.overall_score)
+        }
+
+        // Part 4 — generate AI insight if not already present
+        if (!updatedReflection.ai_insight) {
+          generateInsight(updatedReflection, weekCheckins)
+        }
 
         // Show celebration
         setShowCelebration(true)
@@ -232,7 +321,7 @@ export default function WeeklyReflection() {
   const myFavoriteCheckin = weekCheckins.find(c => c.id === myFavoriteId)
   const partnerFavoriteCheckin = weekCheckins.find(c => c.id === partnerFavoriteId)
 
-  // Split checkins by user for the new per-user schema
+  // Split checkins by user
   const partnerId = couple ? (isUser1 ? couple.user2_id : couple.user1_id) : null
   const partnerWeekCheckins = weekCheckins.filter(c => c.user_id === partnerId)
   const myCheckinsMap = weekCheckins
@@ -241,7 +330,7 @@ export default function WeeklyReflection() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-cream-100 flex items-center justify-center">
+      <div className="min-h-screen bg-[#FDF6EF] flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent mx-auto mb-4"></div>
           <p className="text-coral-500 text-lg">Loading...</p>
@@ -253,9 +342,8 @@ export default function WeeklyReflection() {
   // Outside reflection window
   if (!isReflectionWindow()) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-cream-100 p-4">
+      <div className="min-h-screen bg-[#FDF6EF] p-4">
         <div className="max-w-2xl mx-auto">
-          {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <button
               onClick={() => router.push('/dashboard')}
@@ -266,9 +354,7 @@ export default function WeeklyReflection() {
               </svg>
               Back
             </button>
-            <div className="bg-gradient-to-r from-coral-400 to-coral-500 text-white rounded-xl px-4 py-2 shadow-lg">
-              <span className="font-bold">ABF</span>
-            </div>
+            <img src="/logo-wordmark.png" alt="ABF" className="h-8 w-auto" />
           </div>
 
           <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
@@ -292,9 +378,8 @@ export default function WeeklyReflection() {
   // No check-ins this week
   if (weekCheckins.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-cream-100 p-4">
+      <div className="min-h-screen bg-[#FDF6EF] p-4">
         <div className="max-w-2xl mx-auto">
-          {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <button
               onClick={() => router.push('/dashboard')}
@@ -305,9 +390,7 @@ export default function WeeklyReflection() {
               </svg>
               Back
             </button>
-            <div className="bg-gradient-to-r from-coral-400 to-coral-500 text-white rounded-xl px-4 py-2 shadow-lg">
-              <span className="font-bold">ABF</span>
-            </div>
+            <img src="/logo-wordmark.png" alt="ABF" className="h-8 w-auto" />
           </div>
 
           <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
@@ -329,7 +412,7 @@ export default function WeeklyReflection() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-cream-100 p-4 relative">
+    <div className="min-h-screen bg-[#FDF6EF] p-4 pb-24 relative">
       {/* Confetti Animation */}
       {showConfetti && (
         <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
@@ -362,9 +445,7 @@ export default function WeeklyReflection() {
             </svg>
             Back
           </button>
-          <div className="bg-gradient-to-r from-coral-400 to-coral-500 text-white rounded-xl px-4 py-2 shadow-lg">
-            <span className="font-bold">ABF</span>
-          </div>
+          <img src="/logo-wordmark.png" alt="ABF" className="h-8 w-auto" />
         </div>
 
         {/* STATE C: Both Completed */}
@@ -379,6 +460,19 @@ export default function WeeklyReflection() {
               </div>
             )}
 
+            {/* Part 2 — Health Delta */}
+            {healthDelta !== null && healthDelta !== 0 && (
+              <div className="bg-white rounded-2xl p-4 text-center shadow-sm">
+                <p className="text-gray-500 text-sm">Relationship Health</p>
+                <p className="text-2xl font-bold text-[#E8614D]">
+                  {healthDelta > 0 ? '+' : ''}{healthDelta} points
+                </p>
+                <p className="text-gray-400 text-xs mt-1">
+                  from this week's reflection
+                </p>
+              </div>
+            )}
+
             <h2 className="text-2xl font-bold text-gray-800 text-center">This Week's Moments 💕</h2>
 
             {/* What I picked from partner's answers */}
@@ -387,7 +481,7 @@ export default function WeeklyReflection() {
                 You picked from {partnerName}'s answers:
               </h3>
               {myFavoriteCheckin && (
-                <div className="bg-gradient-to-r from-cream-50 to-purple-50 rounded-xl p-4 border-2 border-coral-100">
+                <div className="bg-gradient-to-r from-cream-50 to-[#FDF6EF] rounded-xl p-4 border-2 border-coral-100">
                   <p className="text-sm text-gray-500 mb-2">{formatDate(myFavoriteCheckin.check_date)}</p>
                   <p className="text-sm text-gray-600 italic mb-3">"{myFavoriteCheckin.question_text}"</p>
                   <div className="bg-cream-100 rounded-lg p-3 mb-3">
@@ -410,7 +504,7 @@ export default function WeeklyReflection() {
                 {partnerName} picked from your answers:
               </h3>
               {partnerFavoriteCheckin && (
-                <div className="bg-gradient-to-r from-purple-50 to-cream-50 rounded-xl p-4 border-2 border-indigo-400">
+                <div className="bg-gradient-to-r from-[#FDF6EF] to-cream-50 rounded-xl p-4 border-2 border-indigo-400">
                   <p className="text-sm text-gray-500 mb-2">{formatDate(partnerFavoriteCheckin.check_date)}</p>
                   <p className="text-sm text-gray-600 italic mb-3">"{partnerFavoriteCheckin.question_text}"</p>
                   <div className="bg-cream-100 rounded-lg p-3 mb-3">
@@ -426,6 +520,18 @@ export default function WeeklyReflection() {
                 </div>
               )}
             </div>
+
+            {/* Part 4 — AI Coach Insight */}
+            {(aiInsight || weeklyReflection?.ai_insight) && (
+              <div className="bg-gradient-to-r from-[#E8614D] to-[#3D3580] rounded-2xl p-6 text-white">
+                <p className="text-xs font-medium opacity-75 mb-2">
+                  💡 Coach Insight
+                </p>
+                <p className="text-white leading-relaxed">
+                  {aiInsight || weeklyReflection?.ai_insight}
+                </p>
+              </div>
+            )}
 
             {/* Back button */}
             <div className="text-center pt-4">
@@ -453,13 +559,30 @@ export default function WeeklyReflection() {
                 <div className="w-2 h-2 bg-coral-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                 <div className="w-2 h-2 bg-coral-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
               </div>
+
+              {/* Part 3 — Nudge button */}
+              <div className="mt-6 text-center">
+                <p className="text-gray-400 text-sm mb-3">
+                  Want to give {partnerName} a nudge?
+                </p>
+                <button
+                  onClick={sendNudge}
+                  disabled={nudgeSent}
+                  className="bg-[#E8614D] text-white px-6 py-2 rounded-full text-sm font-medium disabled:opacity-50 transition-all"
+                >
+                  {nudgeSent ? '✓ Nudge sent!' : `Nudge ${partnerName} 👀`}
+                </button>
+                <p className="text-gray-300 text-xs mt-2">
+                  Or tell them in person — even better 💕
+                </p>
+              </div>
             </div>
 
             {/* Show what I picked */}
             <div className="bg-white rounded-2xl shadow-xl p-6">
               <h3 className="text-lg font-semibold text-coral-600 mb-4">Your Selection:</h3>
               {myFavoriteCheckin && (
-                <div className="bg-gradient-to-r from-cream-50 to-purple-50 rounded-xl p-4 border-2 border-coral-100">
+                <div className="bg-gradient-to-r from-cream-50 to-[#FDF6EF] rounded-xl p-4 border-2 border-coral-100">
                   <p className="text-sm text-gray-500 mb-2">{formatDate(myFavoriteCheckin.check_date)}</p>
                   <p className="text-sm text-gray-600 italic mb-3">"{myFavoriteCheckin.question_text}"</p>
                   <div className="bg-cream-100 rounded-lg p-3 mb-3">
@@ -610,6 +733,8 @@ export default function WeeklyReflection() {
           </div>
         )}
       </div>
+
+      <BottomNav />
 
       {/* Custom animations */}
       <style jsx>{`

@@ -88,6 +88,14 @@ function buildFeatureCards({ todayCheckinDone, nextDate, lastFlirtDaysAgo, memor
       href: '/timeline',
       accent: 'border-[#E8614D]',
     },
+    {
+      emoji: '📝',
+      label: 'Weekly Reflection',
+      status: 'Reflect on the week',
+      statusColor: 'text-[#9CA3AF]',
+      href: '/weekly-reflection',
+      accent: 'border-[#E8614D]',
+    },
   ]
 }
 
@@ -464,6 +472,14 @@ export default function Dashboard() {
                 <p className={`text-xs ${card.statusColor}`}>{card.status}</p>
               </button>
             ))}
+          </div>
+          <div className="mt-2 text-right">
+            <button
+              onClick={() => router.push('/weekly-reflection/history')}
+              className="text-xs text-[#9CA3AF] hover:text-[#E8614D] transition-colors"
+            >
+              View reflection history →
+            </button>
           </div>
         </section>
 
