@@ -110,7 +110,10 @@ export default function FlirtsHistory() {
       .delete()
       .eq('id', flirtId)
       .eq('sender_id', user.id)
-    if (!error) {
+    if (error) {
+      console.error('Delete error:', error)
+      alert('Could not delete. Please try again.')
+    } else {
       setFlirts(prev => prev.filter(f => f.id !== flirtId))
     }
   }

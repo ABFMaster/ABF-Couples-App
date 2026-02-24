@@ -166,6 +166,36 @@ export default function FlirtView({ isOpen, onClose, flirt, senderName, coupleId
 
         {/* Flirt content */}
         <div className="bg-white rounded-3xl p-6 shadow-2xl space-y-4">
+          {/* Song */}
+          {localFlirt?.spotify_album_art && (
+            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl mb-4">
+              <img
+                src={localFlirt.spotify_album_art}
+                alt="Album art"
+                className="w-16 h-16 rounded-xl object-cover shadow-sm flex-shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-[#2D3648] truncate">
+                  {localFlirt.spotify_track_name}
+                </p>
+                <p className="text-gray-500 text-sm truncate">
+                  {localFlirt.spotify_artist}
+                </p>
+                {localFlirt.spotify_track_url && (
+                  <a
+                    href={localFlirt.spotify_track_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: '#1DB954' }}
+                    className="text-sm font-medium flex items-center gap-1 mt-1"
+                  >
+                    ▶ Open in Spotify
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* GIF */}
           {localFlirt.gif_url && (
             <div className="rounded-2xl overflow-hidden">
