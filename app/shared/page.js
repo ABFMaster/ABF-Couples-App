@@ -38,9 +38,10 @@ function relativeTime(dateStr) {
 // ── ITEM CARD ─────────────────────────────────────────────────────────────────
 
 function ItemCard({ item, userId, userName, onToggleDone, onDelete }) {
-  const isOwner   = item.user_id === userId
-  const typeEmoji = TABS[item.type]?.emoji || '✨'
-  const hasPoster = !!item.poster_url
+  const isOwner    = item.user_id === userId
+  const typeEmoji  = TABS[item.type]?.emoji || '✨'
+  const hasPoster  = !!item.poster_url
+  const hasArtwork = !!item.artwork_url
 
   return (
     <div className={`bg-white rounded-2xl overflow-hidden shadow-sm transition-all ${item.completed ? 'opacity-60' : ''}`}>
@@ -51,6 +52,12 @@ function ItemCard({ item, userId, userName, onToggleDone, onDelete }) {
             alt={item.title}
             className="w-14 h-20 object-cover rounded-lg flex-shrink-0"
           />
+        ) : hasArtwork ? (
+          <img
+            src={item.artwork_url}
+            alt={item.title}
+            className="w-12 h-12 object-cover rounded-lg flex-shrink-0 mt-0.5"
+          />
         ) : (
           <span className="text-3xl flex-shrink-0 mt-0.5">{typeEmoji}</span>
         )}
@@ -58,10 +65,25 @@ function ItemCard({ item, userId, userName, onToggleDone, onDelete }) {
           <p className={`text-[#2D3648] font-semibold text-base leading-tight ${item.completed ? 'line-through text-[#9CA3AF]' : ''}`}>
             {item.title}
           </p>
+          {item.artist && (
+            <p className="text-[#9CA3AF] text-xs mt-0.5 truncate">{item.artist}</p>
+          )}
           {(item.year || item.rating) && (
             <p className="text-[#9CA3AF] text-xs mt-0.5">
               {item.year}{item.year && item.rating ? ' · ' : ''}{item.rating ? `⭐ ${item.rating}/10` : ''}
             </p>
+          )}
+          {item.streaming_url && (
+            <a
+              href={item.streaming_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#1DB954' }}
+              className="text-xs font-medium flex items-center gap-1 mt-1"
+              onClick={e => e.stopPropagation()}
+            >
+              ▶ Spotify
+            </a>
           )}
           {item.note ? (
             <p className="text-[#6B7280] text-sm mt-1 italic">"{item.note}"</p>

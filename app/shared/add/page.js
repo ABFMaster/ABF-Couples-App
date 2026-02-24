@@ -13,8 +13,10 @@ const ITEM_TYPES = {
   date_idea:  { emoji: '💡', label: 'Date Idea' },
 }
 
-// Types that use OMDB search instead of a plain text input
+// Types that use OMDB search
 const OMDB_TYPES = ['movie', 'show']
+// Types that use Spotify search
+const SPOTIFY_TYPES = ['song']
 
 export default function AddSharedItemPage() {
   const router = useRouter()
@@ -26,24 +28,36 @@ export default function AddSharedItemPage() {
 
   const [coupleId, setCoupleId] = useState(null)
   const [userId, setUserId]     = useState(null)
+  const [sessionToken, setSessionToken] = useState(null)
 
-  // Plain text mode (song, restaurant, date_idea)
+  // Plain text mode (restaurant, date_idea)
   const [title, setTitle] = useState('')
 
   // OMDB search mode (movie, show)
   const [query, setQuery]               = useState('')
   const [results, setResults]           = useState([])
   const [searching, setSearching]       = useState(false)
-  const [selected, setSelected]         = useState(null) // full detail object from getDetails
+  const [selected, setSelected]         = useState(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
 
-  const debounceRef = useRef(null)
+  // Spotify search mode (song)
+  const [spotifyConnected, setSpotifyConnected]   = useState(null) // null=loading, true, false
+  const [spotifyQuery, setSpotifyQuery]           = useState('')
+  const [spotifyResults, setSpotifyResults]       = useState([])
+  const [spotifySearching, setSpotifySearching]   = useState(false)
+  const [spotifySelected, setSpotifySelected]     = useState(null)
+
+  const debounceRef         = useRef(null)
+  const spotifyDebounceRef  = useRef(null)
 
   useEffect(() => {
     const load = async () => {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) { router.push('/login'); return }
       setUserId(user.id)
+
+      const { data: { session } } = await supabase.auth.getSession()
+      setSessionToken(session?.access_token || null)
 
       const { data: couple } = await supabase
         .from('couples')
@@ -53,6 +67,15 @@ export default function AddSharedItemPage() {
 
       if (!couple) { router.push('/connect'); return }
       setCoupleId(couple.id)
+
+      // Check Spotify connection
+      const { data: spotifyConn } = await supabase
+        .from('user_spotify_connections')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      setSpotifyConnected(!!spotifyConn)
     }
     load()
   }, [router])
@@ -65,7 +88,11 @@ export default function AddSharedItemPage() {
     setTitle('')
     setNote('')
     setError(null)
+    setSpotifyQuery('')
+    setSpotifyResults([])
+    setSpotifySelected(null)
     clearTimeout(debounceRef.current)
+    clearTimeout(spotifyDebounceRef.current)
   }, [type])
 
   // Debounced OMDB search
@@ -87,6 +114,27 @@ export default function AddSharedItemPage() {
     return () => clearTimeout(debounceRef.current)
   }, [query, type])
 
+  // Debounced Spotify search
+  useEffect(() => {
+    if (!SPOTIFY_TYPES.includes(type) || !spotifyConnected || !spotifyQuery.trim()) {
+      setSpotifyResults([])
+      return
+    }
+    clearTimeout(spotifyDebounceRef.current)
+    spotifyDebounceRef.current = setTimeout(async () => {
+      setSpotifySearching(true)
+      try {
+        const res = await fetch(`/api/spotify/search?q=${encodeURIComponent(spotifyQuery)}`, {
+          headers: { Authorization: `Bearer ${sessionToken}` },
+        })
+        const data = await res.json()
+        setSpotifyResults(data.tracks || [])
+      } catch { /* network error */ }
+      setSpotifySearching(false)
+    }, 500)
+    return () => clearTimeout(spotifyDebounceRef.current)
+  }, [spotifyQuery, type, spotifyConnected, sessionToken])
+
   const handleSelect = async (result) => {
     setResults([])
     setQuery('')
@@ -95,15 +143,26 @@ export default function AddSharedItemPage() {
       const detail = await getDetails(result.imdbID)
       setSelected(detail)
     } catch {
-      // Fallback: use search result fields only
       setSelected({ Title: result.Title, Year: result.Year, Poster: result.Poster, imdbID: result.imdbID })
     }
     setLoadingDetail(false)
   }
 
+  const handleSpotifySelect = (track) => {
+    setSpotifySelected(track)
+    setSpotifyResults([])
+    setSpotifyQuery('')
+  }
+
   const handleSave = async () => {
-    const isOmdb = OMDB_TYPES.includes(type)
-    const effectiveTitle = isOmdb ? selected?.Title : title.trim()
+    const isOmdb    = OMDB_TYPES.includes(type)
+    const isSpotify = SPOTIFY_TYPES.includes(type)
+
+    let effectiveTitle
+    if (isOmdb)    effectiveTitle = selected?.Title
+    else if (isSpotify) effectiveTitle = spotifySelected?.name || title.trim()
+    else           effectiveTitle = title.trim()
+
     if (!effectiveTitle || saving || !coupleId) return
     setSaving(true)
     setError(null)
@@ -122,6 +181,13 @@ export default function AddSharedItemPage() {
         payload.rating     = selected.imdbRating && selected.imdbRating !== 'N/A' ? selected.imdbRating : null
         payload.plot       = selected.Plot     && selected.Plot     !== 'N/A' ? selected.Plot     : null
       }
+      if (isSpotify && spotifySelected) {
+        payload.spotify_track_id  = spotifySelected.id          || null
+        payload.artwork_url       = spotifySelected.albumArt    || null
+        payload.artist            = spotifySelected.artist      || null
+        payload.streaming_url     = spotifySelected.spotifyUrl  || null
+        payload.streaming_service = 'spotify'
+      }
       const { error: err } = await supabase.from('shared_items').insert(payload)
       if (err) { setError(err.message); return }
       router.push('/shared')
@@ -133,8 +199,13 @@ export default function AddSharedItemPage() {
     }
   }
 
-  const isOmdb  = OMDB_TYPES.includes(type)
-  const canSave = isOmdb ? !!selected : !!title.trim()
+  const isOmdb    = OMDB_TYPES.includes(type)
+  const isSpotify = SPOTIFY_TYPES.includes(type)
+  const canSave   = isOmdb
+    ? !!selected
+    : isSpotify
+      ? (!!spotifySelected || !!title.trim())
+      : !!title.trim()
 
   return (
     <div className="min-h-screen bg-[#F8F6F3] flex flex-col">
@@ -254,6 +325,116 @@ export default function AddSharedItemPage() {
                   </div>
                 )}
               </div>
+            )}
+          </>
+        ) : isSpotify ? (
+          /* ── Spotify search flow ──────────────────────────────────────── */
+          <>
+            {spotifyConnected === null ? (
+              /* Loading */
+              <div className="flex items-center justify-center py-10">
+                <div className="w-6 h-6 border-2 border-[#E8614D] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : spotifyConnected ? (
+              /* Connected — search UI */
+              <>
+                {spotifySelected ? (
+                  /* Selected track card */
+                  <div className="bg-white rounded-2xl overflow-hidden shadow-sm mb-4">
+                    <div className="flex items-center gap-3 p-4">
+                      {spotifySelected.albumArt ? (
+                        <img
+                          src={spotifySelected.albumArt}
+                          alt={spotifySelected.name}
+                          className="w-16 h-16 object-cover rounded-xl flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <span className="text-2xl">🎵</span>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-[#2D3648] text-base leading-snug truncate">{spotifySelected.name}</p>
+                        <p className="text-[#9CA3AF] text-sm mt-0.5 truncate">{spotifySelected.artist}</p>
+                        <p className="text-[#9CA3AF] text-xs mt-0.5 truncate">{spotifySelected.album}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSpotifySelected(null)}
+                      className="w-full py-2.5 border-t border-gray-100 text-sm text-[#E8614D] font-medium hover:bg-gray-50 transition-colors"
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  /* Search input + results */
+                  <div className="mb-4">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={spotifyQuery}
+                        onChange={e => setSpotifyQuery(e.target.value)}
+                        placeholder="Search for a song…"
+                        className="w-full px-4 py-3.5 rounded-2xl border-2 border-gray-100 focus:border-[#1DB954] focus:outline-none text-[#2D3648] bg-white text-base"
+                        autoFocus
+                      />
+                      {spotifySearching && (
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                          <div className="w-4 h-4 border-2 border-[#1DB954] border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+                    </div>
+
+                    {spotifyResults.length > 0 && (
+                      <div className="mt-2 bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+                        {spotifyResults.map(track => (
+                          <button
+                            key={track.id}
+                            onClick={() => handleSpotifySelect(track)}
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[#F0FDF4] transition-colors border-b border-gray-50 last:border-0 text-left"
+                          >
+                            {track.albumArtSmall ? (
+                              <img
+                                src={track.albumArtSmall}
+                                alt={track.name}
+                                className="w-10 h-10 object-cover rounded flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
+                                <span className="text-lg">🎵</span>
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[#2D3648] font-semibold text-sm leading-tight truncate">{track.name}</p>
+                              <p className="text-[#9CA3AF] text-xs mt-0.5 truncate">{track.artist}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Not connected — plain text + nudge */
+              <>
+                <div className="bg-[#F0FDF4] border border-[#1DB954]/20 rounded-2xl p-4 mb-4 flex items-start gap-3">
+                  <span className="text-2xl flex-shrink-0">🎵</span>
+                  <div>
+                    <p className="text-[#2D3648] font-semibold text-sm">Connect Spotify for song search</p>
+                    <p className="text-[#6B7280] text-xs mt-0.5">Or just type the song title below.</p>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSave()}
+                  placeholder="🎵 Song title…"
+                  className="w-full px-4 py-3.5 rounded-2xl border-2 border-gray-100 focus:border-[#E8614D] focus:outline-none text-[#2D3648] bg-white mb-3 text-base"
+                  autoFocus
+                />
+              </>
             )}
           </>
         ) : (
