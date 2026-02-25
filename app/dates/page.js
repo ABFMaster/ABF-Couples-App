@@ -90,7 +90,9 @@ const CURATED_IDEAS = [
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function UpcomingHeroCard({ plan, onClick }) {
-  const mapUrl = staticMapUrl(plan.latitude, plan.longitude)
+  const mapUrl = plan.stops?.length
+    ? multiStopMapUrl(plan.stops)
+    : staticMapUrl(plan.latitude, plan.longitude)
   return (
     <div
       className="relative rounded-3xl overflow-hidden shadow-lg cursor-pointer"
@@ -111,6 +113,11 @@ function UpcomingHeroCard({ plan, onClick }) {
           )}
           {plan.address && (
             <p className="text-white/60 text-xs mt-0.5 truncate">📍 {plan.address}</p>
+          )}
+          {!plan.address && plan.stops?.length > 0 && (
+            <p className="text-white/60 text-xs mt-0.5 truncate">
+              📍 {plan.stops[0].name}{plan.stops.length > 1 ? ` + ${plan.stops.length - 1} more` : ''}
+            </p>
           )}
         </div>
         <button
@@ -222,18 +229,40 @@ export default function DatesPage() {
 
     const now = new Date().toISOString()
 
-    // Upcoming: next planned date
-    const { data: upcoming } = await supabase
-      .from('date_plans')
-      .select('*')
-      .eq('couple_id', cid)
-      .eq('status', 'planned')
-      .gt('date_time', now)
-      .order('date_time', { ascending: true })
-      .limit(1)
-      .maybeSingle()
+    // Upcoming: next planned date (date_plans or custom_dates)
+    const [{ data: upcoming }, { data: upcomingCustom }] = await Promise.all([
+      supabase
+        .from('date_plans')
+        .select('*')
+        .eq('couple_id', cid)
+        .eq('status', 'planned')
+        .gt('date_time', now)
+        .order('date_time', { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('custom_dates')
+        .select('*')
+        .eq('couple_id', cid)
+        .eq('status', 'planned')
+        .gt('date_time', now)
+        .order('date_time', { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+    ])
 
-    setUpcomingDate(upcoming ?? null)
+    // Show whichever upcoming date is sooner
+    let upcomingToShow = null
+    if (upcoming && upcomingCustom) {
+      upcomingToShow = new Date(upcoming.date_time) <= new Date(upcomingCustom.date_time)
+        ? upcoming
+        : upcomingCustom
+    } else if (upcoming) {
+      upcomingToShow = upcoming
+    } else if (upcomingCustom) {
+      upcomingToShow = upcomingCustom
+    }
+    setUpcomingDate(upcomingToShow)
 
     // Past date_plans
     const { data: pastPlans } = await supabase
@@ -245,10 +274,10 @@ export default function DatesPage() {
       .order('date_time', { ascending: false })
       .limit(10)
 
-    // Custom dates
+    // Custom dates (excluding upcoming ones with future date_time)
     const { data: customDates } = await supabase
       .from('custom_dates')
-      .select('*')
+      .select('id, title, date_time, created_at, status, user1_rating, user2_rating, stops')
       .eq('couple_id', cid)
       .order('created_at', { ascending: false })
       .limit(6)
@@ -270,12 +299,12 @@ export default function DatesPage() {
         id:     c.id,
         source: 'custom',
         title:  c.title,
-        date:   c.created_at,
+        date:   c.date_time || c.created_at,
         lat:    c.stops?.[0]?.lat ?? null,
         lng:    c.stops?.[0]?.lng ?? null,
         stops:  c.stops,
-        status: null,
-        rating: null,
+        status: c.status,
+        rating: c.user1_rating || c.user2_rating || null,
       })),
     ].sort((a, b) => new Date(b.date ?? 0) - new Date(a.date ?? 0))
 
@@ -360,6 +389,14 @@ export default function DatesPage() {
                   onClick={() => router.push(`/dates/${date.id}`)}
                 />
               ))}
+            </div>
+            <div className="text-center mt-4">
+              <button
+                onClick={() => router.push('/dates/history')}
+                className="text-[#E8614D] text-sm font-semibold hover:underline"
+              >
+                View Date History →
+              </button>
             </div>
           </section>
         )}

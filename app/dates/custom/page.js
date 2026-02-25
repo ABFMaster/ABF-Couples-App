@@ -179,7 +179,8 @@ export default function CustomDateBuilderPage() {
 
   // Save
   const [dateName, setDateName] = useState(defaultDateName())
-  const [saving, setSaving] = useState(false)
+  const [dateTime, setDateTime] = useState('')
+  const [saveStage, setSaveStage] = useState(null)
   const [saveError, setSaveError] = useState(null)
 
   // Refs
@@ -493,34 +494,68 @@ export default function CustomDateBuilderPage() {
   // ── Save to Supabase ─────────────────────────────────────────────
   const handleSave = async () => {
     if (itinerary.length === 0) return
-    setSaving(true)
     setSaveError(null)
+    setSaveStage('saving')
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setSaveError('Not logged in'); return }
+      if (!user) { setSaveError('Not logged in'); setSaveStage(null); return }
 
-      const { data: profile } = await supabase
-        .from('couple_members')
-        .select('couple_id')
-        .eq('user_id', user.id)
+      const { data: coupleData } = await supabase
+        .from('couples')
+        .select('id')
+        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
         .maybeSingle()
 
-      sessionStorage.setItem('customDateItinerary', JSON.stringify(itinerary))
+      const coupleId = coupleData?.id ?? null
 
-      const { error } = await supabase.from('custom_dates').insert({
-        user_id:  user.id,
-        couple_id: profile?.couple_id ?? null,
-        title:    dateName.trim() || defaultDateName(),
-        stops:    itinerary,
-      })
+      // Insert the date first
+      const { data: newDate, error } = await supabase
+        .from('custom_dates')
+        .insert({
+          user_id:   user.id,
+          couple_id: coupleId,
+          title:     dateName.trim() || defaultDateName(),
+          stops:     itinerary,
+          date_time: dateTime ? new Date(dateTime).toISOString() : null,
+          status:    'planned',
+        })
+        .select()
+        .single()
 
       if (error) throw error
-      router.push('/dates')
+
+      // Generate conversation starters
+      setSaveStage('generating')
+      try {
+        await fetch('/api/dates/conversation-starters', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            coupleId,
+            userId: user.id,
+            dateTitle: dateName.trim() || defaultDateName(),
+            stops: itinerary,
+          })
+        }).then(async res => {
+          const { starters } = await res.json()
+          if (starters) {
+            await supabase
+              .from('custom_dates')
+              .update({ conversation_starters: starters })
+              .eq('id', newDate.id)
+          }
+        })
+      } catch (e) {
+        console.error('Starters generation failed:', e)
+        // Non-fatal — date is already saved
+      }
+
+      setSaveStage('done')
+      setTimeout(() => router.push(`/dates/${newDate.id}`), 800)
     } catch (err) {
       console.error('Save error:', err)
       setSaveError('Failed to save. Please try again.')
-    } finally {
-      setSaving(false)
+      setSaveStage(null)
     }
   }
 
@@ -738,14 +773,44 @@ export default function CustomDateBuilderPage() {
                 placeholder="Name your date…"
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-coral-200 focus:bg-white transition-colors"
               />
+              <div className="mt-3">
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                  When is this date? <span className="text-gray-300 font-normal normal-case">(optional)</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={dateTime}
+                  onChange={e => setDateTime(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border-2 border-[#E5E2DD] focus:border-[#E8614D] focus:outline-none text-gray-700 bg-white"
+                />
+              </div>
               {saveError && <p className="text-xs text-red-500 text-center">{saveError}</p>}
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="w-full py-4 bg-gradient-to-r from-coral-500 to-indigo-500 text-white font-bold rounded-2xl shadow-md hover:shadow-lg hover:from-coral-600 hover:to-indigo-600 transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-60"
-              >
-                {saving ? 'Saving…' : <>Save Date <span>→</span></>}
-              </button>
+              {saveStage === null && (
+                <button
+                  onClick={handleSave}
+                  disabled={itinerary.length === 0}
+                  className="w-full py-4 bg-gradient-to-r from-[#E8614D] to-[#3D3580] text-white font-bold rounded-2xl shadow-md disabled:opacity-40 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
+                >
+                  Save Date →
+                </button>
+              )}
+              {saveStage === 'saving' && (
+                <div className="w-full py-4 bg-gradient-to-r from-[#E8614D] to-[#3D3580] text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Saving your date…
+                </div>
+              )}
+              {saveStage === 'generating' && (
+                <div className="w-full py-4 bg-gradient-to-r from-[#E8614D] to-[#3D3580] text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ✨ Generating conversation starters…
+                </div>
+              )}
+              {saveStage === 'done' && (
+                <div className="w-full py-4 bg-green-500 text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
+                  ✓ Date saved! Heading there now…
+                </div>
+              )}
             </div>
           )}
         </div>

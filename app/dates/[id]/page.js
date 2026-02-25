@@ -48,6 +48,13 @@ export default function DateDetailPage({ params }) {
   const [date, setDate]       = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [showStarters, setShowStarters] = useState(false)
+  const [activeCategory, setActiveCategory] = useState('personalized')
+  const [showCompleteModal, setShowCompleteModal] = useState(false)
+  const [myRating, setMyRating] = useState(0)
+  const [myReview, setMyReview] = useState('')
+  const [submittingComplete, setSubmittingComplete] = useState(false)
+  const [completionError, setCompletionError] = useState(null)
 
   useEffect(() => {
     loadDate()
@@ -115,14 +122,61 @@ export default function DateDetailPage({ params }) {
 
   const isPlan   = date._source === 'plan'
   const isCustom = date._source === 'custom'
-  const isCompleted = isPlan && date.status === 'completed'
+  const isCompleted = date.status === 'completed'
 
   const mapUrl = isCustom
     ? multiStopMapUrl(date.stops)
     : staticMapUrl(date.latitude, date.longitude)
 
-  const dateStr = fmtDate(isPlan ? date.date_time : date.created_at)
-  const timeStr = isPlan ? fmtTime(date.date_time) : null
+  const dateStr = fmtDate(isPlan ? date.date_time : (date.date_time || date.created_at))
+  const timeStr = date.date_time ? fmtTime(date.date_time) : null
+
+  const now = new Date()
+  const dateTimeValue = date.date_time ? new Date(date.date_time) : null
+  const isUpcoming = date.status === 'planned' && dateTimeValue && dateTimeValue > now
+  const isPast = date.status === 'planned' && dateTimeValue && dateTimeValue <= now
+
+  const handleComplete = async () => {
+    if (!myRating || submittingComplete) return
+    setSubmittingComplete(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const isUser1 = date.user_id === user.id
+
+      const updateData = isUser1 ? {
+        user1_rating: myRating,
+        user1_review: myReview.trim() || null,
+        user1_completed_at: new Date().toISOString()
+      } : {
+        user2_rating: myRating,
+        user2_review: myReview.trim() || null,
+        user2_completed_at: new Date().toISOString()
+      }
+
+      // Check if partner already completed
+      const bothDone = isUser1
+        ? !!date.user2_completed_at
+        : !!date.user1_completed_at
+
+      if (bothDone) {
+        updateData.status = 'completed'
+      }
+
+      const { error } = await supabase
+        .from('custom_dates')
+        .update(updateData)
+        .eq('id', date.id)
+
+      if (error) throw error
+      setShowCompleteModal(false)
+      loadDate() // Refresh
+    } catch (err) {
+      console.error('Complete error:', err)
+      setCompletionError('Failed to save. Try again.')
+    } finally {
+      setSubmittingComplete(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#F8F6F3] pb-24">
@@ -135,14 +189,13 @@ export default function DateDetailPage({ params }) {
         >←</button>
         <h1 className="font-bold text-gray-900 flex-1 truncate">{date.title}</h1>
         {isCompleted && (
-          <span className="flex-shrink-0 text-xs bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-semibold">
-            ✓ Done
-          </span>
+          <span className="flex-shrink-0 text-xs bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-semibold">✓ Done</span>
         )}
-        {isPlan && date.status === 'planned' && (
-          <span className="flex-shrink-0 text-xs bg-cream-100 text-coral-700 px-2.5 py-1 rounded-full font-semibold">
-            Upcoming
-          </span>
+        {isUpcoming && (
+          <span className="flex-shrink-0 text-xs bg-cream-100 text-coral-700 px-2.5 py-1 rounded-full font-semibold">Upcoming</span>
+        )}
+        {isPast && !isCompleted && (
+          <span className="flex-shrink-0 text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full font-semibold">Awaiting Review</span>
         )}
       </div>
 
@@ -235,8 +288,53 @@ export default function DateDetailPage({ params }) {
           </div>
         )}
 
+        {/* ── Conversation Starters ─────────────────────────── */}
+        {(isCustom || isPlan) && date.conversation_starters && (
+          <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
+            <button
+              onClick={() => setShowStarters(!showStarters)}
+              className="w-full flex items-center justify-between"
+            >
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">✨ Conversation Starters</p>
+                <p className="text-gray-600 text-sm mt-0.5">
+                  {showStarters ? 'Tap to hide' : 'Things to talk about tonight'}
+                </p>
+              </div>
+              <span className="text-gray-400 text-lg">{showStarters ? '↑' : '↓'}</span>
+            </button>
+
+            {showStarters && (
+              <div className="mt-4">
+                <div className="flex gap-2 mb-4">
+                  {['personalized', 'fun', 'growth'].map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setActiveCategory(cat)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold capitalize transition-all ${
+                        activeCategory === cat
+                          ? 'bg-[#E8614D] text-white'
+                          : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {cat === 'personalized' ? '💡 Us' : cat === 'fun' ? '😄 Fun' : '💬 Deeper'}
+                    </button>
+                  ))}
+                </div>
+                <div className="space-y-2">
+                  {(date.conversation_starters[activeCategory] || []).map((q, i) => (
+                    <div key={i} className="bg-[#FDF6EF] rounded-xl px-4 py-3">
+                      <p className="text-gray-700 text-sm leading-relaxed">{q}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── Reflection (completed date_plans) ────────────── */}
-        {isCompleted && (date.rating || date.reflection_notes) && (
+        {isPlan && isCompleted && (date.rating || date.reflection_notes) && (
           <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">How it went</p>
             {date.rating > 0 && (
@@ -248,6 +346,34 @@ export default function DateDetailPage({ params }) {
           </div>
         )}
 
+        {/* ── Reviews (completed custom_dates) ─────────────── */}
+        {isCustom && isCompleted && (
+          <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">How it went</p>
+            {[
+              { rating: date.user1_rating, review: date.user1_review, label: 'Partner 1' },
+              { rating: date.user2_rating, review: date.user2_review, label: 'Partner 2' }
+            ].filter(r => r.rating).map((r, i) => (
+              <div key={i} className={i > 0 ? 'mt-3 pt-3 border-t border-gray-100' : ''}>
+                <p className="text-lg mb-1">{'⭐'.repeat(r.rating)}</p>
+                {r.review && (
+                  <p className="text-gray-600 text-sm italic">"{r.review}"</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Mark as Done ──────────────────────────────────── */}
+        {isCustom && !isCompleted && (isPast || !dateTimeValue) && (
+          <button
+            onClick={() => setShowCompleteModal(true)}
+            className="w-full py-4 bg-white border-2 border-[#E8614D] text-[#E8614D] font-bold rounded-2xl text-sm"
+          >
+            ✓ Mark as Done
+          </button>
+        )}
+
         {/* ── Plan again CTA ────────────────────────────────── */}
         <button
           onClick={() => router.push('/dates/custom')}
@@ -257,6 +383,55 @@ export default function DateDetailPage({ params }) {
         </button>
 
       </div>
+
+      {/* ── Completion Modal ──────────────────────────────────── */}
+      {showCompleteModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold text-gray-900 mb-1">How was the date? 💕</h3>
+            <p className="text-gray-500 text-sm mb-5">Rate and leave a note for your memory book</p>
+
+            <div className="flex gap-2 justify-center mb-5">
+              {[1, 2, 3, 4, 5].map(star => (
+                <button
+                  key={star}
+                  onClick={() => setMyRating(star)}
+                  className={`text-3xl transition-transform ${myRating >= star ? 'scale-110' : 'opacity-30'}`}
+                >
+                  ⭐
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              value={myReview}
+              onChange={e => setMyReview(e.target.value)}
+              placeholder="What made it special? (optional)"
+              className="w-full p-4 border-2 border-[#E5E2DD] rounded-xl focus:border-[#E8614D] focus:outline-none resize-none h-24 text-sm mb-4"
+            />
+
+            {completionError && (
+              <p className="text-red-500 text-sm mb-3">{completionError}</p>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCompleteModal(false)}
+                className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-500 font-semibold text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleComplete}
+                disabled={!myRating || submittingComplete}
+                className="flex-1 py-3 rounded-xl bg-[#E8614D] text-white font-bold text-sm disabled:opacity-40"
+              >
+                {submittingComplete ? 'Saving…' : 'Save Review'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
