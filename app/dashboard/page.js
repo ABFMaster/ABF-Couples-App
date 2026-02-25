@@ -125,6 +125,7 @@ export default function Dashboard() {
   const [activeTrip]                            = useState(null)
 
   const [sharedPreview, setSharedPreview]       = useState([])
+  const [pendingDate, setPendingDate]           = useState(null)
 
   // Hydrate localStorage on client only
   useEffect(() => {
@@ -263,6 +264,20 @@ export default function Dashboard() {
           } catch { /* table may not exist yet */ }
         })(),
 
+        // Pending date plans shared with me
+        (async () => {
+          try {
+            const { data } = await supabase
+              .from('custom_dates')
+              .select('id, title, stops, date_time')
+              .eq('shared_with', user.id)
+              .eq('status', 'planned')
+              .order('created_at', { ascending: false })
+              .limit(1)
+            if (data?.[0]) setPendingDate(data[0])
+          } catch { /* ignore */ }
+        })(),
+
       ])
 
       setLoading(false)
@@ -339,6 +354,26 @@ export default function Dashboard() {
               aria-label="Dismiss"
             >
               ×
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== PENDING DATE BANNER ===== */}
+      {pendingDate && (
+        <div className="bg-gradient-to-r from-[#3D3580] to-[#5D55A0] px-4 py-3">
+          <div className="max-w-lg mx-auto flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-semibold">
+                💌 {partnerName} planned a date for you!
+              </p>
+              <p className="text-white/70 text-xs mt-0.5 truncate">{pendingDate.title}</p>
+            </div>
+            <button
+              onClick={() => router.push(`/dates/${pendingDate.id}`)}
+              className="flex-shrink-0 bg-white text-[#3D3580] font-bold px-4 py-1.5 rounded-full text-xs hover:bg-white/90 transition-colors"
+            >
+              View Plan →
             </button>
           </div>
         </div>

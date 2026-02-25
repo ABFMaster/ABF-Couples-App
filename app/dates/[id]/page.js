@@ -56,17 +56,50 @@ export default function DateDetailPage({ params }) {
   const [submittingComplete, setSubmittingComplete] = useState(false)
   const [completionError, setCompletionError] = useState(null)
 
+  // Partner / send state
+  const [currentUserId, setCurrentUserId] = useState(null)
+  const [partnerId, setPartnerId] = useState(null)
+  const [partnerName, setPartnerName] = useState('your partner')
+  const [sendingToPartner, setSendingToPartner] = useState(false)
+  const [sentToPartner, setSentToPartner] = useState(false)
+
+  // Approval state
+  const [approvingDate, setApprovingDate] = useState(false)
+  const [approvalError, setApprovalError] = useState(null)
+
   useEffect(() => {
     loadDate()
   }, [id])
 
   const loadDate = async () => {
-    // Try date_plans first, then custom_dates
-    const { data: plan } = await supabase
-      .from('date_plans')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle()
+    // Fetch current user + partner in parallel with date data
+    const [{ data: { user } }, { data: plan }, { data: custom }] = await Promise.all([
+      supabase.auth.getUser(),
+      supabase.from('date_plans').select('*').eq('id', id).maybeSingle(),
+      supabase.from('custom_dates').select('*').eq('id', id).maybeSingle(),
+    ])
+
+    // Load user + partner info
+    if (user) {
+      setCurrentUserId(user.id)
+      const { data: coupleData } = await supabase
+        .from('couples')
+        .select('user1_id, user2_id')
+        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+        .maybeSingle()
+      if (coupleData) {
+        const pId = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id
+        setPartnerId(pId)
+        if (pId) {
+          const { data: pProfile } = await supabase
+            .from('user_profiles')
+            .select('display_name')
+            .eq('user_id', pId)
+            .maybeSingle()
+          if (pProfile?.display_name) setPartnerName(pProfile.display_name)
+        }
+      }
+    }
 
     if (plan) {
       setDate({ ...plan, _source: 'plan' })
@@ -74,14 +107,9 @@ export default function DateDetailPage({ params }) {
       return
     }
 
-    const { data: custom } = await supabase
-      .from('custom_dates')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle()
-
     if (custom) {
       setDate({ ...custom, _source: 'custom' })
+      setSentToPartner(!!custom.shared_with)
       setLoading(false)
       return
     }
@@ -178,6 +206,68 @@ export default function DateDetailPage({ params }) {
     }
   }
 
+  const sendToPartner = async () => {
+    if (!partnerId || sendingToPartner) return
+    setSendingToPartner(true)
+    try {
+      const { error } = await supabase
+        .from('custom_dates')
+        .update({ shared_with: partnerId, last_edited_by: currentUserId })
+        .eq('id', date.id)
+      if (error) throw error
+
+      // Send flirt notification
+      const { data: coupleData } = await supabase
+        .from('couples')
+        .select('id')
+        .or(`user1_id.eq.${currentUserId},user2_id.eq.${currentUserId}`)
+        .maybeSingle()
+      if (coupleData?.id) {
+        await supabase.from('flirts').insert({
+          couple_id: coupleData.id,
+          sender_id: currentUserId,
+          recipient_id: partnerId,
+          message: `I planned a date for us! Check out "${date.title}" 💕`,
+          flirt_type: 'date_shared',
+        })
+      }
+      setSentToPartner(true)
+      loadDate()
+    } catch (err) {
+      console.error('Send to partner error:', err)
+    } finally {
+      setSendingToPartner(false)
+    }
+  }
+
+  const approveDatePlan = async () => {
+    if (approvingDate) return
+    setApprovingDate(true)
+    setApprovalError(null)
+    try {
+      const isCreator = date.user_id === currentUserId
+      const updateData = isCreator
+        ? { user1_approved_at: new Date().toISOString() }
+        : { user2_approved_at: new Date().toISOString() }
+
+      // If other person already approved, mark as approved
+      const otherApproved = isCreator ? !!date.user2_approved_at : !!date.user1_approved_at
+      if (otherApproved) updateData.status = 'approved'
+
+      const { error } = await supabase
+        .from('custom_dates')
+        .update(updateData)
+        .eq('id', date.id)
+      if (error) throw error
+      loadDate()
+    } catch (err) {
+      console.error('Approval error:', err)
+      setApprovalError('Failed to confirm. Try again.')
+    } finally {
+      setApprovingDate(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#F8F6F3] pb-24">
 
@@ -188,6 +278,14 @@ export default function DateDetailPage({ params }) {
           className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 flex-shrink-0"
         >←</button>
         <h1 className="font-bold text-gray-900 flex-1 truncate">{date.title}</h1>
+        {isCustom && currentUserId === date.user_id && (
+          <button
+            onClick={() => router.push(`/dates/${id}/edit`)}
+            className="flex-shrink-0 text-xs text-gray-400 hover:text-[#E8614D] transition-colors px-2 py-1"
+          >
+            ✏️ Edit
+          </button>
+        )}
         {isCompleted && (
           <span className="flex-shrink-0 text-xs bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-semibold">✓ Done</span>
         )}
@@ -361,6 +459,84 @@ export default function DateDetailPage({ params }) {
                 )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ── Send to Partner ────────────────────────────────── */}
+        {isCustom && !isCompleted && currentUserId === date.user_id && partnerId && (
+          <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
+            {!sentToPartner ? (
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Share with {partnerName}</p>
+                <p className="text-gray-500 text-sm mb-3">Send this date plan so {partnerName} can review and approve it.</p>
+                <button
+                  onClick={sendToPartner}
+                  disabled={sendingToPartner}
+                  className="w-full py-3 bg-gradient-to-r from-[#3D3580] to-[#5D55A0] text-white font-bold rounded-2xl text-sm disabled:opacity-40"
+                >
+                  {sendingToPartner ? 'Sending…' : `💌 Send to ${partnerName}`}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">💌</span>
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">Sent to {partnerName}</p>
+                  <p className="text-gray-400 text-xs mt-0.5">They'll get notified to review this date</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Approval Flow ──────────────────────────────────── */}
+        {isCustom && !isCompleted && date.shared_with && (
+          <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Date Approval</p>
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center gap-3">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                  date.user1_approved_at ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                }`}>
+                  {date.user1_approved_at ? '✓' : '○'}
+                </div>
+                <p className="text-sm text-gray-700">
+                  {date.user_id === currentUserId ? 'You' : partnerName}
+                  <span className="text-gray-400 ml-1.5 text-xs">
+                    {date.user1_approved_at ? '· approved' : '· waiting'}
+                  </span>
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                  date.user2_approved_at ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                }`}>
+                  {date.user2_approved_at ? '✓' : '○'}
+                </div>
+                <p className="text-sm text-gray-700">
+                  {date.shared_with === currentUserId ? 'You' : partnerName}
+                  <span className="text-gray-400 ml-1.5 text-xs">
+                    {date.user2_approved_at ? '· approved' : '· waiting'}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            {date.user1_approved_at && date.user2_approved_at ? (
+              <p className="text-green-600 text-sm font-semibold text-center">✓ Both approved — you're going on a date! 💕</p>
+            ) : ((date.user_id === currentUserId && !date.user1_approved_at) ||
+                 (date.shared_with === currentUserId && !date.user2_approved_at)) && (
+              <div>
+                {approvalError && <p className="text-red-500 text-xs mb-2">{approvalError}</p>}
+                <button
+                  onClick={approveDatePlan}
+                  disabled={approvingDate}
+                  className="w-full py-3 bg-gradient-to-r from-[#E8614D] to-[#3D3580] text-white font-bold rounded-2xl text-sm disabled:opacity-40"
+                >
+                  {approvingDate ? 'Confirming…' : "I'm in! 💕"}
+                </button>
+              </div>
+            )}
           </div>
         )}
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { searchMovies, searchShows, getDetails } from '@/lib/omdb'
@@ -18,11 +18,6 @@ const CATEGORY_CHIPS = [
   { label: 'Outdoors',   type: 'park',          emoji: '🌿' },
 ]
 
-function defaultDateName() {
-  return `Date Night · ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-}
-
-// Haversine distance in km
 function haversineKm(a, b) {
   const R = 6371
   const dLat = (b.lat - a.lat) * Math.PI / 180
@@ -43,7 +38,6 @@ function formatDist(km) {
 function StopCard({ stop, index, total, travelTime, onMoveUp, onMoveDown, onRemove, onNoteChange }) {
   return (
     <div className="px-5 py-4">
-      {/* Travel time connector */}
       {index > 0 && travelTime && (
         <div className="flex items-center gap-2 mb-3 pl-4">
           <div className="w-0.5 h-4 bg-cream-100 ml-3" />
@@ -51,11 +45,9 @@ function StopCard({ stop, index, total, travelTime, onMoveUp, onMoveDown, onRemo
         </div>
       )}
       <div className="flex items-start gap-3">
-        {/* Badge */}
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-coral-400 to-indigo-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 mt-0.5 shadow-sm">
           {index + 1}
         </div>
-        {/* Info */}
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-gray-900 text-sm leading-tight">{stop.name}</p>
           <p className="text-gray-400 text-xs mt-0.5 truncate">{stop.address}</p>
@@ -63,11 +55,10 @@ function StopCard({ stop, index, total, travelTime, onMoveUp, onMoveDown, onRemo
             type="text"
             value={stop.note || ''}
             onChange={e => onNoteChange(e.target.value)}
-            placeholder="Add a note… (e.g. make a reservation)"
+            placeholder="Add a note…"
             className="mt-2 w-full text-xs bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-gray-700 placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-coral-100 focus:bg-white transition-colors"
           />
         </div>
-        {/* Controls */}
         <div className="flex flex-col gap-1 flex-shrink-0 mt-0.5">
           <button onClick={onMoveUp} disabled={index === 0}
             className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed text-xs"
@@ -77,7 +68,6 @@ function StopCard({ stop, index, total, travelTime, onMoveUp, onMoveDown, onRemo
           >↓</button>
           <button onClick={onRemove}
             className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-red-400 hover:bg-red-50 text-xs"
-            title="Remove"
           >✕</button>
         </div>
       </div>
@@ -151,11 +141,16 @@ function NearbyCard({ place, onAdd, alreadyAdded, userLocation }) {
 }
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
-export default function CustomDateBuilderPage() {
+export default function EditDatePage({ params }) {
+  const { id } = use(params)
   const router = useRouter()
 
+  // Initial load
+  const [initialLoading, setInitialLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+
   // UI mode
-  const [mode, setMode] = useState('map')
+  const [mode, setMode] = useState('list')
 
   // Maps
   const [mapsReady, setMapsReady] = useState(false)
@@ -181,7 +176,7 @@ export default function CustomDateBuilderPage() {
   // Media search (OMDB)
   const [showMediaSearch, setShowMediaSearch] = useState(false)
   const [mediaQuery, setMediaQuery] = useState('')
-  const [mediaType, setMediaType] = useState('movie') // 'movie' | 'show'
+  const [mediaType, setMediaType] = useState('movie')
   const [mediaResults, setMediaResults] = useState([])
   const [mediaSearching, setMediaSearching] = useState(false)
   const mediaDebounceRef = useRef(null)
@@ -191,7 +186,7 @@ export default function CustomDateBuilderPage() {
   const [travelTimes, setTravelTimes] = useState([])
 
   // Save
-  const [dateName, setDateName] = useState(defaultDateName())
+  const [dateName, setDateName] = useState('')
   const [dateTime, setDateTime] = useState('')
   const [saveStage, setSaveStage] = useState(null)
   const [saveError, setSaveError] = useState(null)
@@ -205,41 +200,50 @@ export default function CustomDateBuilderPage() {
   const debounceRef     = useRef(null)
   const inputRef        = useRef(null)
 
+  // ── Load existing date ───────────────────────────────────────────
+  useEffect(() => {
+    const loadDate = async () => {
+      const { data: existing } = await supabase
+        .from('custom_dates')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle()
+
+      if (!existing) {
+        setNotFound(true)
+        setInitialLoading(false)
+        return
+      }
+
+      setDateName(existing.title || '')
+      setItinerary(existing.stops || [])
+      if (existing.date_time) {
+        // Convert ISO to datetime-local format
+        const dt = new Date(existing.date_time)
+        const pad = n => String(n).padStart(2, '0')
+        setDateTime(
+          `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+        )
+      }
+      setInitialLoading(false)
+    }
+    loadDate()
+  }, [id])
+
   // ── Load Google Maps JS API ──────────────────────────────────────
-  // Use &callback= (not script.onload) — Maps fires the callback only after
-  // window.google.maps and all services are fully initialized.
-  // script.onload fires when the script downloads, which can be before Maps
-  // is ready, causing "google is not defined" or silent service failures.
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
     if (!apiKey) return
-
-    // Already initialized from a previous page visit
-    if (window.google?.maps?.places) {
-      setMapsReady(true)
-      return
-    }
-
-    // Script already injected (e.g. hot reload) — callback will still fire
-    if (document.getElementById('gmaps-custom')) return
-
-    // Register callback before injecting script so it's available when Maps calls it
-    window.__gmapsCustomInit = () => {
-      delete window.__gmapsCustomInit
-      setMapsReady(true)
-    }
-
+    if (window.google?.maps?.places) { setMapsReady(true); return }
+    if (document.getElementById('gmaps-edit')) return
+    window.__gmapsEditInit = () => { delete window.__gmapsEditInit; setMapsReady(true) }
     const script = document.createElement('script')
-    script.id = 'gmaps-custom'
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,marker&loading=async&callback=__gmapsCustomInit`
+    script.id = 'gmaps-edit'
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,marker&loading=async&callback=__gmapsEditInit`
     script.async = true
     script.defer = true
     document.head.appendChild(script)
-
-    return () => {
-      // Clean up if component unmounts before the script finishes loading
-      if (window.__gmapsCustomInit) delete window.__gmapsCustomInit
-    }
+    return () => { if (window.__gmapsEditInit) delete window.__gmapsEditInit }
   }, [])
 
   // ── Geolocation ──────────────────────────────────────────────────
@@ -247,14 +251,13 @@ export default function CustomDateBuilderPage() {
     if (!navigator.geolocation) return
     navigator.geolocation.getCurrentPosition(
       pos => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {} // silent fallback to Seattle
+      () => {}
     )
   }, [])
 
   // ── Init map (once) ──────────────────────────────────────────────
   useEffect(() => {
     if (!mapsReady || !mapDivRef.current || mapInstance.current) return
-
     const map = new window.google.maps.Map(mapDivRef.current, {
       center: userLocation,
       zoom: 13,
@@ -263,19 +266,16 @@ export default function CustomDateBuilderPage() {
       gestureHandling: 'greedy',
       styles: [
         { featureType: 'poi.business', elementType: 'labels', stylers: [{ visibility: 'off' }] },
-        { featureType: 'transit',      elementType: 'labels', stylers: [{ visibility: 'off' }] },
+        { featureType: 'transit', elementType: 'labels', stylers: [{ visibility: 'off' }] },
       ],
     })
-
     mapInstance.current = map
-
     dirRenderer.current = new window.google.maps.DirectionsRenderer({
       suppressMarkers: true,
       polylineOptions: { strokeColor: '#E8614D', strokeWeight: 4, strokeOpacity: 0.75 },
     })
     dirRenderer.current.setMap(map)
-
-    dirService.current    = new window.google.maps.DirectionsService()
+    dirService.current = new window.google.maps.DirectionsService()
   }, [mapsReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Pan map when location first acquired ────────────────────────
@@ -302,18 +302,11 @@ export default function CustomDateBuilderPage() {
   // ── Sync markers + route when itinerary changes ─────────────────
   useEffect(() => {
     if (!mapInstance.current) return
-
-    // Clear old markers
     markersRef.current.forEach(m => m.setMap(null))
     markersRef.current = []
-
-    // Clear route
     if (dirRenderer.current) dirRenderer.current.setDirections({ routes: [] })
     setTravelTimes([])
-
     if (itinerary.length === 0) return
-
-    // Drop numbered markers
     itinerary.forEach((stop, i) => {
       if (!stop.lat || !stop.lng) return
       const marker = new window.google.maps.Marker({
@@ -332,8 +325,6 @@ export default function CustomDateBuilderPage() {
       })
       markersRef.current.push(marker)
     })
-
-    // Fit bounds to markers
     if (itinerary.length >= 2) {
       const bounds = new window.google.maps.LatLngBounds()
       itinerary.forEach(s => { if (s.lat && s.lng) bounds.extend({ lat: s.lat, lng: s.lng }) })
@@ -342,17 +333,14 @@ export default function CustomDateBuilderPage() {
       mapInstance.current.setCenter({ lat: itinerary[0].lat, lng: itinerary[0].lng })
       mapInstance.current.setZoom(15)
     }
-
-    // Draw route between 2+ stops
     const valid = itinerary.filter(s => s.lat && s.lng)
     if (valid.length < 2 || !dirService.current) return
-
     dirService.current.route(
       {
-        origin:      { lat: valid[0].lat, lng: valid[0].lng },
+        origin: { lat: valid[0].lat, lng: valid[0].lng },
         destination: { lat: valid[valid.length - 1].lat, lng: valid[valid.length - 1].lng },
-        waypoints:    valid.slice(1, -1).map(s => ({ location: { lat: s.lat, lng: s.lng }, stopover: true })),
-        travelMode:  window.google.maps.TravelMode.DRIVING,
+        waypoints: valid.slice(1, -1).map(s => ({ location: { lat: s.lat, lng: s.lng }, stopover: true })),
+        travelMode: window.google.maps.TravelMode.DRIVING,
       },
       (result, status) => {
         if (status === 'OK') {
@@ -368,27 +356,16 @@ export default function CustomDateBuilderPage() {
     setQuery(value)
     setPreviewPlace(null)
     clearTimeout(debounceRef.current)
-
-    if (!value.trim()) {
-      setPredictions([])
-      setShowDropdown(false)
-      return
-    }
-
+    if (!value.trim()) { setPredictions([]); setShowDropdown(false); return }
     debounceRef.current = setTimeout(async () => {
       setSearching(true)
       try {
-        const { AutocompleteSuggestion } =
-          await window.google.maps.importLibrary('places')
-        const { suggestions } = await AutocompleteSuggestion
-          .fetchAutocompleteSuggestions({
-            input: value,
-            locationBias: {
-              center: userLocation,
-              radius: 50000
-            },
-            includedPrimaryTypes: ['establishment']
-          })
+        const { AutocompleteSuggestion } = await window.google.maps.importLibrary('places')
+        const { suggestions } = await AutocompleteSuggestion.fetchAutocompleteSuggestions({
+          input: value,
+          locationBias: { center: userLocation, radius: 50000 },
+          includedPrimaryTypes: ['establishment']
+        })
         const normalized = (suggestions || []).slice(0, 6).map(s => ({
           place_id: s.placePrediction.placeId,
           structured_formatting: {
@@ -417,20 +394,17 @@ export default function CustomDateBuilderPage() {
     try {
       const { Place } = await window.google.maps.importLibrary('places')
       const place = new Place({ id: pred.place_id })
-      await place.fetchFields({
-        fields: ['id', 'displayName', 'formattedAddress',
-                 'location', 'photos', 'rating', 'priceLevel']
-      })
+      await place.fetchFields({ fields: ['id', 'displayName', 'formattedAddress', 'location', 'photos', 'rating', 'priceLevel'] })
       setPreviewPlace({
-        place_id:    place.id,
-        name:        place.displayName || pred.structured_formatting.main_text,
-        address:     place.formattedAddress || '',
-        lat:         place.location?.lat() ?? null,
-        lng:         place.location?.lng() ?? null,
-        photo_url:   place.photos?.[0]?.getURI({ maxWidth: 600 }) ?? null,
-        rating:      place.rating ?? null,
+        place_id: place.id,
+        name: place.displayName || pred.structured_formatting.main_text,
+        address: place.formattedAddress || '',
+        lat: place.location?.lat() ?? null,
+        lng: place.location?.lng() ?? null,
+        photo_url: place.photos?.[0]?.getURI({ maxWidth: 600 }) ?? null,
+        rating: place.rating ?? null,
         price_level: place.priceLevel ?? null,
-        note:        '',
+        note: '',
       })
     } catch (err) {
       console.error('Place details error:', err)
@@ -451,6 +425,20 @@ export default function CustomDateBuilderPage() {
     setChipResults([])
   }, [])
 
+  // ── Add custom stop ──────────────────────────────────────────────
+  const addCustomStop = () => {
+    if (!customStopName.trim()) return
+    addToItinerary({
+      place_id: `custom-${Date.now()}`,
+      name: customStopName.trim(),
+      address: '',
+      lat: null, lng: null,
+      photo_url: null, rating: null, price_level: null, note: '',
+    })
+    setCustomStopName('')
+    setShowCustomStop(false)
+  }
+
   // ── Debounced media search ───────────────────────────────────────
   useEffect(() => {
     if (!showMediaSearch || !mediaQuery.trim()) { setMediaResults([]); return }
@@ -470,7 +458,7 @@ export default function CustomDateBuilderPage() {
     }, 350)
   }, [mediaQuery, mediaType, showMediaSearch])
 
-  // ── Add media stop (movie/show) ──────────────────────────────────
+  // ── Add media stop ───────────────────────────────────────────────
   const addMediaStop = async (result) => {
     let stop
     try {
@@ -479,48 +467,24 @@ export default function CustomDateBuilderPage() {
         place_id: `media-${result.imdbID}`,
         name: details.Title || result.Title,
         address: [details.Genre, details.Year].filter(Boolean).join(' · '),
-        lat: null,
-        lng: null,
+        lat: null, lng: null,
         photo_url: result.Poster !== 'N/A' ? result.Poster : null,
-        rating: null,
-        price_level: null,
-        note: '',
+        rating: null, price_level: null, note: '',
       }
     } catch {
       stop = {
         place_id: `media-${result.imdbID}`,
         name: result.Title,
         address: result.Year || '',
-        lat: null,
-        lng: null,
+        lat: null, lng: null,
         photo_url: result.Poster !== 'N/A' ? result.Poster : null,
-        rating: null,
-        price_level: null,
-        note: '',
+        rating: null, price_level: null, note: '',
       }
     }
     addToItinerary(stop)
     setShowMediaSearch(false)
     setMediaQuery('')
     setMediaResults([])
-  }
-
-  // ── Add custom stop (no address) ────────────────────────────────
-  const addCustomStop = () => {
-    if (!customStopName.trim()) return
-    addToItinerary({
-      place_id: `custom-${Date.now()}`,
-      name: customStopName.trim(),
-      address: '',
-      lat: null,
-      lng: null,
-      photo_url: null,
-      rating: null,
-      price_level: null,
-      note: '',
-    })
-    setCustomStopName('')
-    setShowCustomStop(false)
   }
 
   // ── Category chip → nearby search ───────────────────────────────
@@ -532,28 +496,22 @@ export default function CustomDateBuilderPage() {
     try {
       const { Place } = await window.google.maps.importLibrary('places')
       const { places } = await Place.searchNearby({
-        fields: ['id', 'displayName', 'formattedAddress',
-                 'location', 'photos', 'rating', 'priceLevel'],
-        locationRestriction: {
-          center: userLocation,
-          radius: 5000
-        },
+        fields: ['id', 'displayName', 'formattedAddress', 'location', 'photos', 'rating', 'priceLevel'],
+        locationRestriction: { center: userLocation, radius: 5000 },
         includedTypes: [chip.type],
         maxResultCount: 5
       })
-      setChipResults(
-        (places || []).map(p => ({
-          place_id:    p.id,
-          name:        p.displayName || '',
-          address:     p.formattedAddress || '',
-          lat:         p.location?.lat() ?? null,
-          lng:         p.location?.lng() ?? null,
-          photo_url:   p.photos?.[0]?.getURI({ maxWidth: 400 }) ?? null,
-          rating:      p.rating ?? null,
-          price_level: p.priceLevel ?? null,
-          note:        '',
-        }))
-      )
+      setChipResults((places || []).map(p => ({
+        place_id: p.id,
+        name: p.displayName || '',
+        address: p.formattedAddress || '',
+        lat: p.location?.lat() ?? null,
+        lng: p.location?.lng() ?? null,
+        photo_url: p.photos?.[0]?.getURI({ maxWidth: 400 }) ?? null,
+        rating: p.rating ?? null,
+        price_level: p.priceLevel ?? null,
+        note: '',
+      })))
     } catch (err) {
       console.error('Nearby search error:', err)
       setChipResults([])
@@ -572,53 +530,43 @@ export default function CustomDateBuilderPage() {
       return next
     })
   }
+  const removeStop = index => setItinerary(prev => prev.filter((_, i) => i !== index))
+  const updateNote = (index, note) => setItinerary(prev => prev.map((s, i) => i === index ? { ...s, note } : s))
 
-  const removeStop    = index => setItinerary(prev => prev.filter((_, i) => i !== index))
-  const updateNote    = (index, note) => setItinerary(prev => prev.map((s, i) => i === index ? { ...s, note } : s))
-
-  // ── Save to Supabase ─────────────────────────────────────────────
+  // ── Update (save changes) ────────────────────────────────────────
   const handleSave = async () => {
     if (itinerary.length === 0) return
     setSaveError(null)
     setSaveStage('saving')
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setSaveError('Not logged in'); setSaveStage(null); return }
-
-      const { data: coupleData } = await supabase
-        .from('couples')
-        .select('id')
-        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-        .maybeSingle()
-
-      const coupleId = coupleData?.id ?? null
-
-      // Insert the date first
-      const { data: newDate, error } = await supabase
+      const { error } = await supabase
         .from('custom_dates')
-        .insert({
-          user_id:   user.id,
-          couple_id: coupleId,
-          title:     dateName.trim() || defaultDateName(),
-          stops:     itinerary,
+        .update({
+          title: dateName.trim() || 'Untitled Date',
+          stops: itinerary,
           date_time: dateTime ? new Date(dateTime).toISOString() : null,
-          status:    'planned',
         })
-        .select()
-        .single()
+        .eq('id', id)
 
       if (error) throw error
 
-      // Generate conversation starters
+      // Regenerate conversation starters non-fatally
       setSaveStage('generating')
       try {
+        const { data: { user } } = await supabase.auth.getUser()
+        const { data: coupleData } = await supabase
+          .from('couples')
+          .select('id')
+          .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+          .maybeSingle()
+
         await fetch('/api/dates/conversation-starters', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            coupleId,
+            coupleId: coupleData?.id,
             userId: user.id,
-            dateTitle: dateName.trim() || defaultDateName(),
+            dateTitle: dateName.trim() || 'Untitled Date',
             stops: itinerary,
           })
         }).then(async res => {
@@ -627,18 +575,17 @@ export default function CustomDateBuilderPage() {
             await supabase
               .from('custom_dates')
               .update({ conversation_starters: starters })
-              .eq('id', newDate.id)
+              .eq('id', id)
           }
         })
       } catch (e) {
-        console.error('Starters generation failed:', e)
-        // Non-fatal — date is already saved
+        console.error('Starters regeneration failed:', e)
       }
 
       setSaveStage('done')
-      setTimeout(() => router.push(`/dates/${newDate.id}`), 800)
+      setTimeout(() => router.push(`/dates/${id}`), 800)
     } catch (err) {
-      console.error('Save error:', err)
+      console.error('Update error:', err)
       setSaveError('Failed to save. Please try again.')
       setSaveStage(null)
     }
@@ -646,14 +593,35 @@ export default function CustomDateBuilderPage() {
 
   // ── Close dropdown on outside click ─────────────────────────────
   useEffect(() => {
-    const handler = e => {
-      if (!e.target.closest('[data-search-box]')) setShowDropdown(false)
-    }
+    const handler = e => { if (!e.target.closest('[data-search-box]')) setShowDropdown(false) }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
   const savedIds = new Set(itinerary.map(s => s.place_id))
+
+  // ── Loading / not found states ───────────────────────────────────
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent" />
+      </div>
+    )
+  }
+
+  if (notFound) {
+    return (
+      <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center px-5">
+        <div className="text-center">
+          <p className="text-4xl mb-3">🔍</p>
+          <p className="font-semibold text-gray-800 mb-4">Date not found</p>
+          <button onClick={() => router.push('/dates')} className="text-coral-500 font-semibold text-sm">
+            ← Back to Date Night
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   // ════════════════════════════════════════════════════════════════
   // RENDER
@@ -664,11 +632,10 @@ export default function CustomDateBuilderPage() {
       {/* ── Header ──────────────────────────────────────────────── */}
       <div className="flex-shrink-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3 z-20">
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push(`/dates/${id}`)}
           className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 flex-shrink-0"
         >←</button>
-        <h1 className="font-bold text-gray-900 flex-1 truncate">Build Your Date Night</h1>
-        {/* Map / List toggle */}
+        <h1 className="font-bold text-gray-900 flex-1 truncate">Edit Date</h1>
         <div className="flex bg-gray-100 rounded-full p-0.5 flex-shrink-0">
           {[{ id: 'map', label: '🗺️ Map' }, { id: 'list', label: '📋 List' }].map(m => (
             <button
@@ -698,7 +665,6 @@ export default function CustomDateBuilderPage() {
           {searching && (
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 text-xs animate-pulse">●●●</span>
           )}
-          {/* Autocomplete dropdown */}
           {showDropdown && predictions.length > 0 && (
             <div className="absolute top-full left-0 right-0 z-50 mt-1.5 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
               {predictions.map(pred => (
@@ -716,8 +682,8 @@ export default function CustomDateBuilderPage() {
               ))}
             </div>
           )}
+
           <div className="mt-2">
-            {/* Two-button row when neither panel is open */}
             {!showCustomStop && !showMediaSearch && (
               <div className="flex gap-3 flex-wrap">
                 <button
@@ -736,7 +702,6 @@ export default function CustomDateBuilderPage() {
               </div>
             )}
 
-            {/* Custom stop input */}
             {showCustomStop && (
               <div className="flex gap-2 mt-1">
                 <input
@@ -752,19 +717,14 @@ export default function CustomDateBuilderPage() {
                   onClick={addCustomStop}
                   disabled={!customStopName.trim()}
                   className="px-4 py-2.5 bg-[#E8614D] text-white rounded-2xl text-sm font-semibold disabled:opacity-40"
-                >
-                  Add
-                </button>
+                >Add</button>
                 <button
                   onClick={() => { setShowCustomStop(false); setCustomStopName('') }}
                   className="px-3 py-2.5 bg-gray-100 text-gray-500 rounded-2xl text-sm"
-                >
-                  ✕
-                </button>
+                >✕</button>
               </div>
             )}
 
-            {/* Media search panel */}
             {showMediaSearch && (
               <div className="mt-1 space-y-2">
                 <div className="flex gap-2 items-center">
@@ -792,9 +752,7 @@ export default function CustomDateBuilderPage() {
                   placeholder={`Search ${mediaType === 'movie' ? 'movies' : 'shows'}…`}
                   className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-coral-200 focus:bg-white"
                 />
-                {mediaSearching && (
-                  <p className="text-xs text-gray-400 animate-pulse">Searching…</p>
-                )}
+                {mediaSearching && <p className="text-xs text-gray-400 animate-pulse">Searching…</p>}
                 {mediaResults.length > 0 && (
                   <div className="space-y-1 max-h-52 overflow-y-auto">
                     {mediaResults.map(result => (
@@ -811,9 +769,7 @@ export default function CustomDateBuilderPage() {
                           onClick={() => addMediaStop(result)}
                           disabled={savedIds.has(`media-${result.imdbID}`)}
                           className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold ${
-                            savedIds.has(`media-${result.imdbID}`)
-                              ? 'bg-gray-100 text-gray-400'
-                              : 'bg-[#E8614D] text-white'
+                            savedIds.has(`media-${result.imdbID}`) ? 'bg-gray-100 text-gray-400' : 'bg-[#E8614D] text-white'
                           }`}
                         >
                           {savedIds.has(`media-${result.imdbID}`) ? '✓' : '+ Add'}
@@ -843,7 +799,7 @@ export default function CustomDateBuilderPage() {
       {/* ── Main content ────────────────────────────────────────── */}
       <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
 
-        {/* MAP PANEL — always in DOM, hidden in list mode (preserves map instance) */}
+        {/* MAP PANEL */}
         <div
           className={`relative flex-shrink-0 lg:flex-1 ${mode === 'list' ? 'hidden' : ''}`}
           style={{ height: '45vh' }}
@@ -860,10 +816,8 @@ export default function CustomDateBuilderPage() {
         <div className={`bg-white flex flex-col overflow-hidden ${
           mode === 'map' ? 'flex-1 lg:flex-none lg:w-96 lg:border-l lg:border-gray-100' : 'flex-1'
         }`}>
-          {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto">
 
-            {/* Category chips (shown when no stops yet) */}
             {itinerary.length === 0 && (
               <div className="px-4 pt-4 pb-3 border-b border-gray-50">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Quick add by category</p>
@@ -883,14 +837,11 @@ export default function CustomDateBuilderPage() {
                     </button>
                   ))}
                 </div>
-                {/* Chip results */}
                 {activeChip && (
                   <div className="mt-3">
                     {loadingChip ? (
                       <div className="flex gap-3 overflow-x-auto pb-1">
-                        {[1, 2, 3].map(i => (
-                          <div key={i} className="flex-shrink-0 w-40 h-40 bg-gray-100 rounded-2xl animate-pulse" />
-                        ))}
+                        {[1, 2, 3].map(i => <div key={i} className="flex-shrink-0 w-40 h-40 bg-gray-100 rounded-2xl animate-pulse" />)}
                       </div>
                     ) : chipResults.length > 0 ? (
                       <div className="flex gap-3 overflow-x-auto pb-1">
@@ -912,12 +863,9 @@ export default function CustomDateBuilderPage() {
               </div>
             )}
 
-            {/* Itinerary header */}
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-gray-900">
-                  {mode === 'list' ? 'Date Itinerary' : 'Your Plan'}
-                </h3>
+                <h3 className="font-bold text-gray-900">Date Itinerary</h3>
                 {itinerary.length > 0 && (
                   <p className="text-xs text-gray-400 mt-0.5">{itinerary.length} stop{itinerary.length !== 1 ? 's' : ''}</p>
                 )}
@@ -929,11 +877,10 @@ export default function CustomDateBuilderPage() {
               )}
             </div>
 
-            {/* Empty state */}
             {itinerary.length === 0 ? (
               <div className="px-5 py-12 text-center">
                 <div className="text-4xl mb-3">✨</div>
-                <p className="text-gray-400 text-sm">Search above or tap a category to start building your date</p>
+                <p className="text-gray-400 text-sm">Search above to add stops to your date</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-50">
@@ -957,56 +904,54 @@ export default function CustomDateBuilderPage() {
             )}
           </div>
 
-          {/* Save section — pinned to bottom of panel */}
-          {itinerary.length > 0 && (
-            <div className="flex-shrink-0 border-t border-gray-100 px-5 py-4 bg-white space-y-3">
+          {/* Save section */}
+          <div className="flex-shrink-0 border-t border-gray-100 px-5 py-4 bg-white space-y-3">
+            <input
+              type="text"
+              value={dateName}
+              onChange={e => setDateName(e.target.value)}
+              placeholder="Name your date…"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-coral-200 focus:bg-white transition-colors"
+            />
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                When is this date? <span className="text-gray-300 font-normal normal-case">(optional)</span>
+              </label>
               <input
-                type="text"
-                value={dateName}
-                onChange={e => setDateName(e.target.value)}
-                placeholder="Name your date…"
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-coral-200 focus:bg-white transition-colors"
+                type="datetime-local"
+                value={dateTime}
+                onChange={e => setDateTime(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border-2 border-[#E5E2DD] focus:border-[#E8614D] focus:outline-none text-gray-700 bg-white"
               />
-              <div className="mt-3">
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                  When is this date? <span className="text-gray-300 font-normal normal-case">(optional)</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  value={dateTime}
-                  onChange={e => setDateTime(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-[#E5E2DD] focus:border-[#E8614D] focus:outline-none text-gray-700 bg-white"
-                />
-              </div>
-              {saveError && <p className="text-xs text-red-500 text-center">{saveError}</p>}
-              {saveStage === null && (
-                <button
-                  onClick={handleSave}
-                  disabled={itinerary.length === 0}
-                  className="w-full py-4 bg-gradient-to-r from-[#E8614D] to-[#3D3580] text-white font-bold rounded-2xl shadow-md disabled:opacity-40 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
-                >
-                  Save Date →
-                </button>
-              )}
-              {saveStage === 'saving' && (
-                <div className="w-full py-4 bg-gradient-to-r from-[#E8614D] to-[#3D3580] text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Saving your date…
-                </div>
-              )}
-              {saveStage === 'generating' && (
-                <div className="w-full py-4 bg-gradient-to-r from-[#E8614D] to-[#3D3580] text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ✨ Generating conversation starters…
-                </div>
-              )}
-              {saveStage === 'done' && (
-                <div className="w-full py-4 bg-green-500 text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
-                  ✓ Date saved! Heading there now…
-                </div>
-              )}
             </div>
-          )}
+            {saveError && <p className="text-xs text-red-500 text-center">{saveError}</p>}
+            {saveStage === null && (
+              <button
+                onClick={handleSave}
+                disabled={itinerary.length === 0}
+                className="w-full py-4 bg-gradient-to-r from-[#E8614D] to-[#3D3580] text-white font-bold rounded-2xl shadow-md disabled:opacity-40 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
+              >
+                Save Changes →
+              </button>
+            )}
+            {saveStage === 'saving' && (
+              <div className="w-full py-4 bg-gradient-to-r from-[#E8614D] to-[#3D3580] text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Saving changes…
+              </div>
+            )}
+            {saveStage === 'generating' && (
+              <div className="w-full py-4 bg-gradient-to-r from-[#E8614D] to-[#3D3580] text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ✨ Refreshing conversation starters…
+              </div>
+            )}
+            {saveStage === 'done' && (
+              <div className="w-full py-4 bg-green-500 text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
+                ✓ Changes saved!
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
