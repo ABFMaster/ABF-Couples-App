@@ -372,7 +372,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 gap-3">
 
             <button
-              onClick={() => router.push('/profile/results')}
+              onClick={() => router.push('/assessment/results')}
               className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow text-left"
             >
               <p className={`text-3xl font-bold ${healthColor}`}>
