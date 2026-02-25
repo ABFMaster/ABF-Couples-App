@@ -188,8 +188,6 @@ export default function CustomDateBuilderPage() {
   const markersRef      = useRef([])
   const dirRenderer     = useRef(null)
   const dirService      = useRef(null)
-  const acService       = useRef(null)
-  const placesService   = useRef(null)
   const debounceRef     = useRef(null)
   const inputRef        = useRef(null)
 
@@ -219,7 +217,7 @@ export default function CustomDateBuilderPage() {
 
     const script = document.createElement('script')
     script.id = 'gmaps-custom'
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&callback=__gmapsCustomInit`
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,marker&loading=async&callback=__gmapsCustomInit`
     script.async = true
     script.defer = true
     document.head.appendChild(script)
@@ -264,8 +262,6 @@ export default function CustomDateBuilderPage() {
     dirRenderer.current.setMap(map)
 
     dirService.current    = new window.google.maps.DirectionsService()
-    acService.current     = new window.google.maps.places.AutocompleteService()
-    placesService.current = new window.google.maps.places.PlacesService(map)
   }, [mapsReady]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Pan map when location first acquired ────────────────────────
@@ -365,53 +361,68 @@ export default function CustomDateBuilderPage() {
       return
     }
 
-    if (!acService.current) return
-
-    debounceRef.current = setTimeout(() => {
+    debounceRef.current = setTimeout(async () => {
       setSearching(true)
-      acService.current.getPlacePredictions(
-        { input: value, locationBias: { center: userLocation, radius: 50000 }, types: ['establishment'] },
-        (results, status) => {
-          setSearching(false)
-          if (status === window.google.maps.places.PlacesServiceStatus.OK && results?.length) {
-            setPredictions(results.slice(0, 6))
-            setShowDropdown(true)
-          } else {
-            setPredictions([])
-            setShowDropdown(false)
-          }
-        }
-      )
+      try {
+        const { AutocompleteSuggestion } =
+          await window.google.maps.importLibrary('places')
+        const { suggestions } = await AutocompleteSuggestion
+          .fetchAutocompleteSuggestions({
+            input: value,
+            locationBias: {
+              center: userLocation,
+              radius: 50000
+            },
+            includedPrimaryTypes: ['establishment']
+          })
+        const normalized = (suggestions || []).slice(0, 6).map(s => ({
+          place_id: s.placePrediction.placeId,
+          structured_formatting: {
+            main_text: s.placePrediction.mainText?.text || s.placePrediction.text?.text || '',
+            secondary_text: s.placePrediction.secondaryText?.text || ''
+          },
+          description: s.placePrediction.text?.text || ''
+        }))
+        setPredictions(normalized)
+        setShowDropdown(normalized.length > 0)
+      } catch (err) {
+        console.error('Autocomplete error:', err)
+        setPredictions([])
+        setShowDropdown(false)
+      }
+      setSearching(false)
     }, 280)
   }, [userLocation])
 
   // ── Select prediction → get details → show preview ──────────────
-  const handleSelectPrediction = useCallback((pred) => {
+  const handleSelectPrediction = useCallback(async (pred) => {
     setQuery(pred.structured_formatting.main_text)
     setPredictions([])
     setShowDropdown(false)
     setLoadingPreview(true)
-
-    if (!placesService.current) return
-
-    placesService.current.getDetails(
-      { placeId: pred.place_id, fields: ['place_id', 'name', 'formatted_address', 'geometry', 'photos', 'rating', 'price_level'] },
-      (place, status) => {
-        setLoadingPreview(false)
-        if (status !== window.google.maps.places.PlacesServiceStatus.OK || !place) return
-        setPreviewPlace({
-          place_id:    place.place_id,
-          name:        place.name,
-          address:     place.formatted_address || '',
-          lat:         place.geometry?.location?.lat() ?? null,
-          lng:         place.geometry?.location?.lng() ?? null,
-          photo_url:   place.photos?.[0]?.getUrl({ maxWidth: 600 }) ?? null,
-          rating:      place.rating ?? null,
-          price_level: place.price_level ?? null,
-          note:        '',
-        })
-      }
-    )
+    try {
+      const { Place } = await window.google.maps.importLibrary('places')
+      const place = new Place({ id: pred.place_id })
+      await place.fetchFields({
+        fields: ['id', 'displayName', 'formattedAddress',
+                 'location', 'photos', 'rating', 'priceLevel']
+      })
+      setPreviewPlace({
+        place_id:    place.id,
+        name:        place.displayName || pred.structured_formatting.main_text,
+        address:     place.formattedAddress || '',
+        lat:         place.location?.lat() ?? null,
+        lng:         place.location?.lng() ?? null,
+        photo_url:   place.photos?.[0]?.getURI({ maxWidth: 600 }) ?? null,
+        rating:      place.rating ?? null,
+        price_level: place.priceLevel ?? null,
+        note:        '',
+      })
+    } catch (err) {
+      console.error('Place details error:', err)
+    } finally {
+      setLoadingPreview(false)
+    }
   }, [])
 
   // ── Add place to itinerary ───────────────────────────────────────
@@ -427,33 +438,42 @@ export default function CustomDateBuilderPage() {
   }, [])
 
   // ── Category chip → nearby search ───────────────────────────────
-  const handleChipClick = useCallback((chip) => {
+  const handleChipClick = useCallback(async (chip) => {
     if (activeChip === chip.label) { setActiveChip(null); setChipResults([]); return }
     setActiveChip(chip.label)
     setChipResults([])
-    if (!placesService.current) return
-
     setLoadingChip(true)
-    placesService.current.nearbySearch(
-      { location: userLocation, radius: 5000, type: chip.type },
-      (results, status) => {
-        setLoadingChip(false)
-        if (status !== window.google.maps.places.PlacesServiceStatus.OK || !results?.length) return
-        setChipResults(
-          results.slice(0, 5).map(p => ({
-            place_id:    p.place_id,
-            name:        p.name,
-            address:     p.vicinity || '',
-            lat:         p.geometry?.location?.lat() ?? null,
-            lng:         p.geometry?.location?.lng() ?? null,
-            photo_url:   p.photos?.[0]?.getUrl({ maxWidth: 400 }) ?? null,
-            rating:      p.rating ?? null,
-            price_level: p.price_level ?? null,
-            note:        '',
-          }))
-        )
-      }
-    )
+    try {
+      const { Place } = await window.google.maps.importLibrary('places')
+      const { places } = await Place.searchNearby({
+        fields: ['id', 'displayName', 'formattedAddress',
+                 'location', 'photos', 'rating', 'priceLevel'],
+        locationRestriction: {
+          center: userLocation,
+          radius: 5000
+        },
+        includedTypes: [chip.type],
+        maxResultCount: 5
+      })
+      setChipResults(
+        (places || []).map(p => ({
+          place_id:    p.id,
+          name:        p.displayName || '',
+          address:     p.formattedAddress || '',
+          lat:         p.location?.lat() ?? null,
+          lng:         p.location?.lng() ?? null,
+          photo_url:   p.photos?.[0]?.getURI({ maxWidth: 400 }) ?? null,
+          rating:      p.rating ?? null,
+          price_level: p.priceLevel ?? null,
+          note:        '',
+        }))
+      )
+    } catch (err) {
+      console.error('Nearby search error:', err)
+      setChipResults([])
+    } finally {
+      setLoadingChip(false)
+    }
   }, [activeChip, userLocation])
 
   // ── Itinerary helpers ────────────────────────────────────────────
