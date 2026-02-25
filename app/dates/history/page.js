@@ -37,7 +37,47 @@ export default function DateHistoryPage() {
         .eq('status', 'completed')
         .order('created_at', { ascending: false })
 
-      setDates(completedDates || [])
+      const { data: completedPlans } = await supabase
+        .from('date_plans')
+        .select('id, title, date_time, created_at, status, rating, reflection_notes, address, latitude, longitude')
+        .eq('couple_id', coupleData.id)
+        .eq('status', 'completed')
+        .order('date_time', { ascending: false })
+
+      const normalizedCustom = (completedDates || []).map(d => ({
+        id: d.id,
+        source: 'custom',
+        title: d.title,
+        date_time: d.date_time || d.created_at,
+        created_at: d.created_at,
+        user1_rating: d.user1_rating,
+        user2_rating: d.user2_rating,
+        user1_review: d.user1_review,
+        user2_review: d.user2_review,
+        stops: d.stops,
+        avgRating: d.user1_rating && d.user2_rating
+          ? (d.user1_rating + d.user2_rating) / 2
+          : d.user1_rating || d.user2_rating || 0
+      }))
+
+      const normalizedPlans = (completedPlans || []).map(p => ({
+        id: p.id,
+        source: 'plan',
+        title: p.title,
+        date_time: p.date_time || p.created_at,
+        created_at: p.created_at,
+        user1_rating: p.rating,
+        user2_rating: null,
+        user1_review: p.reflection_notes,
+        user2_review: null,
+        stops: p.address ? [{ name: p.address }] : [],
+        avgRating: p.rating || 0
+      }))
+
+      const allDates = [...normalizedCustom, ...normalizedPlans]
+        .sort((a, b) => new Date(b.date_time) - new Date(a.date_time))
+
+      setDates(allDates)
       setLoading(false)
     } catch (err) {
       console.error('History fetch error:', err)
@@ -50,14 +90,8 @@ export default function DateHistoryPage() {
   const filtered = dates
     .filter(d => d.title.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
-      if (sortBy === 'top') {
-        const aCount = (a.user1_rating ? 1 : 0) + (a.user2_rating ? 1 : 0)
-        const bCount = (b.user1_rating ? 1 : 0) + (b.user2_rating ? 1 : 0)
-        const aAvg = aCount ? ((a.user1_rating || 0) + (a.user2_rating || 0)) / aCount : 0
-        const bAvg = bCount ? ((b.user1_rating || 0) + (b.user2_rating || 0)) / bCount : 0
-        return bAvg - aAvg
-      }
-      return new Date(b.created_at) - new Date(a.created_at)
+      if (sortBy === 'top') return b.avgRating - a.avgRating
+      return new Date(b.date_time) - new Date(a.date_time)
     })
 
   if (loading) {
@@ -126,12 +160,9 @@ export default function DateHistoryPage() {
           </div>
         ) : (
           filtered.map(date => {
-            const count = (date.user1_rating ? 1 : 0) + (date.user2_rating ? 1 : 0)
-            const avgRating = count ? ((date.user1_rating || 0) + (date.user2_rating || 0)) / count : 0
             const firstStop = date.stops?.[0]?.name || null
             const firstReview = date.user1_review || date.user2_review || ''
             const snippet = firstReview.length > 80 ? firstReview.slice(0, 80) + '…' : firstReview
-            const displayDate = date.date_time || date.created_at
 
             return (
               <div
@@ -142,7 +173,7 @@ export default function DateHistoryPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <h3 className="font-bold text-gray-900 text-base truncate">{date.title}</h3>
-                    <p className="text-xs text-gray-400 mt-0.5">{fmtDate(displayDate)}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{fmtDate(date.date_time)}</p>
                     {firstStop && (
                       <p className="text-xs text-gray-500 mt-1">📍 {firstStop}</p>
                     )}
@@ -150,11 +181,11 @@ export default function DateHistoryPage() {
                       <p className="text-gray-500 text-xs mt-2 italic">"{snippet}"</p>
                     )}
                   </div>
-                  {avgRating > 0 && (
+                  {date.avgRating > 0 && (
                     <div className="flex-shrink-0 text-right">
-                      <p className="text-base">{'⭐'.repeat(Math.round(avgRating))}</p>
-                      {avgRating % 1 !== 0 && (
-                        <p className="text-xs text-gray-400">{avgRating.toFixed(1)}</p>
+                      <p className="text-base">{'⭐'.repeat(Math.round(date.avgRating))}</p>
+                      {date.avgRating % 1 !== 0 && (
+                        <p className="text-xs text-gray-400">{date.avgRating.toFixed(1)}</p>
                       )}
                     </div>
                   )}
