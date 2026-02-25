@@ -173,6 +173,10 @@ export default function CustomDateBuilderPage() {
   const [chipResults, setChipResults] = useState([])
   const [loadingChip, setLoadingChip] = useState(false)
 
+  // Custom stop
+  const [showCustomStop, setShowCustomStop] = useState(false)
+  const [customStopName, setCustomStopName] = useState('')
+
   // Itinerary
   const [itinerary, setItinerary] = useState([])
   const [travelTimes, setTravelTimes] = useState([])
@@ -438,6 +442,24 @@ export default function CustomDateBuilderPage() {
     setChipResults([])
   }, [])
 
+  // ── Add custom stop (no address) ────────────────────────────────
+  const addCustomStop = () => {
+    if (!customStopName.trim()) return
+    addToItinerary({
+      place_id: `custom-${Date.now()}`,
+      name: customStopName.trim(),
+      address: '',
+      lat: null,
+      lng: null,
+      photo_url: null,
+      rating: null,
+      price_level: null,
+      note: '',
+    })
+    setCustomStopName('')
+    setShowCustomStop(false)
+  }
+
   // ── Category chip → nearby search ───────────────────────────────
   const handleChipClick = useCallback(async (chip) => {
     if (activeChip === chip.label) { setActiveChip(null); setChipResults([]); return }
@@ -631,6 +653,42 @@ export default function CustomDateBuilderPage() {
               ))}
             </div>
           )}
+          <div className="mt-2">
+            {!showCustomStop ? (
+              <button
+                onClick={() => setShowCustomStop(true)}
+                className="text-xs text-gray-400 hover:text-[#E8614D] transition-colors flex items-center gap-1"
+              >
+                <span>＋</span> Add something without an address
+                  (movie at home, Dick's run, etc.)
+              </button>
+            ) : (
+              <div className="flex gap-2 mt-1">
+                <input
+                  autoFocus
+                  type="text"
+                  value={customStopName}
+                  onChange={e => setCustomStopName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') addCustomStop() }}
+                  placeholder="e.g. Movie at home, Dick's Drive-In run…"
+                  className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-coral-200 focus:bg-white"
+                />
+                <button
+                  onClick={addCustomStop}
+                  disabled={!customStopName.trim()}
+                  className="px-4 py-2.5 bg-[#E8614D] text-white rounded-2xl text-sm font-semibold disabled:opacity-40"
+                >
+                  Add
+                </button>
+                <button
+                  onClick={() => { setShowCustomStop(false); setCustomStopName('') }}
+                  className="px-3 py-2.5 bg-gray-100 text-gray-500 rounded-2xl text-sm"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
