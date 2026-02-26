@@ -271,9 +271,10 @@ export default function DateDetailPage({ params }) {
 
       setAddedToTimeline(true)
       setTimeout(() => {
+        setAddedToTimeline(false)
         setShowTimelinePrompt(false)
         loadDate()
-      }, 1500)
+      }, 2000)
     } catch (err) {
       console.error('Timeline error:', err)
     } finally {
