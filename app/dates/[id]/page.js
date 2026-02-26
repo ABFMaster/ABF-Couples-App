@@ -67,6 +67,12 @@ export default function DateDetailPage({ params }) {
   const [approvingDate, setApprovingDate] = useState(false)
   const [approvalError, setApprovalError] = useState(null)
 
+  // Timeline prompt state
+  const [showTimelinePrompt, setShowTimelinePrompt] = useState(false)
+  const [timelinePhoto, setTimelinePhoto] = useState(null)
+  const [addingToTimeline, setAddingToTimeline] = useState(false)
+  const [addedToTimeline, setAddedToTimeline] = useState(false)
+
   useEffect(() => {
     loadDate()
   }, [id])
@@ -196,8 +202,18 @@ export default function DateDetailPage({ params }) {
         .eq('id', date.id)
 
       if (error) throw error
-      setShowCompleteModal(false)
-      loadDate() // Refresh
+
+      const nowBothDone = isUser1
+        ? !!date.user2_completed_at
+        : !!date.user1_completed_at
+
+      if (nowBothDone || bothDone) {
+        setShowCompleteModal(false)
+        setShowTimelinePrompt(true)
+      } else {
+        setShowCompleteModal(false)
+        loadDate()
+      }
     } catch (err) {
       console.error('Complete error:', err)
       setCompletionError('Failed to save. Try again.')
@@ -237,6 +253,38 @@ export default function DateDetailPage({ params }) {
       console.error('Send to partner error:', err)
     } finally {
       setSendingToPartner(false)
+    }
+  }
+
+  const addToTimeline = async () => {
+    if (addingToTimeline) return
+    setAddingToTimeline(true)
+    try {
+      const stopNames = (date.stops || []).map(s => s.name).filter(Boolean).join(', ')
+      const reviews = [date.user1_review, date.user2_review].filter(Boolean).join(' · ')
+      const description = [stopNames, reviews].filter(Boolean).join('\n')
+
+      await supabase
+        .from('timeline_events')
+        .insert({
+          couple_id: date.couple_id,
+          created_by: currentUserId,
+          event_type: 'date_night',
+          title: date.title,
+          description: description || null,
+          event_date: date.date_time || date.created_at,
+          photo_urls: timelinePhoto ? [timelinePhoto] : [],
+        })
+
+      setAddedToTimeline(true)
+      setTimeout(() => {
+        setShowTimelinePrompt(false)
+        loadDate()
+      }, 1500)
+    } catch (err) {
+      console.error('Timeline error:', err)
+    } finally {
+      setAddingToTimeline(false)
     }
   }
 
@@ -577,6 +625,88 @@ export default function DateDetailPage({ params }) {
         </button>
 
       </div>
+
+      {/* ── Timeline Prompt Modal ─────────────────────────────── */}
+      {showTimelinePrompt && !addedToTimeline && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-end justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md">
+            <div className="text-center mb-5">
+              <p className="text-3xl mb-2">🎉</p>
+              <h3 className="text-xl font-bold text-gray-900">Date complete!</h3>
+              <p className="text-gray-500 text-sm mt-1">
+                Add this to your Timeline so you never forget it 💕
+              </p>
+            </div>
+
+            <div className="bg-[#FDF6EF] rounded-2xl px-4 py-3 mb-4">
+              <p className="font-semibold text-gray-900 text-sm">{date.title}</p>
+              {date.stops?.length > 0 && (
+                <p className="text-gray-400 text-xs mt-1">
+                  {date.stops.map(s => s.name).filter(Boolean).join(' · ')}
+                </p>
+              )}
+            </div>
+
+            <div className="mb-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                Add a photo? (optional)
+              </p>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files[0]
+                  if (!file) return
+                  const ext = file.name.split('.').pop()
+                  const path = `timeline/${date.couple_id}/${Date.now()}.${ext}`
+                  const { error } = await supabase.storage
+                    .from('photos')
+                    .upload(path, file)
+                  if (!error) {
+                    const { data } = supabase.storage
+                      .from('photos')
+                      .getPublicUrl(path)
+                    setTimelinePhoto(data.publicUrl)
+                  }
+                }}
+                className="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4
+                file:rounded-full file:border-0 file:text-xs file:font-semibold
+                file:bg-[#E8614D] file:text-white hover:file:bg-[#d4553f]"
+              />
+              {timelinePhoto && (
+                <img src={timelinePhoto} alt="Preview"
+                  className="mt-2 w-full h-32 object-cover rounded-xl" />
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowTimelinePrompt(false); loadDate() }}
+                className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-500 font-semibold text-sm"
+              >
+                Skip
+              </button>
+              <button
+                onClick={addToTimeline}
+                disabled={addingToTimeline}
+                className="flex-1 py-3 rounded-xl bg-[#E8614D] text-white font-bold text-sm disabled:opacity-40"
+              >
+                {addingToTimeline ? 'Adding…' : 'Add to Timeline 💕'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {addedToTimeline && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 text-center">
+            <p className="text-4xl mb-3">💕</p>
+            <p className="font-bold text-gray-900 text-lg">Added to your Timeline!</p>
+            <p className="text-gray-400 text-sm mt-1">This memory is yours forever</p>
+          </div>
+        </div>
+      )}
 
       {/* ── Completion Modal ──────────────────────────────────── */}
       {showCompleteModal && (
