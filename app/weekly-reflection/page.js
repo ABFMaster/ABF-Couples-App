@@ -29,6 +29,7 @@ export default function WeeklyReflection() {
   // Enhancement state (Parts 2, 3, 4)
   const [healthDelta, setHealthDelta] = useState(null)
   const [nudgeSent, setNudgeSent] = useState(false)
+  const [nudgeError, setNudgeError] = useState(null)
   const [aiInsight, setAiInsight] = useState(null)
 
   // Check if within reflection window (Friday-Sunday)
@@ -176,12 +177,13 @@ export default function WeeklyReflection() {
   const sendNudge = async () => {
     if (nudgeSent) return
     const partnerId = couple ? (isUser1 ? couple.user2_id : couple.user1_id) : null
-    if (!couple || !couple.id || !partnerId) {
-      console.error('Nudge missing data:', { couple, partnerId })
+    console.log('sendNudge called', { coupleId: couple?.id, senderId: user?.id, partnerId })
+    if (!couple?.id || !user?.id || !partnerId) {
+      setNudgeError('Missing data: ' + JSON.stringify({ couple: !!couple, user: !!user, partnerId }))
       return
     }
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('flirts')
         .insert({
           couple_id: couple.id,
@@ -190,10 +192,17 @@ export default function WeeklyReflection() {
           message: 'I finished my weekly reflection — your turn! 👀💕',
           type: 'text',
         })
-      if (error) throw error
+        .select()
+      if (error) {
+        setNudgeError(error.message)
+        console.error('Supabase error:', error)
+        return
+      }
+      console.log('Nudge sent:', data)
       setNudgeSent(true)
     } catch (err) {
-      console.error('Nudge error:', err)
+      setNudgeError(err.message)
+      console.error('Nudge catch:', err)
     }
   }
 
@@ -577,6 +586,9 @@ export default function WeeklyReflection() {
                 >
                   {nudgeSent ? '✓ Nudge sent!' : `Nudge ${partnerName} 👀`}
                 </button>
+                {nudgeError && (
+                  <p className="text-red-500 text-xs mt-2">{nudgeError}</p>
+                )}
                 <p className="text-gray-300 text-xs mt-2">
                   Or tell them in person — even better 💕
                 </p>
