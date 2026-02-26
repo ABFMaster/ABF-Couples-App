@@ -226,7 +226,7 @@ export default function DateDetailPage({ params }) {
         await supabase.from('flirts').insert({
           couple_id: coupleData.id,
           sender_id: currentUserId,
-          recipient_id: partnerId,
+          receiver_id: partnerId,
           message: `I planned a date for us! Check out "${date.title}" 💕`,
           flirt_type: 'date_shared',
         })

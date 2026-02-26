@@ -186,7 +186,7 @@ export default function WeeklyReflection() {
         .insert({
           couple_id: couple.id,
           sender_id: user.id,
-          recipient_id: partnerId,
+          receiver_id: partnerId,
           message: 'I finished my weekly reflection — your turn! 👀💕',
           type: 'text',
         })
