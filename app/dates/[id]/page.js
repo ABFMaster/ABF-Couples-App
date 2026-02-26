@@ -462,13 +462,15 @@ export default function DateDetailPage({ params }) {
           </div>
         )}
 
-        {/* ── Send to Partner ────────────────────────────────── */}
-        {isCustom && !isCompleted && currentUserId === date.user_id && partnerId && (
+        {/* ── Date Status (unified) ──────────────────────────── */}
+        {isCustom && !isCompleted && (currentUserId === date.user_id || date.shared_with === currentUserId) && (
           <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
-            {!sentToPartner ? (
+
+            {/* State 1: Not yet shared — only creator sees this */}
+            {!date.shared_with && currentUserId === date.user_id && (
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Share with {partnerName}</p>
-                <p className="text-gray-500 text-sm mb-3">Send this date plan so {partnerName} can review and approve it.</p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Ready to share?</p>
+                <p className="text-gray-500 text-sm mb-3">Send this to {partnerName} so they can review, edit, and approve it.</p>
                 <button
                   onClick={sendToPartner}
                   disabled={sendingToPartner}
@@ -477,66 +479,82 @@ export default function DateDetailPage({ params }) {
                   {sendingToPartner ? 'Sending…' : `💌 Send to ${partnerName}`}
                 </button>
               </div>
-            ) : !(date.user1_approved_at && date.user2_approved_at) && (
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">💌</span>
-                <div>
-                  <p className="font-semibold text-gray-900 text-sm">Sent to {partnerName}</p>
-                  <p className="text-gray-400 text-xs mt-0.5">They'll get notified to review this date</p>
-                </div>
-              </div>
             )}
-          </div>
-        )}
 
-        {/* ── Approval Flow ──────────────────────────────────── */}
-        {isCustom && !isCompleted && date.shared_with && (
-          <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Date Approval</p>
-            <div className="space-y-2 mb-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                  date.user1_approved_at ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                }`}>
-                  {date.user1_approved_at ? '✓' : '○'}
-                </div>
-                <p className="text-sm text-gray-700">
-                  {date.user_id === currentUserId ? 'You' : partnerName}
-                  <span className="text-gray-400 ml-1.5 text-xs">
-                    {date.user1_approved_at ? '· approved' : '· waiting'}
-                  </span>
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                  date.user2_approved_at ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                }`}>
-                  {date.user2_approved_at ? '✓' : '○'}
-                </div>
-                <p className="text-sm text-gray-700">
-                  {date.shared_with === currentUserId ? 'You' : partnerName}
-                  <span className="text-gray-400 ml-1.5 text-xs">
-                    {date.user2_approved_at ? '· approved' : '· waiting'}
-                  </span>
-                </p>
-              </div>
-            </div>
-
-            {date.user1_approved_at && date.user2_approved_at ? (
-              <p className="text-green-600 text-sm font-semibold text-center">✓ Both approved — you're going on a date! 💕</p>
-            ) : ((date.user_id === currentUserId && !date.user1_approved_at) ||
-                 (date.shared_with === currentUserId && !date.user2_approved_at)) && (
+            {/* State 2: Shared, neither approved */}
+            {date.shared_with && !date.user1_approved_at && !date.user2_approved_at && (
               <div>
-                {approvalError && <p className="text-red-500 text-xs mb-2">{approvalError}</p>}
-                <button
-                  onClick={approveDatePlan}
-                  disabled={approvingDate}
-                  className="w-full py-3 bg-gradient-to-r from-[#E8614D] to-[#3D3580] text-white font-bold rounded-2xl text-sm disabled:opacity-40"
-                >
-                  {approvingDate ? 'Confirming…' : "I'm in! 💕"}
-                </button>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Date Plan</p>
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="text-2xl">💌</span>
+                  <p className="text-gray-600 text-sm">Shared with {partnerName} — waiting for approval</p>
+                </div>
+                {((date.user_id === currentUserId && !date.user1_approved_at) ||
+                  (date.shared_with === currentUserId && !date.user2_approved_at)) && (
+                  <button
+                    onClick={approveDatePlan}
+                    disabled={approvingDate}
+                    className="w-full py-3 bg-gradient-to-r from-[#E8614D] to-[#3D3580] text-white font-bold rounded-2xl text-sm disabled:opacity-40"
+                  >
+                    {approvingDate ? 'Confirming…' : "I'm in! 💕"}
+                  </button>
+                )}
               </div>
             )}
+
+            {/* State 3: One approved, waiting for other */}
+            {date.shared_with && (date.user1_approved_at || date.user2_approved_at) &&
+             !(date.user1_approved_at && date.user2_approved_at) && (
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Date Plan</p>
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                      date.user1_approved_at ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                    }`}>
+                      {date.user1_approved_at ? '✓' : '○'}
+                    </div>
+                    <p className="text-sm text-gray-700">
+                      {date.user_id === currentUserId ? 'You' : partnerName}
+                      <span className="text-gray-400 ml-1.5 text-xs">{date.user1_approved_at ? '· approved' : '· waiting'}</span>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                      date.user2_approved_at ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                    }`}>
+                      {date.user2_approved_at ? '✓' : '○'}
+                    </div>
+                    <p className="text-sm text-gray-700">
+                      {date.shared_with === currentUserId ? 'You' : partnerName}
+                      <span className="text-gray-400 ml-1.5 text-xs">{date.user2_approved_at ? '· approved' : '· waiting'}</span>
+                    </p>
+                  </div>
+                </div>
+                {((date.user_id === currentUserId && !date.user1_approved_at) ||
+                  (date.shared_with === currentUserId && !date.user2_approved_at)) ? (
+                  <button
+                    onClick={approveDatePlan}
+                    disabled={approvingDate}
+                    className="w-full py-3 bg-gradient-to-r from-[#E8614D] to-[#3D3580] text-white font-bold rounded-2xl text-sm disabled:opacity-40"
+                  >
+                    {approvingDate ? 'Confirming…' : "I'm in! 💕"}
+                  </button>
+                ) : (
+                  <p className="text-gray-400 text-sm text-center">Waiting for {partnerName} to approve…</p>
+                )}
+              </div>
+            )}
+
+            {/* State 4: Both approved */}
+            {date.user1_approved_at && date.user2_approved_at && (
+              <div className="text-center py-2">
+                <p className="text-2xl mb-2">🎉</p>
+                <p className="text-green-600 font-bold text-base">You're going on a date!</p>
+                <p className="text-gray-400 text-sm mt-1">Both approved — it's locked in 💕</p>
+              </div>
+            )}
+
           </div>
         )}
 
