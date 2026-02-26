@@ -19,7 +19,7 @@ const CATEGORY_CHIPS = [
 ]
 
 function defaultDateName() {
-  return `Date Night · ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+  return 'Date Night'
 }
 
 // Haversine distance in km
