@@ -35,7 +35,7 @@ export default function WeeklyReflection() {
 
   // Check if within reflection window (Friday-Sunday)
   const isReflectionWindow = () => {
-    const dayOfWeek = new Date().getDay()
+    const dayOfWeek = nowPST().getDay()
     return dayOfWeek >= 5 || dayOfWeek === 0
   }
 
