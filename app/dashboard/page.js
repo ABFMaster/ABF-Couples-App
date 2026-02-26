@@ -25,6 +25,24 @@ function getGreeting() {
   return 'Good evening'
 }
 
+function getDaysUntil(dateStr) {
+  if (!dateStr) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const target = new Date(dateStr)
+  target.setHours(0, 0, 0, 0)
+  const diff = Math.round((target - today) / 86400000)
+  return diff
+}
+
+function getDateHype(daysUntil, title) {
+  if (daysUntil === 0) return { emoji: '🔥', text: `Tonight is the night — ${title}!` }
+  if (daysUntil === 1) return { emoji: '😍', text: `Tomorrow! ${title} is almost here` }
+  if (daysUntil <= 3)  return { emoji: '🎉', text: `${title} in ${daysUntil} days — get excited!` }
+  if (daysUntil <= 7)  return { emoji: '💕', text: `${title} coming up in ${daysUntil} days` }
+  return { emoji: '🗓️', text: `Something to look forward to — ${title}` }
+}
+
 function getCoachInsight({ streak, healthScore, flirtsThisWeek, daysTogether }) {
   if (streak >= 7)          return "Seven days in a row — you two are building something beautiful."
   if (streak >= 3)          return "Consistent check-ins are one of the strongest predictors of relationship health."
@@ -229,17 +247,31 @@ export default function Dashboard() {
           }
         })(),
 
-        // Next upcoming date
+        // Next upcoming date (check both date_plans and custom_dates, pick soonest)
         (async () => {
-          const { data } = await supabase
-            .from('date_plans')
-            .select('title, date_time')
-            .eq('couple_id', coupleData.id)
-            .in('status', ['planned', 'accepted'])
-            .gte('date_time', new Date().toISOString())
-            .order('date_time', { ascending: true })
-            .limit(1)
-          if (data?.[0]) setNextDate(data[0])
+          const now = new Date().toISOString()
+          const [{ data: plans }, { data: customs }] = await Promise.all([
+            supabase
+              .from('date_plans')
+              .select('id, title, date_time, stops')
+              .eq('couple_id', coupleData.id)
+              .in('status', ['planned', 'accepted'])
+              .gte('date_time', now)
+              .order('date_time', { ascending: true })
+              .limit(1),
+            supabase
+              .from('custom_dates')
+              .select('id, title, date_time, stops')
+              .eq('couple_id', coupleData.id)
+              .in('status', ['planned', 'approved'])
+              .gte('date_time', now)
+              .order('date_time', { ascending: true })
+              .limit(1),
+          ])
+          const candidates = [plans?.[0], customs?.[0]].filter(Boolean)
+          if (candidates.length === 0) return
+          candidates.sort((a, b) => new Date(a.date_time) - new Date(b.date_time))
+          setNextDate(candidates[0])
         })(),
 
         // Timeline memory count
@@ -393,6 +425,29 @@ export default function Dashboard() {
             </p>
             <h1 className="text-3xl font-bold mb-3">{getGreeting()}, {userName} 👋</h1>
             <p className="text-white/85 text-sm leading-relaxed mb-5">{coachInsight}</p>
+            {nextDate?.date_time && (() => {
+              const daysUntil = getDaysUntil(nextDate.date_time)
+              if (daysUntil === null || daysUntil < 0) return null
+              const hype = getDateHype(daysUntil, nextDate.title)
+              return (
+                <div
+                  onClick={() => router.push(`/dates/${nextDate.id}`)}
+                  className="bg-white/15 backdrop-blur-sm rounded-2xl px-4 py-3 mb-4 cursor-pointer hover:bg-white/20 transition-colors border border-white/20"
+                >
+                  <p className="text-white/70 text-xs font-medium uppercase tracking-wide mb-0.5">
+                    Coming Up
+                  </p>
+                  <p className="text-white font-bold text-base">
+                    {hype.emoji} {hype.text}
+                  </p>
+                  {daysUntil <= 1 && nextDate.stops?.length > 0 && (
+                    <p className="text-white/60 text-xs mt-1">
+                      {nextDate.stops.length} stops planned · Tap to see details
+                    </p>
+                  )}
+                </div>
+              )
+            })()}
             <Link
               href="/ai-coach"
               className="inline-flex items-center gap-1.5 bg-white text-[#E8614D] font-semibold px-4 py-2 rounded-full text-sm hover:bg-white/90 transition-colors"

@@ -314,7 +314,7 @@ export default function DateDetailPage({ params }) {
         {dateStr && (
           <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-              {isPlan ? 'Scheduled for' : 'Created'}
+              {date.date_time ? 'Scheduled for' : 'Created'}
             </p>
             <p className="font-semibold text-gray-900">
               {dateStr}
@@ -477,7 +477,7 @@ export default function DateDetailPage({ params }) {
                   {sendingToPartner ? 'Sending…' : `💌 Send to ${partnerName}`}
                 </button>
               </div>
-            ) : (
+            ) : !(date.user1_approved_at && date.user2_approved_at) && (
               <div className="flex items-center gap-3">
                 <span className="text-2xl">💌</span>
                 <div>

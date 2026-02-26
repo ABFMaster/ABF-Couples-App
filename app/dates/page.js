@@ -371,7 +371,7 @@ export default function DatesPage() {
                 onClick={() => router.push('/dates/custom')}
                 className="bg-gradient-to-r from-coral-500 to-indigo-500 text-white font-semibold px-6 py-3 rounded-2xl text-sm shadow-md hover:shadow-lg transition-shadow"
               >
-                Plan Your First Date
+                {upcomingDate || pastDates.length > 0 ? 'Plan Another Date' : 'Plan Your First Date'}
               </button>
             </div>
           )}
