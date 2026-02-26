@@ -200,13 +200,13 @@ export default function DateDetailPage({ params }) {
       if (error) throw error
 
       if (bothDone) {
-        updateData.status = 'completed'
-        setShowCompleteModal(false)
-        setShowTimelinePrompt(true)
-      } else {
-        setShowCompleteModal(false)
-        loadDate()
+        await supabase
+          .from('custom_dates')
+          .update({ status: 'completed' })
+          .eq('id', date.id)
       }
+      setShowCompleteModal(false)
+      setShowTimelinePrompt(true)
     } catch (err) {
       console.error('Complete error:', err)
       setCompletionError('Failed to save. Try again.')
