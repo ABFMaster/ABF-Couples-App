@@ -8,7 +8,7 @@ const anthropic = new Anthropic({
 
 export async function POST(request) {
   try {
-    const { coupleId, userId, dateTitle, stops } = await request.json()
+    const { coupleId, userId, dateId, dateTitle, stops } = await request.json()
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -71,7 +71,7 @@ Recent check-in themes: ${checkinThemes || 'none available'}
 Recent reflection insight: ${reflectionInsight || 'none available'}
 Assessment summary: ${assessmentSummary || 'none available'}
 
-Generate exactly 9 conversation starters in 3 categories.
+Generate exactly 9 conversation starters in 3 categories, plus a hype_line.
 Return ONLY valid JSON, no markdown, no explanation:
 
 {
@@ -89,13 +89,20 @@ Return ONLY valid JSON, no markdown, no explanation:
     "question 7",
     "question 8",
     "question 9"
-  ]
+  ],
+  "hype_line": "single sentence here"
 }
 
 Personalized: Draw from the check-in themes and reflection insight. Be specific to what this couple has shared, not generic.
 Fun: Light, playful, curious questions perfect for a date night.
 Growth: Warm questions that deepen understanding of each other.
-Do not number the questions. Do not add labels inside the strings.`
+Do not number the questions. Do not add labels inside the strings.
+
+Also generate a "hype_line" field — a single sentence, maximum 12 words, that makes this couple excited about this specific date. It should feel personal, warm, and energizing. Draw from their check-in themes, reflection insights, or how long since their last date.
+Examples:
+- "Cass picked this neighborhood last time — she's going to love this."
+- "You two haven't been out in weeks. This one's overdue."
+- "Three stops, one night, zero excuses. Go have fun."`
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -105,6 +112,16 @@ Do not number the questions. Do not add labels inside the strings.`
 
     const raw = message.content[0].text.trim()
     const starters = JSON.parse(raw)
+
+    if (dateId) {
+      await supabase
+        .from('custom_dates')
+        .update({
+          conversation_starters: starters,
+          hype_line: starters.hype_line || null
+        })
+        .eq('id', dateId)
+    }
 
     return NextResponse.json({ starters })
   } catch (error) {
