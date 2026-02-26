@@ -176,16 +176,21 @@ export default function WeeklyReflection() {
   const sendNudge = async () => {
     if (nudgeSent) return
     const partnerId = couple ? (isUser1 ? couple.user2_id : couple.user1_id) : null
+    if (!couple || !couple.id || !partnerId) {
+      console.error('Nudge missing data:', { couple, partnerId })
+      return
+    }
     try {
-      await supabase
+      const { error } = await supabase
         .from('flirts')
         .insert({
           couple_id: couple.id,
           sender_id: user.id,
           recipient_id: partnerId,
-          message: `I finished my weekly reflection — your turn! 👀💕`,
+          message: 'I finished my weekly reflection — your turn! 👀💕',
           type: 'text',
         })
+      if (error) throw error
       setNudgeSent(true)
     } catch (err) {
       console.error('Nudge error:', err)
