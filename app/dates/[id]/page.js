@@ -167,8 +167,8 @@ export default function DateDetailPage({ params }) {
 
   const now = new Date()
   const dateTimeValue = date.date_time ? new Date(date.date_time) : null
-  const isUpcoming = date.status === 'planned' && dateTimeValue && dateTimeValue > now
-  const isPast = date.status === 'planned' && dateTimeValue && dateTimeValue <= now
+  const isUpcoming = (date.status === 'planned' || date.status === 'approved') && dateTimeValue && dateTimeValue > now
+  const isPast = (date.status === 'planned' || date.status === 'approved') && dateTimeValue && dateTimeValue <= now
 
   const handleComplete = async () => {
     if (!myRating || submittingComplete) return
