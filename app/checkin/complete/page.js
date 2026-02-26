@@ -15,6 +15,10 @@ export default function CheckinCompletePage() {
   const [partnerName, setPartnerName] = useState('Partner')
   const [streak, setStreak] = useState(0)
   const [showComparison, setShowComparison] = useState(false)
+  const [couple, setCouple] = useState(null)
+  const [currentUser, setCurrentUser] = useState(null)
+  const [partnerId, setPartnerId] = useState(null)
+  const [nudgeSent, setNudgeSent] = useState(false)
 
   useEffect(() => {
     loadCheckinData()
@@ -36,6 +40,8 @@ export default function CheckinCompletePage() {
         router.push('/login')
         return
       }
+
+      setCurrentUser(user)
 
       // Get user's name
       const { data: userData } = await supabase
@@ -75,6 +81,9 @@ export default function CheckinCompletePage() {
         const partnerId = coupleData.user1_id === user.id
           ? coupleData.user2_id
           : coupleData.user1_id
+
+        setCouple(coupleData)
+        setPartnerId(partnerId)
 
         if (partnerId) {
           // Get partner name
@@ -136,6 +145,26 @@ export default function CheckinCompletePage() {
     } catch (err) {
       console.error('Error loading check-in:', err)
       setLoading(false)
+    }
+  }
+
+  const sendNudge = async () => {
+    if (nudgeSent) return
+    if (!couple?.id || !currentUser?.id || !partnerId) return
+    try {
+      const { error } = await supabase
+        .from('flirts')
+        .insert({
+          couple_id: couple.id,
+          sender_id: currentUser.id,
+          receiver_id: partnerId,
+          message: "I just checked in — your turn! 💕",
+          type: 'text',
+        })
+      if (error) throw error
+      setNudgeSent(true)
+    } catch (err) {
+      console.error('Nudge error:', err)
     }
   }
 
@@ -396,8 +425,12 @@ export default function CheckinCompletePage() {
               </div>
 
               {/* Nudge option */}
-              <button className="w-full mt-4 py-3 rounded-xl border-2 border-amber-300 text-amber-700 font-medium hover:bg-amber-100 transition-colors">
-                Send {partnerName} a Gentle Nudge
+              <button
+                onClick={sendNudge}
+                disabled={nudgeSent}
+                className="w-full mt-4 py-3 rounded-xl border-2 border-amber-300 text-amber-700 font-medium hover:bg-amber-100 transition-colors disabled:opacity-50"
+              >
+                {nudgeSent ? `Nudge sent to ${partnerName}!` : `Send ${partnerName} a Gentle Nudge`}
               </button>
             </div>
           </>

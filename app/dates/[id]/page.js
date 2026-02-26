@@ -562,7 +562,7 @@ export default function DateDetailPage({ params }) {
 
       {/* ── Completion Modal ──────────────────────────────────── */}
       {showCompleteModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-end justify-center p-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md">
             <h3 className="text-xl font-bold text-gray-900 mb-1">How was the date? 💕</h3>
             <p className="text-gray-500 text-sm mb-5">Rate and leave a note for your memory book</p>
