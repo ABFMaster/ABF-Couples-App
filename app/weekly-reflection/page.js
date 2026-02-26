@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import BottomNav from '@/components/BottomNav'
+import { nowPST } from '@/lib/date-utils'
 
 export default function WeeklyReflection() {
   const router = useRouter()
@@ -83,9 +84,7 @@ export default function WeeklyReflection() {
       setPartnerName(partnerProfile?.display_name || 'Partner')
 
       // Calculate week start (Monday) in PST
-      const now = new Date()
-      const pstOffset = -8 * 60
-      const pstNow = new Date(now.getTime() + (pstOffset - now.getTimezoneOffset()) * 60000)
+      const pstNow = nowPST()
       const dayOfWeek = pstNow.getDay()
       const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
       const weekStart = new Date(pstNow)

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { todayPST } from '@/lib/date-utils'
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -188,7 +189,7 @@ export default function Dashboard() {
 
         // Check-in streak + today status
         (async () => {
-          const today = new Date().toISOString().split('T')[0]
+          const today = todayPST()
           const { data } = await supabase
             .from('daily_checkins')
             .select('check_date')
