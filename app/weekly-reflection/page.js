@@ -82,17 +82,19 @@ export default function WeeklyReflection() {
 
       setPartnerName(partnerProfile?.display_name || 'Partner')
 
-      // Calculate week start (Monday)
-      const today = new Date()
-      const dayOfWeek = today.getDay()
+      // Calculate week start (Monday) in PST
+      const now = new Date()
+      const pstOffset = -8 * 60
+      const pstNow = new Date(now.getTime() + (pstOffset - now.getTimezoneOffset()) * 60000)
+      const dayOfWeek = pstNow.getDay()
       const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-      const weekStart = new Date(today)
-      weekStart.setDate(today.getDate() + mondayOffset)
+      const weekStart = new Date(pstNow)
+      weekStart.setDate(pstNow.getDate() + mondayOffset)
       const weekStartString = weekStart.toISOString().split('T')[0]
       setWeekStartStr(weekStartString)
-
       const weekEnd = new Date(weekStart)
       weekEnd.setDate(weekStart.getDate() + 6)
+      const weekEndString = weekEnd.toISOString().split('T')[0]
 
       // Fetch week's check-ins
       const { data: checkins } = await supabase
@@ -100,7 +102,7 @@ export default function WeeklyReflection() {
         .select('*')
         .eq('couple_id', coupleData.id)
         .gte('check_date', weekStartString)
-        .lte('check_date', weekEnd.toISOString().split('T')[0])
+        .lte('check_date', weekEndString)
         .order('check_date', { ascending: true })
 
       // Filter to only completed check-ins (answered)
