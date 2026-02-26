@@ -306,7 +306,7 @@ export default function DatesPage() {
         status: c.status,
         rating: c.user1_rating || c.user2_rating || null,
       })),
-    ].sort((a, b) => new Date(b.date ?? 0) - new Date(a.date ?? 0))
+    ].sort((a, b) => new Date(a.date ?? 0) - new Date(b.date ?? 0))
 
     setPastDates(normalized)
     setLoading(false)

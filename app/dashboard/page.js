@@ -35,7 +35,9 @@ function getDaysUntil(dateStr) {
   return diff
 }
 
-function getDateHype(daysUntil, title) {
+function getDateHype(daysUntil, title, hypeLine) {
+  const emoji = daysUntil === 0 ? '🔥' : daysUntil === 1 ? '😍' : daysUntil <= 3 ? '🎉' : '💕'
+  if (hypeLine) return { emoji, text: hypeLine }
   if (daysUntil === 0) return { emoji: '🔥', text: `Tonight is the night — ${title}!` }
   if (daysUntil === 1) return { emoji: '😍', text: `Tomorrow! ${title} is almost here` }
   if (daysUntil <= 3)  return { emoji: '🎉', text: `${title} in ${daysUntil} days — get excited!` }
@@ -139,6 +141,7 @@ export default function Dashboard() {
   const [daysTogether, setDaysTogether]         = useState(0)
   const [todayCheckinDone, setTodayCheckinDone] = useState(false)
   const [nextDate, setNextDate]                 = useState(null)
+  const [upcomingDates, setUpcomingDates]       = useState([])
   const [lastFlirtDaysAgo, setLastFlirtDaysAgo] = useState(null)
   const [memoryCount, setMemoryCount]           = useState(0)
   const [activeTrip]                            = useState(null)
@@ -247,31 +250,35 @@ export default function Dashboard() {
           }
         })(),
 
-        // Next upcoming date (check both date_plans and custom_dates, pick soonest)
+        // Next upcoming dates (check both date_plans and custom_dates)
         (async () => {
           const now = new Date().toISOString()
-          const [{ data: plans }, { data: customs }] = await Promise.all([
-            supabase
-              .from('date_plans')
-              .select('id, title, date_time, stops')
-              .eq('couple_id', coupleData.id)
-              .in('status', ['planned', 'accepted'])
-              .gte('date_time', now)
-              .order('date_time', { ascending: true })
-              .limit(1),
-            supabase
-              .from('custom_dates')
-              .select('id, title, date_time, stops')
-              .eq('couple_id', coupleData.id)
-              .in('status', ['planned', 'approved'])
-              .gte('date_time', now)
-              .order('date_time', { ascending: true })
-              .limit(1),
-          ])
-          const candidates = [plans?.[0], customs?.[0]].filter(Boolean)
-          if (candidates.length === 0) return
-          candidates.sort((a, b) => new Date(a.date_time) - new Date(b.date_time))
-          setNextDate(candidates[0])
+          const cid = coupleData.id
+          const { data: planDates } = await supabase
+            .from('date_plans')
+            .select('id, title, date_time, stops, status')
+            .eq('couple_id', cid)
+            .in('status', ['planned', 'approved'])
+            .gte('date_time', now)
+            .order('date_time', { ascending: true })
+            .limit(5)
+
+          const { data: customDates } = await supabase
+            .from('custom_dates')
+            .select('id, title, date_time, stops, status, hype_line')
+            .eq('couple_id', cid)
+            .in('status', ['planned', 'approved'])
+            .gte('date_time', now)
+            .order('date_time', { ascending: true })
+            .limit(5)
+
+          const allUpcoming = [
+            ...(planDates || []).map(d => ({ ...d, source: 'plan' })),
+            ...(customDates || []).map(d => ({ ...d, source: 'custom' }))
+          ].sort((a, b) => new Date(a.date_time) - new Date(b.date_time)).slice(0, 5)
+
+          setUpcomingDates(allUpcoming)
+          setNextDate(allUpcoming[0] || null)
         })(),
 
         // Timeline memory count
@@ -425,25 +432,62 @@ export default function Dashboard() {
             </p>
             <h1 className="text-3xl font-bold mb-3">{getGreeting()}, {userName} 👋</h1>
             <p className="text-white/85 text-sm leading-relaxed mb-5">{coachInsight}</p>
-            {nextDate?.date_time && (() => {
-              const daysUntil = getDaysUntil(nextDate.date_time)
-              if (daysUntil === null || daysUntil < 0) return null
-              const hype = getDateHype(daysUntil, nextDate.title)
+            {upcomingDates.length > 0 && (() => {
+              const hero = upcomingDates[0]
+              const heroDays = getDaysUntil(hero.date_time)
+              const heroHype = getDateHype(heroDays, hero.title, hero.hype_line)
+              const rest = upcomingDates.slice(1, 3)
+              const moreCount = upcomingDates.length - 3
+
               return (
-                <div
-                  onClick={() => router.push(`/dates/${nextDate.id}`)}
-                  className="bg-white/15 backdrop-blur-sm rounded-2xl px-4 py-3 mb-4 cursor-pointer hover:bg-white/20 transition-colors border border-white/20"
-                >
-                  <p className="text-white/70 text-xs font-medium uppercase tracking-wide mb-0.5">
-                    Coming Up
-                  </p>
-                  <p className="text-white font-bold text-base">
-                    {hype.emoji} {hype.text}
-                  </p>
-                  {daysUntil <= 1 && nextDate.stops?.length > 0 && (
-                    <p className="text-white/60 text-xs mt-1">
-                      {nextDate.stops.length} stops planned · Tap to see details
+                <div className="mb-4">
+                  <div
+                    onClick={() => router.push(`/dates/${hero.id}`)}
+                    className={`rounded-2xl px-4 py-4 cursor-pointer border transition-colors mb-2 ${
+                      heroDays === 0
+                        ? 'bg-white/25 border-white/40 hover:bg-white/30'
+                        : 'bg-white/15 border-white/20 hover:bg-white/20'
+                    }`}
+                  >
+                    <p className="text-white/70 text-xs font-medium uppercase tracking-wide mb-1">
+                      {heroDays === 0 ? '🔥 Tonight' : heroDays === 1 ? '😍 Tomorrow' : '💕 Coming up'}
                     </p>
+                    <p className="text-white font-bold text-base leading-snug">{heroHype.text}</p>
+                    {heroDays <= 1 && hero.stops?.length > 0 && (
+                      <p className="text-white/60 text-xs mt-1">{hero.stops.length} stops planned · Tap for details</p>
+                    )}
+                  </div>
+
+                  {rest.length > 0 && (
+                    <div className="space-y-1.5">
+                      {rest.map(d => {
+                        const days = getDaysUntil(d.date_time)
+                        const hype = getDateHype(days, d.title, d.hype_line)
+                        return (
+                          <div
+                            key={d.id}
+                            onClick={() => router.push(`/dates/${d.id}`)}
+                            className="bg-white/10 rounded-xl px-4 py-2.5 cursor-pointer hover:bg-white/15 transition-colors flex items-center justify-between"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="text-white text-sm font-semibold truncate">{hype.emoji} {d.title}</p>
+                              <p className="text-white/60 text-xs mt-0.5">{hype.text}</p>
+                            </div>
+                            <p className="text-white/50 text-xs ml-3 flex-shrink-0">
+                              {days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`}
+                            </p>
+                          </div>
+                        )
+                      })}
+                      {moreCount > 0 && (
+                        <button
+                          onClick={() => router.push('/dates')}
+                          className="w-full text-white/50 text-xs text-center py-1 hover:text-white/70 transition-colors"
+                        >
+                          and {moreCount} more coming up →
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               )
