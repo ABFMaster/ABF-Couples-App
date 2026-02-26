@@ -192,10 +192,6 @@ export default function DateDetailPage({ params }) {
         ? !!date.user2_completed_at
         : !!date.user1_completed_at
 
-      if (bothDone) {
-        updateData.status = 'completed'
-      }
-
       const { error } = await supabase
         .from('custom_dates')
         .update(updateData)
@@ -203,11 +199,8 @@ export default function DateDetailPage({ params }) {
 
       if (error) throw error
 
-      const nowBothDone = isUser1
-        ? !!date.user2_completed_at
-        : !!date.user1_completed_at
-
-      if (nowBothDone || bothDone) {
+      if (bothDone) {
+        updateData.status = 'completed'
         setShowCompleteModal(false)
         setShowTimelinePrompt(true)
       } else {
@@ -750,7 +743,7 @@ export default function DateDetailPage({ params }) {
                 disabled={!myRating || submittingComplete}
                 className="flex-1 py-3 rounded-xl bg-[#E8614D] text-white font-bold text-sm disabled:opacity-40"
               >
-                {submittingComplete ? 'Saving…' : 'Save Review'}
+                {submittingComplete ? 'Saving…' : 'We Did It! 💕'}
               </button>
             </div>
           </div>
