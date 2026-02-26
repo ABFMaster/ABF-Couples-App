@@ -278,7 +278,7 @@ export default function DateDetailPage({ params }) {
           className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 flex-shrink-0"
         >←</button>
         <h1 className="font-bold text-gray-900 flex-1 truncate">{date.title}</h1>
-        {isCustom && currentUserId === date.user_id && (
+        {isCustom && !isCompleted && (currentUserId === date.user_id || date.shared_with === currentUserId) && (
           <button
             onClick={() => router.push(`/dates/${id}/edit`)}
             className="flex-shrink-0 text-xs text-gray-400 hover:text-[#E8614D] transition-colors px-2 py-1"
