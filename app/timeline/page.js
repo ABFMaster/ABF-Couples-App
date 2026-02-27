@@ -37,6 +37,8 @@ export default function Timeline() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeFilter, setActiveFilter] = useState('all')
 
   useEffect(() => {
     checkAuth()
@@ -155,6 +157,33 @@ export default function Timeline() {
     })
   }
 
+  const filterConfig = [
+    { id: 'all', label: 'All', icon: '✨' },
+    { id: 'date_night', label: 'Dates', icon: '🌙' },
+    { id: 'trip', label: 'Trips', icon: '✈️' },
+    { id: 'custom', label: 'Memories', icon: '📸' },
+    { id: 'milestone', label: 'Milestones', icon: '🎉' },
+    { id: 'anniversary', label: 'Anniversary', icon: '💍' },
+  ]
+
+  const filteredEvents = events.filter(event => {
+    const matchesFilter = activeFilter === 'all' || event.event_type === activeFilter
+    const matchesSearch = !searchQuery ||
+      event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (event.description || '').toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesFilter && matchesSearch
+  })
+
+  const groupedEvents = filteredEvents.reduce((groups, event) => {
+    const date = new Date(event.event_date)
+    const key = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    if (!groups[key]) groups[key] = []
+    groups[key].push(event)
+    return groups
+  }, {})
+
+  const thinTypes = ['song', 'conversation', 'achievement']
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
@@ -167,11 +196,12 @@ export default function Timeline() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F6F3]">
+    <div className="min-h-screen bg-[#F8F6F3] pb-24">
+
       {/* ===== HEADER ===== */}
-      <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-40">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+      <header className="bg-white/90 backdrop-blur-sm shadow-sm sticky top-0 z-40">
+        <div className="max-w-2xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between mb-3">
             <button
               onClick={() => router.push('/dashboard')}
               className="flex items-center gap-2 text-[#6B7280] hover:text-[#2D3648] font-medium transition-colors"
@@ -181,165 +211,233 @@ export default function Timeline() {
               </svg>
               Back
             </button>
+            <div className="text-center">
+              <h1 className="text-lg font-bold text-[#2D3648]">Our Timeline</h1>
+              <p className="text-xs text-[#9CA3AF]">{stats.totalDays} days together</p>
+            </div>
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-5 py-2 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
+              className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-4 py-2 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm"
             >
-              + Add Memory
+              + Add
             </button>
+          </div>
+
+          {/* Search */}
+          <div className="relative mb-3">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search memories..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 bg-[#F8F6F3] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#E8614D]/30 text-gray-700 placeholder-gray-400"
+            />
+          </div>
+
+          {/* Filter chips */}
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {filterConfig.map(f => (
+              <button
+                key={f.id}
+                onClick={() => setActiveFilter(f.id)}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  activeFilter === f.id
+                    ? 'bg-[#E8614D] text-white shadow-sm'
+                    : 'bg-[#F8F6F3] text-gray-500 hover:bg-gray-200'
+                }`}
+              >
+                {f.icon} {f.label}
+              </button>
+            ))}
           </div>
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 py-12">
-        {/* ===== PAGE TITLE ===== */}
-        <section className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-[#2D3648] mb-2">Our Timeline</h1>
-          <p className="text-[#6B7280]">
-            {stats.totalDays} days of memories together
-          </p>
-        </section>
+      <div className="max-w-2xl mx-auto px-4 pt-6">
 
         {/* ===== STATS ROW ===== */}
-        <section className="grid grid-cols-3 gap-4 mb-10">
-          <div className="bg-white rounded-2xl p-6 text-center shadow-sm transition-all hover:shadow-lg">
-            <div className="w-14 h-14 bg-white shadow-md rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-2xl">💕</span>
-            </div>
-            <p className="text-2xl font-bold text-[#2D3648]">{stats.totalFlirts}</p>
-            <p className="text-sm text-[#9CA3AF] mt-1">Flirts Sent</p>
+        <div className="grid grid-cols-3 gap-3 mb-8">
+          <div className="bg-white rounded-2xl p-4 text-center shadow-sm">
+            <p className="text-xl font-bold text-[#2D3648]">{stats.totalFlirts}</p>
+            <p className="text-xs text-[#9CA3AF] mt-0.5">💕 Flirts</p>
           </div>
-          <div className="bg-white rounded-2xl p-6 text-center shadow-sm transition-all hover:shadow-lg">
-            <div className="w-14 h-14 bg-white shadow-md rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-2xl">☀️</span>
-            </div>
-            <p className="text-2xl font-bold text-[#2D3648]">{stats.totalCheckins}</p>
-            <p className="text-sm text-[#9CA3AF] mt-1">Check-ins</p>
+          <div className="bg-white rounded-2xl p-4 text-center shadow-sm">
+            <p className="text-xl font-bold text-[#2D3648]">{stats.totalCheckins}</p>
+            <p className="text-xs text-[#9CA3AF] mt-0.5">☀️ Check-ins</p>
           </div>
-          <div className="bg-white rounded-2xl p-6 text-center shadow-sm transition-all hover:shadow-lg">
-            <div className="w-14 h-14 bg-white shadow-md rounded-full flex items-center justify-center mx-auto mb-3">
-              <span className="text-2xl">📸</span>
-            </div>
-            <p className="text-2xl font-bold text-[#2D3648]">{events.length}</p>
-            <p className="text-sm text-[#9CA3AF] mt-1">Memories</p>
+          <div className="bg-white rounded-2xl p-4 text-center shadow-sm">
+            <p className="text-xl font-bold text-[#2D3648]">{events.length}</p>
+            <p className="text-xs text-[#9CA3AF] mt-0.5">📸 Memories</p>
           </div>
-        </section>
+        </div>
 
-        {/* ===== TIMELINE EVENTS ===== */}
-        {events.length === 0 ? (
-          /* ===== EMPTY STATE ===== */
-          <section className="bg-white rounded-2xl shadow-sm p-12 text-center">
-            <div className="text-7xl mb-6">📷</div>
-            <h2 className="text-3xl font-bold text-[#2D3648] mb-3">Start Your Timeline</h2>
-            <p className="text-[#6B7280] mb-8 max-w-md mx-auto">
-              Add your first milestone, trip, or special memory. Your relationship story starts here.
+        {/* ===== EMPTY STATE ===== */}
+        {filteredEvents.length === 0 && (
+          <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
+            <div className="text-6xl mb-4">
+              {searchQuery || activeFilter !== 'all' ? '🔍' : '📷'}
+            </div>
+            <h2 className="text-2xl font-bold text-[#2D3648] mb-2">
+              {searchQuery || activeFilter !== 'all' ? 'No matches found' : 'Start Your Timeline'}
+            </h2>
+            <p className="text-[#6B7280] mb-6 text-sm">
+              {searchQuery || activeFilter !== 'all'
+                ? 'Try a different search or filter'
+                : 'Add your first memory. Your relationship story starts here.'}
             </p>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-8 py-4 rounded-full font-bold text-lg hover:opacity-90 transition-opacity shadow-lg"
-            >
-              Add First Memory
-            </button>
-          </section>
-        ) : (
-          /* ===== ACTIVITY CARDS ===== */
-          <section className="flex flex-col gap-4">
-            {events.map((event, index) => {
-              const config = eventTypeConfig[event.event_type] || eventTypeConfig.custom
+            {!searchQuery && activeFilter === 'all' && (
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-8 py-3 rounded-full font-bold hover:opacity-90 transition-opacity shadow-lg"
+              >
+                Add First Memory
+              </button>
+            )}
+          </div>
+        )}
 
-              return (
-                <button
-                  key={event.id}
-                  onClick={() => handleEventClick(event)}
-                  className={`bg-white rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all text-left border-l-4 ${config.border} animate-fadeInUp`}
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <div className="flex items-start gap-4">
-                    {/* Icon Circle */}
-                    <div className={`w-14 h-14 ${config.bg} rounded-full flex items-center justify-center flex-shrink-0 shadow-sm`}>
-                      <span className="text-2xl">{config.icon}</span>
-                    </div>
+        {/* ===== TIMELINE GROUPS ===== */}
+        {Object.entries(groupedEvents).map(([monthYear, monthEvents]) => (
+          <div key={monthYear} className="mb-8">
 
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-4 mb-2">
-                        <h3 className="text-xl font-semibold text-[#2D3648] line-clamp-1">
-                          {event.title}
-                        </h3>
-                        {/* Activity Type Badge */}
-                        <span className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white text-xs font-medium px-3 py-1 rounded-full flex-shrink-0">
-                          {config.label}
-                        </span>
-                      </div>
+            {/* Month marker */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#E5E2DD]" />
+              <span className="text-xs font-bold text-[#9CA3AF] uppercase tracking-widest px-2">
+                {monthYear}
+              </span>
+              <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#E5E2DD]" />
+            </div>
 
-                      {event.description && (
-                        <p className="text-[#6B7280] line-clamp-2 mb-3">
-                          {event.description}
-                        </p>
-                      )}
+            {/* Events in this month */}
+            <div className="space-y-3">
+              {(() => {
+                const cards = []
+                let i = 0
+                while (i < monthEvents.length) {
+                  const event = monthEvents[i]
+                  const config = eventTypeConfig[event.event_type] || eventTypeConfig.custom
+                  const isThin = thinTypes.includes(event.event_type)
+                  const hasPhoto = event.photo_urls && event.photo_urls.length > 0
+                  const nextEvent = monthEvents[i + 1]
+                  const nextIsThin = nextEvent && thinTypes.includes(nextEvent.event_type)
 
-                      {/* Photo Preview */}
-                      {event.photo_urls && event.photo_urls.length > 0 && (
-                        <div className="flex gap-2 mb-3">
-                          {event.photo_urls.slice(0, 3).map((url, photoIndex) => (
-                            <div
-                              key={photoIndex}
-                              className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0"
+                  // Pair thin entries side by side
+                  if (isThin && nextIsThin) {
+                    const nextConfig = eventTypeConfig[nextEvent.event_type] || eventTypeConfig.custom
+                    cards.push(
+                      <div key={`pair-${event.id}`} className="grid grid-cols-2 gap-3">
+                        {[event, nextEvent].map((e, idx) => {
+                          const c = idx === 0 ? config : nextConfig
+                          return (
+                            <button
+                              key={e.id}
+                              onClick={() => handleEventClick(e)}
+                              className="bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-all text-left"
                             >
-                              <img
-                                src={url}
-                                alt={`${event.title} photo ${photoIndex + 1}`}
-                                className="w-full h-full object-cover"
-                              />
-                              {photoIndex === 2 && event.photo_urls.length > 3 && (
-                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                  <span className="text-white text-sm font-medium">
-                                    +{event.photo_urls.length - 3}
-                                  </span>
-                                </div>
+                              <span className="text-xl">{c.icon}</span>
+                              <p className="font-semibold text-gray-800 text-sm mt-2 line-clamp-1">{e.title}</p>
+                              <p className="text-xs text-gray-400 mt-1">
+                                {new Date(e.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </p>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )
+                    i += 2
+                    continue
+                  }
+
+                  // Photo-rich card
+                  if (hasPhoto) {
+                    cards.push(
+                      <button
+                        key={event.id}
+                        onClick={() => handleEventClick(event)}
+                        className="w-full rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all text-left relative"
+                      >
+                        <div className="relative h-56">
+                          <img
+                            src={event.photo_urls[0]}
+                            alt={event.title}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                          <div className="absolute bottom-0 left-0 right-0 p-4">
+                            <div className="flex items-end justify-between">
+                              <div>
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full mb-2 inline-block ${config.bg} ${config.accent}`}>
+                                  {config.icon} {config.label}
+                                </span>
+                                <h3 className="text-white font-bold text-lg leading-tight">{event.title}</h3>
+                                <p className="text-white/70 text-xs mt-0.5">
+                                  {new Date(event.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                                </p>
+                              </div>
+                              {event.photo_urls.length > 1 && (
+                                <span className="text-white/70 text-xs bg-black/30 px-2 py-1 rounded-full">
+                                  +{event.photo_urls.length - 1} photos
+                                </span>
                               )}
                             </div>
-                          ))}
+                          </div>
                         </div>
-                      )}
+                        {event.description && (
+                          <div className="bg-white px-4 py-3">
+                            <p className="text-gray-500 text-sm line-clamp-2">{event.description}</p>
+                          </div>
+                        )}
+                      </button>
+                    )
+                    i++
+                    continue
+                  }
 
-                      {/* Timestamp */}
-                      <p className="text-sm text-[#9CA3AF]">
-                        {formatDate(event.event_date)}
-                      </p>
-                    </div>
-
-                    {/* Arrow */}
-                    <svg className="w-5 h-5 text-[#9CA3AF] flex-shrink-0 mt-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </button>
-              )
-            })}
-
-            {/* Add More Card */}
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all border-2 border-dashed border-[#E5E7EB] hover:border-[#E8614D] group"
-            >
-              <div className="flex items-center justify-center gap-4">
-                <div className="w-14 h-14 bg-gradient-to-r from-[#E8614D] to-[#C44A38] rounded-full flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
-                  <span className="text-white text-2xl font-bold">+</span>
-                </div>
-                <span className="text-[#6B7280] font-medium group-hover:text-[#E8614D] transition-colors">
-                  Add Another Memory
-                </span>
-              </div>
-            </button>
-          </section>
-        )}
+                  // Standard text card
+                  cards.push(
+                    <button
+                      key={event.id}
+                      onClick={() => handleEventClick(event)}
+                      className={`w-full bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition-all text-left border-l-4 ${config.border}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`w-10 h-10 ${config.bg} rounded-full flex items-center justify-center flex-shrink-0`}>
+                          <span className="text-lg">{config.icon}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="font-bold text-gray-900 text-sm leading-snug">{event.title}</h3>
+                            <span className={`text-xs font-semibold flex-shrink-0 ${config.accent}`}>
+                              {config.label}
+                            </span>
+                          </div>
+                          {event.description && (
+                            <p className="text-gray-400 text-xs mt-1 line-clamp-2">{event.description}</p>
+                          )}
+                          <p className="text-gray-300 text-xs mt-2">
+                            {new Date(event.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  )
+                  i++
+                }
+                return cards
+              })()}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* ===== FLOATING ADD BUTTON ===== */}
       <button
         onClick={() => setShowAddModal(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:scale-110 transition-all hover:shadow-xl z-50"
+        className="fixed bottom-24 right-5 w-14 h-14 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:scale-110 transition-all hover:shadow-xl z-50"
         aria-label="Add memory"
       >
         +
@@ -365,22 +463,9 @@ export default function Timeline() {
         onEventDeleted={handleEventDeleted}
       />
 
-      {/* ===== STYLES ===== */}
       <style jsx>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fadeInUp {
-          animation: fadeInUp 0.4s ease-out forwards;
-          opacity: 0;
-        }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
     </div>
   )
