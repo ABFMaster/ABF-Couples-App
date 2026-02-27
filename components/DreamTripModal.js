@@ -67,6 +67,7 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
           vibe: selectedVibe || extra.vibe,
           freeform: extra.freeform,
           conversation: extra.conversation || conversation,
+          stage: extra.stage !== undefined ? extra.stage : conversationStage,
         })
       })
       const data = await res.json()
@@ -86,12 +87,23 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
     if (vibe.id === 'surprise') {
       const data = await callWander('surprise', { vibe: vibe.id })
       if (data?.text) {
-        setWanderMessage(data.text)
-        setConversation([{ role: 'assistant', content: data.text }])
+        const openingConvo = [{ role: 'assistant', content: data.text }]
+        setConversation(openingConvo)
         setDestination('Somewhere Special')
+        setStep('chat')
+
+        // Auto follow-up after short pause
+        await new Promise(r => setTimeout(r, 600))
+        const followUp = await callWander('chat', {
+          freeform: 'Ask ONE excited follow-up question about travel style for this specific destination. Under 25 words. End with a question mark.',
+          conversation: openingConvo,
+          stage: 1,
+        })
+        if (followUp?.text) {
+          setConversation(prev => [...prev, { role: 'assistant', content: followUp.text }])
+        }
       }
       setConversationStage(1)
-      setStep('chat')
       return
     }
 
@@ -112,47 +124,47 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
     const updatedConversation = [...conversation, newUserMsg]
     setConversation(updatedConversation)
     setUserInput('')
-
     const nextStage = conversationStage + 1
+    setConversationStage(nextStage)
 
-    // Stage 2+: After second user reply, Wander confirms and generates narrative inline
     if (nextStage >= 2 && !inlineNarrative) {
+      // Final exchange — Wander wraps up and auto-generates narrative
       const data = await callWander('chat', {
-        freeform: userInput,
-        conversation: updatedConversation
+        freeform: `The user said: "${userInput}". React warmly in 1-2 sentences then say "I have everything I need. Let me show you what I'm seeing..." — that's your closing line, word for word.`,
+        conversation: updatedConversation,
+        stage: nextStage,
       })
       if (data?.text) {
-        const wanderReply = { role: 'assistant', content: data.text }
-        setConversation(prev => [...prev, wanderReply])
+        setConversation(prev => [...prev, { role: 'assistant', content: data.text }])
       }
 
-      // Now generate narrative inline
+      // Auto-generate narrative after short pause
       setGeneratingNarrative(true)
-      setTimeout(async () => {
-        const narrativeData = await callWander('narrative')
-        if (narrativeData?.text) {
-          setInlineNarrative(narrativeData.text)
-          setConversationStage(3)
-          setConversation(prev => [...prev, {
-            role: 'assistant',
-            content: "I can see it perfectly. Here's where I'm taking you two:"
-          }])
-        }
-        setGeneratingNarrative(false)
-      }, 1000)
-      setConversationStage(nextStage)
+      await new Promise(r => setTimeout(r, 1200))
+      const narrativeData = await callWander('narrative', {
+        conversation: updatedConversation,
+      })
+      if (narrativeData?.text) {
+        setInlineNarrative(narrativeData.text)
+        setConversationStage(3)
+        setConversation(prev => [...prev, {
+          role: 'assistant',
+          content: "I can see it perfectly. Here's where I'm taking you two:",
+        }])
+      }
+      setGeneratingNarrative(false)
       return
     }
 
-    // Normal chat reply
+    // Round 1 reply — Wander asks follow-up question
     const data = await callWander('chat', {
-      freeform: userInput,
-      conversation: updatedConversation
+      freeform: `The user said: "${userInput}". React in 1 warm sentence then ask ONE specific follow-up question about their travel style or preferences for this trip. Keep the whole response under 50 words.`,
+      conversation: updatedConversation,
+      stage: nextStage,
     })
     if (data?.text) {
       setConversation(prev => [...prev, { role: 'assistant', content: data.text }])
     }
-    setConversationStage(nextStage)
   }
 
   const handleBuildItinerary = async () => {

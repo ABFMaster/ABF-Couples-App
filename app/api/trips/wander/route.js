@@ -27,7 +27,7 @@ RESPONSE RULES:
 
 export async function POST(request) {
   try {
-    const { action, tripId, coupleId, destination, vibe, freeform, conversation } = await request.json()
+    const { action, tripId, coupleId, destination, vibe, freeform, conversation, stage } = await request.json()
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
