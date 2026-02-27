@@ -87,6 +87,7 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
       const data = await callWander('surprise', { vibe: vibe.id })
       if (data?.text) {
         setWanderMessage(data.text)
+        setConversation([{ role: 'assistant', content: data.text }])
         setDestination('Somewhere Special')
       }
       setConversationStage(1)
@@ -306,18 +307,6 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
         {step === 'chat' && (
           <>
             <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
-              {/* Wander opening / surprise message */}
-              {wanderMessage && conversation.length === 0 && (
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#6B5CE7] to-[#3D3580] flex items-center justify-center text-sm flex-shrink-0 mt-1">
-                    🌍
-                  </div>
-                  <div className="bg-white/10 rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%]">
-                    <p className="text-white text-sm leading-relaxed">{wanderMessage}</p>
-                  </div>
-                </div>
-              )}
-
               {/* Conversation history */}
               {conversation.map((msg, i) => (
                 <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
