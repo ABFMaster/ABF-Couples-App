@@ -89,6 +89,7 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
         setWanderMessage(data.text)
         setDestination('Somewhere Special')
       }
+      setConversationStage(1)
       setStep('chat')
       return
     }
@@ -99,6 +100,7 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
       setWanderMessage(data.text)
       setConversation([{ role: 'assistant', content: data.text }])
     }
+    setConversationStage(1)
     setStep('chat')
   }
 
