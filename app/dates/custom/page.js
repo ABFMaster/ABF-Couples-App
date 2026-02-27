@@ -653,6 +653,20 @@ export default function CustomDateBuilderPage() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  // ── Pre-populate stops from date suggestion ──────────────────────
+  useEffect(() => {
+    const savedItinerary = sessionStorage.getItem('customDateItinerary')
+    if (savedItinerary) {
+      try {
+        const stops = JSON.parse(savedItinerary)
+        setItinerary(stops)
+        sessionStorage.removeItem('customDateItinerary')
+      } catch (e) {
+        console.error('Failed to parse saved itinerary', e)
+      }
+    }
+  }, [])
+
   const savedIds = new Set(itinerary.map(s => s.place_id))
 
   // ════════════════════════════════════════════════════════════════
