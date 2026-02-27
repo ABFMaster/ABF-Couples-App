@@ -72,6 +72,7 @@ export default function EventDetailModal({
         return
       }
 
+      setDeleting(false)
       onEventDeleted()
     } catch (err) {
       console.error('Error:', err)
