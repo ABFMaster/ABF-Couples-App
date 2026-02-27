@@ -48,6 +48,14 @@ export default function TripDetail() {
   const [showItineraryModal, setShowItineraryModal] = useState(false)
   const [showPackingModal, setShowPackingModal] = useState(false)
   const [selectedDay, setSelectedDay] = useState(null)
+  const [showCompleteModal, setShowCompleteModal] = useState(false)
+  const [tripRating, setTripRating] = useState(0)
+  const [tripReview, setTripReview] = useState('')
+  const [submittingComplete, setSubmittingComplete] = useState(false)
+  const [showTimelinePrompt, setShowTimelinePrompt] = useState(false)
+  const [timelinePhoto, setTimelinePhoto] = useState(null)
+  const [addingToTimeline, setAddingToTimeline] = useState(false)
+  const [addedToTimeline, setAddedToTimeline] = useState(false)
 
   useEffect(() => {
     if (tripId) {
@@ -205,6 +213,55 @@ export default function TripDetail() {
 
     if (!error) {
       fetchItinerary()
+    }
+  }
+
+  const handleCompleteTrip = async () => {
+    if (!tripRating || submittingComplete) return
+    setSubmittingComplete(true)
+    try {
+      const { error } = await supabase
+        .from('trips')
+        .update({
+          status: 'completed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', tripId)
+      if (error) throw error
+      setShowCompleteModal(false)
+      setShowTimelinePrompt(true)
+    } catch (err) {
+      console.error('Complete trip error:', err)
+    } finally {
+      setSubmittingComplete(false)
+    }
+  }
+
+  const addTripToTimeline = async () => {
+    if (addingToTimeline) return
+    setAddingToTimeline(true)
+    try {
+      await supabase
+        .from('timeline_events')
+        .insert({
+          couple_id: couple.id,
+          created_by: user.id,
+          event_type: 'trip',
+          title: trip.destination,
+          description: tripReview.trim() || null,
+          event_date: trip.start_date,
+          photo_urls: timelinePhoto ? [timelinePhoto] : [],
+        })
+      setAddedToTimeline(true)
+      setTimeout(() => {
+        setAddedToTimeline(false)
+        setShowTimelinePrompt(false)
+        router.push('/trips')
+      }, 2000)
+    } catch (err) {
+      console.error('Timeline error:', err)
+    } finally {
+      setAddingToTimeline(false)
     }
   }
 
@@ -430,6 +487,15 @@ export default function TripDetail() {
                 </button>
               </div>
             </div>
+
+            {trip.status !== 'completed' && new Date(trip.end_date) < new Date() && (
+              <button
+                onClick={() => setShowCompleteModal(true)}
+                className="w-full py-4 bg-white border-2 border-[#E8614D] text-[#E8614D] font-bold rounded-2xl text-sm mt-4"
+              >
+                ✓ We're Back — Mark Trip Complete
+              </button>
+            )}
           </div>
         )}
 
@@ -627,6 +693,109 @@ export default function TripDetail() {
           </div>
         )}
       </div>
+
+      {/* ===== COMPLETION MODAL ===== */}
+      {showCompleteModal && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-end justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md">
+            <h3 className="text-xl font-bold text-gray-900 mb-1">How was {trip?.destination}? ✈️</h3>
+            <p className="text-gray-500 text-sm mb-5">Rate the trip and leave a memory</p>
+            <div className="flex gap-2 justify-center mb-5">
+              {[1,2,3,4,5].map(star => (
+                <button
+                  key={star}
+                  onClick={() => setTripRating(star)}
+                  className={`text-3xl transition-transform ${tripRating >= star ? 'scale-110' : 'opacity-30'}`}
+                >⭐</button>
+              ))}
+            </div>
+            <textarea
+              value={tripReview}
+              onChange={e => setTripReview(e.target.value)}
+              placeholder="What made this trip special? (optional)"
+              className="w-full p-4 border-2 border-[#E5E2DD] rounded-xl focus:border-[#E8614D] focus:outline-none resize-none h-24 text-sm mb-4"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCompleteModal(false)}
+                className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-500 font-semibold text-sm"
+              >Cancel</button>
+              <button
+                onClick={handleCompleteTrip}
+                disabled={!tripRating || submittingComplete}
+                className="flex-1 py-3 rounded-xl bg-[#E8614D] text-white font-bold text-sm disabled:opacity-40"
+              >
+                {submittingComplete ? 'Saving…' : 'We Did It! 💕'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== TIMELINE PROMPT MODAL ===== */}
+      {showTimelinePrompt && !addedToTimeline && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-end justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md">
+            <div className="text-center mb-5">
+              <p className="text-3xl mb-2">✈️</p>
+              <h3 className="text-xl font-bold text-gray-900">Trip complete!</h3>
+              <p className="text-gray-500 text-sm mt-1">Add this to your Timeline so you never forget it 💕</p>
+            </div>
+            <div className="bg-[#FDF6EF] rounded-2xl px-4 py-3 mb-4">
+              <p className="font-semibold text-gray-900 text-sm">{trip?.destination}</p>
+              <p className="text-gray-400 text-xs mt-1">
+                {trip?.start_date && new Date(trip.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                {trip?.end_date && ` → ${new Date(trip.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+              </p>
+            </div>
+            <div className="mb-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Add a photo? (optional)</p>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files[0]
+                  if (!file) return
+                  const ext = file.name.split('.').pop()
+                  const path = `timeline/${couple.id}/${Date.now()}.${ext}`
+                  const { error } = await supabase.storage.from('photos').upload(path, file)
+                  if (!error) {
+                    const { data } = supabase.storage.from('photos').getPublicUrl(path)
+                    setTimelinePhoto(data.publicUrl)
+                  }
+                }}
+                className="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-[#E8614D] file:text-white hover:file:bg-[#d4553f]"
+              />
+              {timelinePhoto && (
+                <img src={timelinePhoto} alt="Preview" className="mt-2 w-full h-32 object-cover rounded-xl" />
+              )}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowTimelinePrompt(false); router.push('/trips') }}
+                className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-500 font-semibold text-sm"
+              >Skip</button>
+              <button
+                onClick={addTripToTimeline}
+                disabled={addingToTimeline}
+                className="flex-1 py-3 rounded-xl bg-[#E8614D] text-white font-bold text-sm disabled:opacity-40"
+              >
+                {addingToTimeline ? 'Adding…' : 'Add to Timeline 💕'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {addedToTimeline && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 text-center">
+            <p className="text-4xl mb-3">💕</p>
+            <p className="font-bold text-gray-900 text-lg">Added to your Timeline!</p>
+            <p className="text-gray-400 text-sm mt-1">This memory is yours forever</p>
+          </div>
+        </div>
+      )}
 
       {/* ===== MODALS ===== */}
       <AddItineraryItemModal
