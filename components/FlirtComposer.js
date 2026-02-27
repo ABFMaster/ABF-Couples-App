@@ -229,7 +229,7 @@ export default function FlirtComposer({ isOpen, onClose, coupleId, partnerId, pa
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -237,7 +237,7 @@ export default function FlirtComposer({ isOpen, onClose, coupleId, partnerId, pa
       />
 
       {/* Modal */}
-      <div className="relative bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[90vh] flex flex-col overflow-hidden animate-slideUp">
+      <div className="relative bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[calc(90vh-80px)] flex flex-col overflow-hidden animate-slideUp">
         {/* Success overlay */}
         {showSuccess && (
           <div className="absolute inset-0 bg-gradient-to-br from-coral-400 to-indigo-400 z-10 flex items-center justify-center animate-fadeIn">

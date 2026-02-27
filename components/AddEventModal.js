@@ -172,7 +172,7 @@ export default function AddEventModal({ isOpen, onClose, coupleId, onEventAdded 
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end md:items-center justify-center">
-      <div className="bg-white w-full md:w-[500px] md:max-h-[90vh] max-h-[85vh] rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden animate-slideUp">
+      <div className="bg-white w-full md:w-[500px] md:max-h-[90vh] max-h-[calc(85vh-80px)] rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden animate-slideUp">
         {/* Header */}
         <div className="bg-gradient-to-r from-coral-500 to-indigo-500 text-white p-6">
           <div className="flex items-center justify-between">
@@ -190,7 +190,7 @@ export default function AddEventModal({ isOpen, onClose, coupleId, onEventAdded 
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[60vh]">
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(60vh-80px)]">
           {error && (
             <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm">
               {error}

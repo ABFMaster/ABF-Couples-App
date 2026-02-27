@@ -155,8 +155,8 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end justify-center">
-      <div className="bg-[#0F0B2E] w-full max-w-lg max-h-[92vh] rounded-t-3xl shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-end justify-center">
+      <div className="bg-[#0F0B2E] w-full max-w-lg max-h-[calc(100vh-80px)] rounded-t-3xl shadow-2xl overflow-hidden flex flex-col">
 
         {/* Header */}
         <div className="px-6 pt-6 pb-4 flex items-center justify-between flex-shrink-0">

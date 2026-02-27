@@ -178,8 +178,8 @@ export default function SendSongModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end md:items-center justify-center">
-      <div className="bg-white w-full md:w-[500px] md:max-h-[90vh] max-h-[85vh] rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden animate-slideUp flex flex-col">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-end md:items-center justify-center">
+      <div className="bg-white w-full md:w-[500px] md:max-h-[90vh] max-h-[calc(85vh-80px)] rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden animate-slideUp flex flex-col">
         {/* Header */}
         <div className="bg-gradient-to-r from-[#1DB954] to-[#1ed760] text-white p-6 flex-shrink-0">
           <div className="flex items-center justify-between">
