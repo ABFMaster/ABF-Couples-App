@@ -52,9 +52,9 @@ const CURATED_IDEAS = [
     from: 'from-orange-400',
     to: 'to-coral-500',
     stops: [
-      { name: 'Pike Place Market',    address: 'Pike Place Market, Seattle, WA 98101' },
-      { name: 'Seattle Great Wheel',  address: '1301 Alaskan Way, Seattle, WA 98101' },
-      { name: 'Aqua Verde',           address: '1303 NE Boat St, Seattle, WA 98105' },
+      { name: 'Pike Place Market', address: 'Pike Place Market, Seattle, WA 98101', lat: 47.6097, lng: -122.3422 },
+      { name: 'Seattle Great Wheel', address: '1301 Alaskan Way, Seattle, WA 98101', lat: 47.6063, lng: -122.3426 },
+      { name: 'Aqua Verde', address: '1303 NE Boat St, Seattle, WA 98105', lat: 47.6499, lng: -122.3234 },
     ],
   },
   {
@@ -66,9 +66,9 @@ const CURATED_IDEAS = [
     from: 'from-indigo-500',
     to: 'to-indigo-600',
     stops: [
-      { name: 'Eltana Bagels', address: '1520 15th Ave, Seattle, WA 98122' },
-      { name: 'Oddfellows',    address: '915 E Pine St, Seattle, WA 98122' },
-      { name: 'Canon Bar',     address: '928 12th Ave, Seattle, WA 98122' },
+      { name: 'Eltana Bagels', address: '1520 15th Ave, Seattle, WA 98122', lat: 47.6150, lng: -122.3130 },
+      { name: 'Oddfellows', address: '915 E Pine St, Seattle, WA 98122', lat: 47.6149, lng: -122.3153 },
+      { name: 'Canon Bar', address: '928 12th Ave, Seattle, WA 98122', lat: 47.6133, lng: -122.3142 },
     ],
   },
   {
@@ -80,9 +80,9 @@ const CURATED_IDEAS = [
     from: 'from-teal-400',
     to: 'to-green-500',
     stops: [
-      { name: 'Volunteer Park Conservatory', address: '1400 E Galer St, Seattle, WA 98112' },
-      { name: 'Café Presse',                 address: '1117 12th Ave, Seattle, WA 98122' },
-      { name: 'Elliott Bay Book Co',         address: '1521 10th Ave, Seattle, WA 98122' },
+      { name: 'Volunteer Park Conservatory', address: '1400 E Galer St, Seattle, WA 98112', lat: 47.6319, lng: -122.3151 },
+      { name: 'Café Presse', address: '1117 12th Ave, Seattle, WA 98122', lat: 47.6142, lng: -122.3153 },
+      { name: 'Elliott Bay Book Co', address: '1521 10th Ave, Seattle, WA 98122', lat: 47.6144, lng: -122.3189 },
     ],
   },
 ]
