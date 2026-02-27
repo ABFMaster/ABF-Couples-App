@@ -758,9 +758,9 @@ export default function TripDetail() {
                   if (!file) return
                   const ext = file.name.split('.').pop()
                   const path = `timeline/${couple.id}/${Date.now()}.${ext}`
-                  const { error } = await supabase.storage.from('photos').upload(path, file)
+                  const { error } = await supabase.storage.from('timeline-photos').upload(path, file)
                   if (!error) {
-                    const { data } = supabase.storage.from('photos').getPublicUrl(path)
+                    const { data } = supabase.storage.from('timeline-photos').getPublicUrl(path)
                     setTimelinePhoto(data.publicUrl)
                   }
                 }}
