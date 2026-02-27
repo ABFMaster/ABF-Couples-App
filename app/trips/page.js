@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import CreateTripModal from '@/components/CreateTripModal'
+import DreamTripModal from '@/components/DreamTripModal'
 
 // Trip type configuration
 const tripTypes = [
@@ -37,6 +38,7 @@ export default function Trips() {
 
   // Modal
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showDreamModal, setShowDreamModal] = useState(false)
 
   // Stats
   const [stats, setStats] = useState({
@@ -179,9 +181,13 @@ export default function Trips() {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const upcomingTrips = filteredTrips.filter(t =>
-    new Date(t.start_date) >= today && t.status !== 'cancelled'
+  const dreamTrips = filteredTrips.filter(t => t.is_dream)
+
+  const realUpcomingTrips = filteredTrips.filter(t =>
+    !t.is_dream && new Date(t.start_date) >= today && t.status !== 'cancelled'
   ).sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
+
+  const upcomingTrips = realUpcomingTrips
 
   const pastTrips = filteredTrips.filter(t =>
     new Date(t.end_date) < today || t.status === 'completed'
@@ -206,13 +212,16 @@ export default function Trips() {
 
   // Trip Card Component
   const TripCard = ({ trip, index, isActive }) => {
-    const statusBadge = getStatusBadge(trip.status, trip.start_date, trip.end_date)
+    const isDream = trip.is_dream
+    const statusBadge = isDream
+      ? { label: 'Dream', className: 'bg-purple-100 text-purple-700' }
+      : getStatusBadge(trip.status, trip.start_date, trip.end_date)
     const tripImage = trip.cover_image || defaultImages[trip.trip_type] || defaultImages.mixed
 
     return (
       <button
         onClick={() => handleTripClick(trip)}
-        className={`bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all border border-[#E5E2DD] overflow-hidden text-left w-full animate-fadeInUp ${isActive ? 'ring-2 ring-[#E8614D] ring-offset-2' : ''}`}
+        className={`bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all overflow-hidden text-left w-full animate-fadeInUp ${isActive ? 'ring-2 ring-[#E8614D] ring-offset-2 border border-[#E5E2DD]' : isDream ? 'border-l-4 border-l-purple-400 border border-[#E5E2DD]' : 'border border-[#E5E2DD]'}`}
         style={{ animationDelay: `${index * 0.1}s` }}
       >
         <div className="flex flex-col md:flex-row">
@@ -227,6 +236,11 @@ export default function Trips() {
               {isActive && (
                 <div className="absolute top-3 left-3 bg-[#E8614D] text-white text-xs font-bold px-3 py-1 rounded-full">
                   NOW TRAVELING
+                </div>
+              )}
+              {isDream && (
+                <div className="absolute top-3 left-3 bg-gradient-to-r from-[#3D3580] to-[#6B5CE7] text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                  ✨ Dream Trip
                 </div>
               )}
             </div>
@@ -261,15 +275,15 @@ export default function Trips() {
               {formatDateRange(trip.start_date, trip.end_date)}
             </p>
 
-            {/* Description */}
-            {trip.description && (
+            {/* Description or dream narrative */}
+            {(trip.dream_narrative || trip.description) && (
               <p className="text-[#6B7280] line-clamp-2 mb-4">
-                {trip.description}
+                {trip.dream_narrative || trip.description}
               </p>
             )}
 
             {/* View Details Link */}
-            <span className="text-[#E8614D] hover:text-[#C44A38] font-medium inline-flex items-center gap-1 transition-colors">
+            <span className={`font-medium inline-flex items-center gap-1 transition-colors ${isDream ? 'text-purple-500 hover:text-purple-700' : 'text-[#E8614D] hover:text-[#C44A38]'}`}>
               View Details
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -296,12 +310,20 @@ export default function Trips() {
               </svg>
               Back
             </button>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-6 py-2.5 rounded-xl font-semibold hover:shadow-xl hover:scale-105 transition-all"
-            >
-              + Create New Trip
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowDreamModal(true)}
+                className="bg-gradient-to-r from-[#3D3580] to-[#6B5CE7] text-white px-5 py-2.5 rounded-xl font-semibold hover:shadow-xl hover:scale-105 transition-all flex items-center gap-2"
+              >
+                ✨ Dream Trip
+              </button>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-6 py-2.5 rounded-xl font-semibold hover:shadow-xl hover:scale-105 transition-all"
+              >
+                + Create New Trip
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -378,6 +400,23 @@ export default function Trips() {
           </section>
         )}
 
+        {/* ===== DREAM TRIPS ===== */}
+        {dreamTrips.length > 0 && (
+          <section className="mb-10">
+            <h2 className="text-2xl font-bold text-[#2D3648] mb-2 flex items-center gap-2">
+              ✨ Dream Trips
+            </h2>
+            <p className="text-gray-400 text-sm mb-6">
+              Places you two are dreaming about
+            </p>
+            <div className="flex flex-col gap-6">
+              {dreamTrips.map((trip, index) => (
+                <TripCard key={trip.id} trip={trip} index={index} />
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* ===== UPCOMING TRIPS ===== */}
         {upcomingTrips.length > 0 && (
           <section className="mb-10">
@@ -438,19 +477,37 @@ export default function Trips() {
         )}
       </div>
 
-      {/* ===== FLOATING ACTION BUTTON ===== */}
-      <button
-        onClick={() => setShowCreateModal(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:scale-110 transition-all hover:shadow-xl z-50"
-        aria-label="Create new trip"
-      >
-        +
-      </button>
+      {/* ===== FLOATING ACTION BUTTONS ===== */}
+      <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-50">
+        <button
+          onClick={() => setShowDreamModal(true)}
+          className="w-14 h-14 bg-gradient-to-r from-[#3D3580] to-[#6B5CE7] text-white rounded-full shadow-lg flex items-center justify-center text-xl hover:scale-110 transition-all hover:shadow-xl"
+          aria-label="Create dream trip"
+        >
+          ✨
+        </button>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="w-14 h-14 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:scale-110 transition-all hover:shadow-xl"
+          aria-label="Create real trip"
+        >
+          ✈️
+        </button>
+      </div>
 
       {/* ===== CREATE TRIP MODAL ===== */}
       <CreateTripModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
+        coupleId={couple?.id}
+        partnerName={partnerName}
+        onTripCreated={handleTripCreated}
+      />
+
+      {/* ===== DREAM TRIP MODAL ===== */}
+      <DreamTripModal
+        isOpen={showDreamModal}
+        onClose={() => setShowDreamModal(false)}
         coupleId={couple?.id}
         partnerName={partnerName}
         onTripCreated={handleTripCreated}
