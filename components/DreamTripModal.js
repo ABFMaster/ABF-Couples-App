@@ -14,7 +14,7 @@ const vibes = [
 
 export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName, onTripCreated }) {
   const router = useRouter()
-  const [step, setStep] = useState('intro') // intro | vibe | chat | saving
+  const [step, setStep] = useState('intro') // intro | chat
   const [selectedVibe, setSelectedVibe] = useState(null)
   const [destination, setDestination] = useState('')
   const [freeform, setFreeform] = useState('')
@@ -23,13 +23,19 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
   const [conversation, setConversation] = useState([])
   const [userInput, setUserInput] = useState('')
   const [saving, setSaving] = useState(false)
+  const [conversationStage, setConversationStage] = useState(0)
+  // 0 = opening, 1 = follow-up, 2 = destination confirmed, 3 = narrative shown, 4 = itinerary shown
+  const [inlineNarrative, setInlineNarrative] = useState(null)
+  const [inlineItinerary, setInlineItinerary] = useState(null)
+  const [generatingNarrative, setGeneratingNarrative] = useState(false)
+  const [generatingItinerary, setGeneratingItinerary] = useState(false)
   const chatEndRef = useRef(null)
 
   useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [conversation, wanderMessage])
+  }, [conversation, wanderMessage, inlineNarrative, inlineItinerary])
 
   useEffect(() => {
     if (!isOpen) {
@@ -40,6 +46,11 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
       setWanderMessage('')
       setConversation([])
       setUserInput('')
+      setConversationStage(0)
+      setInlineNarrative(null)
+      setInlineItinerary(null)
+      setGeneratingNarrative(false)
+      setGeneratingItinerary(false)
     }
   }, [isOpen])
 
@@ -55,7 +66,7 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
           destination: destination || extra.destination,
           vibe: selectedVibe || extra.vibe,
           freeform: extra.freeform,
-          conversation,
+          conversation: extra.conversation || conversation,
         })
       })
       const data = await res.json()
@@ -94,17 +105,71 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
   const handleSendMessage = async () => {
     if (!userInput.trim() || loadingWander) return
 
-    const newConversation = [
-      ...conversation,
-      { role: 'user', content: userInput }
-    ]
-    setConversation(newConversation)
+    const newUserMsg = { role: 'user', content: userInput }
+    const updatedConversation = [...conversation, newUserMsg]
+    setConversation(updatedConversation)
     setUserInput('')
 
-    const data = await callWander('chat', { freeform: userInput })
+    const nextStage = conversationStage + 1
+
+    // Stage 2+: After second user reply, Wander confirms and generates narrative inline
+    if (nextStage >= 2 && !inlineNarrative) {
+      const data = await callWander('chat', {
+        freeform: userInput,
+        conversation: updatedConversation
+      })
+      if (data?.text) {
+        const wanderReply = { role: 'assistant', content: data.text }
+        setConversation(prev => [...prev, wanderReply])
+      }
+
+      // Now generate narrative inline
+      setGeneratingNarrative(true)
+      setTimeout(async () => {
+        const narrativeData = await callWander('narrative')
+        if (narrativeData?.text) {
+          setInlineNarrative(narrativeData.text)
+          setConversationStage(3)
+          setConversation(prev => [...prev, {
+            role: 'assistant',
+            content: "I can see it perfectly. Here's where I'm taking you two:"
+          }])
+        }
+        setGeneratingNarrative(false)
+      }, 1000)
+      setConversationStage(nextStage)
+      return
+    }
+
+    // Normal chat reply
+    const data = await callWander('chat', {
+      freeform: userInput,
+      conversation: updatedConversation
+    })
     if (data?.text) {
       setConversation(prev => [...prev, { role: 'assistant', content: data.text }])
     }
+    setConversationStage(nextStage)
+  }
+
+  const handleBuildItinerary = async () => {
+    if (generatingItinerary) return
+    setGeneratingItinerary(true)
+    setConversation(prev => [...prev, {
+      role: 'assistant',
+      content: "Alright. Let me build you the full picture — every day, every moment. Give me a second."
+    }])
+
+    const data = await callWander('itinerary')
+    if (data?.itinerary) {
+      setInlineItinerary(data.itinerary)
+      setConversationStage(4)
+      setConversation(prev => [...prev, {
+        role: 'assistant',
+        content: data.itinerary.wanderNote || "There it is. Your trip. Now go have it."
+      }])
+    }
+    setGeneratingItinerary(false)
   }
 
   const handleSaveDream = async () => {
@@ -114,9 +179,12 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
     try {
       const { data: { user } } = await supabase.auth.getUser()
 
-      // Generate narrative
-      const narrativeData = await callWander('narrative')
-      const narrative = narrativeData?.text || ''
+      // Use inline narrative if available, otherwise generate one
+      let narrative = inlineNarrative
+      if (!narrative) {
+        const narrativeData = await callWander('narrative')
+        narrative = narrativeData?.text || ''
+      }
 
       const { data: trip, error } = await supabase
         .from('trips')
@@ -135,7 +203,8 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
           status: 'upcoming',
           is_dream: true,
           dream_vibe: selectedVibe,
-          dream_narrative: narrative,
+          dream_narrative: inlineNarrative || null,
+          dream_itinerary: inlineItinerary || null,
           dream_conversation: conversation,
         })
         .select()
@@ -156,7 +225,7 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-end justify-center">
-      <div className="bg-[#0F0B2E] w-full max-w-lg max-h-[calc(100vh-80px)] rounded-t-3xl shadow-2xl overflow-hidden flex flex-col">
+      <div className="bg-[#0F0B2E] w-full max-w-lg h-[calc(100vh-80px)] rounded-t-3xl shadow-2xl overflow-hidden flex flex-col">
 
         {/* Header */}
         <div className="px-6 pt-6 pb-4 flex items-center justify-between flex-shrink-0">
@@ -255,15 +324,64 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
                       🌍
                     </div>
                   )}
-                  <div className={`rounded-2xl px-4 py-3 max-w-[85%] ${
-                    msg.role === 'user'
-                      ? 'bg-[#E8614D] text-white rounded-tr-sm'
-                      : 'bg-white/10 text-white rounded-tl-sm'
-                  }`}>
+                  <div className={`rounded-2xl px-4 py-3 max-w-[85%] ${msg.role === 'user' ? 'bg-[#E8614D] text-white rounded-tr-sm' : 'bg-white/10 text-white rounded-tl-sm'}`}>
                     <p className="text-sm leading-relaxed">{msg.content}</p>
                   </div>
                 </div>
               ))}
+
+              {/* Inline narrative card — appears after stage 3 */}
+              {inlineNarrative && (
+                <div className="mx-2 bg-gradient-to-br from-[#1a1545] to-[#0F0B2E] border border-purple-500/30 rounded-2xl p-5">
+                  <p className="text-purple-300 text-xs font-semibold uppercase tracking-wider mb-3">
+                    ✨ Your Dream Trip
+                  </p>
+                  <p className="text-white text-sm leading-relaxed italic">
+                    {inlineNarrative}
+                  </p>
+                  {!inlineItinerary && !generatingItinerary && (
+                    <button
+                      onClick={handleBuildItinerary}
+                      className="mt-4 w-full py-2.5 bg-white/10 hover:bg-white/20 border border-purple-400/40 text-purple-200 text-sm font-semibold rounded-xl transition-all"
+                    >
+                      Build the full day-by-day →
+                    </button>
+                  )}
+                  {generatingItinerary && (
+                    <div className="mt-4 flex items-center gap-2 text-purple-300 text-sm">
+                      <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                      Wander is crafting every detail...
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Inline itinerary — appears after stage 4 */}
+              {inlineItinerary && (
+                <div className="mx-2 bg-gradient-to-br from-[#1a1545] to-[#0F0B2E] border border-purple-500/30 rounded-2xl p-5">
+                  <p className="text-white font-bold text-base mb-4">
+                    {inlineItinerary.title}
+                  </p>
+                  {(inlineItinerary.days || []).map((day, i) => (
+                    <div key={i} className="mb-4">
+                      <p className="text-purple-300 text-xs font-bold uppercase tracking-wider mb-1">
+                        Day {day.day} — {day.title}
+                      </p>
+                      <p className="text-white/80 text-sm leading-relaxed">
+                        {day.narrative}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Narrative generating indicator */}
+              {generatingNarrative && (
+                <div className="mx-2 flex items-center gap-2 text-purple-300 text-sm">
+                  <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+                  Wander is painting the picture...
+                </div>
+              )}
 
               {loadingWander && (
                 <div className="flex gap-3">
@@ -303,16 +421,18 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
               </div>
               <button
                 onClick={handleSaveDream}
-                disabled={saving}
-                className="w-full py-3 bg-gradient-to-r from-[#6B5CE7] to-[#3D3580] text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                disabled={saving || conversationStage < 1}
+                className={`w-full py-3 font-bold rounded-xl text-sm flex items-center justify-center gap-2 transition-all ${conversationStage >= 3 ? 'bg-gradient-to-r from-[#6B5CE7] to-[#3D3580] text-white' : 'bg-white/5 text-white/30 border border-white/10'} disabled:opacity-40`}
               >
                 {saving ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     Saving your dream...
                   </>
-                ) : (
+                ) : conversationStage >= 3 ? (
                   '✨ Save This Dream Trip'
+                ) : (
+                  '✨ Save anytime'
                 )}
               </button>
             </div>
