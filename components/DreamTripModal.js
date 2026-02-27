@@ -121,11 +121,22 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
     // Get Wander's opening
     const data = await callWander('opening', { vibe: vibe.id, destination })
     if (data?.text) {
-      setWanderMessage(data.text)
-      setConversation([{ role: 'assistant', content: data.text }])
+      const openingConvo = [{ role: 'assistant', content: data.text }]
+      setConversation(openingConvo)
+      setStep('chat')
+
+      // Auto follow-up question — same pattern as Surprise Me
+      await new Promise(r => setTimeout(r, 600))
+      const followUp = await callWander('chat', {
+        freeform: 'Ask ONE specific follow-up question about their travel style or preferences for this trip. React to the destination or vibe in one warm sentence first, then ask the question. Keep the whole response under 50 words. End with a question mark.',
+        conversation: openingConvo,
+        stage: 1,
+      })
+      if (followUp?.text) {
+        setConversation(prev => [...prev, { role: 'assistant', content: followUp.text }])
+      }
     }
     setConversationStage(1)
-    setStep('chat')
   }
 
   const handleSendMessage = async () => {
