@@ -409,6 +409,63 @@ export default function TripDetail() {
         {/* ===== OVERVIEW TAB ===== */}
         {activeTab === 'overview' && (
           <div className="flex flex-col gap-6">
+            {/* Dream Trip — Wander Narrative */}
+            {trip.is_dream && trip.dream_narrative && (
+              <div className="bg-gradient-to-br from-[#1a1545] to-[#0F0B2E] rounded-2xl p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#6B5CE7] to-[#3D3580] flex items-center justify-center text-sm">
+                    🌍
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-sm">Wander</p>
+                    <p className="text-purple-300 text-xs">Your dream trip</p>
+                  </div>
+                </div>
+                <p className="text-white/90 text-sm leading-relaxed italic">
+                  {trip.dream_narrative}
+                </p>
+              </div>
+            )}
+
+            {/* Dream Trip — Wander Itinerary */}
+            {trip.is_dream && trip.dream_itinerary && (
+              <div className="bg-gradient-to-br from-[#1a1545] to-[#0F0B2E] rounded-2xl p-6">
+                <p className="text-white font-bold text-base mb-4">
+                  {trip.dream_itinerary.title}
+                </p>
+                {(trip.dream_itinerary.days || []).map((day, i) => (
+                  <div key={i} className="mb-4">
+                    <p className="text-purple-300 text-xs font-bold uppercase tracking-wider mb-1">
+                      Day {day.day} — {day.title}
+                    </p>
+                    <p className="text-white/80 text-sm leading-relaxed">
+                      {day.narrative}
+                    </p>
+                  </div>
+                ))}
+                {trip.dream_itinerary.wanderNote && (
+                  <p className="text-purple-300 text-sm italic mt-4 border-t border-white/10 pt-4">
+                    — {trip.dream_itinerary.wanderNote}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Dream Trip — No Itinerary Yet */}
+            {trip.is_dream && !trip.dream_itinerary && (
+              <div className="bg-[#0F0B2E] border border-purple-500/30 rounded-2xl p-6 text-center">
+                <p className="text-purple-300 text-sm mb-3">
+                  Wander hasn&apos;t built your full itinerary yet
+                </p>
+                <button
+                  onClick={() => router.push('/trips')}
+                  className="text-purple-400 text-sm font-semibold underline"
+                >
+                  Open Wander to build it →
+                </button>
+              </div>
+            )}
+
             {/* Quick Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-white rounded-2xl p-6 shadow-sm text-center border border-[#E5E2DD]">

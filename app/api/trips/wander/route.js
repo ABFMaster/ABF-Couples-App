@@ -60,27 +60,29 @@ Give them Wander's opening message. Ask them one evocative question that gets th
 
     } else if (action === 'narrative') {
       // Generate the cinematic opening paragraph
-      userMessage = `Generate a cinematic opening narrative for ${names || 'a couple'}'s dream trip to ${destination || 'an unknown destination'}. Vibe: ${vibe || 'not specified'}. Their interests: ${hobbies || 'not specified'}.
+      const conversationContext = conversation?.length
+        ? `\n\nConversation context:\n${conversation.map(m => `${m.role}: ${m.content}`).join('\n')}`
+        : ''
+      userMessage = `Generate a cinematic opening narrative for ${names || 'a couple'}'s dream trip to ${destination || 'an unknown destination'}. Vibe: ${vibe || 'not specified'}. Their interests: ${hobbies || 'not specified'}.${conversationContext}
 
+IMPORTANT: Stay true to the exact destination discussed. Do not switch destinations.
 Write 3 sentences maximum. Present tense. Sensory and specific. Make them feel like they're already there. This is the first thing they'll read about their dream trip — make it land.`
 
     } else if (action === 'itinerary') {
       // Generate full day-by-day dream itinerary
-      const { data: trip } = await supabase
-        .from('trips')
-        .select('*')
-        .eq('id', tripId)
-        .maybeSingle()
+      const conversationContext = conversation?.length
+        ? `\n\nConversation so far:\n${conversation.slice(0, 4).map(m => `${m.role}: ${m.content}`).join('\n')}`
+        : ''
 
-      const days = trip?.end_date && trip?.start_date
-        ? Math.max(3, Math.ceil((new Date(trip.end_date) - new Date(trip.start_date)) / (1000 * 60 * 60 * 24)))
-        : 4
+      const days = 4
 
-      userMessage = `Generate a dreamy day-by-day itinerary for ${names || 'a couple'}'s trip to ${destination}. Vibe: ${vibe || 'mixed'}. Duration: ${days} days. Their interests: ${hobbies || 'not specified'}.
+      userMessage = `Generate a dreamy day-by-day itinerary for ${names || 'a couple'}'s trip to ${destination}. Vibe: ${vibe || 'mixed'}. Duration: ${days} days. Their interests: ${hobbies || 'not specified'}.${conversationContext}
 
-Format as JSON only, no markdown:
+IMPORTANT: Stay true to the exact destination discussed in the conversation.
+
+Return ONLY valid JSON, no markdown, no explanation:
 {
-  "title": "A evocative trip title (e.g. Your Kyoto Autumn)",
+  "title": "An evocative trip title",
   "days": [
     {
       "day": 1,
@@ -94,6 +96,9 @@ Format as JSON only, no markdown:
     } else if (action === 'chat') {
       // Ongoing conversation
       userMessage = freeform || 'Tell me more about this destination.'
+    } else if (action === 'extract_destination') {
+      userMessage = `Based on this travel recommendation, extract ONLY the destination city and country (e.g. "São Miguel Island, Azores, Portugal"). Return ONLY the destination name, nothing else, no punctuation at the end:\n\n${freeform}`
+
     } else if (action === 'surprise') {
       // Wander picks the destination
       userMessage = `A couple (${names || 'two people'}) wants to be surprised. Their interests: ${hobbies || 'not specified'}. Their vibe choice: ${vibe || 'surprise'}.

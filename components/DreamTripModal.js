@@ -17,6 +17,7 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
   const [step, setStep] = useState('intro') // intro | chat
   const [selectedVibe, setSelectedVibe] = useState(null)
   const [destination, setDestination] = useState('')
+  const [resolvedDestination, setResolvedDestination] = useState('')
   const [freeform, setFreeform] = useState('')
   const [wanderMessage, setWanderMessage] = useState('')
   const [loadingWander, setLoadingWander] = useState(false)
@@ -42,6 +43,7 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
       setStep('intro')
       setSelectedVibe(null)
       setDestination('')
+      setResolvedDestination('')
       setFreeform('')
       setWanderMessage('')
       setConversation([])
@@ -92,6 +94,15 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
         setDestination('Somewhere Special')
         setStep('chat')
 
+        // Extract the real destination from Wander's response
+        const destData = await callWander('extract_destination', {
+          freeform: data.text,
+        })
+        if (destData?.text) {
+          setResolvedDestination(destData.text.trim())
+          setDestination(destData.text.trim())
+        }
+
         // Auto follow-up after short pause
         await new Promise(r => setTimeout(r, 600))
         const followUp = await callWander('chat', {
@@ -127,7 +138,7 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
     const nextStage = conversationStage + 1
     setConversationStage(nextStage)
 
-    if (nextStage >= 2 && !inlineNarrative) {
+    if (nextStage >= 3 && !inlineNarrative) {
       // Final exchange — Wander wraps up and auto-generates narrative
       const data = await callWander('chat', {
         freeform: `The user said: "${userInput}". React warmly in 1-2 sentences then say "I have everything I need. Let me show you what I'm seeing..." — that's your closing line, word for word.`,
@@ -175,7 +186,7 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
       content: "Alright. Let me build you the full picture — every day, every moment. Give me a second."
     }])
 
-    const data = await callWander('itinerary')
+    const data = await callWander('itinerary', { conversation })
     if (data?.itinerary) {
       setInlineItinerary(data.itinerary)
       setConversationStage(4)
@@ -206,7 +217,7 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
         .insert({
           couple_id: coupleId,
           created_by: user.id,
-          destination: destination || 'Dream Destination',
+          destination: resolvedDestination || destination || 'Dream Destination',
           start_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           end_date: new Date(Date.now() + 95 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           trip_type: selectedVibe === 'surprise' ? 'mixed' :
