@@ -56,6 +56,9 @@ export default function TripDetail() {
   const [timelinePhoto, setTimelinePhoto] = useState(null)
   const [addingToTimeline, setAddingToTimeline] = useState(false)
   const [addedToTimeline, setAddedToTimeline] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [promoting, setPromoting] = useState(false)
 
   useEffect(() => {
     if (tripId) {
@@ -237,6 +240,42 @@ export default function TripDetail() {
     }
   }
 
+  const handleDelete = async () => {
+    if (deleting) return
+    setDeleting(true)
+    try {
+      await supabase.from('trip_itinerary').delete().eq('trip_id', trip.id)
+      await supabase.from('trip_packing').delete().eq('trip_id', trip.id)
+      await supabase.from('trips').delete().eq('id', trip.id)
+      router.push('/trips')
+    } catch (err) {
+      console.error('Delete error:', err)
+      setDeleting(false)
+    }
+  }
+
+  const handlePromoteToReal = async () => {
+    if (promoting) return
+    setPromoting(true)
+    try {
+      await supabase
+        .from('trips')
+        .update({
+          is_dream: false,
+          promoted_at: new Date().toISOString(),
+          status: 'planning',
+        })
+        .eq('id', trip.id)
+
+      router.refresh()
+      setTrip(prev => ({ ...prev, is_dream: false, promoted_at: new Date().toISOString() }))
+    } catch (err) {
+      console.error('Promote error:', err)
+    } finally {
+      setPromoting(false)
+    }
+  }
+
   const addTripToTimeline = async () => {
     if (addingToTimeline) return
     setAddingToTimeline(true)
@@ -323,18 +362,26 @@ export default function TripDetail() {
   return (
     <div className="min-h-screen bg-[#F8F6F3] pb-24">
       {/* ===== HERO HEADER ===== */}
-      <div className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white py-16">
+      <div className={`text-white py-16 ${trip.is_dream ? 'bg-gradient-to-r from-[#3D3580] to-[#6B5CE7]' : 'bg-gradient-to-r from-[#E8614D] to-[#C44A38]'}`}>
         <div className="max-w-4xl mx-auto px-4">
-          {/* Back Button */}
-          <button
-            onClick={() => router.push('/trips')}
-            className="flex items-center gap-2 px-4 py-2 bg-white/20 border border-white/30 text-white rounded-full hover:bg-white/30 transition-colors mb-8"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            <span className="font-medium">Back to Trips</span>
-          </button>
+          {/* Back Button + Delete */}
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={() => router.push('/trips')}
+              className="flex items-center gap-2 px-4 py-2 bg-white/20 border border-white/30 text-white rounded-full hover:bg-white/30 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span className="font-medium">Back to Trips</span>
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 text-white/70 hover:bg-red-500/30 hover:text-white hover:border-red-400 rounded-full transition-all text-sm"
+            >
+              🗑️ Delete
+            </button>
+          </div>
 
           {/* Trip Info */}
           <div className="flex items-start justify-between">
@@ -344,10 +391,13 @@ export default function TripDetail() {
                 <h1 className="text-5xl font-bold">{trip.destination}</h1>
               </div>
               <p className="text-xl opacity-90 ml-1">
-                {startDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} - {endDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                {trip.is_dream
+                  ? '✨ Dream Trip'
+                  : `${startDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+                }
               </p>
 
-              {isUpcoming && daysUntil > 0 && (
+              {!trip.is_dream && isUpcoming && daysUntil > 0 && (
                 <div className="bg-white/20 rounded-full px-5 py-2.5 inline-flex items-center gap-2 mt-6">
                   <span className="text-2xl">⏳</span>
                   <span className="font-semibold">{daysUntil} days to go!</span>
@@ -374,12 +424,15 @@ export default function TripDetail() {
       <div className="bg-white/80 backdrop-blur-sm border-b border-[#E5E2DD] sticky top-0 z-40">
         <div className="max-w-4xl mx-auto px-4">
           <div className="flex gap-1 overflow-x-auto">
-            {[
-              { id: 'overview', label: 'Overview', icon: '📋' },
-              { id: 'itinerary', label: 'Itinerary', icon: '📅' },
-              { id: 'packing', label: 'Packing', icon: '🎒' },
-              { id: 'photos', label: 'Photos', icon: '📸' },
-            ].map(tab => (
+            {(trip.is_dream
+              ? [{ id: 'overview', label: 'Overview', icon: '📋' }]
+              : [
+                  { id: 'overview', label: 'Overview', icon: '📋' },
+                  { id: 'itinerary', label: 'Itinerary', icon: '📅' },
+                  { id: 'packing', label: 'Packing', icon: '🎒' },
+                  { id: 'photos', label: 'Photos', icon: '📸' },
+                ]
+            ).map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -462,6 +515,26 @@ export default function TripDetail() {
                   className="text-purple-400 text-sm font-semibold underline"
                 >
                   Open Wander to build it →
+                </button>
+              </div>
+            )}
+
+            {/* Dream Trip — Promote to Real */}
+            {trip.is_dream && (
+              <div className="bg-white border-2 border-dashed border-purple-300 rounded-2xl p-6 text-center">
+                <p className="text-2xl mb-3">✈️</p>
+                <p className="text-gray-700 font-semibold mb-1">
+                  Ready to make this real?
+                </p>
+                <p className="text-gray-400 text-sm mb-4">
+                  Wander&apos;s work stays. You add the real dates and start planning.
+                </p>
+                <button
+                  onClick={handlePromoteToReal}
+                  disabled={promoting}
+                  className="w-full py-3 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white font-bold rounded-xl text-sm disabled:opacity-50"
+                >
+                  {promoting ? 'Promoting...' : "Let's actually go ✈️"}
                 </button>
               </div>
             )}
@@ -872,6 +945,38 @@ export default function TripDetail() {
         partnerName={partnerName}
         onItemCreated={handlePackingCreated}
       />
+
+      {/* ===== DELETE CONFIRM MODAL ===== */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+            <p className="text-xl font-bold text-gray-900 mb-2">
+              Delete this trip?
+            </p>
+            <p className="text-gray-500 text-sm mb-6">
+              {trip.is_dream
+                ? `"${trip.destination}" and everything Wander built will be gone forever.`
+                : `"${trip.destination}" including all itinerary, packing, and photos will be gone forever.`
+              }
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-500 font-semibold text-sm"
+              >
+                Keep it
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 py-3 rounded-xl bg-red-500 text-white font-bold text-sm disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Yes, delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===== STYLES ===== */}
       <style jsx>{`
