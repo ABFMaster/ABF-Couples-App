@@ -132,8 +132,13 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
         })
         if (destData?.text) {
           const extracted = destData.text.trim()
-          setDestination(extracted)
-          setResolvedDestination(extracted)
+          // Only use if it looks like a real place name —
+          // short, no more than 5 words, not "unknown"
+          const words = extracted.split(' ').length
+          if (words <= 5 && extracted.toLowerCase() !== 'unknown' && extracted.length < 50) {
+            setDestination(extracted)
+            setResolvedDestination(extracted)
+          }
         }
       }
 

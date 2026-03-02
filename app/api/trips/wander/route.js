@@ -97,7 +97,7 @@ Return ONLY valid JSON, no markdown, no explanation:
       // Ongoing conversation
       userMessage = freeform || 'Tell me more about this destination.'
     } else if (action === 'extract_destination') {
-      userMessage = `Based on this travel recommendation, extract ONLY the destination city and country (e.g. "São Miguel Island, Azores, Portugal"). Return ONLY the destination name, nothing else, no punctuation at the end:\n\n${freeform}`
+      userMessage = `Extract the destination city/place from this text. Return ONLY the place name, maximum 4 words, nothing else. No explanation, no punctuation. If no specific place is mentioned, return exactly the word: unknown\n\nText: ${freeform}`
 
     } else if (action === 'surprise') {
       // Wander picks the destination
