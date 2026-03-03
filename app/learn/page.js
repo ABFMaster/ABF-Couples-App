@@ -6,6 +6,77 @@ import { ASSESSMENT_MODULES } from '@/lib/relationship-questions'
 
 const SOURCES = ['All', 'The Gottman Institute', 'Greater Good Magazine', 'Psychology Today', 'MindBodyGreen']
 
+// ── Recommended books ──────────────────────────────────────────────────────────
+
+const RECOMMENDED_BOOKS = [
+  {
+    id: 'seven-principles',
+    title: 'The Seven Principles for Making Marriage Work',
+    author: 'Dr. John Gottman',
+    emoji: '💑',
+    color: '#E8614D',
+    topics: ['Communication', 'Conflict', 'Intimacy'],
+    blurb: 'The most science-backed book on relationships ever written. Gottman\'s 40 years of research distilled into 7 actionable principles every couple can use.',
+    bestFor: 'Every couple',
+    amazonUrl: 'https://www.amazon.com/dp/0553447718',
+  },
+  {
+    id: 'attached',
+    title: 'Attached',
+    author: 'Amir Levine & Rachel Heller',
+    emoji: '🔗',
+    color: '#6B5CE7',
+    topics: ['Attachment', 'Psychology', 'Self-Awareness'],
+    blurb: 'Discover your attachment style and understand why you relate the way you do. A game-changer for understanding patterns that shape every relationship.',
+    bestFor: 'Understanding yourself',
+    amazonUrl: 'https://www.amazon.com/dp/1585429139',
+  },
+  {
+    id: 'hold-me-tight',
+    title: 'Hold Me Tight',
+    author: 'Dr. Sue Johnson',
+    emoji: '🤝',
+    color: '#3D9970',
+    topics: ['Emotional Connection', 'Bonding', 'Vulnerability'],
+    blurb: 'Based on Emotionally Focused Therapy (EFT), this book reveals the secret to lasting love: emotional responsiveness and creating a safe connection.',
+    bestFor: 'Rebuilding connection',
+    amazonUrl: 'https://www.amazon.com/dp/031611300X',
+  },
+  {
+    id: 'five-love-languages',
+    title: 'The 5 Love Languages',
+    author: 'Gary Chapman',
+    emoji: '💝',
+    color: '#F39C12',
+    topics: ['Love Languages', 'Connection', 'Communication'],
+    blurb: 'The classic that introduced the world to love languages. Simple, practical, and surprisingly powerful for understanding how you each give and receive love.',
+    bestFor: 'Speaking each other\'s language',
+    amazonUrl: 'https://www.amazon.com/dp/080241270X',
+  },
+  {
+    id: 'mating-in-captivity',
+    title: 'Mating in Captivity',
+    author: 'Esther Perel',
+    emoji: '🔥',
+    color: '#C44A38',
+    topics: ['Desire', 'Intimacy', 'Long-term Love'],
+    blurb: 'How do you sustain desire in a long-term relationship? Perel\'s provocative, brilliant answer challenges everything you thought you knew about love and lust.',
+    bestFor: 'Long-term couples',
+    amazonUrl: 'https://www.amazon.com/dp/0060753641',
+  },
+  {
+    id: 'wired-for-love',
+    title: 'Wired for Love',
+    author: 'Stan Tatkin',
+    emoji: '🧠',
+    color: '#3D3580',
+    topics: ['Neuroscience', 'Attachment', 'Partnership'],
+    blurb: 'How neuroscience explains why we behave the way we do in relationships — and how to use that understanding to build a genuinely secure partnership.',
+    bestFor: 'Science-minded couples',
+    amazonUrl: 'https://www.amazon.com/dp/1608820580',
+  },
+]
+
 // ── Skeleton card for loading state ───────────────────────────────────────────
 
 function SkeletonFeatured() {
@@ -31,6 +102,44 @@ function SkeletonCompact() {
       <div className="flex-1">
         <div className="h-4 w-full bg-gray-200 rounded-full mb-2" />
         <div className="h-3 w-24 bg-gray-100 rounded-full" />
+      </div>
+    </div>
+  )
+}
+
+// ── Book preview modal ────────────────────────────────────────────────────────
+
+function BookPreviewModal({ book, onClose }) {
+  if (!book) return null
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="relative w-full max-w-sm bg-white rounded-3xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="p-6" style={{ background: `linear-gradient(135deg, ${book.color}22, ${book.color}11)`, borderBottom: `3px solid ${book.color}` }}>
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-4xl" style={{ backgroundColor: book.color + '20' }}>
+              {book.emoji}
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none mt-1">×</button>
+          </div>
+          <h2 className="text-[#2D3648] font-bold text-lg leading-snug mb-1">{book.title}</h2>
+          <p className="text-[#6B7280] text-sm">{book.author}</p>
+        </div>
+        <div className="p-6">
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {book.topics.map(t => (
+              <span key={t} className="px-2.5 py-1 rounded-full text-xs font-semibold text-white" style={{ backgroundColor: book.color }}>{t}</span>
+            ))}
+          </div>
+          <p className="text-[#6B7280] text-sm leading-relaxed mb-4">{book.blurb}</p>
+          <div className="bg-[#F8F6F3] rounded-xl px-4 py-2.5 mb-5">
+            <p className="text-xs text-[#9CA3AF] font-medium">Best for</p>
+            <p className="text-[#2D3648] text-sm font-semibold">{book.bestFor}</p>
+          </div>
+          <a href={book.amazonUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-white text-sm hover:opacity-90 transition-opacity" style={{ backgroundColor: book.color }}>
+            Get this book →
+          </a>
+        </div>
       </div>
     </div>
   )
@@ -92,7 +201,7 @@ function ModuleCard({ module, completed, scores, onClick }) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[#2D3648] font-semibold text-sm">{module.title}</p>
-        <p className="text-[#9CA3AF] text-xs mt-0.5 line-clamp-1">{module.description.slice(0, 70)}…</p>
+        <p className="text-[#9CA3AF] text-xs mt-0.5 line-clamp-2">{module.description}</p>
       </div>
       <div className="flex-shrink-0">
         {completed && score !== undefined ? (
@@ -118,6 +227,7 @@ export default function LearnPage() {
   const [loadingArticles, setLoadingArticles] = useState(true)
   const [articlesError, setArticlesError] = useState(null)
   const [selectedSource, setSelectedSource] = useState('All')
+  const [selectedBook, setSelectedBook] = useState(null)
 
   // Assessments state
   const [user, setUser] = useState(null)
@@ -270,8 +380,27 @@ export default function LearnPage() {
                 ))}
               </div>
             )}
+
+            {/* Reading list */}
+            <div>
+              <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-3">📚 Relationship Reading List</p>
+              <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
+                {RECOMMENDED_BOOKS.map(book => (
+                  <button key={book.id} onClick={() => setSelectedBook(book)} className="flex-shrink-0 w-36 bg-white rounded-2xl p-4 shadow-sm border border-[#E5E2DD] text-left hover:shadow-md transition-shadow">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-2xl mb-3" style={{ backgroundColor: book.color + '20' }}>
+                      {book.emoji}
+                    </div>
+                    <p className="text-[#2D3648] font-semibold text-xs leading-snug line-clamp-2 mb-1">{book.title}</p>
+                    <p className="text-[#9CA3AF] text-[10px]">{book.author.split('&')[0].trim()}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
+
+        {/* Book preview modal */}
+        {selectedBook && <BookPreviewModal book={selectedBook} onClose={() => setSelectedBook(null)} />}
 
         {/* ── ASSESSMENTS TAB ──────────────────────────────────────────────── */}
         {activeTab === 'assessments' && (

@@ -148,6 +148,7 @@ export default function Dashboard() {
 
   const [sharedPreview, setSharedPreview]       = useState([])
   const [pendingDate, setPendingDate]           = useState(null)
+  const [todaysRead, setTodaysRead]             = useState(null)
 
   // Hydrate localStorage on client only
   useEffect(() => {
@@ -328,6 +329,13 @@ export default function Dashboard() {
   }, [router])
 
   useEffect(() => { fetchAll() }, [fetchAll])
+
+  useEffect(() => {
+    fetch('/api/learn/feed')
+      .then(r => r.json())
+      .then(d => { if (d.articles?.[0]) setTodaysRead(d.articles[0]) })
+      .catch(() => {})
+  }, [])
 
   const handleCopyCode = async () => {
     try {
@@ -545,6 +553,26 @@ export default function Dashboard() {
 
           </div>
         </section>
+
+        {/* ===== SECTION 2.5: TODAY'S READ ===== */}
+        {todaysRead && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold text-[#2D3648]">Today's Read 📰</h2>
+              <Link href="/learn" className="text-sm text-[#E8614D] font-semibold">See More →</Link>
+            </div>
+            <a href={todaysRead.url} target="_blank" rel="noopener noreferrer" className="block bg-white rounded-2xl shadow-sm border-l-4 overflow-hidden hover:shadow-md transition-shadow" style={{ borderLeftColor: todaysRead.sourceColor }}>
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="inline-block px-2 py-0.5 rounded-full text-white text-[10px] font-semibold" style={{ backgroundColor: todaysRead.sourceColor }}>{todaysRead.source}</span>
+                  <span className="text-[#9CA3AF] text-xs">5 min read</span>
+                </div>
+                <p className="text-[#2D3648] font-semibold text-sm leading-snug line-clamp-2">{todaysRead.title}</p>
+                {todaysRead.description && <p className="text-[#6B7280] text-xs mt-1.5 line-clamp-2">{todaysRead.description}</p>}
+              </div>
+            </a>
+          </section>
+        )}
 
         {/* ===== SECTION 3: SHARED SPACE PREVIEW ===== */}
         <section>
