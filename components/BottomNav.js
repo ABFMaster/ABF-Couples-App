@@ -8,6 +8,7 @@ const EXCLUDED = ['/login', '/signup', '/onboarding', '/connect', '/assessment',
 const TABS = [
   { href: '/dashboard', emoji: '🏠', label: 'Home' },
   { href: '/ai-coach',  emoji: '💬', label: 'Coach' },
+  { href: '/learn',     emoji: '📚', label: 'Learn' },
   { href: '/shared',    emoji: '💑', label: 'Our Space' },
   { href: '/profile',   emoji: '👤', label: 'Profile' },
 ]

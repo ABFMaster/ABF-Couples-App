@@ -1,0 +1,360 @@
+'use client'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
+import { ASSESSMENT_MODULES } from '@/lib/relationship-questions'
+
+const SOURCES = ['All', 'The Gottman Institute', 'Greater Good Magazine', 'Psychology Today', 'MindBodyGreen']
+
+// ── Skeleton card for loading state ───────────────────────────────────────────
+
+function SkeletonFeatured() {
+  return (
+    <div className="bg-white rounded-3xl shadow-sm overflow-hidden animate-pulse">
+      <div className="h-48 bg-gray-200" />
+      <div className="p-6">
+        <div className="h-3 w-24 bg-gray-200 rounded-full mb-3" />
+        <div className="h-6 w-full bg-gray-200 rounded-full mb-2" />
+        <div className="h-6 w-3/4 bg-gray-200 rounded-full mb-4" />
+        <div className="h-4 w-full bg-gray-100 rounded-full mb-2" />
+        <div className="h-4 w-5/6 bg-gray-100 rounded-full mb-6" />
+        <div className="h-10 w-36 bg-gray-200 rounded-full" />
+      </div>
+    </div>
+  )
+}
+
+function SkeletonCompact() {
+  return (
+    <div className="bg-white rounded-2xl p-4 animate-pulse flex gap-3 items-center">
+      <div className="w-1 h-12 bg-gray-200 rounded-full flex-shrink-0" />
+      <div className="flex-1">
+        <div className="h-4 w-full bg-gray-200 rounded-full mb-2" />
+        <div className="h-3 w-24 bg-gray-100 rounded-full" />
+      </div>
+    </div>
+  )
+}
+
+// ── Featured article card ──────────────────────────────────────────────────────
+
+function FeaturedCard({ article }) {
+  return (
+    <div className="bg-white rounded-3xl shadow-sm overflow-hidden border border-[#E5E2DD]">
+      {article.image && (
+        <div className="h-48 overflow-hidden">
+          <img src={article.image} alt="" className="w-full h-full object-cover" />
+        </div>
+      )}
+      <div className="p-6">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="inline-block px-2.5 py-1 rounded-full text-white text-xs font-semibold" style={{ backgroundColor: article.sourceColor }}>
+            {article.source}
+          </span>
+          <span className="text-gray-400 text-xs">5 min read</span>
+        </div>
+        <h2 className="text-xl font-bold text-[#2D3648] leading-snug mb-3">{article.title}</h2>
+        {article.description && (
+          <p className="text-[#6B7280] text-sm leading-relaxed mb-5">{article.description}</p>
+        )}
+        <a href={article.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-[#E8614D] hover:bg-[#C44A38] text-white font-semibold px-5 py-2.5 rounded-full text-sm transition-colors">
+          Read Article →
+        </a>
+        <button className="ml-3 text-gray-300 hover:text-[#E8614D] transition-colors text-lg" title="Save (coming soon)">🤍</button>
+      </div>
+    </div>
+  )
+}
+
+// ── Compact article card ───────────────────────────────────────────────────────
+
+function CompactCard({ article }) {
+  return (
+    <a href={article.url} target="_blank" rel="noopener noreferrer" className="bg-white rounded-2xl p-4 flex gap-3 items-start hover:shadow-md transition-shadow border border-[#E5E2DD] group">
+      <div className="w-1 rounded-full self-stretch flex-shrink-0 mt-0.5" style={{ backgroundColor: article.sourceColor }} />
+      <div className="flex-1 min-w-0">
+        <p className="text-[#2D3648] text-sm font-semibold leading-snug group-hover:text-[#E8614D] transition-colors line-clamp-2">{article.title}</p>
+        <p className="text-[#9CA3AF] text-xs mt-1">{article.source} · 5 min read</p>
+      </div>
+      <span className="text-gray-300 group-hover:text-[#E8614D] transition-colors flex-shrink-0 text-sm">→</span>
+    </a>
+  )
+}
+
+// ── Assessment module card ─────────────────────────────────────────────────────
+
+function ModuleCard({ module, completed, scores, onClick }) {
+  const score = scores?.[module.id]
+  return (
+    <button onClick={onClick} className="w-full bg-white rounded-2xl p-5 shadow-sm border border-[#E5E2DD] flex items-center gap-4 hover:shadow-md transition-shadow text-left">
+      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl flex-shrink-0 ${module.bgColor}`}>
+        {module.icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[#2D3648] font-semibold text-sm">{module.title}</p>
+        <p className="text-[#9CA3AF] text-xs mt-0.5 line-clamp-1">{module.description.slice(0, 70)}…</p>
+      </div>
+      <div className="flex-shrink-0">
+        {completed && score !== undefined ? (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#FDF6EF] text-[#E8614D] text-xs font-bold">{score}%</span>
+        ) : completed ? (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#FDF6EF] text-[#E8614D] text-xs font-bold">✓</span>
+        ) : (
+          <span className="text-gray-300 text-lg">🔒</span>
+        )}
+      </div>
+    </button>
+  )
+}
+
+// ── Main page ──────────────────────────────────────────────────────────────────
+
+export default function LearnPage() {
+  const router = useRouter()
+  const [activeTab, setActiveTab] = useState('discover')
+
+  // Discover state
+  const [articles, setArticles] = useState([])
+  const [loadingArticles, setLoadingArticles] = useState(true)
+  const [articlesError, setArticlesError] = useState(null)
+  const [selectedSource, setSelectedSource] = useState('All')
+
+  // Assessments state
+  const [user, setUser] = useState(null)
+  const [assessment, setAssessment] = useState(null)
+  const [loadingUser, setLoadingUser] = useState(true)
+
+  // ── Fetch articles ──────────────────────────────────────────────────────────
+
+  const fetchArticles = async () => {
+    setLoadingArticles(true)
+    setArticlesError(null)
+    try {
+      const res = await fetch('/api/learn/feed')
+      if (!res.ok) throw new Error('Feed unavailable')
+      const data = await res.json()
+      setArticles(data.articles || [])
+    } catch (err) {
+      console.error('Articles error:', err)
+      setArticlesError('Couldn\'t load articles today. Check back soon.')
+    } finally {
+      setLoadingArticles(false)
+    }
+  }
+
+  // ── Fetch user + assessment ────────────────────────────────────────────────
+
+  const fetchUserData = async () => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) { router.push('/login'); return }
+      setUser(authUser)
+
+      const { data: existing } = await supabase
+        .from('relationship_assessments')
+        .select('completed_at, scores, results')
+        .eq('user_id', authUser.id)
+        .not('completed_at', 'is', null)
+        .maybeSingle()
+
+      setAssessment(existing || null)
+    } catch (err) {
+      console.error('User data error:', err)
+    } finally {
+      setLoadingUser(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchArticles()
+    fetchUserData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // ── Filtered articles ──────────────────────────────────────────────────────
+
+  const filtered = selectedSource === 'All'
+    ? articles
+    : articles.filter(a => a.source === selectedSource)
+
+  const featured = filtered[0] || null
+  const rest = filtered.slice(1)
+
+  // ── Module score lookup ────────────────────────────────────────────────────
+
+  const moduleScores = assessment?.results?.modules
+    ? Object.fromEntries(
+        assessment.results.modules.map(m => [m.moduleId, m.percentage])
+      )
+    : {}
+
+  const completedAt = assessment?.completed_at
+    ? new Date(assessment.completed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : null
+
+  return (
+    <div className="min-h-screen bg-[#F8F6F3] pb-28">
+      {/* ── Page header ──────────────────────────────────────────────────────── */}
+      <div className="bg-white border-b border-[#E5E2DD] px-4 pt-10 pb-0">
+        <div className="max-w-2xl mx-auto">
+          <h1 className="text-2xl font-bold text-[#2D3648]">Learn</h1>
+          <p className="text-[#6B7280] text-sm mt-0.5 mb-4">Reading and tools for your relationship</p>
+
+          {/* Tab pills */}
+          <div className="flex gap-2">
+            {[{ id: 'discover', label: '📰 Discover' }, { id: 'assessments', label: '🧠 Assessments' }].map(tab => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`px-4 py-2 rounded-t-xl text-sm font-semibold border-b-2 transition-colors ${activeTab === tab.id ? 'border-[#E8614D] text-[#E8614D]' : 'border-transparent text-[#6B7280] hover:text-[#2D3648]'}`}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-2xl mx-auto px-4 py-6">
+
+        {/* ── DISCOVER TAB ─────────────────────────────────────────────────── */}
+        {activeTab === 'discover' && (
+          <div className="flex flex-col gap-4">
+            <div>
+              <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-3">Daily reading for your relationship</p>
+
+              {/* Source filter chips */}
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+                {SOURCES.map(source => (
+                  <button key={source} onClick={() => setSelectedSource(source)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${selectedSource === source ? 'bg-[#E8614D] text-white' : 'bg-white border border-[#E5E2DD] text-[#6B7280] hover:border-[#E8614D] hover:text-[#E8614D]'}`}>
+                    {source}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Loading state */}
+            {loadingArticles && (
+              <div className="flex flex-col gap-4">
+                <SkeletonFeatured />
+                <SkeletonCompact />
+                <SkeletonCompact />
+                <SkeletonCompact />
+              </div>
+            )}
+
+            {/* Error state */}
+            {!loadingArticles && articlesError && (
+              <div className="bg-white rounded-2xl p-8 text-center border border-[#E5E2DD]">
+                <p className="text-4xl mb-3">📡</p>
+                <p className="text-[#6B7280] text-sm mb-4">{articlesError}</p>
+                <button onClick={fetchArticles} className="px-4 py-2 bg-[#E8614D] text-white text-sm font-semibold rounded-full hover:bg-[#C44A38] transition-colors">
+                  Try Again
+                </button>
+              </div>
+            )}
+
+            {/* No results for filter */}
+            {!loadingArticles && !articlesError && filtered.length === 0 && (
+              <div className="bg-white rounded-2xl p-8 text-center border border-[#E5E2DD]">
+                <p className="text-[#6B7280] text-sm">No articles from this source right now.</p>
+              </div>
+            )}
+
+            {/* Featured article */}
+            {!loadingArticles && !articlesError && featured && (
+              <FeaturedCard article={featured} />
+            )}
+
+            {/* Compact article list */}
+            {!loadingArticles && !articlesError && rest.length > 0 && (
+              <div className="flex flex-col gap-3">
+                {rest.map(article => (
+                  <CompactCard key={article.id} article={article} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── ASSESSMENTS TAB ──────────────────────────────────────────────── */}
+        {activeTab === 'assessments' && (
+          <div className="flex flex-col gap-4">
+
+            {/* CTA or completion state */}
+            {loadingUser ? (
+              <div className="bg-white rounded-2xl p-8 text-center animate-pulse">
+                <div className="h-6 w-48 bg-gray-200 rounded-full mx-auto mb-3" />
+                <div className="h-4 w-64 bg-gray-100 rounded-full mx-auto" />
+              </div>
+            ) : assessment ? (
+              <div className="bg-white rounded-2xl p-6 border border-[#E5E2DD] shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xl">✅</span>
+                      <p className="text-[#2D3648] font-bold">Relationship Profile Complete</p>
+                    </div>
+                    <p className="text-[#9CA3AF] text-xs">Completed {completedAt}</p>
+                  </div>
+                  <button onClick={() => router.push('/assessment')} className="text-[#9CA3AF] hover:text-[#6B7280] text-xs font-medium transition-colors">
+                    Retake →
+                  </button>
+                </div>
+                {assessment.results?.overallPercentage !== undefined && (
+                  <div className="mt-4 bg-[#FDF6EF] rounded-xl px-4 py-3 flex items-center gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-xs font-semibold text-[#6B7280]">Overall relationship health</p>
+                        <p className="text-sm font-bold text-[#E8614D]">{assessment.results.overallPercentage}%</p>
+                      </div>
+                      <div className="h-2 bg-white rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-[#E8614D] to-[#C44A38] rounded-full transition-all" style={{ width: `${assessment.results.overallPercentage}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-gradient-to-br from-[#E8614D] to-[#C44A38] rounded-3xl p-6 text-white shadow-lg">
+                <p className="text-3xl mb-3">💝</p>
+                <h2 className="text-xl font-bold mb-1">Start Your Relationship Profile</h2>
+                <p className="text-white/80 text-sm mb-5">5 modules, ~15 minutes. Unlock personalized coaching insights.</p>
+                <div className="flex flex-col gap-2 mb-5">
+                  {['Love language insights', 'Communication style profile', 'Attachment patterns', 'Personalized AI coach advice'].map(item => (
+                    <div key={item} className="flex items-center gap-2 text-sm text-white/90">
+                      <span className="text-white font-bold">✓</span>
+                      {item}
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => router.push('/assessment')} className="w-full py-3 bg-white text-[#E8614D] font-bold rounded-xl text-sm hover:bg-white/90 transition-colors">
+                  Begin Assessment →
+                </button>
+              </div>
+            )}
+
+            {/* Module cards */}
+            <div>
+              <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-3">Assessment Modules</p>
+              <div className="flex flex-col gap-3">
+                {ASSESSMENT_MODULES.map(module => (
+                  <ModuleCard key={module.id} module={module} completed={!!assessment} scores={moduleScores} onClick={() => router.push(assessment ? '/assessment/results' : '/assessment')} />
+                ))}
+              </div>
+            </div>
+
+            {/* Coming Soon */}
+            <div className="bg-gradient-to-br from-[#2D3648] to-[#1a1f2e] rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-lg">✨</span>
+                <p className="text-white font-bold text-sm">More Assessments Coming Soon</p>
+              </div>
+              <p className="text-purple-300 text-xs leading-relaxed">
+                Attachment Style · Conflict Style · Love Languages Deep Dive · Intimacy Profile
+              </p>
+            </div>
+
+          </div>
+        )}
+
+      </div>
+    </div>
+  )
+}
