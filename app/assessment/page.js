@@ -10,6 +10,9 @@ import {
   ASSESSMENT_ATTRIBUTION,
 } from '@/lib/relationship-questions'
 
+// Filter out standalone modules (e.g. attachment_style) from the main assessment flow
+const MAIN_MODULES = ASSESSMENT_MODULES.filter(m => !m.standalone)
+
 function AssessmentContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -78,10 +81,10 @@ function AssessmentContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const currentModule = ASSESSMENT_MODULES[currentModuleIndex]
+  const currentModule = MAIN_MODULES[currentModuleIndex]
   const moduleQuestions = ASSESSMENT_QUESTIONS[currentModule?.id] || []
   const currentQuestion = moduleQuestions[currentQuestionIndex]
-  const totalQuestions = ASSESSMENT_MODULES.reduce(
+  const totalQuestions = MAIN_MODULES.reduce(
     (sum, mod) => sum + (ASSESSMENT_QUESTIONS[mod.id]?.length || 0),
     0
   )
@@ -117,7 +120,7 @@ function AssessmentContent() {
     if (currentQuestionIndex < moduleQuestions.length - 1) {
       // Next question in module
       setCurrentQuestionIndex(prev => prev + 1)
-    } else if (currentModuleIndex < ASSESSMENT_MODULES.length - 1) {
+    } else if (currentModuleIndex < MAIN_MODULES.length - 1) {
       // Next module
       setCurrentModuleIndex(prev => prev + 1)
       setCurrentQuestionIndex(0)
@@ -139,7 +142,7 @@ function AssessmentContent() {
       setCurrentQuestionIndex(prev => prev - 1)
     } else if (currentModuleIndex > 0) {
       const prevModuleIndex = currentModuleIndex - 1
-      const prevModuleQuestions = ASSESSMENT_QUESTIONS[ASSESSMENT_MODULES[prevModuleIndex].id]
+      const prevModuleQuestions = ASSESSMENT_QUESTIONS[MAIN_MODULES[prevModuleIndex].id]
       setCurrentModuleIndex(prevModuleIndex)
       setCurrentQuestionIndex(prevModuleQuestions.length - 1)
       setModuleIntroShown(true)
@@ -190,7 +193,7 @@ function AssessmentContent() {
       }
 
       // Generate insights FIRST using the complete answer set
-      const moduleResults = ASSESSMENT_MODULES.map(module => {
+      const moduleResults = MAIN_MODULES.map(module => {
         const moduleAnswers = {}
         ASSESSMENT_QUESTIONS[module.id].forEach(q => {
           if (finalAnswers[q.id] !== undefined) {
@@ -328,7 +331,7 @@ function AssessmentContent() {
             {/* Header */}
             <div className={`bg-gradient-to-r ${currentModule.color} p-8 text-white`}>
               <div className="flex items-center gap-2 text-white/80 text-sm mb-4">
-                <span>Module {currentModuleIndex + 1} of {ASSESSMENT_MODULES.length}</span>
+                <span>Module {currentModuleIndex + 1} of {MAIN_MODULES.length}</span>
               </div>
               <div className="text-6xl mb-4">{currentModule.icon}</div>
               <h1 className="text-3xl font-bold mb-2">{currentModule.title}</h1>
@@ -356,7 +359,7 @@ function AssessmentContent() {
 
           {/* Module indicators */}
           <div className="flex justify-center gap-2 mt-8">
-            {ASSESSMENT_MODULES.map((mod, idx) => (
+            {MAIN_MODULES.map((mod, idx) => (
               <div
                 key={mod.id}
                 className={`w-3 h-3 rounded-full transition-all ${
@@ -494,7 +497,7 @@ function AssessmentContent() {
                   <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                   <span>Saving...</span>
                 </>
-              ) : currentModuleIndex === ASSESSMENT_MODULES.length - 1 &&
+              ) : currentModuleIndex === MAIN_MODULES.length - 1 &&
                 currentQuestionIndex === moduleQuestions.length - 1 ? (
                 <>
                   <span>See Results</span>

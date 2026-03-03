@@ -232,6 +232,7 @@ export default function LearnPage() {
   // Assessments state
   const [user, setUser] = useState(null)
   const [assessment, setAssessment] = useState(null)
+  const [attachmentResult, setAttachmentResult] = useState(null)
   const [loadingUser, setLoadingUser] = useState(true)
 
   // ── Fetch articles ──────────────────────────────────────────────────────────
@@ -268,6 +269,20 @@ export default function LearnPage() {
         .maybeSingle()
 
       setAssessment(existing || null)
+
+      // Fetch attachment style assessment (table may not exist yet — fail silently)
+      try {
+        const { data: attData } = await supabase
+          .from('attachment_assessments')
+          .select('result, created_at')
+          .eq('user_id', authUser.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        setAttachmentResult(attData?.result || null)
+      } catch {
+        setAttachmentResult(null)
+      }
     } catch (err) {
       console.error('User data error:', err)
     } finally {
@@ -459,14 +474,46 @@ export default function LearnPage() {
               </div>
             )}
 
-            {/* Module cards */}
+            {/* Module cards — main assessment only (no standalone modules) */}
             <div>
               <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-3">Assessment Modules</p>
               <div className="flex flex-col gap-3">
-                {ASSESSMENT_MODULES.map(module => (
+                {ASSESSMENT_MODULES.filter(m => !m.standalone).map(module => (
                   <ModuleCard key={module.id} module={module} completed={!!assessment} scores={moduleScores} onClick={() => router.push(assessment ? '/assessment/results' : '/assessment')} />
                 ))}
               </div>
+            </div>
+
+            {/* Deep Dive: Attachment Style */}
+            <div>
+              <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-3">Deep Dive Assessments</p>
+              <button onClick={() => router.push('/learn/assessment/attachment')} className="w-full bg-white rounded-2xl p-5 shadow-sm border border-[#E5E2DD] hover:shadow-md transition-shadow text-left">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-violet-50 flex items-center justify-center text-2xl flex-shrink-0">🔗</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[#2D3648] font-semibold text-sm">Attachment Style</p>
+                    {attachmentResult ? (
+                      <p className="text-violet-600 text-xs mt-0.5 font-medium">{attachmentResult.profile?.emoji} {attachmentResult.profile?.label} · Tap to retake</p>
+                    ) : (
+                      <p className="text-[#9CA3AF] text-xs mt-0.5 line-clamp-2">Discover your attachment pattern — the invisible blueprint shaping how you love.</p>
+                    )}
+                  </div>
+                  <div className="flex-shrink-0">
+                    {attachmentResult ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-violet-50 text-violet-600 text-xs font-bold">✓</span>
+                    ) : (
+                      <span className="text-gray-400 text-sm">→</span>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center gap-3 text-[#9CA3AF] text-xs pl-16">
+                  <span>20 questions</span>
+                  <span>·</span>
+                  <span>~8 minutes</span>
+                  <span>·</span>
+                  <span className="text-violet-500 font-medium">Free</span>
+                </div>
+              </button>
             </div>
 
             {/* Coming Soon */}
@@ -476,7 +523,7 @@ export default function LearnPage() {
                 <p className="text-white font-bold text-sm">More Assessments Coming Soon</p>
               </div>
               <p className="text-purple-300 text-xs leading-relaxed">
-                Attachment Style · Conflict Style · Love Languages Deep Dive · Intimacy Profile
+                Conflict Style · Love Languages Deep Dive · Intimacy Profile
               </p>
             </div>
 
