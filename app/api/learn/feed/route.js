@@ -6,9 +6,9 @@ const RSS_FEEDS = [
     color: '#E8614D',
   },
   {
-    url: 'https://greatergood.berkeley.edu/feeds/articles',
+    url: 'https://greatergood.berkeley.edu/site/rss/relationships',
     source: 'Greater Good Magazine',
-    tags: ['wellbeing', 'connection', 'gratitude'],
+    tags: ['wellbeing', 'connection', 'relationships'],
     color: '#6B5CE7',
   },
   {
@@ -18,9 +18,15 @@ const RSS_FEEDS = [
     color: '#3D9970',
   },
   {
-    url: 'https://www.mindbodygreen.com/relationships/rss.xml',
-    source: 'MindBodyGreen',
-    tags: ['relationships', 'love', 'connection'],
+    url: 'https://www.psychologytoday.com/us/blog/meet-catch-and-keep/feed',
+    source: 'Psychology Today',
+    tags: ['dating', 'relationships', 'attraction'],
+    color: '#3D9970',
+  },
+  {
+    url: 'https://positivepsychology.com/feed',
+    source: 'Positive Psychology',
+    tags: ['relationships', 'wellbeing', 'growth'],
     color: '#F39C12',
   },
 ]
@@ -66,13 +72,16 @@ async function parseFeed(feedConfig) {
         .replace(/&gt;/g, '>')
         .replace(/&#\d+;/g, '')
         .trim()
-        .slice(0, 150)
+        .replace(/The post .+ appeared first on .+\.?$/i, '')
+        .replace(/The post .+$/i, '')
+        .trim()
+        .slice(0, 200)
 
       if (title && link) {
         items.push({
           id: Buffer.from(link).toString('base64').slice(0, 16),
           title: title.trim(),
-          description: cleanDesc + (cleanDesc.length >= 150 ? '...' : ''),
+          description: cleanDesc + (cleanDesc.length >= 200 ? '...' : ''),
           url: link.trim(),
           source: feedConfig.source,
           sourceColor: feedConfig.color,
