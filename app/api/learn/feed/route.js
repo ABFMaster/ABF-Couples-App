@@ -12,7 +12,7 @@ const RSS_FEEDS = [
     color: '#6B5CE7',
   },
   {
-    url: 'https://www.psychologytoday.com/us/blog/heart-the-matter/feed',
+    url: 'https://www.psychologytoday.com/us/blog/together-apart/feed',
     source: 'Psychology Today',
     tags: ['relationships', 'attachment', 'intimacy'],
     color: '#3D9970',
@@ -94,7 +94,29 @@ async function parseFeed(feedConfig) {
       if (items.length >= 5) break
     }
 
-    return items
+    const EXCLUDE_KEYWORDS = [
+      'parenting', 'children', 'kids', 'school', 'educator',
+      'teacher', 'classroom', 'student', 'teen', 'teenager',
+      'adolescent', 'parent', 'mother', 'father', 'divorce custody',
+      'politics', 'election', 'climate', 'race', 'discrimination',
+      'workplace', 'career', 'job', 'boss', 'employee',
+    ]
+
+    const REQUIRE_ONE_OF = [
+      'relationship', 'couple', 'partner', 'love', 'intimacy',
+      'connection', 'attachment', 'communication', 'marriage',
+      'romance', 'trust', 'conflict', 'emotion', 'happiness',
+      'wellbeing', 'well-being', 'bond', 'commitment', 'dating',
+    ]
+
+    const filtered = items.filter(item => {
+      const text = (item.title + ' ' + item.description).toLowerCase()
+      const hasExcluded = EXCLUDE_KEYWORDS.some(kw => text.includes(kw))
+      const hasRequired = REQUIRE_ONE_OF.some(kw => text.includes(kw))
+      return !hasExcluded && hasRequired
+    })
+
+    return filtered
   } catch (err) {
     console.error(`Feed error for ${feedConfig.source}:`, err)
     return []
