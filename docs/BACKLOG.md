@@ -2,7 +2,7 @@
 
 Single source of truth for future work, enhancements, and known issues.
 
-**Last Updated:** March 2, 2026
+**Last Updated:** March 3, 2026
 
 ---
 
@@ -417,6 +417,287 @@ Document the established patterns:
 - Airbnb (vacation rentals)
 - Viator (activities)
 - Amazon (date night products, travel gear)
+
+---
+
+## 🤝 Couples Coaching
+
+### Async Couples Session
+**Priority:** Sprint 3
+**Effort:** Medium
+**Value:** Very High — first couples coaching mode
+
+First couples coaching mode. Async, two devices, no real-time sync required.
+
+**Flow:**
+- Either partner initiates a Couples Session from Coach tab
+- Other partner notified: "Matt started a couples check-in"
+- Coach asks one structured question to both partners separately
+- Each answers privately — neither sees the other's response
+- Once both respond, coach synthesizes and delivers shared insight
+- The reveal: "You both said X. Here's what that means for you two."
+- Coach suggests follow-up action, date, or next question
+
+**Key decisions locked:**
+- Individual responses NEVER shown to other partner verbatim
+- Only synthesized insight is shared
+- Session history shared; individual responses private forever
+- Coach facilitates, never takes sides
+
+**DB requirements:**
+- New table: `couples_sessions` (session_id, couple_id, initiated_by, status, question, partner1_response, partner2_response, insight, created_at)
+- Status flow: `initiated → p1_answered → p2_answered → insight_generated → complete`
+
+### Live Couples Session
+**Priority:** Sprint 4
+**Effort:** Large
+
+Real-time synchronized session via Supabase real-time subscriptions. Turn-based, coach facilitates, both partners present simultaneously. Higher complexity, higher intimacy value.
+
+### Structured Session Templates
+**Priority:** Sprint 4/5
+**Effort:** Large — requires original content writing
+
+In-house designed exercise templates inspired by published relationship research. Written entirely in ABF's own language to avoid licensing issues. Based on academic research concepts: conflict processing, bids for connection, shared meaning, stress-reducing conversation, dreams within conflict.
+
+---
+
+## 🧠 AI Coach Architecture
+
+*Sprint 2 priority. Foundation work before couples mode is possible.*
+
+### Coach Persona Document
+**Priority:** Sprint 2 — Cass leads
+**Effort:** Small (writing), Medium (product thinking)
+
+Lock name, voice, tone, and boundaries before Sprint 2 build. Coach needs an identity as defined as Wander's. What it will and won't say. How it handles sensitive topics. How it differs between individual vs couples mode.
+
+*(Note: stub item "Coach Persona and Name" already in backlog under Feature Enhancements → AI Coach. This is the full spec and process.)*
+
+### Three-Layer Knowledge Architecture
+**Priority:** Sprint 2
+**Effort:** Large — requires careful DB and policy design
+
+**Layer 1 — Public profile:** Assessment scores, attachment style, love language, communication style. Both partners can see. Couples coach uses freely.
+
+**Layer 2 — Individual insights:** Coach-generated synthesis of patterns from individual sessions. Never raw quotes. Never shared verbatim. Couples coach uses internally to ask better questions only — never to make statements about either partner.
+
+**Layer 3 — Raw individual session content:** Fully firewalled. Encrypted, individual-scoped only. Couples coach has ZERO access. Technically enforced, not just policy.
+
+### Core Prompt Guardrail (lock permanently into couples coach)
+> "You facilitate conversation between partners. You never reveal what one partner shared privately to the other, directly or indirectly. You use private context only to ask better questions, never to make statements about either partner's feelings or needs."
+
+### Proactive Trigger System
+**Priority:** Sprint 2
+**Effort:** Medium
+
+5–6 moments when coach reaches out unprompted:
+- Check-in score drops two weeks in a row
+- Assessment just completed
+- Dream trip just saved in Wander
+- Date or trip just completed
+- Partner hasn't activated yet (gentle nudge to inviter)
+- Weekly reflection submitted with low scores
+
+### Longitudinal Memory
+**Priority:** Sprint 2 — implement before >500 couples
+**Effort:** Medium
+
+Compress older session history into rolling profile summary. 500-token profile instead of 5,000 tokens raw history. 10x cost reduction, minimal quality loss.
+
+### Coach Context Bundle
+**Priority:** Sprint 2
+**Effort:** Small — define spec, then implement
+
+Define exactly what coach receives at session start:
+- Assessment scores + attachment style
+- Recent check-in data (last 2 weeks)
+- Last coach session summary
+- Active dream trips
+- Recently read articles from Learn tab
+- Completed dates/trips (last 30 days)
+- Layer 2 individual insights (couples mode only)
+
+### Coach ↔ Learn Connection
+Articles read in Learn tab feed coach context. Coach references relevant content naturally. *"You read about anxious attachment yesterday — want to explore how that shows up for you?"*
+
+### Coach ↔ Wander Connection
+Dream trips feed coach context. Coach references anticipation as a relationship health signal.
+
+### Coach ↔ Timeline Connection
+Completed dates and trips inform coach. Coach acknowledges shared experiences.
+
+---
+
+## 📊 Engagement & Retention
+
+*Design philosophy decisions. Must be locked before retention sprint build.*
+
+### Relationship Mood Model (replaces health score)
+Replace current health/score framing with a warmth-based momentum indicator. Soft, directional, not punitive. Individual streaks + couple momentum — separate concepts. Couple momentum goes up when EITHER partner does anything. Never punishes the less-engaged partner. Design change to be fitted into retention sprint.
+
+### Asymmetric Engagement Design
+Accept that one partner uses the app more than the other. Heavy user gets depth — assessments, coach, learning. Light user gets delightful low-friction touchpoints. Partner two's first experience must be a delight, not a form. *"Matt planned something for you — what do you think?"* as activation hook for passive partner.
+
+### Gamification Rethink
+Rewards should be relationship prizes, not points. Example: unlock new Wander destination after 4 dates this month. The prize always benefits the couple, not a leaderboard. Remove guilt-inducing streak mechanics.
+
+### Timeline as Frictionless Feed
+Philosophy shift: everything is a memory by default. Complete date → Timeline. Trip → Timeline. Flirt → Timeline. Article read together → Timeline. Coach breakthrough → Timeline. User shouldn't decide what's worth remembering — app decides everything is; user can delete what isn't. Dashboard shows "12 memories this month" — pride, not notification. Needs design session before build to avoid junk drawer feel.
+
+### Always Something Upcoming
+Dashboard must always show something to look forward to. Planned date, dream trip, book being read together. Anticipation is the strongest retention driver for couples. Design pattern to be implemented in retention sprint.
+
+### Progress Visibility Without Clutter
+Timeline scrollback is the irreplaceable artifact. 6 months of memories = emotional cost to churn. Surface naturally — not alerts, not badges. "Look how far you've come" moment built into monthly recap.
+
+---
+
+## 📚 Learn Tab — Current Sprint
+
+### Assessment Expansion
+**Priority:** Sprint 1 — next after core Learn tab
+**Effort:** Medium per assessment (content-heavy)
+
+Assessments to build, in priority order:
+1. Attachment Style deep dive *(Tier 1 — build first)*
+2. Conflict Style assessment
+3. Love Languages deep dive (beyond basic 5)
+4. Intimacy Profile
+5. Relationship Values inventory
+6. Emotional Needs inventory
+7. Stress Response Profile
+8. Apology Language
+9. Self-Expansion Profile
+10. Compatibility Report *(premium — both partners' results synthesized)*
+
+All questions written in-house based on published academic research. No licensed content from Gottman, Chapman, or others.
+
+### Book Recommendations
+**Priority:** Sprint 1
+**Effort:** Medium
+
+Google Books API for free preview chapters. Amazon affiliate links for purchase. Personalized recommendation engine based on assessment profile.
+
+**Initial curated library (20–30 books):**
+Attached (Levine & Heller), The 5 Love Languages (Chapman), Hold Me Tight (Johnson), Come As You Are (Nagoski), Seven Principles (Gottman), Mating in Captivity (Perel), Boundaries (Cloud & Townsend), Wired for Love (Tatkin).
+
+Wander-style personalized recommendation card: *"Based on your attachment profile, this book will explain a lot."*
+
+### Podcast Integration
+**Priority:** Sprint 1
+**Effort:** Medium
+
+Embedded Spotify/Apple player — stays in app, doesn't kick out. 2-sentence personalized relevance explanation per episode. Post-listen reflection prompt feeds coach context. Short clips over full episodes where available.
+
+**Initial sources:** Where Should We Begin (Perel), Gottman podcast, Therapist Uncensored, Secure Love, Dear Sugars.
+
+### Daily Content Card on Dashboard
+**Priority:** After Learn tab core
+**Effort:** Small
+
+"Today's Read" card on home screen. One article surfaced daily based on profile + recent activity. Creates daily habit loop — reason to open app beyond check-in.
+
+### Article Save / Bookmark
+**Priority:** Sprint 1
+**Effort:** Small
+
+Heart icon on articles is currently visual only (Learn tab). Build save functionality — saved articles feed coach context and are accessible in Learn tab.
+
+### Content Personalization Engine
+**Priority:** Sprint 2
+**Effort:** Large
+
+Tag all content (articles, books, podcasts) with relationship themes. Match tags to couple's assessment profile and coach insights. Anxious attachment → surfaces anxious attachment content. Conflict score diverging → surfaces conflict resolution content. AI generates "why this for you" explanation for every recommendation.
+
+---
+
+## 🔐 Security & Privacy
+
+### Security Audit
+**Priority:** Before beta launch — non-negotiable
+**Effort:** Large ($2–5K external)
+
+Audit all RLS policies in Supabase. Every query scoped to authenticated user's couple_id. No cross-couple data access possible even via client manipulation. Hire security consultant for penetration testing. Do before any growth push.
+
+### Privacy Policy
+**Priority:** Before beta launch — non-negotiable
+**Effort:** Medium (legal)
+
+Written by a lawyer who understands AI and relationship data. GDPR compliance if any European users. CCPA compliance for California users. Right to deletion — clean process for couple data removal. Explicit statement: conversation data never used for model training, never sold, never shared.
+
+### Coach Data Promise (surface to users)
+Visible statement — not buried in settings:
+> "Your conversations with your coach are private, encrypted, and never shared. Not with your partner. Not with anyone."
+
+Individual coach sessions are private from partner permanently. This boundary never changes, never gets accidentally overridden.
+
+### AI Cost Architecture
+**Current:** ~$0.004 per coach conversation.
+- 1K couples daily: ~$4/day — negligible
+- 10K couples: ~$1,200/month against $144K ARR — fine
+- 100K couples: ~$12,000/month against $1.2M ARR — ~1% revenue
+
+**Mitigation:** Compressed profile summaries (500 tokens vs 5,000). Budget 2–3% of ARR for AI costs at scale.
+
+---
+
+## 🏗️ Partner Activation
+
+*(Broad item already in Core Product section. These are the specific sub-items for Sprint 3.)*
+
+### Invite Flow Redesign
+**Priority:** Sprint 3
+**Effort:** Medium
+
+Current invite is friction-heavy. Needs radical simplification. Partner two's first experience must be delight not onboarding. Single compelling hook: *"Matt planned something for you two."* Asymmetric onboarding — partner two gets reaction-based entry. Light user path: respond to something, feel good, come back.
+
+### Partner Two Activation Hook
+**Priority:** Sprint 3
+**Effort:** Medium
+
+Partner one creates date/trip/flirt. Partner two receives notification with preview. First action is a reaction — approve, suggest change, heart it. No form, no assessment, no setup required to feel value. Assessment and profile build progressively after activation.
+
+---
+
+## 🗺️ Sprint Roadmap
+
+### Sprint 1 (NOW): Finish Learn Tab
+- [ ] Assessment expansion — Attachment Style first
+- [ ] Book recommendations (Google Books API)
+- [ ] Podcast section
+- [ ] Wire "Today's Read" card into dashboard
+- [ ] Fix assessment module description truncation
+- [ ] Article save/bookmark functionality
+
+### Sprint 2: Coach Architecture
+- [ ] Coach persona document (Cass leads)
+- [ ] Context bundle implementation
+- [ ] Three-layer knowledge architecture
+- [ ] Proactive trigger system
+- [ ] Coach ↔ Learn/Wander/Timeline connections
+- [ ] Longitudinal memory/summarization
+
+### Sprint 3: Partner Activation + Async Couples Coaching
+- [ ] Invite flow redesign
+- [ ] Partner two delight-first onboarding
+- [ ] Async couples session build
+- [ ] `couples_sessions` DB table
+
+### Sprint 4: Retention Mechanics
+- [ ] Relationship mood model (replace health score)
+- [ ] Timeline auto-population philosophy
+- [ ] Dashboard always-upcoming pattern
+- [ ] Progress visibility design
+- [ ] Gamification rethink
+- [ ] Live couples session (real-time)
+
+### Sprint 5: Growth Prep
+- [ ] Security audit + penetration test
+- [ ] Privacy policy (legal)
+- [ ] Analytics instrumentation
+- [ ] Friends & family beta plan
+- [ ] Pitch deck
 
 ---
 
