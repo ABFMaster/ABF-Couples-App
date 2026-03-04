@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AiChatMessage from '@/components/AiChatMessage';
 import { analyzeUserPatterns } from '@/lib/checkin-patterns';
+import { generateNoraTrigger } from '@/lib/nora-triggers';
 
 function AiCoachContent() {
   const router = useRouter();
@@ -118,8 +119,24 @@ function AiCoachContent() {
       // Resume recent conversation
       await loadConversation(recentConv.id, session);
     } else {
-      // Start fresh — fetch a warm opener from the server
-      await loadOpener(couple.id, session);
+      // Check for a Nora opener passed via sessionStorage (from dashboard card)
+      const storedOpener = typeof window !== 'undefined'
+        ? sessionStorage.getItem('nora_opener')
+        : null;
+
+      if (storedOpener) {
+        sessionStorage.removeItem('nora_opener');
+        setMessages([{
+          id: 'opener-' + Date.now(),
+          role: 'assistant',
+          content: storedOpener,
+          created_at: new Date().toISOString(),
+          isOpener: true,
+        }]);
+      } else {
+        // Start fresh — fetch a warm opener from the server
+        await loadOpener(couple.id, session);
+      }
     }
 
     setLoading(false);
@@ -282,8 +299,8 @@ function AiCoachContent() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-cream-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-coral-500 text-lg">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent mx-auto mb-4"></div>
+          <p className="text-[#E8614D] text-lg">Loading Nora...</p>
         </div>
       </div>
     );
@@ -304,11 +321,11 @@ function AiCoachContent() {
           </button>
 
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-coral-500 flex items-center justify-center">
-              <span className="text-sm">🤖</span>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#E8614D] to-[#3D3580] flex items-center justify-center">
+              <span className="text-sm">💬</span>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-800">AI Coach</h1>
+              <h1 className="text-lg font-bold text-gray-800">Nora</h1>
               {isPremium ? (
                 <p className="text-xs text-indigo-500 font-medium flex items-center gap-1">
                   ✨ Premium — unlimited messages
@@ -343,12 +360,12 @@ function AiCoachContent() {
           {/* Empty state / Welcome message */}
           {messages.length === 0 && (
             <div className="text-center py-12">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 to-coral-500 flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <span className="text-4xl">🤖</span>
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#E8614D] to-[#3D3580] flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <span className="text-4xl">💬</span>
               </div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-3">Hi! I'm your AI Coach</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-3">Hi, I'm Nora</h2>
               <p className="text-gray-600 max-w-sm mx-auto mb-6">
-                I'm here to help you strengthen your relationship. Whether you want to discuss communication, plan a special date, or work through a challenge, I'm here to listen and guide you.
+                I'm your relationship coach on ABF. Whether you want to talk through something, work on your connection, or just think out loud — I'm here.
               </p>
               <div className="flex flex-wrap justify-center gap-2 max-w-md mx-auto">
                 {[
@@ -446,7 +463,7 @@ function AiCoachContent() {
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={!isPremium && limitReached ? 'Weekly limit reached...' : 'Type your message...'}
+                placeholder={!isPremium && limitReached ? 'Weekly limit reached...' : 'Message Nora...'}
                 disabled={sending || (!isPremium && limitReached)}
                 rows={1}
                 className="w-full px-4 py-3 pr-12 border-2 border-coral-100 rounded-2xl focus:border-coral-400 focus:outline-none resize-none disabled:bg-gray-50 disabled:text-gray-400"
@@ -483,8 +500,8 @@ export default function AiCoach() {
     <Suspense fallback={
       <div className="min-h-screen bg-gradient-to-br from-cream-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-coral-500 text-lg">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent mx-auto mb-4"></div>
+          <p className="text-[#E8614D] text-lg">Loading Nora...</p>
         </div>
       </div>
     }>

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { todayPST } from '@/lib/date-utils'
+import { generateNoraTrigger } from '@/lib/nora-triggers'
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -149,6 +150,7 @@ export default function Dashboard() {
   const [sharedPreview, setSharedPreview]       = useState([])
   const [pendingDate, setPendingDate]           = useState(null)
   const [todaysRead, setTodaysRead]             = useState(null)
+  const [noraTrigger, setNoraTrigger]           = useState(null)
 
   // Hydrate localStorage on client only
   useEffect(() => {
@@ -320,6 +322,11 @@ export default function Dashboard() {
         })(),
 
       ])
+
+      // Fetch Nora trigger (non-blocking)
+      generateNoraTrigger(user.id, coupleData.id, null, null)
+        .then(trigger => setNoraTrigger(trigger))
+        .catch(() => {})
 
       setLoading(false)
     } catch (err) {
@@ -554,7 +561,32 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* ===== SECTION 2.5: TODAY'S READ ===== */}
+        {/* ===== SECTION 2.5: NORA CARD ===== */}
+        {noraTrigger && noraTrigger.trigger !== 'default' && (
+          <button
+            onClick={() => {
+              sessionStorage.setItem('nora_opener', noraTrigger.message)
+              router.push('/ai-coach')
+            }}
+            className="w-full bg-white rounded-2xl shadow-sm text-left hover:shadow-md transition-shadow overflow-hidden"
+            style={{ borderLeft: '4px solid #E8614D' }}
+          >
+            <div className="p-4 flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#E8614D] to-[#3D3580] flex items-center justify-center flex-shrink-0">
+                <span className="text-lg">💬</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-[#E8614D] uppercase tracking-wide mb-1">Nora has something for you</p>
+                <p className="text-[#2D3648] text-sm leading-snug line-clamp-2">{noraTrigger.message}</p>
+              </div>
+              <svg className="w-5 h-5 text-[#9CA3AF] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </button>
+        )}
+
+        {/* ===== SECTION 2.7: TODAY'S READ ===== */}
         {todaysRead && (
           <section>
             <div className="flex items-center justify-between mb-3">
