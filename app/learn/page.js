@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ASSESSMENT_MODULES } from '@/lib/relationship-questions'
@@ -416,12 +416,13 @@ export default function LearnPage() {
 
   // ── Filtered articles ──────────────────────────────────────────────────────
 
-  const filtered = selectedSource === 'All'
-    ? articles
-    : articles.filter(a =>
-        a.source?.toLowerCase().includes(selectedSource.toLowerCase()) ||
-        selectedSource.toLowerCase().includes(a.source?.toLowerCase() || '')
-      )
+  const filtered = useMemo(() => {
+    if (selectedSource === 'All') return articles
+    return articles.filter(a =>
+      a.source?.toLowerCase().includes(selectedSource.toLowerCase()) ||
+      selectedSource.toLowerCase().includes(a.source?.toLowerCase() || '')
+    )
+  }, [articles, selectedSource])
 
   const featured = filtered[0] || null
   const rest = filtered.slice(1)
