@@ -50,6 +50,12 @@ function AiCoachContent() {
   };
 
   const checkAuth = async () => {
+    // Detect forced fresh start from ?new=true (e.g. hero card "Talk to Nora →")
+    const isNewSession = searchParams.get('new') === 'true';
+    if (isNewSession) {
+      window.history.replaceState({}, '', '/ai-coach');
+    }
+
     const { data: { user }, error } = await supabase.auth.getUser();
 
     if (error || !user) {
@@ -73,16 +79,14 @@ function AiCoachContent() {
 
     setCoupleId(couple.id);
 
-    // Fetch check-in patterns for context
+    // Fetch check-in patterns for proactive prompt (non-blocking)
     try {
       const patterns = await analyzeUserPatterns(user.id, 7);
       setCheckinContext(patterns);
 
-      // Check for high-severity concerns to show proactive prompt
       if (patterns?.concernFlags?.length > 0) {
         const highConcern = patterns.concernFlags.find(c => c.severity === 'high');
         if (highConcern) {
-          // Generate contextual prompt based on concern type
           const promptMap = {
             consecutive_stress: "I've been feeling stressed lately. Can you help me work through this?",
             low_connection: "I want to feel more connected with my partner. Any suggestions?",
@@ -115,11 +119,11 @@ function AiCoachContent() {
       ? Date.now() - new Date(recentConv.updated_at).getTime() > 24 * 60 * 60 * 1000
       : true;
 
-    if (recentConv && !isStale) {
-      // Resume recent conversation
+    if (recentConv && !isStale && !isNewSession) {
+      // Resume recent conversation (only when not forced fresh)
       await loadConversation(recentConv.id, session);
     } else {
-      // Check for a Nora opener passed via sessionStorage (from dashboard card)
+      // Fresh start — check sessionStorage for Nora opener first
       const storedOpener = typeof window !== 'undefined'
         ? sessionStorage.getItem('nora_opener')
         : null;
@@ -134,7 +138,7 @@ function AiCoachContent() {
           isOpener: true,
         }]);
       } else {
-        // Start fresh — fetch a warm opener from the server
+        // Fall back to server-generated opener
         await loadOpener(couple.id, session);
       }
     }
@@ -321,8 +325,11 @@ function AiCoachContent() {
           </button>
 
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#E8614D] to-[#3D3580] flex items-center justify-center">
-              <span className="text-sm">💬</span>
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+              style={{ background: 'linear-gradient(135deg, #E8614D, #c44a39)' }}
+            >
+              N
             </div>
             <div>
               <h1 className="text-lg font-bold text-gray-800">Nora</h1>
@@ -360,8 +367,11 @@ function AiCoachContent() {
           {/* Empty state / Welcome message */}
           {messages.length === 0 && (
             <div className="text-center py-12">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#E8614D] to-[#3D3580] flex items-center justify-center mx-auto mb-6 shadow-lg">
-                <span className="text-4xl">💬</span>
+              <div
+                className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg text-white text-4xl font-bold"
+                style={{ background: 'linear-gradient(135deg, #E8614D, #c44a39)' }}
+              >
+                N
               </div>
               <h2 className="text-2xl font-bold text-gray-800 mb-3">Hi, I'm Nora</h2>
               <p className="text-gray-600 max-w-sm mx-auto mb-6">

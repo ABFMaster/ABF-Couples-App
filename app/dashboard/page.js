@@ -19,11 +19,11 @@ const ITEM_TYPES = {
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 
-function getGreeting() {
+function getGreetingWord() {
   const h = new Date().getHours()
-  if (h < 12) return 'Good morning'
-  if (h < 17) return 'Good afternoon'
-  return 'Good evening'
+  if (h < 12) return 'morning'
+  if (h < 17) return 'afternoon'
+  return 'evening'
 }
 
 function getDaysUntil(dateStr) {
@@ -46,15 +46,6 @@ function getDateHype(daysUntil, title, hypeLine) {
   return { emoji: '🗓️', text: `Something to look forward to — ${title}` }
 }
 
-function getCoachInsight({ streak, healthScore, flirtsThisWeek, daysTogether }) {
-  if (streak >= 7)          return "Seven days in a row — you two are building something beautiful."
-  if (streak >= 3)          return "Consistent check-ins are one of the strongest predictors of relationship health."
-  if (flirtsThisWeek >= 3)  return "You've been sending the love lately. That spark matters."
-  if (healthScore >= 80)    return "Your relationship health is looking strong. Keep doing what you're doing."
-  if (daysTogether < 30)    return "Every early habit you build now will shape the relationship you have."
-  if (!flirtsThisWeek)      return "A small flirt can go a long way — even a simple message makes a difference."
-  return "Daily connection, no matter how small, adds up to something profound."
-}
 
 function buildFeatureCards({ todayCheckinDone, nextDate, lastFlirtDaysAgo, memoryCount, activeTrip }) {
   return [
@@ -87,8 +78,8 @@ function buildFeatureCards({ todayCheckinDone, nextDate, lastFlirtDaysAgo, memor
       accent: 'border-[#E8614D]',
     },
     {
-      emoji: '🧠',
-      label: 'AI Coach',
+      emoji: '💬',
+      label: 'Nora',
       status: 'Chat now',
       statusColor: 'text-[#3D3580]',
       href: '/ai-coach',
@@ -149,7 +140,7 @@ export default function Dashboard() {
 
   const [sharedPreview, setSharedPreview]       = useState([])
   const [pendingDate, setPendingDate]           = useState(null)
-  const [todaysRead, setTodaysRead]             = useState(null)
+  const [upcomingTrip, setUpcomingTrip]         = useState(null)
   const [noraTrigger, setNoraTrigger]           = useState(null)
 
   // Hydrate localStorage on client only
@@ -321,6 +312,21 @@ export default function Dashboard() {
           } catch { /* ignore */ }
         })(),
 
+        // Upcoming trip (for hero card upcoming line)
+        (async () => {
+          try {
+            const { data } = await supabase
+              .from('trips')
+              .select('destination, start_date, trip_type')
+              .eq('couple_id', coupleData.id)
+              .gte('start_date', new Date().toISOString())
+              .order('start_date', { ascending: true })
+              .limit(1)
+              .maybeSingle()
+            if (data) setUpcomingTrip(data)
+          } catch { /* ignore */ }
+        })(),
+
       ])
 
       // Fetch Nora trigger (non-blocking)
@@ -336,13 +342,6 @@ export default function Dashboard() {
   }, [router])
 
   useEffect(() => { fetchAll() }, [fetchAll])
-
-  useEffect(() => {
-    fetch('/api/learn/feed')
-      .then(r => r.json())
-      .then(d => { if (d.articles?.[0]) setTodaysRead(d.articles[0]) })
-      .catch(() => {})
-  }, [])
 
   const handleCopyCode = async () => {
     try {
@@ -372,7 +371,6 @@ export default function Dashboard() {
 
   // ── Computed ──────────────────────────────────────────────────────────────
 
-  const coachInsight = getCoachInsight({ streak, healthScore, flirtsThisWeek, daysTogether })
   const healthColor  = healthScore === null
     ? 'text-[#9CA3AF]'
     : healthScore >= 70 ? 'text-[#E8614D]'
@@ -436,85 +434,88 @@ export default function Dashboard() {
 
       <div className="max-w-lg mx-auto px-4 py-6 space-y-7">
 
-        {/* ===== SECTION 1: HERO ===== */}
-        <section className="relative bg-gradient-to-br from-[#E8614D] to-[#3D3580] rounded-3xl p-6 text-white overflow-hidden">
-          <div className="absolute -top-10 -right-10 w-36 h-36 bg-white/10 rounded-full pointer-events-none" />
-          <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full pointer-events-none" />
-          <div className="relative">
-            <img src="/logo-wordmark.png" alt="ABF" className="h-8 w-auto mb-4" />
-            <p className="text-white/60 text-xs font-medium uppercase tracking-wide mb-1">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-            </p>
-            <h1 className="text-3xl font-bold mb-3">{getGreeting()}, {userName} 👋</h1>
-            <p className="text-white/85 text-sm leading-relaxed mb-5">{coachInsight}</p>
-            {upcomingDates.length > 0 && (() => {
-              const hero = upcomingDates[0]
-              const heroDays = getDaysUntil(hero.date_time)
-              const heroHype = getDateHype(heroDays, hero.title, hero.hype_line)
-              const rest = upcomingDates.slice(1, 3)
-              const moreCount = upcomingDates.length - 3
+        {/* ===== SECTION 1: HERO (Nora-owned) ===== */}
+        {(() => {
+          // Compute upcoming line from nextDate or upcomingTrip (whichever is sooner)
+          let upcomingLine = null
+          if (nextDate && upcomingTrip) {
+            const dateSoon = new Date(nextDate.date_time) <= new Date(upcomingTrip.start_date)
+            if (dateSoon) {
+              const days = getDaysUntil(nextDate.date_time)
+              const label = days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`
+              upcomingLine = `📅 ${nextDate.title} · ${label}`
+            } else {
+              upcomingLine = `✈️ ${upcomingTrip.destination} · ${new Date(upcomingTrip.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+            }
+          } else if (nextDate) {
+            const days = getDaysUntil(nextDate.date_time)
+            const label = days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`
+            upcomingLine = `📅 ${nextDate.title} · ${label}`
+          } else if (upcomingTrip) {
+            upcomingLine = `✈️ ${upcomingTrip.destination} · ${new Date(upcomingTrip.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+          }
 
-              return (
-                <div className="mb-4">
-                  <div
-                    onClick={() => router.push(`/dates/${hero.id}`)}
-                    className={`rounded-2xl px-4 py-4 cursor-pointer border transition-colors mb-2 ${
-                      heroDays === 0
-                        ? 'bg-white/25 border-white/40 hover:bg-white/30'
-                        : 'bg-white/15 border-white/20 hover:bg-white/20'
-                    }`}
-                  >
-                    <p className="text-white/70 text-xs font-medium uppercase tracking-wide mb-1">
-                      {heroDays === 0 ? '🔥 Tonight' : heroDays === 1 ? '😍 Tomorrow' : '💕 Coming up'}
-                    </p>
-                    <p className="text-white font-bold text-base leading-snug">{heroHype.text}</p>
-                    {heroDays <= 1 && hero.stops?.length > 0 && (
-                      <p className="text-white/60 text-xs mt-1">{hero.stops.length} stops planned · Tap for details</p>
-                    )}
-                  </div>
+          // Compute secondary button
+          let secondaryLabel, secondaryHref
+          if (!todayCheckinDone) {
+            secondaryLabel = 'Check In →'
+            secondaryHref  = '/checkin'
+          } else if (!nextDate && !upcomingTrip) {
+            secondaryLabel = 'Plan Something →'
+            secondaryHref  = '/dates'
+          } else {
+            secondaryLabel = 'Add Memory →'
+            secondaryHref  = '/timeline'
+          }
 
-                  {rest.length > 0 && (
-                    <div className="space-y-1.5">
-                      {rest.map(d => {
-                        const days = getDaysUntil(d.date_time)
-                        const hype = getDateHype(days, d.title, d.hype_line)
-                        return (
-                          <div
-                            key={d.id}
-                            onClick={() => router.push(`/dates/${d.id}`)}
-                            className="bg-white/10 rounded-xl px-4 py-2.5 cursor-pointer hover:bg-white/15 transition-colors flex items-center justify-between"
-                          >
-                            <div className="min-w-0 flex-1">
-                              <p className="text-white text-sm font-semibold truncate">{hype.emoji} {d.title}</p>
-                              <p className="text-white/60 text-xs mt-0.5">{hype.text}</p>
-                            </div>
-                            <p className="text-white/50 text-xs ml-3 flex-shrink-0">
-                              {days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`}
-                            </p>
-                          </div>
-                        )
-                      })}
-                      {moreCount > 0 && (
-                        <button
-                          onClick={() => router.push('/dates')}
-                          className="w-full text-white/50 text-xs text-center py-1 hover:text-white/70 transition-colors"
-                        >
-                          and {moreCount} more coming up →
-                        </button>
-                      )}
-                    </div>
-                  )}
+          const noraMessage = noraTrigger?.message || `Good ${getGreetingWord()}, ${userName}.`
+
+          return (
+            <section className="relative bg-gradient-to-br from-[#E8614D] to-[#3D3580] rounded-3xl p-6 text-white overflow-hidden">
+              <div className="absolute -top-10 -right-10 w-36 h-36 bg-white/10 rounded-full pointer-events-none" />
+              <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full pointer-events-none" />
+              <div className="relative">
+                {/* Top row: NORA label + greeting */}
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-white/70 text-[11px] font-bold uppercase tracking-widest">Nora</span>
+                  <span className="text-white/30 text-xs">·</span>
+                  <span className="text-white/60 text-xs capitalize">Good {getGreetingWord()}</span>
                 </div>
-              )
-            })()}
-            <Link
-              href="/ai-coach"
-              className="inline-flex items-center gap-1.5 bg-white text-[#E8614D] font-semibold px-4 py-2 rounded-full text-sm hover:bg-white/90 transition-colors"
-            >
-              Talk to Coach →
-            </Link>
-          </div>
-        </section>
+
+                {/* Nora's contextual message */}
+                <p className="text-white text-lg font-medium leading-snug mb-4 line-clamp-3">
+                  {noraMessage}
+                </p>
+
+                {/* Upcoming line (date or trip) */}
+                {upcomingLine && (
+                  <p className="text-white/60 text-sm mb-5">{upcomingLine}</p>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => {
+                      if (noraTrigger?.message) {
+                        sessionStorage.setItem('nora_opener', noraTrigger.message)
+                      }
+                      router.push('/ai-coach?new=true')
+                    }}
+                    className="bg-white text-[#E8614D] font-semibold px-4 py-2 rounded-full text-sm hover:bg-white/90 transition-colors"
+                  >
+                    Talk to Nora →
+                  </button>
+                  <button
+                    onClick={() => router.push(secondaryHref)}
+                    className="bg-white/20 text-white font-semibold px-4 py-2 rounded-full text-sm hover:bg-white/30 transition-colors border border-white/30"
+                  >
+                    {secondaryLabel}
+                  </button>
+                </div>
+              </div>
+            </section>
+          )
+        })()}
 
         {/* ===== SECTION 2: RELATIONSHIP PULSE ===== */}
         <section>
@@ -560,51 +561,6 @@ export default function Dashboard() {
 
           </div>
         </section>
-
-        {/* ===== SECTION 2.5: NORA CARD ===== */}
-        {noraTrigger && noraTrigger.trigger !== 'default' && (
-          <button
-            onClick={() => {
-              sessionStorage.setItem('nora_opener', noraTrigger.message)
-              router.push('/ai-coach')
-            }}
-            className="w-full bg-white rounded-2xl shadow-sm text-left hover:shadow-md transition-shadow overflow-hidden"
-            style={{ borderLeft: '4px solid #E8614D' }}
-          >
-            <div className="p-4 flex items-start gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#E8614D] to-[#3D3580] flex items-center justify-center flex-shrink-0">
-                <span className="text-lg">💬</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-[#E8614D] uppercase tracking-wide mb-1">Nora has something for you</p>
-                <p className="text-[#2D3648] text-sm leading-snug line-clamp-2">{noraTrigger.message}</p>
-              </div>
-              <svg className="w-5 h-5 text-[#9CA3AF] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          </button>
-        )}
-
-        {/* ===== SECTION 2.7: TODAY'S READ ===== */}
-        {todaysRead && (
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-[#2D3648]">Today's Read 📰</h2>
-              <Link href="/learn" className="text-sm text-[#E8614D] font-semibold">See More →</Link>
-            </div>
-            <a href={todaysRead.url} target="_blank" rel="noopener noreferrer" className="block bg-white rounded-2xl shadow-sm border-l-4 overflow-hidden hover:shadow-md transition-shadow" style={{ borderLeftColor: todaysRead.sourceColor }}>
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="inline-block px-2 py-0.5 rounded-full text-white text-[10px] font-semibold" style={{ backgroundColor: todaysRead.sourceColor }}>{todaysRead.source}</span>
-                  <span className="text-[#9CA3AF] text-xs">5 min read</span>
-                </div>
-                <p className="text-[#2D3648] font-semibold text-sm leading-snug line-clamp-2">{todaysRead.title}</p>
-                {todaysRead.description && <p className="text-[#6B7280] text-xs mt-1.5 line-clamp-2">{todaysRead.description}</p>}
-              </div>
-            </a>
-          </section>
-        )}
 
         {/* ===== SECTION 3: SHARED SPACE PREVIEW ===== */}
         <section>
