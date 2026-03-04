@@ -18,23 +18,23 @@ const RSS_FEEDS = [
     color: '#3D9970',
   },
   {
-    url: 'https://www.mindbodygreen.com/rss.xml',
-    source: 'Mind Body Green',
-    tags: ['relationships', 'wellness', 'love'],
-    color: '#F39C12',
-  },
-  {
     url: 'https://positivepsychology.com/feed',
     source: 'Positive Psychology',
     tags: ['relationships', 'wellbeing', 'growth'],
     color: '#F39C12',
+  },
+  {
+    url: 'https://blogs.scientificamerican.com/beautiful-minds/feed/',
+    source: 'Scientific American',
+    tags: ['psychology', 'relationships', 'science'],
+    color: '#2196F3',
   },
 ]
 
 async function parseFeed(feedConfig) {
   try {
     const res = await fetch(feedConfig.url, {
-      next: { revalidate: 60 },
+      next: { revalidate: 3600 },
       headers: { 'User-Agent': 'ABF-App/1.0' },
     })
     const xml = await res.text()
@@ -91,7 +91,7 @@ async function parseFeed(feedConfig) {
         })
       }
 
-      if (items.length >= 4) break
+      if (items.length >= 6) break
     }
 
     const EXCLUDE_KEYWORDS = [
