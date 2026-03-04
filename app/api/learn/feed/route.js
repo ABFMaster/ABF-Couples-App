@@ -30,7 +30,7 @@ const RSS_FEEDS = [
     color: '#3D9970',
   },
   {
-    url: 'https://practicalintimacy.com/feed/',
+    url: 'https://practicalintimacy.com/blog/feed/',
     source: 'Practical Intimacy',
     tags: ['intimacy', 'connection', 'relationships'],
     color: '#9C27B0',
@@ -40,7 +40,7 @@ const RSS_FEEDS = [
 async function parseFeed(feedConfig) {
   try {
     const res = await fetch(feedConfig.url, {
-      next: { revalidate: 3600 },
+      next: { revalidate: 0 },
       headers: { 'User-Agent': 'ABF-App/1.0' },
     })
     const xml = await res.text()
@@ -106,6 +106,10 @@ async function parseFeed(feedConfig) {
       'adolescent', 'parent', 'mother', 'father', 'divorce custody',
       'politics', 'election', 'climate', 'race', 'discrimination',
       'workplace', 'career', 'job', 'boss', 'employee',
+      'procrastinat', 'narcissist', 'generation', 'best life',
+      'watch out', 'ufo', 'count the', 'nice people',
+      'stay nice', 'snub', 'volunteering', 'queer eye',
+      'bridging di', 'living your',
     ]
 
     const filtered = items.filter(item => {
