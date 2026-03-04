@@ -18,10 +18,10 @@ const RSS_FEEDS = [
     color: '#3D9970',
   },
   {
-    url: 'https://www.psychologytoday.com/us/blog/meet-catch-and-keep/feed',
-    source: 'Psychology Today',
-    tags: ['dating', 'relationships', 'attraction'],
-    color: '#3D9970',
+    url: 'https://www.mindbodygreen.com/rss.xml',
+    source: 'Mind Body Green',
+    tags: ['relationships', 'wellness', 'love'],
+    color: '#F39C12',
   },
   {
     url: 'https://positivepsychology.com/feed',
@@ -34,7 +34,7 @@ const RSS_FEEDS = [
 async function parseFeed(feedConfig) {
   try {
     const res = await fetch(feedConfig.url, {
-      next: { revalidate: 3600 },
+      next: { revalidate: 60 },
       headers: { 'User-Agent': 'ABF-App/1.0' },
     })
     const xml = await res.text()
