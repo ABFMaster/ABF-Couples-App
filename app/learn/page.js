@@ -418,10 +418,12 @@ export default function LearnPage() {
 
   const filtered = useMemo(() => {
     if (selectedSource === 'All') return articles
-    return articles.filter(a =>
+    const result = articles.filter(a =>
       a.source?.toLowerCase().includes(selectedSource.toLowerCase()) ||
       selectedSource.toLowerCase().includes(a.source?.toLowerCase() || '')
     )
+    console.log('[Filter] selected:', selectedSource, '| total articles:', articles.length, '| filtered:', result.length, '| sources in result:', [...new Set(result.map(a => a.source))])
+    return result
   }, [articles, selectedSource])
 
   const featured = filtered[0] || null
