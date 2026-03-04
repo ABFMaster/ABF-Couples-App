@@ -95,7 +95,7 @@ const FEATURED_PODCASTS = [
     tags: ['intimacy', 'conflict', 'desire'],
     emoji: '🎙️',
     accentColor: '#E8614D',
-    spotifyUrl: 'https://open.spotify.com/show/1e7OKLaIdSjJFrSCiXCvWZ',
+    spotifyUrl: 'https://open.spotify.com/search/Where%20Should%20We%20Begin%20Esther%20Perel',
     applePodcastsUrl: 'https://podcasts.apple.com/us/podcast/where-should-we-begin-with-esther-perel/id1237931798',
     whyItMatters: 'Hearing real couples work through real issues normalizes the struggles you face and shows what resolution actually looks like.',
   },
@@ -108,7 +108,7 @@ const FEATURED_PODCASTS = [
     tags: ['communication', 'conflict', 'science'],
     emoji: '🔬',
     accentColor: '#3D9970',
-    spotifyUrl: 'https://open.spotify.com/show/0YPcBySqfHSIVOrBOFaFBV',
+    spotifyUrl: 'https://open.spotify.com/search/Gottman%20Relationship%20Coach',
     applePodcastsUrl: 'https://podcasts.apple.com/us/podcast/gottman-relationship-coach/id1474856585',
     whyItMatters: "The research behind your assessments, made accessible. Gottman's decades of couples research distilled into actionable episodes.",
   },
@@ -121,7 +121,7 @@ const FEATURED_PODCASTS = [
     tags: ['attachment', 'neuroscience', 'self-awareness'],
     emoji: '🧠',
     accentColor: '#6B5CE7',
-    spotifyUrl: 'https://open.spotify.com/show/3uUITSXxhSYBhEdmDxXbAn',
+    spotifyUrl: 'https://open.spotify.com/search/Therapist%20Uncensored',
     applePodcastsUrl: 'https://podcasts.apple.com/us/podcast/therapist-uncensored-podcast/id1148737853',
     whyItMatters: 'If you want to understand WHY your attachment style works the way it does, this is the deep dive.',
   },
@@ -134,7 +134,7 @@ const FEATURED_PODCASTS = [
     tags: ['attachment', 'security', 'connection'],
     emoji: '💚',
     accentColor: '#2196F3',
-    spotifyUrl: 'https://open.spotify.com/show/2mfnAidme0NLgcZcEcfJGy',
+    spotifyUrl: 'https://open.spotify.com/search/Secure%20Love%20Julie%20Menanno',
     applePodcastsUrl: 'https://podcasts.apple.com/us/podcast/secure-love/id1601758404',
     whyItMatters: 'Directly complements your Attachment Style assessment — practical tools for moving toward more secure relating.',
   },
@@ -147,7 +147,7 @@ const FEATURED_PODCASTS = [
     tags: ['happiness', 'connection', 'wellbeing'],
     emoji: '✨',
     accentColor: '#E8A020',
-    spotifyUrl: 'https://open.spotify.com/show/3i5TCKhc6GY42pOWkpWveG',
+    spotifyUrl: 'https://open.spotify.com/search/Science%20of%20Happiness%20Greater%20Good',
     applePodcastsUrl: 'https://podcasts.apple.com/us/podcast/the-science-of-happiness/id1340505607',
     whyItMatters: 'From the same team behind Greater Good Magazine. Research made practical and warm.',
   },
@@ -418,7 +418,10 @@ export default function LearnPage() {
 
   const filtered = selectedSource === 'All'
     ? articles
-    : articles.filter(a => a.source === selectedSource)
+    : articles.filter(a =>
+        a.source?.toLowerCase().includes(selectedSource.toLowerCase()) ||
+        selectedSource.toLowerCase().includes(a.source?.toLowerCase() || '')
+      )
 
   const featured = filtered[0] || null
   const rest = filtered.slice(1)
