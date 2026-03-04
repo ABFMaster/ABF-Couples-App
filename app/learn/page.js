@@ -305,6 +305,7 @@ export default function LearnPage() {
   const [selectedSource, setSelectedSource] = useState('All')
   const [selectedBook, setSelectedBook] = useState(null)
   const [showAllPodcasts, setShowAllPodcasts] = useState(false)
+  const [showAllArticles, setShowAllArticles] = useState(false)
 
   // Assessments state
   const [user, setUser] = useState(null)
@@ -472,7 +473,7 @@ export default function LearnPage() {
               {/* Source filter chips */}
               <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
                 {SOURCES.map(source => (
-                  <button key={source} onClick={() => setSelectedSource(source)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${selectedSource === source ? 'bg-[#E8614D] text-white' : 'bg-white border border-[#E5E2DD] text-[#6B7280] hover:border-[#E8614D] hover:text-[#E8614D]'}`}>
+                  <button key={source} onClick={() => { setSelectedSource(source); setShowAllArticles(false) }} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${selectedSource === source ? 'bg-[#E8614D] text-white' : 'bg-white border border-[#E5E2DD] text-[#6B7280] hover:border-[#E8614D] hover:text-[#E8614D]'}`}>
                     {source}
                   </button>
                 ))}
@@ -515,9 +516,17 @@ export default function LearnPage() {
             {/* Compact article list */}
             {!loadingArticles && !articlesError && rest.length > 0 && (
               <div className="flex flex-col gap-3">
-                {rest.map(article => (
+                {(showAllArticles ? rest : rest.slice(0, 5)).map(article => (
                   <CompactCard key={article.id} article={article} />
                 ))}
+                {rest.length > 5 && (
+                  <button
+                    onClick={() => setShowAllArticles(!showAllArticles)}
+                    className="w-full py-3 text-sm font-semibold text-[#E8614D] hover:text-[#C44A38] transition-colors"
+                  >
+                    {showAllArticles ? 'Show less ↑' : `Show ${rest.length - 5} more articles ↓`}
+                  </button>
+                )}
               </div>
             )}
 

@@ -40,7 +40,7 @@ const RSS_FEEDS = [
 async function parseFeed(feedConfig) {
   try {
     const res = await fetch(feedConfig.url, {
-      next: { revalidate: 0 },
+      next: { revalidate: 3600 },
       headers: { 'User-Agent': 'ABF-App/1.0' },
     })
     const xml = await res.text()
@@ -127,18 +127,34 @@ async function parseFeed(feedConfig) {
 export async function GET() {
   const results = await Promise.allSettled(RSS_FEEDS.map(parseFeed))
 
-  const allArticles = results
+  // Deduplicate first
+  const deduped = results
     .filter(r => r.status === 'fulfilled')
     .flatMap(r => r.value)
-    .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
     .filter((article, index, self) => {
-      const normalizedTitle = article.title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 40)
+      const normalizedTitle = article.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+        .slice(0, 40)
       return index === self.findIndex(a => {
-        const aTitle = a.title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 40)
+        const aTitle = a.title
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '')
+          .slice(0, 40)
         return aTitle === normalizedTitle
       })
     })
-    .slice(0, 30)
+
+  // Cap each source at 5 articles
+  const sourceCounts = {}
+  const allArticles = deduped
+    .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
+    .filter(article => {
+      const source = article.source
+      sourceCounts[source] = (sourceCounts[source] || 0) + 1
+      return sourceCounts[source] <= 5
+    })
+    .slice(0, 25)
 
   return Response.json({ articles: allArticles })
 }
