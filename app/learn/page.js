@@ -77,6 +77,82 @@ const RECOMMENDED_BOOKS = [
   },
 ]
 
+// ── Featured podcasts ──────────────────────────────────────────────────────────
+
+// TODO Sprint 2: Personalize podcast order based on
+// user's attachment and conflict style results.
+// Anxious attachment → surface Secure Love first
+// Avoidant attachment → surface Therapist Uncensored first
+// Hostile conflict → surface Where Should We Begin first
+
+const FEATURED_PODCASTS = [
+  {
+    id: 'where-should-we-begin',
+    title: 'Where Should We Begin?',
+    host: 'Esther Perel',
+    description: 'Real couples, real sessions. Esther Perel conducts live therapy sessions with couples navigating love, desire, and conflict.',
+    episodeCount: '100+ episodes',
+    tags: ['intimacy', 'conflict', 'desire'],
+    emoji: '🎙️',
+    accentColor: '#E8614D',
+    spotifyUrl: 'https://open.spotify.com/show/1e7OKLaIdSjJFrSCiXCvWZ',
+    applePodcastsUrl: 'https://podcasts.apple.com/us/podcast/where-should-we-begin-with-esther-perel/id1237931798',
+    whyItMatters: 'Hearing real couples work through real issues normalizes the struggles you face and shows what resolution actually looks like.',
+  },
+  {
+    id: 'gottman-relationship-coach',
+    title: 'The Gottman Relationship Coach',
+    host: 'John & Julie Gottman',
+    description: "Research-backed advice from the world's leading relationship scientists. Practical tools for real couples.",
+    episodeCount: '50+ episodes',
+    tags: ['communication', 'conflict', 'science'],
+    emoji: '🔬',
+    accentColor: '#3D9970',
+    spotifyUrl: 'https://open.spotify.com/show/0YPcBySqfHSIVOrBOFaFBV',
+    applePodcastsUrl: 'https://podcasts.apple.com/us/podcast/gottman-relationship-coach/id1474856585',
+    whyItMatters: "The research behind your assessments, made accessible. Gottman's decades of couples research distilled into actionable episodes.",
+  },
+  {
+    id: 'therapist-uncensored',
+    title: 'Therapist Uncensored',
+    host: 'Ann Kelley & Sue Marriott',
+    description: 'The neuroscience and attachment theory behind why we do what we do in relationships — explained accessibly.',
+    episodeCount: '200+ episodes',
+    tags: ['attachment', 'neuroscience', 'self-awareness'],
+    emoji: '🧠',
+    accentColor: '#6B5CE7',
+    spotifyUrl: 'https://open.spotify.com/show/3uUITSXxhSYBhEdmDxXbAn',
+    applePodcastsUrl: 'https://podcasts.apple.com/us/podcast/therapist-uncensored-podcast/id1148737853',
+    whyItMatters: 'If you want to understand WHY your attachment style works the way it does, this is the deep dive.',
+  },
+  {
+    id: 'secure-love',
+    title: 'Secure Love',
+    host: 'Julie Menanno',
+    description: 'Practical attachment theory for couples. How to break anxious-avoidant cycles and build real security together.',
+    episodeCount: '80+ episodes',
+    tags: ['attachment', 'security', 'connection'],
+    emoji: '💚',
+    accentColor: '#2196F3',
+    spotifyUrl: 'https://open.spotify.com/show/2mfnAidme0NLgcZcEcfJGy',
+    applePodcastsUrl: 'https://podcasts.apple.com/us/podcast/secure-love/id1601758404',
+    whyItMatters: 'Directly complements your Attachment Style assessment — practical tools for moving toward more secure relating.',
+  },
+  {
+    id: 'science-of-happiness',
+    title: 'The Science of Happiness',
+    host: 'Greater Good Science Center',
+    description: 'UC Berkeley researchers share science-backed practices for a happier, more connected life and relationship.',
+    episodeCount: '150+ episodes',
+    tags: ['happiness', 'connection', 'wellbeing'],
+    emoji: '✨',
+    accentColor: '#E8A020',
+    spotifyUrl: 'https://open.spotify.com/show/3i5TCKhc6GY42pOWkpWveG',
+    applePodcastsUrl: 'https://podcasts.apple.com/us/podcast/the-science-of-happiness/id1340505607',
+    whyItMatters: 'From the same team behind Greater Good Magazine. Research made practical and warm.',
+  },
+]
+
 // ── Skeleton card for loading state ───────────────────────────────────────────
 
 function SkeletonFeatured() {
@@ -228,6 +304,7 @@ export default function LearnPage() {
   const [articlesError, setArticlesError] = useState(null)
   const [selectedSource, setSelectedSource] = useState('All')
   const [selectedBook, setSelectedBook] = useState(null)
+  const [showAllPodcasts, setShowAllPodcasts] = useState(false)
 
   // Assessments state
   const [user, setUser] = useState(null)
@@ -436,6 +513,56 @@ export default function LearnPage() {
                 ))}
               </div>
             )}
+
+            {/* Podcast section */}
+            <div>
+              <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-3">🎧 Relationship Podcasts</p>
+              <div className="flex flex-col gap-3">
+                {(showAllPodcasts ? FEATURED_PODCASTS : FEATURED_PODCASTS.slice(0, 3)).map(podcast => (
+                  <div key={podcast.id} className="bg-white rounded-2xl shadow-sm overflow-hidden border border-[#E5E2DD]" style={{ borderLeft: `4px solid ${podcast.accentColor}` }}>
+                    <div className="p-4">
+                      {/* Top row: emoji + title/host */}
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" style={{ backgroundColor: podcast.accentColor + '18' }}>
+                          {podcast.emoji}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[#2D3648] font-bold text-sm leading-snug">{podcast.title}</p>
+                          <p className="text-[#9CA3AF] text-xs mt-0.5">{podcast.host} · {podcast.episodeCount}</p>
+                        </div>
+                      </div>
+                      {/* Description */}
+                      <p className="text-[#6B7280] text-sm leading-relaxed line-clamp-2 mb-3">{podcast.description}</p>
+                      {/* Tags */}
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {podcast.tags.map(tag => (
+                          <span key={tag} className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#F3F4F6] text-[#6B7280]">{tag}</span>
+                        ))}
+                      </div>
+                      {/* Why it matters */}
+                      <div className="bg-[#FDF6EF] rounded-xl px-3 py-2.5 mb-4">
+                        <p className="text-[10px] font-bold text-[#E8614D] uppercase tracking-wide mb-1">Why This Podcast</p>
+                        <p className="text-[#6B7280] text-xs leading-relaxed italic">{podcast.whyItMatters}</p>
+                      </div>
+                      {/* Listen buttons */}
+                      <div className="flex gap-2">
+                        <a href={podcast.spotifyUrl} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-xs font-semibold border-2 border-[#1DB954] text-[#1DB954] hover:bg-[#1DB954] hover:text-white transition-all">
+                          🎵 Spotify
+                        </a>
+                        <a href={podcast.applePodcastsUrl} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-xs font-semibold border-2 border-[#9C27B0] text-[#9C27B0] hover:bg-[#9C27B0] hover:text-white transition-all">
+                          🎙️ Apple Podcasts
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {FEATURED_PODCASTS.length > 3 && (
+                <button onClick={() => setShowAllPodcasts(v => !v)} className="w-full mt-3 py-2.5 text-[#6B7280] text-sm font-semibold hover:text-[#2D3648] transition-colors">
+                  {showAllPodcasts ? 'Show less' : `Show all podcasts →`}
+                </button>
+              )}
+            </div>
 
             {/* Reading list */}
             <div>
