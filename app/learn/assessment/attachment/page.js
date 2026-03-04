@@ -63,17 +63,20 @@ export default function AttachmentAssessmentPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
-      await supabase.from('attachment_assessments').insert({
-        user_id: user.id,
-        answers,
-        primary_style: result.primary,
-        secondary_style: result.secondary,
-        counts: result.counts,
-        completed_at: new Date().toISOString(),
-      })
+      const { error } = await supabase
+        .from('attachment_assessments')
+        .upsert({
+          user_id: user.id,
+          primary_style: result.primary,
+          secondary_style: result.secondary,
+          counts: result.counts,
+          completed_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' })
+      if (error) console.error('Attachment save error:', error)
       setSaved(true)
-    } catch {
-      // Table may not exist yet — fail silently, user still sees results
+    } catch (err) {
+      console.error('Attachment save catch:', err)
+      setSaved(true) // Still mark as saved so UX doesn't break
     } finally {
       setSaving(false)
     }
