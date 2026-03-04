@@ -43,7 +43,7 @@ function detectTopics(title, description) {
 
   if (text.match(/conflict|argue|argument|fight|disagree|tension|anger|hostile|repair|rupture|difficult conversation/))
     topics.push('conflict')
-  if (text.match(/intimacy|sex|sexual|desire|passion|spark|physical|touch|bedroom|erotic|sensual|feel loved|ways to love|love language/))
+  if (text.match(/\bintimacy\b|sexual|desire|passion|spark|physical touch|bedroom|erotic|sensual|feel loved|love language|roommates.*lovers|lovers.*roommates/))
     topics.push('intimacy')
   if (text.match(/communicat|listen|talk|conversation|express|understand|heard|speak|say|tell|discuss/))
     topics.push('communication')
@@ -51,7 +51,7 @@ function detectTopics(title, description) {
     topics.push('attachment')
   if (text.match(/connect with partner|togetherness|feel close|emotional distance|lonely in relationship|quality time together|relationship quality/))
     topics.push('connection')
-  if (text.match(/wellbeing|well-being|happiness|mental health|stress|anxiety|self|growth|mindful|flourish|thrive/))
+  if (text.match(/wellbeing in relationship|relationship happiness|mental health.*partner|stress.*relationship|anxiety.*relationship|emotional health.*couple|flourish together|thrive.*together|relationship satisfaction/))
     topics.push('wellbeing')
 
   return topics // empty array = no match = will be excluded
@@ -83,6 +83,17 @@ async function parseFeed(feedConfig) {
         item.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/)?.[1] ||
         item.match(/<description>([\s\S]*?)<\/description>/)?.[1] ||
         ''
+      const decodeEntities = (str) => str
+        .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(dec))
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#039;/g, "'")
+        .replace(/&nbsp;/g, ' ')
+
+      const cleanTitle = decodeEntities(title.trim())
+
       const pubDate = item.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] || ''
       const imgMatch =
         item.match(/<media:thumbnail[^>]*url="([^"]*)"/) ||
@@ -103,11 +114,11 @@ async function parseFeed(feedConfig) {
         .trim()
         .slice(0, 200)
 
-      const tags = detectTopics(title, cleanDesc)
-      if (title && link && tags.length > 0) {
+      const tags = detectTopics(cleanTitle, cleanDesc)
+      if (cleanTitle && link && tags.length > 0) {
         items.push({
           id: Buffer.from(link).toString('base64').slice(0, 16),
-          title: title.trim(),
+          title: cleanTitle,
           description: cleanDesc + (cleanDesc.length >= 200 ? '...' : ''),
           url: link.trim(),
           source: feedConfig.source,
@@ -134,6 +145,10 @@ async function parseFeed(feedConfig) {
       'liar', 'lying', 'lie detector', 'personality you develop',
       'generations be friends', 'social anxiety', 'fatigue', 'misogyny',
       'situationship', 'trade down', 'hijacked', 'skeptic', 'disclosure',
+      'society', 'self-compassion', 'self compassion', 'dial up',
+      'happiness really', 'self-growth', 'self-acceptance', 'self acceptance',
+      'cave', 'meditation', 'monk', 'himalaya', 'enlightenment',
+      'over the life', 'shape of happiness',
     ]
 
     const filtered = items.filter(item => {
