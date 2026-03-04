@@ -233,6 +233,7 @@ export default function LearnPage() {
   const [user, setUser] = useState(null)
   const [assessment, setAssessment] = useState(null)
   const [attachmentResult, setAttachmentResult] = useState(null)
+  const [conflictResult, setConflictResult] = useState(null)
   const [loadingUser, setLoadingUser] = useState(true)
 
   // ── Fetch articles ──────────────────────────────────────────────────────────
@@ -296,6 +297,32 @@ export default function LearnPage() {
         }
       } catch {
         setAttachmentResult(null)
+      }
+
+      // Fetch conflict style assessment (table may not exist yet — fail silently)
+      try {
+        const { data: conflictData } = await supabase
+          .from('conflict_assessments')
+          .select('primary_style, completed_at')
+          .eq('user_id', authUser.id)
+          .maybeSingle()
+        if (conflictData?.primary_style) {
+          const conflictProfiles = {
+            validator: { emoji: '🤝', label: 'The Validator', color: '#3D9970' },
+            volatile: { emoji: '🔥', label: 'The Passionate Fighter', color: '#E8614D' },
+            avoider: { emoji: '🕊️', label: 'The Peacekeeper', color: '#6B5CE7' },
+            hostile: { emoji: '⚡', label: 'The Reactive Fighter', color: '#E8A020' },
+          }
+          setConflictResult({
+            primary_style: conflictData.primary_style,
+            profile: conflictProfiles[conflictData.primary_style] || null,
+            completed_at: conflictData.completed_at,
+          })
+        } else {
+          setConflictResult(null)
+        }
+      } catch {
+        setConflictResult(null)
       }
     } catch (err) {
       console.error('User data error:', err)
@@ -498,36 +525,65 @@ export default function LearnPage() {
               </div>
             </div>
 
-            {/* Deep Dive: Attachment Style */}
+            {/* Deep Dive Assessments */}
             <div>
               <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-3">Deep Dive Assessments</p>
-              <button onClick={() => router.push('/learn/assessment/attachment')} className="w-full bg-white rounded-2xl p-5 shadow-sm border border-[#E5E2DD] hover:shadow-md transition-shadow text-left">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-violet-50 flex items-center justify-center text-2xl flex-shrink-0">🔗</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[#2D3648] font-semibold text-sm">Attachment Style</p>
-                    {attachmentResult ? (
-                      <p className="text-violet-600 text-xs mt-0.5 font-medium">{attachmentResult.profile?.emoji} {attachmentResult.profile?.label} · Tap to retake</p>
-                    ) : (
-                      <p className="text-[#9CA3AF] text-xs mt-0.5 line-clamp-2">Discover your attachment pattern — the invisible blueprint shaping how you love.</p>
-                    )}
+              <div className="flex flex-col gap-3">
+                <button onClick={() => router.push('/learn/assessment/attachment')} className="w-full bg-white rounded-2xl p-5 shadow-sm border border-[#E5E2DD] hover:shadow-md transition-shadow text-left">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-violet-50 flex items-center justify-center text-2xl flex-shrink-0">🔗</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[#2D3648] font-semibold text-sm">Attachment Style</p>
+                      {attachmentResult ? (
+                        <p className="text-violet-600 text-xs mt-0.5 font-medium">{attachmentResult.profile?.emoji} {attachmentResult.profile?.label} · Tap to retake</p>
+                      ) : (
+                        <p className="text-[#9CA3AF] text-xs mt-0.5 line-clamp-2">Discover your attachment pattern — the invisible blueprint shaping how you love.</p>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0">
+                      {attachmentResult ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-violet-50 text-violet-600 text-xs font-bold">✓</span>
+                      ) : (
+                        <span className="text-gray-400 text-sm">→</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-shrink-0">
-                    {attachmentResult ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-violet-50 text-violet-600 text-xs font-bold">✓</span>
-                    ) : (
-                      <span className="text-gray-400 text-sm">→</span>
-                    )}
+                  <div className="mt-3 flex items-center gap-3 text-[#9CA3AF] text-xs pl-16">
+                    <span>20 questions</span>
+                    <span>·</span>
+                    <span>~8 minutes</span>
+                    <span>·</span>
+                    <span className="text-violet-500 font-medium">Free</span>
                   </div>
-                </div>
-                <div className="mt-3 flex items-center gap-3 text-[#9CA3AF] text-xs pl-16">
-                  <span>20 questions</span>
-                  <span>·</span>
-                  <span>~8 minutes</span>
-                  <span>·</span>
-                  <span className="text-violet-500 font-medium">Free</span>
-                </div>
-              </button>
+                </button>
+                <button onClick={() => router.push('/learn/assessment/conflict')} className="w-full bg-white rounded-2xl p-5 shadow-sm border border-[#E5E2DD] hover:shadow-md transition-shadow text-left">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-2xl flex-shrink-0">⚡</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[#2D3648] font-semibold text-sm">Conflict Style</p>
+                      {conflictResult ? (
+                        <p className="text-[#E8614D] text-xs mt-0.5 font-medium">{conflictResult.profile?.emoji} {conflictResult.profile?.label} · Tap to retake</p>
+                      ) : (
+                        <p className="text-[#9CA3AF] text-xs mt-0.5 line-clamp-2">Understand how you handle disagreement — and why it matters.</p>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0">
+                      {conflictResult ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-50 text-[#E8614D] text-xs font-bold">✓</span>
+                      ) : (
+                        <span className="text-gray-400 text-sm">→</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center gap-3 text-[#9CA3AF] text-xs pl-16">
+                    <span>18 questions</span>
+                    <span>·</span>
+                    <span>~7 minutes</span>
+                    <span>·</span>
+                    <span className="text-[#E8614D] font-medium">Free</span>
+                  </div>
+                </button>
+              </div>
             </div>
 
             {/* Coming Soon */}
@@ -537,7 +593,7 @@ export default function LearnPage() {
                 <p className="text-white font-bold text-sm">More Assessments Coming Soon</p>
               </div>
               <p className="text-purple-300 text-xs leading-relaxed">
-                Conflict Style · Love Languages Deep Dive · Intimacy Profile
+                Love Languages Deep Dive · Intimacy Profile
               </p>
             </div>
 
