@@ -274,12 +274,26 @@ export default function LearnPage() {
       try {
         const { data: attData } = await supabase
           .from('attachment_assessments')
-          .select('result, created_at')
+          .select('primary_style, secondary_style, counts, completed_at')
           .eq('user_id', authUser.id)
-          .order('created_at', { ascending: false })
+          .order('completed_at', { ascending: false })
           .limit(1)
           .maybeSingle()
-        setAttachmentResult(attData?.result || null)
+        if (attData?.primary_style) {
+          const profiles = {
+            secure: { emoji: '💚', label: 'Securely Attached', color: '#3D9970' },
+            anxious: { emoji: '💛', label: 'Anxiously Attached', color: '#E8A020' },
+            avoidant: { emoji: '💙', label: 'Dismissive-Avoidant', color: '#2196F3' },
+            fearful: { emoji: '🤍', label: 'Fearful-Avoidant', color: '#9C27B0' },
+          }
+          setAttachmentResult({
+            primary_style: attData.primary_style,
+            profile: profiles[attData.primary_style] || null,
+            completed_at: attData.completed_at,
+          })
+        } else {
+          setAttachmentResult(null)
+        }
       } catch {
         setAttachmentResult(null)
       }

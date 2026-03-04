@@ -8,8 +8,10 @@
  *     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
  *     user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
  *     answers jsonb NOT NULL,
- *     result jsonb NOT NULL,
- *     created_at timestamptz DEFAULT now() NOT NULL
+ *     primary_style text NOT NULL,
+ *     secondary_style text,
+ *     counts jsonb,
+ *     completed_at timestamptz DEFAULT now() NOT NULL
  *   );
  *   ALTER TABLE attachment_assessments ENABLE ROW LEVEL SECURITY;
  *   CREATE POLICY "Users manage own attachment assessments" ON attachment_assessments
@@ -64,7 +66,10 @@ export default function AttachmentAssessmentPage() {
       await supabase.from('attachment_assessments').insert({
         user_id: user.id,
         answers,
-        result,
+        primary_style: result.primary,
+        secondary_style: result.secondary,
+        counts: result.counts,
+        completed_at: new Date().toISOString(),
       })
       setSaved(true)
     } catch {
