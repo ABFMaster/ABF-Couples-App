@@ -91,7 +91,7 @@ async function parseFeed(feedConfig) {
         })
       }
 
-      if (items.length >= 5) break
+      if (items.length >= 4) break
     }
 
     const EXCLUDE_KEYWORDS = [
@@ -130,6 +130,14 @@ export async function GET() {
     .filter(r => r.status === 'fulfilled')
     .flatMap(r => r.value)
     .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
+    .filter((article, index, self) => {
+      const normalizedTitle = article.title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 40)
+      return index === self.findIndex(a => {
+        const aTitle = a.title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 40)
+        return aTitle === normalizedTitle
+      })
+    })
+    .slice(0, 20)
 
   return Response.json({ articles: allArticles })
 }
