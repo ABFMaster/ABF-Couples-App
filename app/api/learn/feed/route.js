@@ -91,7 +91,7 @@ async function parseFeed(feedConfig) {
         })
       }
 
-      if (items.length >= 6) break
+      if (items.length >= 10) break
     }
 
     const EXCLUDE_KEYWORDS = [
@@ -102,18 +102,9 @@ async function parseFeed(feedConfig) {
       'workplace', 'career', 'job', 'boss', 'employee',
     ]
 
-    const REQUIRE_ONE_OF = [
-      'relationship', 'couple', 'partner', 'love', 'intimacy',
-      'connection', 'attachment', 'communication', 'marriage',
-      'romance', 'trust', 'conflict', 'emotion', 'happiness',
-      'wellbeing', 'well-being', 'bond', 'commitment', 'dating',
-    ]
-
     const filtered = items.filter(item => {
       const text = (item.title + ' ' + item.description).toLowerCase()
-      const hasExcluded = EXCLUDE_KEYWORDS.some(kw => text.includes(kw))
-      const hasRequired = REQUIRE_ONE_OF.some(kw => text.includes(kw))
-      return !hasExcluded && hasRequired
+      return !EXCLUDE_KEYWORDS.some(kw => text.includes(kw))
     })
 
     return filtered
@@ -137,7 +128,7 @@ export async function GET() {
         return aTitle === normalizedTitle
       })
     })
-    .slice(0, 20)
+    .slice(0, 30)
 
   return Response.json({ articles: allArticles })
 }
