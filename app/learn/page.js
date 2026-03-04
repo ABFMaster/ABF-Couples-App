@@ -4,7 +4,15 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ASSESSMENT_MODULES } from '@/lib/relationship-questions'
 
-const SOURCES = ['All', 'The Gottman Institute', 'Greater Good Magazine', 'Psychology Today', 'Practical Intimacy']
+const TOPICS = [
+  { id: 'all', label: 'All', emoji: '✨' },
+  { id: 'intimacy', label: 'Intimacy', emoji: '💕' },
+  { id: 'conflict', label: 'Conflict', emoji: '⚡' },
+  { id: 'communication', label: 'Communication', emoji: '💬' },
+  { id: 'attachment', label: 'Attachment', emoji: '🔗' },
+  { id: 'connection', label: 'Connection', emoji: '🤝' },
+  { id: 'wellbeing', label: 'Wellbeing', emoji: '🌱' },
+]
 
 // ── Recommended books ──────────────────────────────────────────────────────────
 
@@ -15,7 +23,8 @@ const RECOMMENDED_BOOKS = [
     author: 'Dr. John Gottman',
     emoji: '💑',
     color: '#E8614D',
-    topics: ['Communication', 'Conflict', 'Intimacy'],
+    topics: ['conflict', 'communication', 'connection'],
+    primaryTopic: 'conflict',
     blurb: 'The most science-backed book on relationships ever written. Gottman\'s 40 years of research distilled into 7 actionable principles every couple can use.',
     bestFor: 'Every couple',
     amazonUrl: 'https://www.amazon.com/dp/0553447718',
@@ -26,7 +35,8 @@ const RECOMMENDED_BOOKS = [
     author: 'Amir Levine & Rachel Heller',
     emoji: '🔗',
     color: '#6B5CE7',
-    topics: ['Attachment', 'Psychology', 'Self-Awareness'],
+    topics: ['attachment', 'intimacy', 'connection'],
+    primaryTopic: 'attachment',
     blurb: 'Discover your attachment style and understand why you relate the way you do. A game-changer for understanding patterns that shape every relationship.',
     bestFor: 'Understanding yourself',
     amazonUrl: 'https://www.amazon.com/dp/1585429139',
@@ -37,7 +47,8 @@ const RECOMMENDED_BOOKS = [
     author: 'Dr. Sue Johnson',
     emoji: '🤝',
     color: '#3D9970',
-    topics: ['Emotional Connection', 'Bonding', 'Vulnerability'],
+    topics: ['attachment', 'intimacy', 'connection'],
+    primaryTopic: 'attachment',
     blurb: 'Based on Emotionally Focused Therapy (EFT), this book reveals the secret to lasting love: emotional responsiveness and creating a safe connection.',
     bestFor: 'Rebuilding connection',
     amazonUrl: 'https://www.amazon.com/dp/031611300X',
@@ -48,7 +59,8 @@ const RECOMMENDED_BOOKS = [
     author: 'Gary Chapman',
     emoji: '💝',
     color: '#F39C12',
-    topics: ['Love Languages', 'Connection', 'Communication'],
+    topics: ['intimacy', 'communication', 'connection'],
+    primaryTopic: 'intimacy',
     blurb: 'The classic that introduced the world to love languages. Simple, practical, and surprisingly powerful for understanding how you each give and receive love.',
     bestFor: 'Speaking each other\'s language',
     amazonUrl: 'https://www.amazon.com/dp/080241270X',
@@ -59,7 +71,8 @@ const RECOMMENDED_BOOKS = [
     author: 'Esther Perel',
     emoji: '🔥',
     color: '#C44A38',
-    topics: ['Desire', 'Intimacy', 'Long-term Love'],
+    topics: ['intimacy', 'connection', 'wellbeing'],
+    primaryTopic: 'intimacy',
     blurb: 'How do you sustain desire in a long-term relationship? Perel\'s provocative, brilliant answer challenges everything you thought you knew about love and lust.',
     bestFor: 'Long-term couples',
     amazonUrl: 'https://www.amazon.com/dp/0060753641',
@@ -70,10 +83,23 @@ const RECOMMENDED_BOOKS = [
     author: 'Stan Tatkin',
     emoji: '🧠',
     color: '#3D3580',
-    topics: ['Neuroscience', 'Attachment', 'Partnership'],
+    topics: ['attachment', 'communication', 'connection'],
+    primaryTopic: 'attachment',
     blurb: 'How neuroscience explains why we behave the way we do in relationships — and how to use that understanding to build a genuinely secure partnership.',
     bestFor: 'Science-minded couples',
     amazonUrl: 'https://www.amazon.com/dp/1608820580',
+  },
+  {
+    id: 'come-as-you-are',
+    title: 'Come As You Are',
+    author: 'Emily Nagoski',
+    emoji: '🌸',
+    color: '#E91E8C',
+    topics: ['intimacy', 'wellbeing', 'connection'],
+    primaryTopic: 'intimacy',
+    blurb: 'The science of why women\'s sexuality works the way it does. Groundbreaking research that helps couples understand desire, arousal, and intimacy on a deeper level.',
+    bestFor: 'Understanding desire',
+    amazonUrl: 'https://www.amazon.com/dp/1476762090',
   },
 ]
 
@@ -92,7 +118,8 @@ const FEATURED_PODCASTS = [
     host: 'Esther Perel',
     description: 'Real couples, real sessions. Esther Perel conducts live therapy sessions with couples navigating love, desire, and conflict.',
     episodeCount: '100+ episodes',
-    tags: ['intimacy', 'conflict', 'desire'],
+    tags: ['intimacy', 'conflict', 'connection'],
+    primaryTopic: 'intimacy',
     emoji: '🎙️',
     accentColor: '#E8614D',
     spotifyUrl: 'https://open.spotify.com/search/Where%20Should%20We%20Begin%20Esther%20Perel',
@@ -105,7 +132,8 @@ const FEATURED_PODCASTS = [
     host: 'John & Julie Gottman',
     description: "Research-backed advice from the world's leading relationship scientists. Practical tools for real couples.",
     episodeCount: '50+ episodes',
-    tags: ['communication', 'conflict', 'science'],
+    tags: ['conflict', 'communication', 'connection'],
+    primaryTopic: 'conflict',
     emoji: '🔬',
     accentColor: '#3D9970',
     spotifyUrl: 'https://open.spotify.com/search/Gottman%20Relationship%20Coach',
@@ -118,7 +146,8 @@ const FEATURED_PODCASTS = [
     host: 'Ann Kelley & Sue Marriott',
     description: 'The neuroscience and attachment theory behind why we do what we do in relationships — explained accessibly.',
     episodeCount: '200+ episodes',
-    tags: ['attachment', 'neuroscience', 'self-awareness'],
+    tags: ['attachment', 'connection', 'wellbeing'],
+    primaryTopic: 'attachment',
     emoji: '🧠',
     accentColor: '#6B5CE7',
     spotifyUrl: 'https://open.spotify.com/search/Therapist%20Uncensored',
@@ -131,7 +160,8 @@ const FEATURED_PODCASTS = [
     host: 'Julie Menanno',
     description: 'Practical attachment theory for couples. How to break anxious-avoidant cycles and build real security together.',
     episodeCount: '80+ episodes',
-    tags: ['attachment', 'security', 'connection'],
+    tags: ['attachment', 'intimacy', 'connection'],
+    primaryTopic: 'attachment',
     emoji: '💚',
     accentColor: '#2196F3',
     spotifyUrl: 'https://open.spotify.com/search/Secure%20Love%20Julie%20Menanno',
@@ -144,7 +174,8 @@ const FEATURED_PODCASTS = [
     host: 'Greater Good Science Center',
     description: 'UC Berkeley researchers share science-backed practices for a happier, more connected life and relationship.',
     episodeCount: '150+ episodes',
-    tags: ['happiness', 'connection', 'wellbeing'],
+    tags: ['wellbeing', 'connection', 'intimacy'],
+    primaryTopic: 'wellbeing',
     emoji: '✨',
     accentColor: '#E8A020',
     spotifyUrl: 'https://open.spotify.com/search/Science%20of%20Happiness%20Greater%20Good',
@@ -215,6 +246,44 @@ function BookPreviewModal({ book, onClose }) {
           <a href={book.amazonUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold text-white text-sm hover:opacity-90 transition-opacity" style={{ backgroundColor: book.color }}>
             Get this book →
           </a>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Podcast detail modal ───────────────────────────────────────────────────────
+
+function PodcastDetailModal({ podcast, onClose }) {
+  if (!podcast) return null
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="relative w-full max-w-sm bg-white rounded-3xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="p-6" style={{ background: `linear-gradient(135deg, ${podcast.accentColor}22, ${podcast.accentColor}11)`, borderBottom: `3px solid ${podcast.accentColor}` }}>
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-4xl" style={{ backgroundColor: podcast.accentColor + '20' }}>
+              {podcast.emoji}
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none mt-1">×</button>
+          </div>
+          <h2 className="text-[#2D3648] font-bold text-lg leading-snug mb-1">{podcast.title}</h2>
+          <p className="text-[#6B7280] text-sm">{podcast.host} · {podcast.episodeCount}</p>
+        </div>
+        <div className="p-6">
+          <p className="text-[#6B7280] text-sm leading-relaxed mb-4">{podcast.description}</p>
+          <div className="bg-[#FDF6EF] rounded-xl px-4 py-3 mb-5">
+            <p className="text-[10px] font-bold text-[#E8614D] uppercase tracking-wide mb-1">Why This Podcast</p>
+            <p className="text-[#6B7280] text-xs leading-relaxed italic">{podcast.whyItMatters}</p>
+          </div>
+          <div className="flex gap-2">
+            <a href={podcast.spotifyUrl} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold border-2 border-[#1DB954] text-[#1DB954] hover:bg-[#1DB954] hover:text-white transition-all">
+              🎵 Spotify
+            </a>
+            <a href={podcast.applePodcastsUrl} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold border-2 border-[#9C27B0] text-[#9C27B0] hover:bg-[#9C27B0] hover:text-white transition-all">
+              🎙️ Apple
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -302,10 +371,10 @@ export default function LearnPage() {
   const [articles, setArticles] = useState([])
   const [loadingArticles, setLoadingArticles] = useState(true)
   const [articlesError, setArticlesError] = useState(null)
-  const [selectedSource, setSelectedSource] = useState('All')
+  const [selectedTopic, setSelectedTopic] = useState('all')
   const [selectedBook, setSelectedBook] = useState(null)
-  const [showAllPodcasts, setShowAllPodcasts] = useState(false)
-  const [showAllArticles, setShowAllArticles] = useState(false)
+  const [selectedPodcast, setSelectedPodcast] = useState(null)
+  const [showMoreArticles, setShowMoreArticles] = useState(false)
 
   // Assessments state
   const [user, setUser] = useState(null)
@@ -417,19 +486,20 @@ export default function LearnPage() {
 
   // ── Filtered articles ──────────────────────────────────────────────────────
 
-  const { filtered, featured, rest } = useMemo(() => {
-    const filtered = selectedSource === 'All'
-      ? articles
-      : articles.filter(a =>
-          a.source?.toLowerCase().includes(selectedSource.toLowerCase()) ||
-          selectedSource.toLowerCase().includes(a.source?.toLowerCase() || '')
-        )
-    return {
-      filtered,
-      featured: filtered[0] || null,
-      rest: filtered.slice(1)
-    }
-  }, [articles, selectedSource])
+  const filteredArticles = useMemo(() => {
+    if (selectedTopic === 'all') return articles
+    return articles.filter(a => a.tags?.includes(selectedTopic))
+  }, [articles, selectedTopic])
+
+  const filteredBooks = useMemo(() => {
+    if (selectedTopic === 'all') return RECOMMENDED_BOOKS
+    return RECOMMENDED_BOOKS.filter(b => b.topics?.includes(selectedTopic))
+  }, [selectedTopic])
+
+  const filteredPodcasts = useMemo(() => {
+    if (selectedTopic === 'all') return FEATURED_PODCASTS
+    return FEATURED_PODCASTS.filter(p => p.tags?.includes(selectedTopic))
+  }, [selectedTopic])
 
   // ── Module score lookup ────────────────────────────────────────────────────
 
@@ -466,140 +536,118 @@ export default function LearnPage() {
 
         {/* ── DISCOVER TAB ─────────────────────────────────────────────────── */}
         {activeTab === 'discover' && (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-6">
+
+            {/* Today's Read */}
             <div>
-              <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-3">Daily reading for your relationship · {selectedSource}</p>
-
-              {/* Source filter chips */}
-              <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
-                {SOURCES.map(source => (
-                  <button key={source} onClick={() => { setSelectedSource(source); setShowAllArticles(false) }} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${selectedSource === source ? 'bg-[#E8614D] text-white' : 'bg-white border border-[#E5E2DD] text-[#6B7280] hover:border-[#E8614D] hover:text-[#E8614D]'}`}>
-                    {source}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Loading state */}
-            {loadingArticles && (
-              <div className="flex flex-col gap-4">
-                <SkeletonFeatured />
-                <SkeletonCompact />
-                <SkeletonCompact />
-                <SkeletonCompact />
-              </div>
-            )}
-
-            {/* Error state */}
-            {!loadingArticles && articlesError && (
-              <div className="bg-white rounded-2xl p-8 text-center border border-[#E5E2DD]">
-                <p className="text-4xl mb-3">📡</p>
-                <p className="text-[#6B7280] text-sm mb-4">{articlesError}</p>
-                <button onClick={fetchArticles} className="px-4 py-2 bg-[#E8614D] text-white text-sm font-semibold rounded-full hover:bg-[#C44A38] transition-colors">
-                  Try Again
-                </button>
-              </div>
-            )}
-
-            {/* No results for filter */}
-            {!loadingArticles && !articlesError && filtered.length === 0 && (
-              <div className="bg-white rounded-2xl p-8 text-center border border-[#E5E2DD]">
-                <p className="text-[#6B7280] text-sm">No articles from this source right now.</p>
-              </div>
-            )}
-
-            {/* Featured article */}
-            {!loadingArticles && !articlesError && featured && (
-              <FeaturedCard article={featured} />
-            )}
-
-            {/* Compact article list */}
-            {!loadingArticles && !articlesError && rest.length > 0 && (
-              <div className="flex flex-col gap-3">
-                {(showAllArticles ? rest : rest.slice(0, 5)).map(article => (
-                  <CompactCard key={article.id} article={article} />
-                ))}
-                {rest.length > 5 && (
-                  <button
-                    onClick={() => setShowAllArticles(!showAllArticles)}
-                    className="w-full py-3 text-sm font-semibold text-[#E8614D] hover:text-[#C44A38] transition-colors"
-                  >
-                    {showAllArticles ? 'Show less ↑' : `Show ${rest.length - 5} more articles ↓`}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Podcast section */}
-            <div>
-              <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-3">🎧 Relationship Podcasts</p>
-              <div className="flex flex-col gap-3">
-                {(showAllPodcasts ? FEATURED_PODCASTS : FEATURED_PODCASTS.slice(0, 3)).map(podcast => (
-                  <div key={podcast.id} className="bg-white rounded-2xl shadow-sm overflow-hidden border border-[#E5E2DD]" style={{ borderLeft: `4px solid ${podcast.accentColor}` }}>
-                    <div className="p-4">
-                      {/* Top row: emoji + title/host */}
-                      <div className="flex items-start gap-3 mb-3">
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" style={{ backgroundColor: podcast.accentColor + '18' }}>
-                          {podcast.emoji}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[#2D3648] font-bold text-sm leading-snug">{podcast.title}</p>
-                          <p className="text-[#9CA3AF] text-xs mt-0.5">{podcast.host} · {podcast.episodeCount}</p>
-                        </div>
-                      </div>
-                      {/* Description */}
-                      <p className="text-[#6B7280] text-sm leading-relaxed line-clamp-2 mb-3">{podcast.description}</p>
-                      {/* Tags */}
-                      <div className="flex flex-wrap gap-1.5 mb-3">
-                        {podcast.tags.map(tag => (
-                          <span key={tag} className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#F3F4F6] text-[#6B7280]">{tag}</span>
-                        ))}
-                      </div>
-                      {/* Why it matters */}
-                      <div className="bg-[#FDF6EF] rounded-xl px-3 py-2.5 mb-4">
-                        <p className="text-[10px] font-bold text-[#E8614D] uppercase tracking-wide mb-1">Why This Podcast</p>
-                        <p className="text-[#6B7280] text-xs leading-relaxed italic">{podcast.whyItMatters}</p>
-                      </div>
-                      {/* Listen buttons */}
-                      <div className="flex gap-2">
-                        <a href={podcast.spotifyUrl} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-xs font-semibold border-2 border-[#1DB954] text-[#1DB954] hover:bg-[#1DB954] hover:text-white transition-all">
-                          🎵 Spotify
-                        </a>
-                        <a href={podcast.applePodcastsUrl} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full text-xs font-semibold border-2 border-[#9C27B0] text-[#9C27B0] hover:bg-[#9C27B0] hover:text-white transition-all">
-                          🎙️ Apple Podcasts
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {FEATURED_PODCASTS.length > 3 && (
-                <button onClick={() => setShowAllPodcasts(v => !v)} className="w-full mt-3 py-2.5 text-[#6B7280] text-sm font-semibold hover:text-[#2D3648] transition-colors">
-                  {showAllPodcasts ? 'Show less' : `Show all podcasts →`}
-                </button>
+              <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-3">Today's Read</p>
+              {loadingArticles && <SkeletonFeatured />}
+              {!loadingArticles && articlesError && (
+                <div className="bg-white rounded-2xl p-8 text-center border border-[#E5E2DD]">
+                  <p className="text-4xl mb-3">📡</p>
+                  <p className="text-[#6B7280] text-sm mb-4">{articlesError}</p>
+                  <button onClick={fetchArticles} className="px-4 py-2 bg-[#E8614D] text-white text-sm font-semibold rounded-full hover:bg-[#C44A38] transition-colors">Try Again</button>
+                </div>
+              )}
+              {!loadingArticles && !articlesError && filteredArticles[0] && (
+                <FeaturedCard article={filteredArticles[0]} />
+              )}
+              {!loadingArticles && !articlesError && filteredArticles.length === 0 && (
+                <p className="text-[#9CA3AF] text-sm text-center py-4">No articles on this topic yet.</p>
               )}
             </div>
 
-            {/* Reading list */}
-            <div>
-              <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-3">📚 Relationship Reading List</p>
-              <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
-                {RECOMMENDED_BOOKS.map(book => (
-                  <button key={book.id} onClick={() => setSelectedBook(book)} className="flex-shrink-0 w-36 bg-white rounded-2xl p-4 shadow-sm border border-[#E5E2DD] text-left hover:shadow-md transition-shadow">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-2xl mb-3" style={{ backgroundColor: book.color + '20' }}>
-                      {book.emoji}
-                    </div>
-                    <p className="text-[#2D3648] font-semibold text-xs leading-snug line-clamp-2 mb-1">{book.title}</p>
-                    <p className="text-[#9CA3AF] text-[10px]">{book.author.split('&')[0].trim()}</p>
-                  </button>
-                ))}
-              </div>
+            {/* Topic chips */}
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+              {TOPICS.map(topic => (
+                <button
+                  key={topic.id}
+                  onClick={() => { setSelectedTopic(topic.id); setShowMoreArticles(false) }}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${selectedTopic === topic.id ? 'bg-[#E8614D] text-white' : 'bg-white border border-[#E5E2DD] text-[#6B7280] hover:border-[#E8614D] hover:text-[#E8614D]'}`}
+                >
+                  {topic.emoji} {topic.label}
+                </button>
+              ))}
             </div>
+
+            {/* Articles */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">📰 Articles</p>
+                {filteredArticles.length > 1 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-[#F3F4F6] text-[#9CA3AF] text-[10px] font-bold">{filteredArticles.length - 1}</span>
+                )}
+              </div>
+              {loadingArticles && (
+                <div className="flex flex-col gap-3">
+                  <SkeletonCompact />
+                  <SkeletonCompact />
+                  <SkeletonCompact />
+                </div>
+              )}
+              {!loadingArticles && filteredArticles.length <= 1 && (
+                <p className="text-[#9CA3AF] text-sm">No articles on this topic yet.</p>
+              )}
+              {!loadingArticles && filteredArticles.length > 1 && (
+                <div className="flex flex-col gap-3">
+                  {(showMoreArticles ? filteredArticles.slice(1) : filteredArticles.slice(1, 5)).map(article => (
+                    <CompactCard key={article.id} article={article} />
+                  ))}
+                  {filteredArticles.length - 1 > 4 && (
+                    <button
+                      onClick={() => setShowMoreArticles(!showMoreArticles)}
+                      className="w-full py-3 text-sm font-semibold text-[#E8614D] hover:text-[#C44A38] transition-colors"
+                    >
+                      {showMoreArticles ? 'Show less ↑' : `Show ${filteredArticles.length - 5} more →`}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Books */}
+            {filteredBooks.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-3">📚 Books</p>
+                <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
+                  {filteredBooks.map(book => (
+                    <button key={book.id} onClick={() => setSelectedBook(book)} className="flex-shrink-0 w-[140px] bg-white rounded-2xl p-4 shadow-sm border border-[#E5E2DD] text-left hover:shadow-md transition-shadow">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-2xl mb-3" style={{ backgroundColor: book.color + '20' }}>
+                        {book.emoji}
+                      </div>
+                      <p className="text-[#2D3648] font-semibold text-xs leading-snug line-clamp-2 mb-1">{book.title}</p>
+                      <p className="text-[#9CA3AF] text-[10px]">{book.author.split('&')[0].trim()}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Podcasts */}
+            {filteredPodcasts.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-3">🎧 Podcasts</p>
+                <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
+                  {filteredPodcasts.map(podcast => (
+                    <button key={podcast.id} onClick={() => setSelectedPodcast(podcast)} className="flex-shrink-0 w-[160px] bg-white rounded-2xl p-4 shadow-sm border border-[#E5E2DD] text-left hover:shadow-md transition-shadow" style={{ borderTop: `3px solid ${podcast.accentColor}` }}>
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center text-3xl mb-3" style={{ backgroundColor: podcast.accentColor + '18' }}>
+                        {podcast.emoji}
+                      </div>
+                      <p className="text-[#2D3648] font-bold text-xs leading-snug line-clamp-2 mb-1">{podcast.title}</p>
+                      <p className="text-[#9CA3AF] text-[10px]">{podcast.host}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
           </div>
         )}
 
         {/* Book preview modal */}
         {selectedBook && <BookPreviewModal book={selectedBook} onClose={() => setSelectedBook(null)} />}
+        {/* Podcast detail modal */}
+        {selectedPodcast && <PodcastDetailModal podcast={selectedPodcast} onClose={() => setSelectedPodcast(null)} />}
 
         {/* ── ASSESSMENTS TAB ──────────────────────────────────────────────── */}
         {activeTab === 'assessments' && (

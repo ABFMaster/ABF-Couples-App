@@ -2,37 +2,37 @@ const RSS_FEEDS = [
   {
     url: 'https://www.gottman.com/blog/feed/',
     source: 'The Gottman Institute',
-    tags: ['relationships', 'communication', 'conflict'],
+    tags: ['conflict', 'communication', 'intimacy'],
     color: '#E8614D',
   },
   {
     url: 'https://greatergood.berkeley.edu/site/rss/relationships',
     source: 'Greater Good Magazine',
-    tags: ['wellbeing', 'connection', 'relationships'],
+    tags: ['connection', 'wellbeing', 'intimacy'],
     color: '#6B5CE7',
   },
   {
     url: 'https://www.psychologytoday.com/us/blog/the-attraction-doctor/feed',
     source: 'Psychology Today',
-    tags: ['relationships', 'attraction', 'connection'],
+    tags: ['intimacy', 'connection', 'attachment'],
     color: '#3D9970',
   },
   {
     url: 'https://www.psychologytoday.com/us/blog/fulfillment-any-age/feed',
     source: 'Psychology Today',
-    tags: ['relationships', 'intimacy', 'fulfillment'],
+    tags: ['intimacy', 'wellbeing', 'connection'],
     color: '#3D9970',
   },
   {
     url: 'https://www.psychologytoday.com/us/blog/the-mysteries-love/feed',
     source: 'Psychology Today',
-    tags: ['love', 'relationships', 'patterns'],
+    tags: ['attachment', 'intimacy', 'connection'],
     color: '#3D9970',
   },
   {
     url: 'https://practicalintimacy.com/blog/feed/',
     source: 'Practical Intimacy',
-    tags: ['intimacy', 'connection', 'relationships'],
+    tags: ['intimacy', 'connection', 'communication'],
     color: '#9C27B0',
   },
 ]
