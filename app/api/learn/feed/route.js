@@ -37,6 +37,28 @@ const RSS_FEEDS = [
   },
 ]
 
+function detectTopics(title, description) {
+  const text = (title + ' ' + description).toLowerCase()
+  const topics = []
+
+  if (text.match(/conflict|argue|argument|fight|disagree|tension|anger|hostile|repair|rupture|difficult conversation/))
+    topics.push('conflict')
+  if (text.match(/intimacy|sex|sexual|desire|passion|spark|physical|touch|bedroom|erotic|sensual/))
+    topics.push('intimacy')
+  if (text.match(/communicat|listen|talk|conversation|express|understand|heard|speak|say|tell|discuss/))
+    topics.push('communication')
+  if (text.match(/attachment|attach|anxious|avoidant|secure|insecure|bond|early|childhood|pattern|style/))
+    topics.push('attachment')
+  if (text.match(/connect|togeth|close|distance|lonely|isolated|presence|quality time|relationship/))
+    topics.push('connection')
+  if (text.match(/wellbeing|well-being|happiness|mental health|stress|anxiety|self|growth|mindful|flourish|thrive/))
+    topics.push('wellbeing')
+
+  if (topics.length === 0) topics.push('connection')
+
+  return topics
+}
+
 async function parseFeed(feedConfig) {
   try {
     const res = await fetch(feedConfig.url, {
@@ -91,7 +113,7 @@ async function parseFeed(feedConfig) {
           url: link.trim(),
           source: feedConfig.source,
           sourceColor: feedConfig.color,
-          tags: feedConfig.tags,
+          tags: detectTopics(title, cleanDesc),
           image,
           publishedAt: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
         })

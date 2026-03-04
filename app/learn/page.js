@@ -491,6 +491,9 @@ export default function LearnPage() {
     return articles.filter(a => a.tags?.includes(selectedTopic))
   }, [articles, selectedTopic])
 
+  const featuredArticle = filteredArticles[0] || null
+  const restArticles = filteredArticles.slice(1)
+
   const filteredBooks = useMemo(() => {
     if (selectedTopic === 'all') return RECOMMENDED_BOOKS
     return RECOMMENDED_BOOKS.filter(b => b.topics?.includes(selectedTopic))
@@ -549,8 +552,8 @@ export default function LearnPage() {
                   <button onClick={fetchArticles} className="px-4 py-2 bg-[#E8614D] text-white text-sm font-semibold rounded-full hover:bg-[#C44A38] transition-colors">Try Again</button>
                 </div>
               )}
-              {!loadingArticles && !articlesError && filteredArticles[0] && (
-                <FeaturedCard article={filteredArticles[0]} />
+              {!loadingArticles && !articlesError && featuredArticle && (
+                <FeaturedCard article={featuredArticle} />
               )}
               {!loadingArticles && !articlesError && filteredArticles.length === 0 && (
                 <p className="text-[#9CA3AF] text-sm text-center py-4">No articles on this topic yet.</p>
@@ -574,8 +577,8 @@ export default function LearnPage() {
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">📰 Articles</p>
-                {filteredArticles.length > 1 && (
-                  <span className="px-1.5 py-0.5 rounded-full bg-[#F3F4F6] text-[#9CA3AF] text-[10px] font-bold">{filteredArticles.length - 1}</span>
+                {restArticles.length > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-full bg-[#F3F4F6] text-[#9CA3AF] text-[10px] font-bold">{restArticles.length}</span>
                 )}
               </div>
               {loadingArticles && (
@@ -585,20 +588,20 @@ export default function LearnPage() {
                   <SkeletonCompact />
                 </div>
               )}
-              {!loadingArticles && filteredArticles.length <= 1 && (
+              {!loadingArticles && restArticles.length === 0 && (
                 <p className="text-[#9CA3AF] text-sm">No articles on this topic yet.</p>
               )}
-              {!loadingArticles && filteredArticles.length > 1 && (
+              {!loadingArticles && restArticles.length > 0 && (
                 <div className="flex flex-col gap-3">
-                  {(showMoreArticles ? filteredArticles.slice(1) : filteredArticles.slice(1, 5)).map(article => (
+                  {(showMoreArticles ? restArticles : restArticles.slice(0, 4)).map(article => (
                     <CompactCard key={article.id} article={article} />
                   ))}
-                  {filteredArticles.length - 1 > 4 && (
+                  {restArticles.length > 4 && (
                     <button
                       onClick={() => setShowMoreArticles(!showMoreArticles)}
                       className="w-full py-3 text-sm font-semibold text-[#E8614D] hover:text-[#C44A38] transition-colors"
                     >
-                      {showMoreArticles ? 'Show less ↑' : `Show ${filteredArticles.length - 5} more →`}
+                      {showMoreArticles ? 'Show less ↑' : `Show ${restArticles.length - 4} more →`}
                     </button>
                   )}
                 </div>
