@@ -416,18 +416,19 @@ export default function LearnPage() {
 
   // ── Filtered articles ──────────────────────────────────────────────────────
 
-  const filtered = useMemo(() => {
-    if (selectedSource === 'All') return articles
-    const result = articles.filter(a =>
-      a.source?.toLowerCase().includes(selectedSource.toLowerCase()) ||
-      selectedSource.toLowerCase().includes(a.source?.toLowerCase() || '')
-    )
-    console.log('[Filter] selected:', selectedSource, '| total articles:', articles.length, '| filtered:', result.length, '| sources in result:', [...new Set(result.map(a => a.source))])
-    return result
+  const { filtered, featured, rest } = useMemo(() => {
+    const filtered = selectedSource === 'All'
+      ? articles
+      : articles.filter(a =>
+          a.source?.toLowerCase().includes(selectedSource.toLowerCase()) ||
+          selectedSource.toLowerCase().includes(a.source?.toLowerCase() || '')
+        )
+    return {
+      filtered,
+      featured: filtered[0] || null,
+      rest: filtered.slice(1)
+    }
   }, [articles, selectedSource])
-
-  const featured = filtered[0] || null
-  const rest = filtered.slice(1)
 
   // ── Module score lookup ────────────────────────────────────────────────────
 
