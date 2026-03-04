@@ -467,7 +467,7 @@ export default function LearnPage() {
         {activeTab === 'discover' && (
           <div className="flex flex-col gap-4">
             <div>
-              <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-3">Daily reading for your relationship</p>
+              <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-3">Daily reading for your relationship · {selectedSource}</p>
 
               {/* Source filter chips */}
               <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
