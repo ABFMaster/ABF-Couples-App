@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { ASSESSMENT_MODULES } from '@/lib/relationship-questions'
 
-const SOURCES = ['All', 'The Gottman Institute', 'Greater Good Magazine', 'Psychology Today', 'Positive Psychology', 'Scientific American']
+const SOURCES = ['All', 'The Gottman Institute', 'Greater Good Magazine', 'Psychology Today', 'Practical Intimacy']
 
 // ── Recommended books ──────────────────────────────────────────────────────────
 

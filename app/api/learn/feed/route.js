@@ -12,22 +12,28 @@ const RSS_FEEDS = [
     color: '#6B5CE7',
   },
   {
-    url: 'https://www.psychologytoday.com/us/blog/together-apart/feed',
+    url: 'https://www.psychologytoday.com/us/blog/the-attraction-doctor/feed',
     source: 'Psychology Today',
-    tags: ['relationships', 'attachment', 'intimacy'],
+    tags: ['relationships', 'attraction', 'connection'],
     color: '#3D9970',
   },
   {
-    url: 'https://positivepsychology.com/feed',
-    source: 'Positive Psychology',
-    tags: ['relationships', 'wellbeing', 'growth'],
-    color: '#F39C12',
+    url: 'https://www.psychologytoday.com/us/blog/fulfillment-any-age/feed',
+    source: 'Psychology Today',
+    tags: ['relationships', 'intimacy', 'fulfillment'],
+    color: '#3D9970',
   },
   {
-    url: 'https://blogs.scientificamerican.com/beautiful-minds/feed/',
-    source: 'Scientific American',
-    tags: ['psychology', 'relationships', 'science'],
-    color: '#2196F3',
+    url: 'https://www.psychologytoday.com/us/blog/the-mysteries-love/feed',
+    source: 'Psychology Today',
+    tags: ['love', 'relationships', 'patterns'],
+    color: '#3D9970',
+  },
+  {
+    url: 'https://practicalintimacy.com/feed/',
+    source: 'Practical Intimacy',
+    tags: ['intimacy', 'connection', 'relationships'],
+    color: '#9C27B0',
   },
 ]
 
