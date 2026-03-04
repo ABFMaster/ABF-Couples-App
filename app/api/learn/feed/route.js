@@ -49,7 +49,7 @@ function detectTopics(title, description) {
     topics.push('communication')
   if (text.match(/attachment|attach|anxious|avoidant|secure|insecure|bond|early|childhood|pattern|style/))
     topics.push('attachment')
-  if (text.match(/connect with partner|togetherness|feel close|emotional distance|lonely in relationship|quality time together|relationship quality/))
+  if (text.match(/feel connected|staying connected|connection with partner|emotional connection|connect with.*partner|disconnect|feel close to|quality time/))
     topics.push('connection')
   if (text.match(/wellbeing in relationship|relationship happiness|mental health.*partner|stress.*relationship|anxiety.*relationship|emotional health.*couple|flourish together|thrive.*together|relationship satisfaction/))
     topics.push('wellbeing')
