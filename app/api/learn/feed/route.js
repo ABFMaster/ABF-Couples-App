@@ -43,20 +43,18 @@ function detectTopics(title, description) {
 
   if (text.match(/conflict|argue|argument|fight|disagree|tension|anger|hostile|repair|rupture|difficult conversation/))
     topics.push('conflict')
-  if (text.match(/intimacy|sex|sexual|desire|passion|spark|physical|touch|bedroom|erotic|sensual/))
+  if (text.match(/intimacy|sex|sexual|desire|passion|spark|physical|touch|bedroom|erotic|sensual|feel loved|ways to love|love language/))
     topics.push('intimacy')
   if (text.match(/communicat|listen|talk|conversation|express|understand|heard|speak|say|tell|discuss/))
     topics.push('communication')
   if (text.match(/attachment|attach|anxious|avoidant|secure|insecure|bond|early|childhood|pattern|style/))
     topics.push('attachment')
-  if (text.match(/connect|togeth|close|distance|lonely|isolated|presence|quality time|relationship/))
+  if (text.match(/connect with partner|togetherness|feel close|emotional distance|lonely in relationship|quality time together|relationship quality/))
     topics.push('connection')
   if (text.match(/wellbeing|well-being|happiness|mental health|stress|anxiety|self|growth|mindful|flourish|thrive/))
     topics.push('wellbeing')
 
-  if (topics.length === 0) topics.push('connection')
-
-  return topics
+  return topics // empty array = no match = will be excluded
 }
 
 async function parseFeed(feedConfig) {
@@ -105,7 +103,8 @@ async function parseFeed(feedConfig) {
         .trim()
         .slice(0, 200)
 
-      if (title && link) {
+      const tags = detectTopics(title, cleanDesc)
+      if (title && link && tags.length > 0) {
         items.push({
           id: Buffer.from(link).toString('base64').slice(0, 16),
           title: title.trim(),
@@ -113,7 +112,7 @@ async function parseFeed(feedConfig) {
           url: link.trim(),
           source: feedConfig.source,
           sourceColor: feedConfig.color,
-          tags: detectTopics(title, cleanDesc),
+          tags,
           image,
           publishedAt: pubDate ? new Date(pubDate).toISOString() : new Date().toISOString(),
         })
@@ -132,6 +131,9 @@ async function parseFeed(feedConfig) {
       'watch out', 'ufo', 'count the', 'nice people',
       'stay nice', 'snub', 'volunteering', 'queer eye',
       'bridging di', 'living your',
+      'liar', 'lying', 'lie detector', 'personality you develop',
+      'generations be friends', 'social anxiety', 'fatigue', 'misogyny',
+      'situationship', 'trade down', 'hijacked', 'skeptic', 'disclosure',
     ]
 
     const filtered = items.filter(item => {
