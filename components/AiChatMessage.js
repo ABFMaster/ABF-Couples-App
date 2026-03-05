@@ -66,9 +66,7 @@ export default function AiChatMessage({ message, isTyping = false }) {
     return (
       <div className="flex items-start gap-3 mb-4">
         {/* AI Avatar */}
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-coral-500 flex items-center justify-center flex-shrink-0 shadow-md">
-          <span className="text-lg">🤖</span>
-        </div>
+        <img src="/nora-avatar.svg" alt="Nora" className="w-10 h-10 rounded-full flex-shrink-0 shadow-md" />
 
         {/* Typing bubble */}
         <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-md max-w-[80%]">
@@ -86,9 +84,7 @@ export default function AiChatMessage({ message, isTyping = false }) {
     <div className={`flex items-start gap-3 mb-4 ${isUser ? 'flex-row-reverse' : ''}`}>
       {/* Avatar */}
       {!isUser && (
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-coral-500 flex items-center justify-center flex-shrink-0 shadow-md">
-          <span className="text-lg">🤖</span>
-        </div>
+        <img src="/nora-avatar.svg" alt="Nora" className="w-10 h-10 rounded-full flex-shrink-0 shadow-md" />
       )}
 
       {/* Message bubble */}
