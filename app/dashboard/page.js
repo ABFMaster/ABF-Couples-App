@@ -365,314 +365,305 @@ export default function Dashboard() {
     setInviteDismissed(true)
   }
 
-  // ── Loading ───────────────────────────────────────────────────────────────
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F7F4EF] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent mx-auto mb-4" />
-          <p className="text-[#6B7280] font-medium">Loading your dashboard…</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-[#E8614D] border-t-transparent mx-auto mb-4" />
+          <p className="text-neutral-400 text-sm">Loading…</p>
         </div>
       </div>
     )
   }
 
-  // ── Computed ──────────────────────────────────────────────────────────────
+  const noraMessage = noraTrigger?.message || `Good ${getGreetingWord()}, ${userName}. How are you two doing today?`
 
-  const healthColor  = healthScore === null
-    ? 'text-[#9CA3AF]'
-    : healthScore >= 70 ? 'text-[#E8614D]'
-    : healthScore >= 50 ? 'text-amber-500'
-    : 'text-[#9CA3AF]'
-  const featureCards = buildFeatureCards({ todayCheckinDone, nextDate, lastFlirtDaysAgo, memoryCount, activeTrip })
+  const pendingDateAction = pendingDate
+  const checkinDone = todayCheckinDone
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // Section 3 — build 2 contextual action cards + 1 Nora surprise slot
+  const suggestedActions = []
+
+  if (!checkinDone) {
+    suggestedActions.push({
+      id: 'checkin',
+      verb: 'Check in together',
+      hint: 'Takes 2 minutes',
+      nudge: null,
+      urgent: true,
+      href: '/checkin',
+    })
+  }
+
+  if (lastFlirtDaysAgo === null || lastFlirtDaysAgo >= 2) {
+    suggestedActions.push({
+      id: 'flirt',
+      verb: `Send ${partnerName} a flirt`,
+      hint: 'Keep the spark going',
+      nudge: lastFlirtDaysAgo >= 2 ? `${lastFlirtDaysAgo} days since last one` : null,
+      urgent: lastFlirtDaysAgo >= 3,
+      href: '/flirts',
+    })
+  }
+
+  if (!nextDate) {
+    suggestedActions.push({
+      id: 'date',
+      verb: 'Plan a date night',
+      hint: 'Nothing on the books yet',
+      nudge: null,
+      urgent: false,
+      href: '/dates',
+    })
+  }
+
+  if (upcomingTrip === null) {
+    suggestedActions.push({
+      id: 'trip',
+      verb: 'Dream a trip together',
+      hint: 'Let Wander take you somewhere',
+      nudge: null,
+      urgent: false,
+      href: '/trips',
+    })
+  }
+
+  suggestedActions.push({
+    id: 'reflection',
+    verb: 'Weekly reflection',
+    hint: 'Sunday · 2 min',
+    nudge: null,
+    urgent: false,
+    href: '/weekly-reflection',
+  })
+
+  const displayActions = suggestedActions.slice(0, 2)
+
+  // Mood vibe from health + streak
+  const getMoodVibe = () => {
+    if (streak >= 7) return { emoji: '🔥', label: 'On fire this week', sub: `${streak} day streak` }
+    if (streak >= 3) return { emoji: '🌿', label: 'You two are in a good rhythm', sub: `${streak} days going strong` }
+    if (streak === 0 && healthScore < 50) return { emoji: '🌫️', label: 'A little quiet lately', sub: 'A check-in goes a long way' }
+    if (daysTogether > 365) return { emoji: '💛', label: `${Math.floor(daysTogether / 365)} year${daysTogether >= 730 ? 's' : ''} and counting`, sub: 'Something worth celebrating' }
+    return { emoji: '💕', label: 'Showing up for each other', sub: `${daysTogether} days together` }
+  }
+  const mood = getMoodVibe()
+
+  // Upcoming event line
+  const getUpcomingEvent = () => {
+    if (pendingDateAction) return {
+      icon: '💌',
+      text: `${partnerName} planned something for you`,
+      strong: 'View the plan →',
+      href: `/dates/${pendingDateAction.id}`,
+    }
+    if (nextDate) {
+      const days = getDaysUntil(nextDate.date_time)
+      const when = days === 0 ? 'Tonight' : days === 1 ? 'Tomorrow' : `in ${days} days`
+      return { icon: '📅', text: `${nextDate.title} — ${when}`, strong: null, href: '/dates' }
+    }
+    if (upcomingTrip) {
+      const days = Math.ceil((new Date(upcomingTrip.start_date) - new Date()) / 86400000)
+      return { icon: '✈️', text: `${upcomingTrip.destination} in ${days} days`, strong: null, href: '/trips' }
+    }
+    return null
+  }
+  const upcomingEvent = getUpcomingEvent()
+
+  // Primary CTA
+  const getPrimaryCTA = () => {
+    if (pendingDateAction) return { label: `See what ${partnerName} planned →`, href: `/dates/${pendingDateAction.id}` }
+    if (!hasPartner) return { label: `Invite ${partnerName} to ABF →`, href: '/connect' }
+    if (!checkinDone) return { label: 'Check in together →', href: '/checkin' }
+    return { label: 'Talk to Nora →', href: '/ai-coach?new=true' }
+  }
+  const primaryCTA = getPrimaryCTA()
 
   return (
-    <div className="min-h-screen bg-[#F8F6F3]">
+    <div className="min-h-screen bg-[#F7F4EF]">
+      <div className="max-w-lg mx-auto px-6 pt-10 pb-32 space-y-8">
 
-      {/* ===== INVITE BANNER ===== */}
-      {!hasPartner && !inviteDismissed && connectCode && (
-        <div className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] px-4 py-3">
-          <div className="max-w-lg mx-auto flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-semibold">
-                💌 Invite {partnerName} to unlock shared features
-              </p>
-              <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-white/80 font-mono text-sm tracking-[0.2em]">{connectCode}</span>
-                <button
-                  onClick={handleCopyCode}
-                  className="text-white/90 text-xs border border-white/40 px-2 py-0.5 rounded-full hover:bg-white/20 transition-colors"
-                >
-                  {codeCopied ? 'Copied!' : 'Copy'}
-                </button>
+        {/* SECTION 1 — STATUS: Nora hero + mood */}
+        <section className="space-y-3">
+
+          {/* Nora message card */}
+          <div className="bg-gradient-to-br from-[#252048] via-[#3E3585] to-[#6B4A72] rounded-2xl p-6 relative overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-[#E8614D]/10 pointer-events-none" />
+            <div className="relative">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-2 h-2 rounded-full bg-[#F2A090] animate-pulse" />
+                <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-white/40">Nora</span>
+                <span className="text-white/20 text-xs">·</span>
+                <span className="text-white/40 text-xs capitalize">Good {getGreetingWord()}</span>
               </div>
-            </div>
-            <button
-              onClick={handleDismissInvite}
-              className="text-white/60 hover:text-white text-2xl leading-none flex-shrink-0"
-              aria-label="Dismiss"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      )}
 
-      {/* ===== PENDING DATE BANNER ===== */}
-      {pendingDate && (
-        <div className="bg-gradient-to-r from-[#3D3580] to-[#5D55A0] px-4 py-3">
-          <div className="max-w-lg mx-auto flex items-center justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-semibold">
-                💌 {partnerName} planned a date for you!
-              </p>
-              <p className="text-white/70 text-xs mt-0.5 truncate">{pendingDate.title}</p>
-            </div>
-            <button
-              onClick={() => router.push(`/dates/${pendingDate.id}`)}
-              className="flex-shrink-0 bg-white text-[#3D3580] font-bold px-4 py-1.5 rounded-full text-xs hover:bg-white/90 transition-colors"
-            >
-              View Plan →
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="max-w-lg mx-auto px-4 py-6 space-y-7">
-
-        {/* ===== SECTION 1: HERO (Nora-owned) ===== */}
-        {(() => {
-          // Compute upcoming line from nextDate or upcomingTrip (whichever is sooner)
-          const tripEmoji = { dream: '✨', travel: '✈️', date: '🗓️' }[upcomingTrip?.trip_type] || '✈️'
-          const getTripLabel = (startDate) => {
-            const days = Math.ceil((new Date(startDate) - new Date()) / 86400000)
-            if (days <= 0) return 'Today'
-            if (days === 1) return 'Tomorrow'
-            return `in ${days} days`
-          }
-          let upcomingLine = null
-          if (nextDate && upcomingTrip) {
-            const dateSoon = new Date(nextDate.date_time) <= new Date(upcomingTrip.start_date)
-            if (dateSoon) {
-              const days = getDaysUntil(nextDate.date_time)
-              const label = days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `in ${days} days`
-              upcomingLine = `📅 ${nextDate.title} ${label} →`
-            } else {
-              upcomingLine = `${tripEmoji} ${upcomingTrip.destination} ${getTripLabel(upcomingTrip.start_date)} →`
-            }
-          } else if (nextDate) {
-            const days = getDaysUntil(nextDate.date_time)
-            const label = days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `in ${days} days`
-            upcomingLine = `📅 ${nextDate.title} ${label} →`
-          } else if (upcomingTrip) {
-            upcomingLine = `${tripEmoji} ${upcomingTrip.destination} ${getTripLabel(upcomingTrip.start_date)} →`
-          }
-
-          // Compute secondary button
-          let secondaryLabel, secondaryHref
-          if (!todayCheckinDone) {
-            secondaryLabel = 'Check In →'
-            secondaryHref  = '/checkin'
-          } else if (!nextDate && !upcomingTrip) {
-            secondaryLabel = 'Plan Something →'
-            secondaryHref  = '/dates'
-          } else {
-            secondaryLabel = 'Add Memory →'
-            secondaryHref  = '/timeline'
-          }
-
-          const noraMessage = noraTrigger?.message || `Good ${getGreetingWord()}, ${userName}.`
-
-          return (
-            <section className="relative bg-gradient-to-br from-[#E8614D] to-[#3D3580] rounded-3xl p-6 text-white overflow-hidden">
-              <div className="absolute -top-10 -right-10 w-36 h-36 bg-white/10 rounded-full pointer-events-none" />
-              <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full pointer-events-none" />
-              <div className="relative">
-                {/* Top row: NORA label + greeting */}
-                <div className="flex items-center gap-2 mb-4">
-                  <img src="/nora-avatar.svg" alt="Nora" className="w-6 h-6 rounded-full flex-shrink-0" />
-                  <span className="text-white/70 text-[11px] font-bold uppercase tracking-widest">Nora</span>
-                  <span className="text-white/30 text-xs">·</span>
-                  <span className="text-white/60 text-xs capitalize">Good {getGreetingWord()}</span>
+              {upcomingEvent && (
+                <div className="flex items-center gap-2 bg-white/10 border border-white/10 rounded-xl px-3 py-2.5 mb-4">
+                  <span className="text-base">{upcomingEvent.icon}</span>
+                  <span className="text-[13px] text-white/80 font-medium flex-1 leading-snug">
+                    {upcomingEvent.text}
+                    {upcomingEvent.strong && <span className="text-white font-semibold"> {upcomingEvent.strong}</span>}
+                  </span>
                 </div>
+              )}
 
-                {/* Nora's contextual message */}
-                <p className="text-white text-lg font-medium leading-snug mb-4 line-clamp-3">
-                  {noraMessage}
+              <p className="text-white text-[20px] leading-[1.4] mb-5"
+                 style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
+                {noraMessage}
+              </p>
+
+              <button
+                onClick={() => {
+                  if (noraTrigger?.message) sessionStorage.setItem('nora_opener', noraTrigger.message)
+                  window.location.href = primaryCTA.href
+                }}
+                className="w-full min-h-[52px] bg-white text-[#E8614D] rounded-xl font-semibold text-[15px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md"
+              >
+                {primaryCTA.label}
+              </button>
+
+              {checkinDone && (
+                <div className="flex justify-center mt-3">
+                  <button
+                    onClick={() => window.location.href = '/ai-coach'}
+                    className="text-[13px] text-white/40 font-medium"
+                  >
+                    Talk to Nora instead
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mood card */}
+          <div className="bg-white rounded-2xl border border-neutral-200 p-5 flex items-center gap-4 shadow-sm">
+            <div className="w-12 h-12 rounded-xl bg-neutral-100 flex items-center justify-center text-2xl flex-shrink-0">
+              {mood.emoji}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[16px] text-neutral-900 leading-snug"
+                 style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
+                {mood.label}
+              </p>
+              <p className="text-[12px] text-neutral-400 mt-0.5">{mood.sub}</p>
+            </div>
+            <div className="text-center pl-4 border-l border-neutral-200 flex-shrink-0">
+              <p className="text-[26px] font-semibold text-[#E8614D] leading-none"
+                 style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
+                {streak}
+              </p>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-400 mt-1">day<br/>streak</p>
+            </div>
+          </div>
+
+        </section>
+
+        {/* SECTION 2 — PRIMARY ACTION */}
+        {nextDate && (
+          <section>
+            <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
+              Coming up
+            </div>
+            <button
+              onClick={() => window.location.href = '/dates'}
+              className="w-full rounded-2xl overflow-hidden relative min-h-[100px] active:scale-[0.99] transition-transform"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-[#1B5E47] to-[#2E9B70]" />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent" />
+              <div className="relative p-5 text-left">
+                <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-white/50 mb-2">📅 Date Night</p>
+                <p className="text-white text-[22px] leading-tight mb-1"
+                   style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
+                  {nextDate.title}
                 </p>
-
-                {/* Upcoming line (date or trip) */}
-                {upcomingLine && (
-                  <p className="text-white/60 text-sm mb-5">{upcomingLine}</p>
-                )}
-
-                {/* Action buttons */}
-                <div className="flex gap-2 flex-wrap">
-                  <button
-                    onClick={() => {
-                      if (noraTrigger?.message) {
-                        sessionStorage.setItem('nora_opener', noraTrigger.message)
-                      }
-                      router.push('/ai-coach?new=true')
-                    }}
-                    className="bg-white text-[#E8614D] font-semibold px-4 py-2 rounded-full text-sm hover:bg-white/90 transition-colors"
-                  >
-                    Talk to Nora →
-                  </button>
-                  <button
-                    onClick={() => router.push(secondaryHref)}
-                    className="bg-white/20 text-white font-semibold px-4 py-2 rounded-full text-sm hover:bg-white/30 transition-colors border border-white/30"
-                  >
-                    {secondaryLabel}
-                  </button>
-                </div>
+                <p className="text-white/60 text-[12px] font-medium">
+                  {(() => {
+                    const days = getDaysUntil(nextDate.date_time)
+                    if (days === 0) return 'Tonight'
+                    if (days === 1) return 'Tomorrow'
+                    return `${days} days away`
+                  })()}
+                </p>
               </div>
-            </section>
-          )
-        })()}
+              <div className="absolute right-5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-white text-lg backdrop-blur-sm">
+                ›
+              </div>
+            </button>
+          </section>
+        )}
 
-        {/* ===== SECTION 2: RELATIONSHIP PULSE ===== */}
+        {/* SECTION 3 — SUGGESTED ACTIONS */}
         <section>
-          <h2 className="text-lg font-bold text-[#2D3648] mb-3">Relationship Pulse</h2>
+          <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
+            Do something together
+          </div>
           <div className="grid grid-cols-2 gap-3">
-
-            <button
-              onClick={() => router.push('/assessment/results')}
-              className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow text-left"
-            >
-              <p className={`text-3xl font-bold ${healthColor}`}>
-                {healthScore !== null ? healthScore : '—'}
-                <span className="text-base font-normal text-gray-200">/100</span>
-              </p>
-              <p className="text-xs text-[#9CA3AF] mt-1.5 font-medium">Relationship Health</p>
-            </button>
-
-            <button
-              onClick={() => router.push('/checkin')}
-              className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow text-left"
-            >
-              <p className="text-3xl font-bold text-[#E8614D]">
-                {streak}{streak > 3 ? ' 🔥' : ''}
-              </p>
-              <p className="text-xs text-[#9CA3AF] mt-1.5 font-medium">Day Streak</p>
-            </button>
-
-            <button
-              onClick={() => router.push('/flirts')}
-              className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow text-left"
-            >
-              <p className="text-3xl font-bold text-[#E8614D]">{flirtsThisWeek} 💌</p>
-              <p className="text-xs text-[#9CA3AF] mt-1.5 font-medium">Flirts This Week</p>
-            </button>
-
-            <button
-              onClick={() => router.push('/timeline')}
-              className="bg-white rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow text-left"
-            >
-              <p className="text-3xl font-bold text-[#3D3580]">{daysTogether} ❤️</p>
-              <p className="text-xs text-[#9CA3AF] mt-1.5 font-medium">Days Together</p>
-            </button>
-
+            {displayActions.map(action => (
+              <button
+                key={action.id}
+                onClick={() => window.location.href = action.href}
+                className={`rounded-2xl p-4 min-h-[120px] flex flex-col text-left border active:scale-[0.97] transition-transform ${
+                  action.urgent
+                    ? 'bg-[#FEF3F1] border-[#F5C9C2]'
+                    : 'bg-white border-neutral-200'
+                } shadow-sm`}
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 text-lg ${
+                  action.urgent ? 'bg-[rgba(232,97,77,0.1)]' : 'bg-neutral-100'
+                }`}>
+                  {action.id === 'checkin' && '✓'}
+                  {action.id === 'flirt' && '💌'}
+                  {action.id === 'date' && '🌙'}
+                  {action.id === 'trip' && '🗺️'}
+                  {action.id === 'reflection' && '📖'}
+                </div>
+                <p className="text-[13px] font-semibold text-neutral-900 leading-snug mb-1">{action.verb}</p>
+                {action.hint && <p className="text-[11px] text-neutral-400 leading-snug mt-auto">{action.hint}</p>}
+                {action.nudge && <p className="text-[11px] font-semibold text-[#E8614D] mt-2">{action.nudge}</p>}
+              </button>
+            ))}
           </div>
         </section>
 
-        {/* ===== SECTION 2.5: TODAY'S READ ===== */}
+        {/* SECTION 4 — OPTIONAL CONTENT: Today's Read */}
         {todaysRead && (
           <section>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold text-[#2D3648]">Today's Read 📰</h2>
-              <Link href="/learn" className="text-sm text-[#E8614D] font-semibold">See More →</Link>
+            <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
+              Today's read
             </div>
-            <a href={todaysRead.url} target="_blank" rel="noopener noreferrer" className="block bg-white rounded-2xl shadow-sm border-l-4 overflow-hidden hover:shadow-md transition-shadow" style={{ borderLeftColor: todaysRead.sourceColor }}>
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="inline-block px-2 py-0.5 rounded-full text-white text-[10px] font-semibold" style={{ backgroundColor: todaysRead.sourceColor }}>{todaysRead.source}</span>
-                  <span className="text-[#9CA3AF] text-xs">5 min read</span>
+            <a href={todaysRead.url} target="_blank" rel="noopener noreferrer" className="block">
+              <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-5">
+                <div className="flex items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className="inline-block px-2 py-0.5 rounded-full text-white text-[10px] font-bold"
+                        style={{ backgroundColor: todaysRead.sourceColor || '#3D3580' }}
+                      >
+                        {todaysRead.source}
+                      </span>
+                      <span className="text-[11px] text-neutral-400">5 min read</span>
+                    </div>
+                    <p className="text-[15px] text-neutral-900 leading-snug line-clamp-2"
+                       style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
+                      {todaysRead.title}
+                    </p>
+                    {todaysRead.description && (
+                      <p className="text-[12px] text-neutral-400 mt-1.5 line-clamp-2 leading-relaxed">
+                        {todaysRead.description}
+                      </p>
+                    )}
+                  </div>
+                  <div className="w-14 h-14 rounded-xl bg-neutral-100 flex-shrink-0 flex items-center justify-center text-2xl">
+                    📖
+                  </div>
                 </div>
-                <p className="text-[#2D3648] font-semibold text-sm leading-snug line-clamp-2">{todaysRead.title}</p>
-                {todaysRead.description && <p className="text-[#6B7280] text-xs mt-1.5 line-clamp-2">{todaysRead.description}</p>}
               </div>
             </a>
           </section>
         )}
 
-        {/* ===== SECTION 3: SHARED SPACE PREVIEW ===== */}
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-bold text-[#2D3648]">Our Space 💑</h2>
-            <Link href="/shared" className="text-sm text-[#E8614D] font-semibold">See All →</Link>
-          </div>
-
-          {sharedPreview.length === 0 ? (
-            <div className="bg-white rounded-2xl p-8 shadow-sm text-center">
-              <p className="text-4xl mb-3">🎬📺🎵</p>
-              <p className="text-[#6B7280] text-sm mb-4 max-w-xs mx-auto">
-                Start building your shared list — movies, shows, songs, and more
-              </p>
-              <button
-                onClick={() => router.push('/shared/add')}
-                className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:opacity-90 transition-opacity"
-              >
-                + Add Something
-              </button>
-            </div>
-          ) : (
-            <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
-              {sharedPreview.map(item => (
-                <Link
-                  key={item.id}
-                  href="/shared"
-                  className="flex-shrink-0 bg-white rounded-2xl p-4 shadow-sm w-36 hover:shadow-md transition-shadow"
-                >
-                  <span className="text-3xl block mb-2">{ITEM_TYPES[item.type]?.emoji || '✨'}</span>
-                  <p className="text-[#2D3648] font-semibold text-sm line-clamp-2 leading-tight mb-1">{item.title}</p>
-                  <p className="text-[#9CA3AF] text-xs">{ITEM_TYPES[item.type]?.label}</p>
-                </Link>
-              ))}
-              <button
-                onClick={() => router.push('/shared/add')}
-                className="flex-shrink-0 w-36 bg-white rounded-2xl p-4 shadow-sm border-2 border-dashed border-gray-200 hover:border-[#E8614D] flex flex-col items-center justify-center gap-2 transition-colors group"
-              >
-                <span className="text-2xl text-gray-300 group-hover:text-[#E8614D] transition-colors">+</span>
-                <span className="text-xs text-gray-400 group-hover:text-[#E8614D] transition-colors font-medium text-center">
-                  Add Something
-                </span>
-              </button>
-            </div>
-          )}
-        </section>
-
-        {/* ===== SECTION 4: FEATURE NAVIGATION ===== */}
-        <section>
-          <h2 className="text-lg font-bold text-[#2D3648] mb-3">Explore</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {featureCards.map(card => (
-              <button
-                key={card.href}
-                onClick={() => router.push(card.href)}
-                className={`bg-[#FDF6EF] border-l-4 ${card.accent} rounded-2xl p-4 text-left shadow-sm hover:shadow-md transition-shadow`}
-              >
-                <span className="text-3xl block mb-2">{card.emoji}</span>
-                <p className="text-[#2D3648] font-semibold text-sm mb-0.5">{card.label}</p>
-                <p className={`text-xs ${card.statusColor}`}>{card.status}</p>
-              </button>
-            ))}
-          </div>
-          <div className="mt-2 text-right">
-            <button
-              onClick={() => router.push('/weekly-reflection/history')}
-              className="text-xs text-[#9CA3AF] hover:text-[#E8614D] transition-colors"
-            >
-              View reflection history →
-            </button>
-          </div>
-        </section>
-
       </div>
-
     </div>
   )
 }
