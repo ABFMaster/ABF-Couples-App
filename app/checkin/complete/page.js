@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { MOOD_OPTIONS } from '@/lib/checkin-questions'
+import { todayPST } from '@/lib/date-utils'
 
 export default function CheckinCompletePage() {
   const router = useRouter()
@@ -54,8 +55,8 @@ export default function CheckinCompletePage() {
         setUserName(userData.display_name.split(' ')[0])
       }
 
-      // Get today's check-in
-      const today = new Date().toISOString().split('T')[0]
+      // Get today's check-in — use PST date to match checkin page (avoids UTC midnight loop)
+      const today = todayPST()
       const { data: todayCheckin } = await supabase
         .from('daily_checkins')
         .select('*')
@@ -64,7 +65,7 @@ export default function CheckinCompletePage() {
         .maybeSingle()
 
       if (!todayCheckin) {
-        router.push('/checkin')
+        setTimeout(() => router.push('/checkin'), 500)
         return
       }
 

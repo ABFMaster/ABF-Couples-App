@@ -325,12 +325,7 @@ function AiCoachContent() {
           </button>
 
           <div className="flex items-center gap-2">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, #E8614D, #c44a39)' }}
-            >
-              N
-            </div>
+            <img src="/nora-avatar.svg" alt="Nora" className="w-8 h-8 rounded-full flex-shrink-0" />
             <div>
               <h1 className="text-lg font-bold text-gray-800">Nora</h1>
               {isPremium ? (
@@ -367,12 +362,7 @@ function AiCoachContent() {
           {/* Empty state / Welcome message */}
           {messages.length === 0 && (
             <div className="text-center py-12">
-              <div
-                className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg text-white text-4xl font-bold"
-                style={{ background: 'linear-gradient(135deg, #E8614D, #c44a39)' }}
-              >
-                N
-              </div>
+              <img src="/nora-avatar.svg" alt="Nora" className="w-20 h-20 rounded-full mx-auto mb-6 shadow-lg" />
               <h2 className="text-2xl font-bold text-gray-800 mb-3">Hi, I'm Nora</h2>
               <p className="text-gray-600 max-w-sm mx-auto mb-6">
                 I'm your relationship coach on ABF. Whether you want to talk through something, work on your connection, or just think out loud — I'm here.

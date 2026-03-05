@@ -142,10 +142,19 @@ export default function Dashboard() {
   const [pendingDate, setPendingDate]           = useState(null)
   const [upcomingTrip, setUpcomingTrip]         = useState(null)
   const [noraTrigger, setNoraTrigger]           = useState(null)
+  const [todaysRead, setTodaysRead]             = useState(null)
 
   // Hydrate localStorage on client only
   useEffect(() => {
     setInviteDismissed(localStorage.getItem('abf_invite_dismissed') === 'true')
+  }, [])
+
+  // Fetch Today's Read (non-blocking)
+  useEffect(() => {
+    fetch('/api/learn/feed')
+      .then(r => r.json())
+      .then(d => { if (d.articles?.[0]) setTodaysRead(d.articles[0]) })
+      .catch(() => {})
   }, [])
 
   const fetchAll = useCallback(async () => {
@@ -437,22 +446,29 @@ export default function Dashboard() {
         {/* ===== SECTION 1: HERO (Nora-owned) ===== */}
         {(() => {
           // Compute upcoming line from nextDate or upcomingTrip (whichever is sooner)
+          const tripEmoji = { dream: '✨', travel: '✈️', date: '🗓️' }[upcomingTrip?.trip_type] || '✈️'
+          const getTripLabel = (startDate) => {
+            const days = Math.ceil((new Date(startDate) - new Date()) / 86400000)
+            if (days <= 0) return 'Today'
+            if (days === 1) return 'Tomorrow'
+            return `in ${days} days`
+          }
           let upcomingLine = null
           if (nextDate && upcomingTrip) {
             const dateSoon = new Date(nextDate.date_time) <= new Date(upcomingTrip.start_date)
             if (dateSoon) {
               const days = getDaysUntil(nextDate.date_time)
-              const label = days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`
-              upcomingLine = `📅 ${nextDate.title} · ${label}`
+              const label = days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `in ${days} days`
+              upcomingLine = `📅 ${nextDate.title} ${label} →`
             } else {
-              upcomingLine = `✈️ ${upcomingTrip.destination} · ${new Date(upcomingTrip.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+              upcomingLine = `${tripEmoji} ${upcomingTrip.destination} ${getTripLabel(upcomingTrip.start_date)} →`
             }
           } else if (nextDate) {
             const days = getDaysUntil(nextDate.date_time)
-            const label = days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `${days} days`
-            upcomingLine = `📅 ${nextDate.title} · ${label}`
+            const label = days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : `in ${days} days`
+            upcomingLine = `📅 ${nextDate.title} ${label} →`
           } else if (upcomingTrip) {
-            upcomingLine = `✈️ ${upcomingTrip.destination} · ${new Date(upcomingTrip.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+            upcomingLine = `${tripEmoji} ${upcomingTrip.destination} ${getTripLabel(upcomingTrip.start_date)} →`
           }
 
           // Compute secondary button
@@ -477,6 +493,7 @@ export default function Dashboard() {
               <div className="relative">
                 {/* Top row: NORA label + greeting */}
                 <div className="flex items-center gap-2 mb-4">
+                  <img src="/nora-avatar.svg" alt="Nora" className="w-6 h-6 rounded-full flex-shrink-0" />
                   <span className="text-white/70 text-[11px] font-bold uppercase tracking-widest">Nora</span>
                   <span className="text-white/30 text-xs">·</span>
                   <span className="text-white/60 text-xs capitalize">Good {getGreetingWord()}</span>
@@ -561,6 +578,26 @@ export default function Dashboard() {
 
           </div>
         </section>
+
+        {/* ===== SECTION 2.5: TODAY'S READ ===== */}
+        {todaysRead && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold text-[#2D3648]">Today's Read 📰</h2>
+              <Link href="/learn" className="text-sm text-[#E8614D] font-semibold">See More →</Link>
+            </div>
+            <a href={todaysRead.url} target="_blank" rel="noopener noreferrer" className="block bg-white rounded-2xl shadow-sm border-l-4 overflow-hidden hover:shadow-md transition-shadow" style={{ borderLeftColor: todaysRead.sourceColor }}>
+              <div className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="inline-block px-2 py-0.5 rounded-full text-white text-[10px] font-semibold" style={{ backgroundColor: todaysRead.sourceColor }}>{todaysRead.source}</span>
+                  <span className="text-[#9CA3AF] text-xs">5 min read</span>
+                </div>
+                <p className="text-[#2D3648] font-semibold text-sm leading-snug line-clamp-2">{todaysRead.title}</p>
+                {todaysRead.description && <p className="text-[#6B7280] text-xs mt-1.5 line-clamp-2">{todaysRead.description}</p>}
+              </div>
+            </a>
+          </section>
+        )}
 
         {/* ===== SECTION 3: SHARED SPACE PREVIEW ===== */}
         <section>

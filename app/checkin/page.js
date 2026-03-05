@@ -34,6 +34,7 @@ export default function DailyCheckinPage() {
 
   // Transition state
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false)
 
   const activeQuestion = rotatingQuestion || FALLBACK_QUESTION
 
@@ -97,7 +98,10 @@ export default function DailyCheckinPage() {
         .maybeSingle()
 
       if (existingCheckin) {
-        router.push('/checkin/complete')
+        // Already checked in today — show a done state instead of redirecting
+        // (redirecting to /complete causes a loop when /complete uses UTC date)
+        setAlreadyCheckedIn(true)
+        setLoading(false)
         return
       }
 
@@ -300,6 +304,31 @@ export default function DailyCheckinPage() {
         <button
           onClick={() => router.push('/dashboard')}
           className="px-6 py-3 rounded-full bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white font-medium"
+        >
+          Back to Dashboard
+        </button>
+      </div>
+    )
+  }
+
+  // Already checked in today — show a simple done state
+  if (alreadyCheckedIn) {
+    return (
+      <div className="min-h-screen bg-[#F8F6F3] flex flex-col items-center justify-center p-6 text-center">
+        <div className="text-6xl mb-4">✅</div>
+        <h1 className="text-2xl font-bold text-[#2D3648] mb-2">Already checked in today!</h1>
+        <p className="text-[#6B7280] mb-8">
+          Come back tomorrow to keep your streak going.
+        </p>
+        <button
+          onClick={() => router.push('/checkin/complete')}
+          className="px-6 py-3 rounded-full bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white font-medium mb-3"
+        >
+          View Today's Check-in →
+        </button>
+        <button
+          onClick={() => router.push('/dashboard')}
+          className="text-[#6B7280] text-sm hover:text-[#2D3648] transition-colors"
         >
           Back to Dashboard
         </button>
