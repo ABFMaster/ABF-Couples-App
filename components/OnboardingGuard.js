@@ -67,7 +67,7 @@ export default function OnboardingGuard({ children }) {
 
         if (profile?.display_name) return; // Step 1 done, assessment pending
 
-        router.push('/onboarding');
+        router.push('/onboarding/welcome');
       } catch {
         // Fail open — don't block the user if the check errors
       }
