@@ -207,18 +207,18 @@ export default function ProfileAssessmentPage() {
           throw error
         }
       } else if (user) {
-        // Insert new assessment with all data at once
+        // Upsert to prevent stacking duplicate assessments
         const { error } = await supabase
           .from('relationship_assessments')
-          .insert({
+          .upsert({
             user_id: user.id,
             answers: finalAnswers,
             results,
             completed_at: completedAt,
-          })
+          }, { onConflict: 'user_id' })
 
         if (error) {
-          console.error('[Profile] Error inserting assessment:', error)
+          console.error('[Profile] Error upserting assessment:', error)
           throw error
         }
       }
