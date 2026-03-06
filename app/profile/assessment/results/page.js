@@ -97,6 +97,7 @@ export default function ProfileResultsPage() {
         .maybeSingle()
 
       if (profileData) {
+        console.log('Profile data:', JSON.stringify(profileData.results))
         setProfile(profileData)
       }
 
