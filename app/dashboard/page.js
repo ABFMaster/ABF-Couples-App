@@ -550,9 +550,11 @@ export default function Dashboard() {
             <div className="text-center pl-4 border-l border-neutral-200 flex-shrink-0">
               <p className="text-[26px] font-semibold text-[#E8614D] leading-none"
                  style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
-                {streak}
+                {streak > 0 ? streak : daysTogether}
               </p>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-400 mt-1">day<br/>streak</p>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-400 mt-1">
+                {streak > 0 ? <>day<br/>streak</> : <>days<br/>together</>}
+              </p>
             </div>
           </div>
 
@@ -611,7 +613,7 @@ export default function Dashboard() {
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 text-lg ${
                   action.urgent ? 'bg-[rgba(232,97,77,0.1)]' : 'bg-neutral-100'
                 }`}>
-                  {action.id === 'checkin' && '✓'}
+                  {action.id === 'checkin' && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8614D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
                   {action.id === 'flirt' && '💌'}
                   {action.id === 'date' && '🌙'}
                   {action.id === 'trip' && '🗺️'}

@@ -2,15 +2,16 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { Home, Sparkles, Heart, Sun, User } from 'lucide-react'
 
 const EXCLUDED = ['/login', '/signup', '/onboarding', '/connect', '/assessment', '/shared/add']
 
 const TABS = [
-  { href: '/dashboard', emoji: '🏠', label: 'Home' },
-  { href: '/ai-coach',  emoji: '✦',  label: 'Nora' },
-  { href: '/us',        emoji: '💛',  label: 'Us' },
-  { href: '/today',     emoji: '☀️',  label: 'Today' },
-  { href: '/profile',   emoji: '👤',  label: 'Profile' },
+  { href: '/dashboard', icon: Home,     label: 'Home' },
+  { href: '/ai-coach',  icon: Sparkles, label: 'Nora' },
+  { href: '/us',        icon: Heart,    label: 'Us' },
+  { href: '/today',     icon: Sun,      label: 'Today' },
+  { href: '/profile',   icon: User,     label: 'Profile' },
 ]
 
 export default function BottomNav() {
@@ -33,7 +34,7 @@ export default function BottomNav() {
                 active ? 'text-[#E8614D]' : 'text-gray-400 hover:text-gray-600'
               }`}
             >
-              <span className="text-2xl leading-none">{tab.emoji}</span>
+              <tab.icon size={22} strokeWidth={1.75} />
               <span className={`text-[10px] font-semibold tracking-wide ${active ? 'text-[#E8614D]' : 'text-gray-400'}`}>
                 {tab.label}
               </span>
