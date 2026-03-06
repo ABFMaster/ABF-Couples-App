@@ -27,6 +27,10 @@ const CONFLICT_STYLE_LABELS = {
   need_space: 'Take some space first',
   write_it_out: 'Write it out',
   avoid: 'Let it cool down',
+  validator: 'Validator',
+  volatile: 'Passionate Fighter',
+  avoider: 'Peacekeeper',
+  hostile: 'Reactive Fighter',
 }
 
 const ATTACHMENT_LABELS = {
