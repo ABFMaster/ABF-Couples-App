@@ -155,7 +155,7 @@ export default function ProfileResultsPage() {
   return (
     <div className="min-h-screen bg-[#F8F6F3] pb-24">
       {/* Hero Header */}
-      <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white py-12">
+      <div className="bg-gradient-to-br from-[#252048] via-[#3E3585] to-[#6B4A72] text-white py-12">
         <div className="max-w-4xl mx-auto px-4">
           <button
             onClick={() => router.push('/dashboard')}
@@ -181,20 +181,12 @@ export default function ProfileResultsPage() {
             Understanding yourself is the foundation for healthy relationships.
           </div>
 
-          {/* Quick Stats */}
-          <div className="mt-6 grid grid-cols-5 gap-3">
-            {moduleResults.map((result, index) => {
-              const moduleConfig = PROFILE_MODULES.find(m => m.id === result.moduleId)
-              return (
-                <div
-                  key={result.moduleId}
-                  className="bg-white/20 rounded-xl p-3 text-center backdrop-blur-sm"
-                >
-                  <span className="text-2xl">{moduleConfig?.icon}</span>
-                  <p className="text-sm mt-1 font-medium">{result.percentage}%</p>
-                </div>
-              )
-            })}
+          {/* Completion badge */}
+          <div className="mt-6 flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white/90">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span className="text-[14px] font-semibold text-white/90">Profile complete</span>
           </div>
         </div>
       </div>
@@ -311,18 +303,24 @@ export default function ProfileResultsPage() {
         </div>
 
         {/* Actions */}
-        <div className="mt-8 flex flex-col sm:flex-row gap-4">
+        <div className="mt-8 flex flex-col gap-3">
           <button
-            onClick={() => router.push('/profile/assessment')}
-            className="flex-1 border-2 border-[#E8614D] text-[#E8614D] px-6 py-4 rounded-xl font-semibold hover:bg-[#FDF6EF] transition-colors"
+            onClick={() => router.push('/ai-coach')}
+            className="w-full min-h-[54px] bg-[#E8614D] text-white rounded-xl font-semibold text-[16px] active:scale-[0.98] transition-transform"
           >
-            Retake Profile
+            Talk to Nora about this →
           </button>
           <button
-            onClick={() => router.push('/assessment')}
-            className="flex-1 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-6 py-4 rounded-xl font-semibold hover:opacity-90 transition-opacity"
+            onClick={() => router.push('/profile')}
+            className="w-full min-h-[48px] bg-white border border-neutral-200 rounded-xl font-semibold text-[15px] text-neutral-600 active:scale-[0.98] transition-transform"
           >
-            Take Relationship Assessment
+            Back to Profile
+          </button>
+          <button
+            onClick={() => router.push('/profile/assessment')}
+            className="w-full py-3 text-[13px] font-medium text-neutral-400"
+          >
+            Retake assessment
           </button>
         </div>
 
