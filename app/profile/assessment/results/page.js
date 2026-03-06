@@ -70,6 +70,21 @@ function CircularProgress({ percentage, color, size = 80, strokeWidth = 6, anima
   )
 }
 
+function StrengthPill({ level }) {
+  const config = {
+    strong:  { label: 'Strong',  bg: 'bg-[#E8F5EC]', text: 'text-[#2D7A4F]' },
+    good:    { label: 'Good',    bg: 'bg-[#EEF2FF]', text: 'text-[#4F46E5]' },
+    growing: { label: 'Growing', bg: 'bg-[#FEF3F1]', text: 'text-[#E8614D]' },
+    needs_attention: { label: 'Needs Work', bg: 'bg-[#FEF3F1]', text: 'text-[#E8614D]' },
+  }
+  const { label, bg, text } = config[level] || config.growing
+  return (
+    <span className={`px-3 py-1.5 rounded-full text-[12px] font-bold ${bg} ${text}`}>
+      {label}
+    </span>
+  )
+}
+
 export default function ProfileResultsPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -224,16 +239,10 @@ export default function ProfileResultsPage() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <CircularProgress
-                        percentage={moduleResult.percentage}
-                        color={moduleConfig.color}
-                        size={64}
-                        strokeWidth={5}
-                        animate={animateCards}
-                      />
+                    <div className="flex items-center gap-3">
+                      <StrengthPill level={moduleResult.strengthLevel} />
                       <svg
-                        className={`w-6 h-6 text-[#9CA3AF] transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
+                        className={`w-5 h-5 text-[#9CA3AF] transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
