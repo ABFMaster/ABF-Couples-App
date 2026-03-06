@@ -480,8 +480,8 @@ export default function Dashboard() {
   const primaryCTA = getPrimaryCTA()
 
   return (
-    <div className="min-h-screen bg-[#F7F4EF]">
-      <div className="max-w-lg mx-auto px-6 pt-10 pb-32 space-y-8">
+    <div className="min-h-screen bg-[#F7F4EF] flex flex-col items-center">
+      <div className="max-w-lg mx-auto px-6 pt-10 pb-32 space-y-8 w-full">
 
         {/* SECTION 1 — STATUS: Nora hero + mood */}
         <section className="space-y-3">
