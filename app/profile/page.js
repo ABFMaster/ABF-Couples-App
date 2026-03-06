@@ -170,7 +170,7 @@ export default function ProfilePage() {
               weekly_reflection: true,
             })
             setLoveLanguage(data.love_language_primary || null)
-            setConflictStyle(data.conflict_style || null)
+            if (data.conflict_style) setConflictStyle(data.conflict_style)
           }
         })(),
 
@@ -325,7 +325,7 @@ export default function ProfilePage() {
             <StylePill label="Attachment style" value={ATTACHMENT_LABELS[attachmentStyle] || attachmentStyle} />
             <StylePill label="Conflict style" value={CONFLICT_STYLE_LABELS[conflictStyle] || conflictStyle} />
             <StylePill label="Love language" value={LOVE_LANGUAGE_LABELS[loveLanguage] || loveLanguage} />
-            {(!attachmentStyle || !conflictStyle) && (
+            {(!attachmentStyle && !conflictStyle && !loveLanguage) ? (
               <div className="py-3.5">
                 <button
                   onClick={() => router.push('/profile/assessment')}
@@ -334,8 +334,7 @@ export default function ProfilePage() {
                   Complete your assessment →
                 </button>
               </div>
-            )}
-            {(attachmentStyle || conflictStyle) && (
+            ) : (
               <div className="py-3.5">
                 <button
                   onClick={() => router.push('/profile/assessment')}
