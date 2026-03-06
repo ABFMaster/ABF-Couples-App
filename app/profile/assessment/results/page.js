@@ -75,7 +75,7 @@ export default function ProfileResultsPage() {
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState(null)
   const [expandedModule, setExpandedModule] = useState(null)
-  const [animateCards, setAnimateCards] = useState(false)
+  const [animateCards, setAnimateCards] = useState(true)
 
   const checkAuth = async () => {
     try {
@@ -205,14 +205,7 @@ export default function ProfileResultsPage() {
             return (
               <div
                 key={moduleResult.moduleId}
-                className={`bg-white rounded-2xl shadow-sm border border-[#E5E2DD] overflow-hidden transform transition-all duration-500 ${
-                  animateCards
-                    ? 'opacity-100 translate-y-0'
-                    : 'opacity-0 translate-y-4'
-                }`}
-                style={{
-                  transitionDelay: animateCards ? `${index * 100}ms` : '0ms'
-                }}
+                className="bg-white rounded-2xl shadow-sm border border-[#E5E2DD] overflow-hidden"
               >
                 {/* Module Header */}
                 <button
