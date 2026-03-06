@@ -223,6 +223,31 @@ export default function ProfileAssessmentPage() {
         }
       }
 
+      // Extract and save love language from love_needs module
+      try {
+        const loveNeedsResult = moduleResults.find(r => r?.moduleId === 'love_needs')
+        if (loveNeedsResult?.traits) {
+          const t = loveNeedsResult.traits
+          let loveLanguage = null
+          const scores = {
+            touch: t.touch_need || 0,
+            words: t.verbal_intimacy || 0,
+            quality_time: t.quality_time || 0,
+            acts: t.acts || 0,
+          }
+          const dominant = Object.entries(scores).sort((a, b) => b[1] - a[1])[0]
+          if (dominant && dominant[1] > 0) loveLanguage = dominant[0]
+          if (loveLanguage) {
+            await supabase
+              .from('user_profiles')
+              .update({ love_language_primary: loveLanguage })
+              .eq('user_id', user.id)
+          }
+        }
+      } catch (err) {
+        console.error('Love language save error:', err)
+      }
+
       // Navigate to results
       router.push('/profile/assessment/results')
     } catch (err) {
