@@ -179,40 +179,42 @@ export default function TodayPage() {
     // Nora surprise — rotates daily
     setNoraSurprise(NORA_SURPRISES[dayIndex % NORA_SURPRISES.length])
 
-    // Neglected feature — what hasn't been done recently
+    // Neglected feature — compute inline without circular dependency
+    let computed = null
     if (!checkinDone) {
-      setNeglectedFeature({
+      computed = {
         verb: 'Check in together',
         hint: 'You haven\'t checked in today yet',
         href: '/checkin',
         urgent: true,
-      })
+      }
     } else if (lastFlirtDaysAgo === null || lastFlirtDaysAgo >= 3) {
-      setNeglectedFeature({
+      computed = {
         verb: `Send ${partnerName} a flirt`,
         hint: lastFlirtDaysAgo >= 3 ? `${lastFlirtDaysAgo} days since your last one` : 'You haven\'t sent one yet',
         href: '/flirts',
         urgent: lastFlirtDaysAgo >= 5,
-      })
+      }
     } else if (memoryCount === 0) {
-      setNeglectedFeature({
+      computed = {
         verb: 'Add your first memory',
         hint: 'Start your relationship timeline',
         href: '/timeline',
         urgent: false,
-      })
+      }
     } else {
-      setNeglectedFeature({
+      computed = {
         verb: 'Start your weekly reflection',
         hint: 'Takes 2 minutes',
         href: '/weekly-reflection',
         urgent: false,
-      })
+      }
     }
+    setNeglectedFeature(computed)
 
     // Feature spotlight — rotates daily, avoids neglected feature
     const available = FEATURE_SPOTLIGHTS.filter(f =>
-      neglectedFeature ? f.href !== neglectedFeature.href : true
+      computed ? f.href !== computed.href : true
     )
     setSpotlight(available[dayIndex % available.length])
 
@@ -229,7 +231,7 @@ export default function TodayPage() {
       setInsight(`You two are just getting started. The best part about that? Everything is still ahead of you.`)
     }
 
-  }, [loading, checkinDone, lastFlirtDaysAgo, memoryCount, streak, flirtCount, daysTogether, partnerName, neglectedFeature])
+  }, [loading, checkinDone, lastFlirtDaysAgo, memoryCount, streak, flirtCount, daysTogether, partnerName])
 
   if (loading) {
     return (
