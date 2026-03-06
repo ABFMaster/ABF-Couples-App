@@ -150,7 +150,7 @@ export default function ProfileResultsPage() {
     )
   }
 
-  const moduleResults = results.modules || []
+  const moduleResults = profile?.results?.modules || []
 
   return (
     <div className="min-h-screen bg-[#F8F6F3] pb-24">
