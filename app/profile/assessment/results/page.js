@@ -72,12 +72,13 @@ function CircularProgress({ percentage, color, size = 80, strokeWidth = 6, anima
 
 function StrengthPill({ level }) {
   const config = {
-    strong:  { label: 'Strong',  bg: 'bg-[#E8F5EC]', text: 'text-[#2D7A4F]' },
-    good:    { label: 'Good',    bg: 'bg-[#EEF2FF]', text: 'text-[#4F46E5]' },
-    growing: { label: 'Growing', bg: 'bg-[#FEF3F1]', text: 'text-[#E8614D]' },
-    needs_attention: { label: 'Needs Work', bg: 'bg-[#FEF3F1]', text: 'text-[#E8614D]' },
+    strong:      { label: 'Strong',     bg: 'bg-[#E8F5EC]', text: 'text-[#2D7A4F]' },
+    good:        { label: 'Good',       bg: 'bg-[#EEF2FF]', text: 'text-[#4F46E5]' },
+    developing:  { label: 'Developing', bg: 'bg-[#FEF9EC]', text: 'text-[#B45309]' },
+    growth_area: { label: 'Growing',    bg: 'bg-[#FEF3F1]', text: 'text-[#E8614D]' },
+    growing:     { label: 'Growing',    bg: 'bg-[#FEF3F1]', text: 'text-[#E8614D]' },
   }
-  const { label, bg, text } = config[level] || config.growing
+  const { label, bg, text } = config[level] || config.growth_area
   return (
     <span className={`px-3 py-1.5 rounded-full text-[12px] font-bold ${bg} ${text}`}>
       {label}
