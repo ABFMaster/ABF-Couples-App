@@ -14,6 +14,28 @@ const TIMEZONES = [
   { value: 'Australia/Sydney', label: 'Sydney' },
 ]
 
+const LOVE_LANGUAGE_LABELS = {
+  words: 'Words of Affirmation',
+  time: 'Quality Time',
+  acts: 'Acts of Service',
+  gifts: 'Receiving Gifts',
+  touch: 'Physical Touch',
+}
+
+const CONFLICT_STYLE_LABELS = {
+  talk_immediately: 'Talk it out right away',
+  need_space: 'Take some space first',
+  write_it_out: 'Write it out',
+  avoid: 'Let it cool down',
+}
+
+const ATTACHMENT_LABELS = {
+  secure: 'Secure',
+  anxious: 'Anxious',
+  avoidant: 'Avoidant',
+  disorganized: 'Disorganized',
+}
+
 function SectionLabel({ children }) {
   return (
     <p className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
@@ -300,9 +322,9 @@ export default function ProfilePage() {
         <section>
           <SectionLabel>Who you are</SectionLabel>
           <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm px-5">
-            <StylePill label="Attachment style" value={attachmentStyle} />
-            <StylePill label="Conflict style" value={conflictStyle} />
-            <StylePill label="Love language" value={loveLanguage} />
+            <StylePill label="Attachment style" value={ATTACHMENT_LABELS[attachmentStyle] || attachmentStyle} />
+            <StylePill label="Conflict style" value={CONFLICT_STYLE_LABELS[conflictStyle] || conflictStyle} />
+            <StylePill label="Love language" value={LOVE_LANGUAGE_LABELS[loveLanguage] || loveLanguage} />
             {(!attachmentStyle || !conflictStyle) && (
               <div className="py-3.5">
                 <button
@@ -331,9 +353,9 @@ export default function ProfilePage() {
           <section>
             <SectionLabel>{partnerName}</SectionLabel>
             <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm px-5">
-              <StylePill label="Attachment style" value={partnerAttachment} />
-              <StylePill label="Conflict style" value={partnerConflict} />
-              <StylePill label="Love language" value={partnerLoveLanguage} />
+              <StylePill label="Attachment style" value={ATTACHMENT_LABELS[partnerAttachment] || partnerAttachment} />
+              <StylePill label="Conflict style" value={CONFLICT_STYLE_LABELS[partnerConflict] || partnerConflict} />
+              <StylePill label="Love language" value={LOVE_LANGUAGE_LABELS[partnerLoveLanguage] || partnerLoveLanguage} />
               {!partnerAttachment && !partnerConflict && !partnerLoveLanguage && (
                 <div className="py-4 text-center">
                   <p className="text-[13px] text-neutral-400">
