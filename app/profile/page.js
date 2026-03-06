@@ -377,6 +377,13 @@ export default function ProfilePage() {
             <InfoRow label="Anniversary" value={anniversary} type="date" placeholder="mm/dd/yyyy" onChange={setAnniversary} />
             <InfoRow label="Timezone" value={timezone} onChange={setTimezone} options={TIMEZONES} />
           </div>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full mt-3 min-h-[48px] bg-[#E8614D] text-white rounded-xl font-semibold text-[15px] active:scale-[0.98] transition-transform disabled:opacity-50"
+          >
+            {saved ? 'Saved ✓' : saving ? 'Saving…' : 'Save changes'}
+          </button>
         </section>
 
         {/* SECTION 2 — WHO YOU ARE */}
@@ -535,13 +542,6 @@ export default function ProfilePage() {
               onChange={v => setNotifications(n => ({ ...n, weekly_reflection: v }))}
             />
           </div>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full mt-3 min-h-[48px] bg-[#E8614D] text-white rounded-xl font-semibold text-[15px] active:scale-[0.98] transition-transform disabled:opacity-50"
-          >
-            {saved ? 'Saved ✓' : saving ? 'Saving…' : 'Save changes'}
-          </button>
         </section>
 
         {/* Sign out */}
