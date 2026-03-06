@@ -315,6 +315,7 @@ export default function Dashboard() {
               .select('id, title, stops, date_time')
               .eq('shared_with', user.id)
               .eq('status', 'planned')
+              .or('date_time.is.null,date_time.gte.' + new Date().toISOString())
               .order('created_at', { ascending: false })
               .limit(1)
             if (data?.[0]) setPendingDate(data[0])
@@ -480,8 +481,8 @@ export default function Dashboard() {
   const primaryCTA = getPrimaryCTA()
 
   return (
-    <div className="min-h-screen bg-[#F7F4EF] flex flex-col items-center">
-      <div className="max-w-lg mx-auto px-6 pt-10 pb-32 space-y-8 w-full">
+    <div className="min-h-screen bg-[#F7F4EF]">
+      <div className="px-6 pt-10 pb-32 space-y-8">
 
         {/* SECTION 1 — STATUS: Nora hero + mood */}
         <section className="space-y-3">

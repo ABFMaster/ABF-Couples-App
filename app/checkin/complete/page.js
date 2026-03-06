@@ -153,6 +153,17 @@ export default function CheckinCompletePage() {
     if (nudgeSent) return
     if (!couple?.id || !currentUser?.id || !partnerId) return
     try {
+      const todayStart = new Date()
+      todayStart.setHours(0, 0, 0, 0)
+      const { data: existing } = await supabase
+        .from('flirts')
+        .select('id')
+        .eq('couple_id', couple.id)
+        .eq('sender_id', currentUser.id)
+        .eq('message', "I just checked in — your turn! 💕")
+        .gte('created_at', todayStart.toISOString())
+        .limit(1)
+      if (existing?.length > 0) { setNudgeSent(true); return }
       const { error } = await supabase
         .from('flirts')
         .insert({

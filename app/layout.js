@@ -33,7 +33,11 @@ export default function RootLayout({ children }) {
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <OnboardingGuard>
-          <div className="pb-20">{children}</div>
+          <div className="pb-20 min-h-screen flex flex-col items-center">
+            <div className="w-full max-w-lg">
+              {children}
+            </div>
+          </div>
           <BottomNav />
         </OnboardingGuard>
       </body>
