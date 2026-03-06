@@ -40,6 +40,59 @@ const ATTACHMENT_LABELS = {
   disorganized: 'Disorganized',
 }
 
+const HOBBIES = [
+  { value: 'reading', label: 'Reading' },
+  { value: 'gaming', label: 'Gaming' },
+  { value: 'cooking', label: 'Cooking' },
+  { value: 'fitness', label: 'Fitness' },
+  { value: 'music', label: 'Music' },
+  { value: 'movies', label: 'Movies/TV' },
+  { value: 'travel', label: 'Travel' },
+  { value: 'outdoors', label: 'Outdoors' },
+  { value: 'sports', label: 'Sports' },
+  { value: 'art', label: 'Art' },
+  { value: 'photography', label: 'Photography' },
+  { value: 'writing', label: 'Writing' },
+  { value: 'dancing', label: 'Dancing' },
+  { value: 'crafts', label: 'Crafts/DIY' },
+  { value: 'gardening', label: 'Gardening' },
+  { value: 'pets', label: 'Pets' },
+  { value: 'technology', label: 'Technology' },
+  { value: 'meditation', label: 'Meditation' },
+  { value: 'podcasts', label: 'Podcasts' },
+  { value: 'board_games', label: 'Board Games' },
+  { value: 'wine', label: 'Wine/Drinks' },
+  { value: 'volunteering', label: 'Volunteering' },
+]
+
+const DATE_PREFERENCES = [
+  { value: 'dinner', label: 'Nice dinner out' },
+  { value: 'home_cooking', label: 'Cooking at home' },
+  { value: 'movie_night', label: 'Movie night' },
+  { value: 'outdoor_adventure', label: 'Outdoor adventure' },
+  { value: 'museum', label: 'Museums/galleries' },
+  { value: 'concert', label: 'Concert/live music' },
+  { value: 'coffee', label: 'Coffee date' },
+  { value: 'picnic', label: 'Picnic' },
+  { value: 'spa', label: 'Spa day' },
+  { value: 'game_night', label: 'Game night' },
+  { value: 'dancing', label: 'Dancing' },
+  { value: 'travel', label: 'Weekend getaway' },
+  { value: 'stargazing', label: 'Stargazing' },
+  { value: 'beach', label: 'Beach day' },
+  { value: 'workout', label: 'Working out together' },
+  { value: 'shopping', label: 'Shopping' },
+  { value: 'sports_event', label: 'Sports event' },
+  { value: 'lazy_day', label: 'Lazy day in' },
+]
+
+const CHECKIN_TIMES = [
+  { value: 'morning', label: 'Morning' },
+  { value: 'afternoon', label: 'Afternoon' },
+  { value: 'evening', label: 'Evening' },
+  { value: 'night', label: 'Night' },
+]
+
 function SectionLabel({ children }) {
   return (
     <p className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
@@ -121,6 +174,11 @@ export default function ProfilePage() {
     weekly_reflection: true,
   })
 
+  // Preference fields
+  const [hobbies, setHobbies] = useState([])
+  const [datePreferences, setDatePreferences] = useState([])
+  const [checkinTime, setCheckinTime] = useState(null)
+
   // Read-only assessment data
   const [attachmentStyle, setAttachmentStyle] = useState(null)
   const [conflictStyle, setConflictStyle] = useState(null)
@@ -159,7 +217,7 @@ export default function ProfilePage() {
         (async () => {
           const { data } = await supabase
             .from('user_profiles')
-            .select('display_name, birthday, anniversary, timezone, notification_preferences, love_language_primary, conflict_style')
+            .select('display_name, birthday, anniversary, timezone, notification_preferences, love_language_primary, conflict_style, hobbies, date_preferences, preferred_checkin_time')
             .eq('user_id', user.id)
             .maybeSingle()
           if (data) {
@@ -175,6 +233,9 @@ export default function ProfilePage() {
             })
             setLoveLanguage(data.love_language_primary || null)
             if (data.conflict_style) setConflictStyle(data.conflict_style)
+            setHobbies(data.hobbies || [])
+            setDatePreferences(data.date_preferences || [])
+            setCheckinTime(data.preferred_checkin_time || null)
           }
         })(),
 
@@ -263,6 +324,9 @@ export default function ProfilePage() {
           anniversary: anniversary || null,
           timezone,
           notification_preferences: notifications,
+          hobbies,
+          date_preferences: datePreferences,
+          preferred_checkin_time: checkinTime,
           updated_at: new Date().toISOString(),
         })
         .eq('user_id', user.id)
@@ -313,13 +377,6 @@ export default function ProfilePage() {
             <InfoRow label="Anniversary" value={anniversary} type="date" placeholder="mm/dd/yyyy" onChange={setAnniversary} />
             <InfoRow label="Timezone" value={timezone} onChange={setTimezone} options={TIMEZONES} />
           </div>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full mt-3 min-h-[48px] bg-[#E8614D] text-white rounded-xl font-semibold text-[15px] active:scale-[0.98] transition-transform disabled:opacity-50"
-          >
-            {saved ? 'Saved ✓' : saving ? 'Saving…' : 'Save changes'}
-          </button>
         </section>
 
         {/* SECTION 2 — WHO YOU ARE */}
@@ -370,7 +427,90 @@ export default function ProfilePage() {
           </section>
         )}
 
-        {/* SECTION 4 — NOTIFICATIONS */}
+        {/* SECTION 4 — YOUR PREFERENCES */}
+        <section>
+          <SectionLabel>Your preferences</SectionLabel>
+
+          {/* Check-in time */}
+          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm px-5 mb-3">
+            <div className="py-3.5 border-b border-neutral-100">
+              <p className="text-[13px] text-neutral-500 font-medium mb-3">Best time to check in</p>
+              <div className="flex gap-2 flex-wrap">
+                {CHECKIN_TIMES.map(t => (
+                  <button
+                    key={t.value}
+                    onClick={() => setCheckinTime(t.value)}
+                    className={`px-4 py-2 rounded-full text-[13px] font-semibold transition-all ${
+                      checkinTime === t.value
+                        ? 'bg-neutral-900 text-white'
+                        : 'bg-neutral-100 text-neutral-500'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Hobbies */}
+            <div className="py-3.5 border-b border-neutral-100">
+              <p className="text-[13px] text-neutral-500 font-medium mb-3">Hobbies & interests</p>
+              <div className="flex gap-2 flex-wrap">
+                {HOBBIES.map(h => (
+                  <button
+                    key={h.value}
+                    onClick={() => setHobbies(prev =>
+                      prev.includes(h.value)
+                        ? prev.filter(v => v !== h.value)
+                        : [...prev, h.value]
+                    )}
+                    className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all ${
+                      hobbies.includes(h.value)
+                        ? 'bg-neutral-900 text-white'
+                        : 'bg-neutral-100 text-neutral-500'
+                    }`}
+                  >
+                    {h.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Date preferences */}
+            <div className="py-3.5">
+              <p className="text-[13px] text-neutral-500 font-medium mb-3">Date ideas you love</p>
+              <div className="flex gap-2 flex-wrap">
+                {DATE_PREFERENCES.map(d => (
+                  <button
+                    key={d.value}
+                    onClick={() => setDatePreferences(prev =>
+                      prev.includes(d.value)
+                        ? prev.filter(v => v !== d.value)
+                        : [...prev, d.value]
+                    )}
+                    className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all ${
+                      datePreferences.includes(d.value)
+                        ? 'bg-neutral-900 text-white'
+                        : 'bg-neutral-100 text-neutral-500'
+                    }`}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full mt-1 min-h-[48px] bg-[#E8614D] text-white rounded-xl font-semibold text-[15px] active:scale-[0.98] transition-transform disabled:opacity-50"
+          >
+            {saved ? 'Saved ✓' : saving ? 'Saving…' : 'Save changes'}
+          </button>
+        </section>
+
+        {/* SECTION 5 — NOTIFICATIONS */}
         <section>
           <SectionLabel>Notifications</SectionLabel>
           <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm px-5">
