@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -7,35 +7,35 @@ const FEATURE_SPOTLIGHTS = [
   {
     id: 'wander',
     title: 'Dream a trip together',
-    description: 'Tell Wander where you want to go and it will build an entire trip around you two.',
+    description: "Planning a dream trip together is one of the best conversations you can have. Where would you two actually go?",
     action: 'Start Wandering →',
     href: '/trips',
   },
   {
     id: 'reflection',
     title: 'Weekly reflection',
-    description: 'Two minutes. One question. A record of your relationship over time.',
+    description: "Two minutes, once a week. Couples who reflect together stay connected longer.",
     action: 'Start reflecting →',
     href: '/weekly-reflection',
   },
   {
     id: 'timeline',
     title: 'Your relationship timeline',
-    description: 'Every memory, milestone, and moment — all in one place.',
+    description: "Your relationship has a story. Start telling it.",
     action: 'Add a memory →',
     href: '/timeline',
   },
   {
     id: 'flirts',
     title: 'Send a flirt',
-    description: 'A small thing that means a lot. Takes 10 seconds.',
+    description: "The smallest things land the hardest. Send one now.",
     action: 'Send one now →',
     href: '/flirts',
   },
   {
     id: 'dates',
     title: 'Plan your next date',
-    description: 'Let ABF help you plan something worth looking forward to.',
+    description: "You don't need a reason. You just need a plan.",
     action: 'Browse ideas →',
     href: '/dates',
   },
@@ -52,10 +52,16 @@ const NORA_SURPRISES = [
   "If you could go anywhere together tomorrow, where would it be?",
 ]
 
+const REACTIONS = ['This is us', 'Made me think', 'Tell Nora']
+
 function getDayIndex() {
   const start = new Date('2026-01-01')
   const today = new Date()
   return Math.floor((today - start) / 86400000)
+}
+
+function getTodayString() {
+  return new Date().toISOString().split('T')[0]
 }
 
 export default function TodayPage() {
@@ -72,12 +78,43 @@ export default function TodayPage() {
   const [neglectedFeature, setNeglectedFeature] = useState(null)
   const [spotlight, setSpotlight] = useState(null)
   const [noraSurprise, setNoraSurprise] = useState('')
-  const [insight, setInsight] = useState(null)
+
+  // Section 1 — reaction state
+  const [todayReaction, setTodayReaction] = useState(null)
+  const [todayNote, setTodayNote] = useState('')
+  const [partnerReaction, setPartnerReaction] = useState(null)
+  const [partnerNote, setPartnerNote] = useState('')
+  const [reactionSaved, setReactionSaved] = useState(false)
+  const [reactionInput, setReactionInput] = useState('')
+  const autoSaveTimer = useRef(null)
+
+  // Section 2 — partner coaching
+  const [partnerLoveLanguage, setPartnerLoveLanguage] = useState(null)
+  const [whyOpen, setWhyOpen] = useState(false)
+
+  // Section 3 — article insight
+  const [articleInsight, setArticleInsight] = useState(null)
+  const [noraCommentary, setNoraCommentary] = useState('')
+
+  // User profile for article tag matching
+  const [myAttachmentStyle, setMyAttachmentStyle] = useState(null)
+  const [myConflictStyle, setMyConflictStyle] = useState(null)
+  const [myLoveLanguage, setMyLoveLanguage] = useState(null)
+
+  // IDs needed for today_responses upsert
+  const [userId, setUserId] = useState(null)
+  const [coupleId, setCoupleId] = useState(null)
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
+  }, [])
 
   const fetchAll = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
+      setUserId(user.id)
 
       const { data: couple } = await supabase
         .from('couples')
@@ -85,36 +122,42 @@ export default function TodayPage() {
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
         .maybeSingle()
       if (!couple) { router.push('/connect'); return }
+      setCoupleId(couple.id)
 
       const partnerId = couple.user1_id === user.id ? couple.user2_id : couple.user1_id
       const days = Math.floor((Date.now() - new Date(couple.created_at).getTime()) / 86400000)
       setDaysTogether(days)
 
+      const today = getTodayString()
+
       await Promise.allSettled([
 
-        // User name
+        // User profile (name + assessment styles for article matching)
         (async () => {
           const { data } = await supabase
             .from('user_profiles')
-            .select('display_name')
+            .select('display_name, attachment_style, conflict_style, love_language_primary')
             .eq('user_id', user.id)
             .maybeSingle()
           if (data?.display_name) setUserName(data.display_name)
+          if (data?.attachment_style) setMyAttachmentStyle(data.attachment_style)
+          if (data?.conflict_style) setMyConflictStyle(data.conflict_style)
+          if (data?.love_language_primary) setMyLoveLanguage(data.love_language_primary)
         })(),
 
-        // Partner name
+        // Partner profile (name + love language for coaching)
         partnerId ? (async () => {
           const { data } = await supabase
             .from('user_profiles')
-            .select('display_name')
+            .select('display_name, love_language_primary')
             .eq('user_id', partnerId)
             .maybeSingle()
           if (data?.display_name) setPartnerName(data.display_name)
+          if (data?.love_language_primary) setPartnerLoveLanguage(data.love_language_primary)
         })() : Promise.resolve(),
 
         // Streak + checkin
         (async () => {
-          const today = new Date().toISOString().split('T')[0]
           const { data } = await supabase
             .from('daily_checkins')
             .select('check_date')
@@ -160,6 +203,29 @@ export default function TodayPage() {
           setMemoryCount(count || 0)
         })(),
 
+        // Today's reactions (mine + partner's)
+        (async () => {
+          try {
+            const { data } = await supabase
+              .from('today_responses')
+              .select('user_id, reaction, note')
+              .eq('couple_id', couple.id)
+              .eq('prompt_date', today)
+            if (!data) return
+            const mine = data.find(r => r.user_id === user.id)
+            const theirs = partnerId ? data.find(r => r.user_id === partnerId) : null
+            if (mine) {
+              setTodayReaction(mine.reaction)
+              setTodayNote(mine.note || '')
+              setReactionSaved(true)
+            }
+            if (theirs) {
+              setPartnerReaction(theirs.reaction)
+              setPartnerNote(theirs.note || '')
+            }
+          } catch { /* table may not exist yet */ }
+        })(),
+
       ])
 
       setLoading(false)
@@ -176,22 +242,21 @@ export default function TodayPage() {
     if (loading) return
     const dayIndex = getDayIndex()
 
-    // Nora surprise — rotates daily
     setNoraSurprise(NORA_SURPRISES[dayIndex % NORA_SURPRISES.length])
 
-    // Neglected feature — compute inline without circular dependency
+    // Neglected feature fallback (used if no partner love language)
     let computed = null
     if (!checkinDone) {
       computed = {
         verb: 'Check in together',
-        hint: 'You haven\'t checked in today yet',
+        hint: "You haven't checked in today yet",
         href: '/checkin',
         urgent: true,
       }
     } else if (lastFlirtDaysAgo === null || lastFlirtDaysAgo >= 3) {
       computed = {
         verb: `Send ${partnerName} a flirt`,
-        hint: lastFlirtDaysAgo >= 3 ? `${lastFlirtDaysAgo} days since your last one` : 'You haven\'t sent one yet',
+        hint: lastFlirtDaysAgo >= 3 ? `${lastFlirtDaysAgo} days since your last one` : "You haven't sent one yet",
         href: '/flirts',
         urgent: lastFlirtDaysAgo >= 5,
       }
@@ -218,20 +283,118 @@ export default function TodayPage() {
     )
     setSpotlight(available[dayIndex % available.length])
 
-    // Relationship insight — one story from real data
-    if (streak >= 7) {
-      setInsight(`${streak} days in a row. That kind of consistency is rare — and it matters more than you think.`)
-    } else if (flirtCount >= 10) {
-      setInsight(`${flirtCount} flirts since you started. That's not nothing — that's showing up for each other every day.`)
-    } else if (daysTogether > 30) {
-      setInsight(`${daysTogether} days together in ABF. The couples who make it this far are the ones who keep going.`)
-    } else if (memoryCount > 0) {
-      setInsight(`You've saved ${memoryCount} ${memoryCount === 1 ? 'memory' : 'memories'} together. Every one of them is worth keeping.`)
-    } else {
-      setInsight(`You two are just getting started. The best part about that? Everything is still ahead of you.`)
+  }, [loading, checkinDone, lastFlirtDaysAgo, memoryCount, streak, flirtCount, daysTogether, partnerName])
+
+  // Article insight fetch
+  useEffect(() => {
+    if (loading) return
+    const dayIndex = getDayIndex()
+
+    fetch('/api/learn/feed')
+      .then(r => r.json())
+      .then(d => {
+        const articles = d.articles || []
+        if (!articles.length) return
+
+        // Filter by user's profile tags
+        const activeTags = []
+        if (myAttachmentStyle) activeTags.push('attachment')
+        if (myConflictStyle) activeTags.push('conflict')
+        if (myLoveLanguage) { activeTags.push('intimacy'); activeTags.push('communication') }
+
+        let filtered = activeTags.length
+          ? articles.filter(a => a.tags && activeTags.some(tag => a.tags.includes(tag)))
+          : []
+        if (!filtered.length) filtered = articles
+
+        const article = filtered[dayIndex % filtered.length]
+        setArticleInsight(article)
+
+        const articleTags = article.tags || []
+        if (articleTags.includes('attachment')) {
+          setNoraCommentary('Understanding how you each attach changes everything.')
+        } else if (articleTags.includes('conflict')) {
+          setNoraCommentary('How you fight matters more than how much you fight.')
+        } else if (articleTags.includes('intimacy')) {
+          setNoraCommentary("Intimacy isn't just physical — it's feeling truly known.")
+        } else if (articleTags.includes('communication')) {
+          setNoraCommentary('The best couples are just two good listeners.')
+        } else {
+          setNoraCommentary("Nora thought you'd find this one interesting.")
+        }
+      })
+      .catch(() => {})
+  }, [loading, myAttachmentStyle, myConflictStyle, myLoveLanguage])
+
+  const handleReaction = (reaction) => {
+    if (reactionSaved) return
+
+    if (reaction === 'Tell Nora') {
+      sessionStorage.setItem('nora_opener', noraSurprise)
+      router.push('/ai-coach?new=true')
+      return
     }
 
-  }, [loading, checkinDone, lastFlirtDaysAgo, memoryCount, streak, flirtCount, daysTogether, partnerName])
+    setTodayReaction(reaction)
+
+    // Auto-save with empty note after 2 seconds (clears if user starts typing)
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    autoSaveTimer.current = setTimeout(() => {
+      saveReaction(reaction, '')
+    }, 2000)
+  }
+
+  const saveReaction = async (reaction, note) => {
+    if (!userId || !coupleId) return
+    try {
+      await supabase
+        .from('today_responses')
+        .upsert({
+          user_id: userId,
+          couple_id: coupleId,
+          prompt: noraSurprise,
+          prompt_date: getTodayString(),
+          reaction,
+          note: note || null,
+        }, { onConflict: 'user_id,prompt_date' })
+      setTodayNote(note)
+      setReactionSaved(true)
+    } catch (err) {
+      console.error('Save reaction error:', err)
+    }
+  }
+
+  const handleSaveReaction = () => {
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+    saveReaction(todayReaction, reactionInput)
+  }
+
+  const getPartnerCoaching = () => {
+    if (!partnerLoveLanguage) return null
+    const coaching = {
+      words_of_affirmation: {
+        action: `Send ${partnerName} a note telling them one thing you genuinely appreciate about them today.`,
+        why: `${partnerName}'s primary love language is words of affirmation — being told they're loved and valued matters more to them than almost anything else.`,
+      },
+      quality_time: {
+        action: `Put your phone away for the next hour and just be present with ${partnerName}.`,
+        why: `${partnerName} feels most loved through quality time — your full attention is the gift they actually want.`,
+      },
+      acts_of_service: {
+        action: `Do one small thing for ${partnerName} without being asked — notice what would help them.`,
+        why: `For ${partnerName}, love shows up in action. Doing something helpful before they ask is deeply meaningful.`,
+      },
+      physical_touch: {
+        action: `Reach for ${partnerName}'s hand today. That's it.`,
+        why: `Physical touch is how ${partnerName} feels connected. Even small gestures carry a lot of weight for them.`,
+      },
+      receiving_gifts: {
+        action: `Pick up something small for ${partnerName} today — it doesn't need to be expensive, just thoughtful.`,
+        why: `${partnerName}'s love language is receiving gifts — not the cost, but the thought behind it shows them you were thinking of them.`,
+      },
+    }
+    return coaching[partnerLoveLanguage] || null
+  }
 
   if (loading) {
     return (
@@ -240,6 +403,8 @@ export default function TodayPage() {
       </div>
     )
   }
+
+  const partnerCoaching = getPartnerCoaching()
 
   return (
     <div className="min-h-screen bg-[#F7F4EF]">
@@ -256,7 +421,7 @@ export default function TodayPage() {
           </h1>
         </div>
 
-        {/* SECTION 1 — NORA SURPRISE */}
+        {/* SECTION 1 — NORA PROMPT */}
         <section>
           <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
             From Nora
@@ -272,25 +437,95 @@ export default function TodayPage() {
                  style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
                 {noraSurprise}
               </p>
-              <button
-                onClick={() => {
-                  sessionStorage.setItem('nora_opener', noraSurprise)
-                  router.push('/ai-coach?new=true')
-                }}
-                className="w-full min-h-[48px] bg-white text-[#E8614D] rounded-xl font-semibold text-[15px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md"
-              >
-                Talk to Nora about this →
-              </button>
+
+              {!reactionSaved ? (
+                <div>
+                  <div className="flex gap-2 flex-wrap">
+                    {REACTIONS.map(r => (
+                      <button
+                        key={r}
+                        onClick={() => handleReaction(r)}
+                        className={`px-4 py-2 rounded-full text-[13px] font-semibold transition-colors ${
+                          todayReaction === r
+                            ? 'bg-[#E8614D] text-white'
+                            : 'bg-white/15 text-white/80 hover:bg-white/25'
+                        }`}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                  {todayReaction && (
+                    <div className="mt-4">
+                      <input
+                        type="text"
+                        value={reactionInput}
+                        onChange={e => {
+                          setReactionInput(e.target.value)
+                          if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+                        }}
+                        placeholder="Want to add anything? (optional)"
+                        className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/40 text-[14px] focus:outline-none focus:border-white/40"
+                      />
+                      <button
+                        onClick={handleSaveReaction}
+                        className="mt-2 px-5 py-2 bg-white/20 text-white text-[13px] font-semibold rounded-full hover:bg-white/30 transition-colors"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-4 py-2 rounded-full text-[13px] font-semibold bg-[#E8614D] text-white">
+                      {todayReaction}
+                    </span>
+                    {todayNote && (
+                      <span className="text-white/60 text-[13px]">— {todayNote}</span>
+                    )}
+                  </div>
+                  {partnerReaction && (
+                    <p className="text-white/50 text-[12px]">
+                      {partnerName} said: {partnerReaction}{partnerNote ? ` — ${partnerNote}` : ''}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </section>
 
-        {/* SECTION 2 — PRIMARY ACTION (neglected feature) */}
-        {neglectedFeature && (
-          <section>
-            <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
-              Pick up where you left off
+        {/* SECTION 2 — FOR YOUR PARTNER */}
+        <section>
+          <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
+            For {partnerName}
+          </div>
+          {partnerCoaching ? (
+            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+              <div className="flex">
+                <div className="w-1 bg-[#E8614D] flex-shrink-0" />
+                <div className="p-5 flex-1">
+                  <p className="text-[16px] text-neutral-900 leading-snug"
+                     style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
+                    {partnerCoaching.action}
+                  </p>
+                  <button
+                    onClick={() => setWhyOpen(w => !w)}
+                    className="mt-3 text-[12px] text-neutral-400 underline underline-offset-2"
+                  >
+                    {whyOpen ? 'Hide' : 'Why this?'}
+                  </button>
+                  {whyOpen && (
+                    <p className="mt-2 text-[12px] text-neutral-500 leading-relaxed">
+                      {partnerCoaching.why}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
+          ) : neglectedFeature ? (
             <button
               onClick={() => router.push(neglectedFeature.href)}
               className={`w-full rounded-2xl p-5 flex items-center gap-4 text-left border active:scale-[0.98] transition-transform shadow-sm ${
@@ -315,21 +550,50 @@ export default function TodayPage() {
               </div>
               <span className="text-neutral-300 text-xl flex-shrink-0">›</span>
             </button>
-          </section>
-        )}
+          ) : null}
+        </section>
 
         {/* SECTION 3 — RELATIONSHIP INSIGHT */}
-        {insight && (
+        {articleInsight && (
           <section>
             <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
-              Something Nora noticed
+              Worth reading
             </div>
-            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-6">
-              <p className="text-[18px] text-neutral-900 leading-[1.5]"
-                 style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                {insight}
-              </p>
-            </div>
+            {noraCommentary && (
+              <div className="bg-white rounded-xl border-l-4 border-[#E8614D] px-4 py-3 mb-3">
+                <p className="text-[13px] text-neutral-500 italic leading-relaxed">{noraCommentary}</p>
+              </div>
+            )}
+            <a href={articleInsight.url} target="_blank" rel="noopener noreferrer" className="block">
+              <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-5">
+                <div className="flex items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className="inline-block px-2 py-0.5 rounded-full text-white text-[10px] font-bold"
+                        style={{ backgroundColor: articleInsight.sourceColor || '#3D3580' }}
+                      >
+                        {articleInsight.source}
+                      </span>
+                      <span className="text-[11px] text-neutral-400">5 min read</span>
+                    </div>
+                    <p className="text-[18px] text-neutral-900 leading-snug"
+                       style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
+                      {articleInsight.title}
+                    </p>
+                    {articleInsight.description && (
+                      <p className="text-[12px] text-neutral-400 mt-1.5 line-clamp-2 leading-relaxed">
+                        {articleInsight.description}
+                      </p>
+                    )}
+                    <span className="inline-block mt-3 text-[13px] font-semibold text-[#E8614D]">Read →</span>
+                  </div>
+                  <div className="w-14 h-14 rounded-xl bg-neutral-100 flex-shrink-0 flex items-center justify-center text-2xl">
+                    📖
+                  </div>
+                </div>
+              </div>
+            </a>
           </section>
         )}
 
@@ -337,7 +601,7 @@ export default function TodayPage() {
         {spotlight && (
           <section>
             <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
-              Have you tried this?
+              Try this together
             </div>
             <button
               onClick={() => router.push(spotlight.href)}

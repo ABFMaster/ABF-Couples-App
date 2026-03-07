@@ -721,3 +721,21 @@ Partner one creates date/trip/flirt. Partner two receives notification with prev
 - Blocked (include blocker)
 - Completed (move to changelog)
 - Cancelled (include reason)
+
+## Session 2026-03-07
+
+### Deferred / Backlog
+
+- **Nora commentary on content** — Nora reacts contextually to user actions within a page (e.g. user adds a movie, Nora comments on the choice with personality). Requires significant knowledge base. High delight potential. Defer to v2.
+
+- **Nora persistent widget** — Let the need reveal itself organically. Revisit once Nora's intelligence layer is more built out. Don't force familiar UI patterns.
+
+- **Feature progression / trial retention arc** — Features visible day 1 but Nora's depth unlocks with engagement. "First date with Nora" framing. Map full progression arc when core experience is solid.
+
+- **Nora knowledge library** — Gottman research, attachment theory depth, love language interaction patterns, culturally informed dynamics. Build the wing when architecture is ready.
+
+- **Couples debrief — test end to end** — Waiting on Cass to retake assessment with new module format. Card is built and waiting on dashboard.
+
+- **Today tab — personalized feed logic** — Wire Nora's data signals to surface the single most relevant action per day per user.
+
+- **Us tab — feature hub** — Date Night, Trips, Timeline need clear entry points from Us tab.
