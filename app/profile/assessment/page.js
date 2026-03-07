@@ -248,6 +248,28 @@ export default function ProfileAssessmentPage() {
         console.error('Love language save error:', err)
       }
 
+      // Pre-load Nora debrief opener for when user taps "Talk to Nora"
+      try {
+        const topModule = moduleResults
+          .filter(r => r?.title && r?.insights?.headline)
+          .sort((a, b) => (b.percentage || 0) - (a.percentage || 0))[0]
+        const loveNeedsResult = moduleResults.find(r => r?.moduleId === 'love_needs')
+        const loveNeedsStrength = loveNeedsResult?.insights?.strengths?.[0]
+
+        const opener = [
+          `I've just finished reading through your profile — and there's a lot here worth talking about.`,
+          topModule ? `Your strongest dimension is ${topModule.title}: "${topModule.insights.headline}". That tells me something important about how you show up in relationships.` : null,
+          loveNeedsStrength ? `And when it comes to how you need to feel loved — ${loveNeedsStrength.toLowerCase()} came through clearly.` : null,
+          `I want to walk you through what all of this means for you — and for your relationship. Where would you like to start?`
+        ].filter(Boolean).join(' ')
+
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('nora_opener', opener)
+        }
+      } catch (err) {
+        console.error('Nora opener error:', err)
+      }
+
       // Navigate to results
       router.push('/profile/assessment/results')
     } catch (err) {

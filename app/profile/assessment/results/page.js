@@ -308,7 +308,7 @@ export default function ProfileResultsPage() {
         {/* Actions */}
         <div className="mt-8 flex flex-col gap-3">
           <button
-            onClick={() => router.push('/ai-coach')}
+            onClick={() => router.push('/ai-coach?new=true')}
             className="w-full min-h-[54px] bg-[#E8614D] text-white rounded-xl font-semibold text-[16px] active:scale-[0.98] transition-transform"
           >
             Talk to Nora about this →
