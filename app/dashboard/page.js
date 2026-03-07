@@ -122,6 +122,7 @@ export default function Dashboard() {
   const [userName, setUserName]                 = useState('there')
   const [couple, setCouple]                     = useState(null)
   const [partnerName, setPartnerName]           = useState('your partner')
+  const [showCouplesDebrief, setShowCouplesDebrief] = useState(false)
   const [hasPartner, setHasPartner]             = useState(false)
   const [connectCode, setConnectCode]           = useState(null)
   const [inviteDismissed, setInviteDismissed]   = useState(true)
@@ -338,6 +339,41 @@ export default function Dashboard() {
         })(),
 
       ])
+
+      // Check if both partners have completed the new-format assessment
+      try {
+        const [myAssessment, partnerAssessment] = await Promise.all([
+          supabase
+            .from('relationship_assessments')
+            .select('id, results')
+            .eq('user_id', user.id)
+            .not('completed_at', 'is', null)
+            .order('completed_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+            .then(({ data }) => data),
+          supabase
+            .from('relationship_assessments')
+            .select('id, results')
+            .eq('user_id', partnerId)
+            .not('completed_at', 'is', null)
+            .order('completed_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+            .then(({ data }) => data),
+        ])
+        const myModules = myAssessment?.results?.modules
+        const partnerModules = partnerAssessment?.results?.modules
+        const bothHaveNewFormat =
+          Array.isArray(myModules) && myModules[0]?.moduleId === 'processing_style' &&
+          Array.isArray(partnerModules) && partnerModules[0]?.moduleId === 'processing_style'
+        const dismissed = localStorage.getItem('abf_couples_debrief_dismissed') === 'true'
+        if (bothHaveNewFormat && !dismissed) {
+          setShowCouplesDebrief(true)
+        }
+      } catch (err) {
+        console.error('Couples debrief check error:', err)
+      }
 
       // Fetch Nora trigger (non-blocking)
       generateNoraTrigger(user.id, coupleData.id, null, null)
@@ -560,6 +596,46 @@ export default function Dashboard() {
           </div>
 
         </section>
+
+        {/* COUPLES DEBRIEF CARD */}
+        {showCouplesDebrief && (
+          <section>
+            <div className="bg-white border border-[#E8614D]/20 rounded-2xl p-5 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-[#E8614D]/5 -translate-y-8 translate-x-8 pointer-events-none" />
+              <button
+                onClick={() => {
+                  localStorage.setItem('abf_couples_debrief_dismissed', 'true')
+                  setShowCouplesDebrief(false)
+                }}
+                className="absolute top-4 right-4 w-6 h-6 flex items-center justify-center text-neutral-300 hover:text-neutral-500"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#252048] to-[#6B4A72] flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-sm font-bold">N</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-bold text-neutral-800 mb-1">You both have profiles now</p>
+                  <p className="text-[13px] text-neutral-500 leading-relaxed mb-4">Nora has read both of yours. She wants to walk you through what your combination means — what works naturally and what to watch for.</p>
+                  <button
+                    onClick={() => {
+                      if (typeof window !== 'undefined') {
+                        sessionStorage.setItem('nora_opener', `${userName || 'Hey'} — I've now read both your profile and ${partnerName}'s. Your combination is really interesting and I want to walk you through it together. There's a lot here about how you naturally complement each other, and a few things worth being mindful of. Where would you like to start — what works, or what to watch for?`)
+                      }
+                      localStorage.setItem('abf_couples_debrief_dismissed', 'true')
+                      setShowCouplesDebrief(false)
+                      router.push('/ai-coach?new=true')
+                    }}
+                    className="w-full min-h-[44px] bg-[#E8614D] text-white rounded-xl text-[14px] font-semibold active:scale-[0.98] transition-transform"
+                  >
+                    Meet with Nora →
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* SECTION 2 — PRIMARY ACTION */}
         {nextDate && (
