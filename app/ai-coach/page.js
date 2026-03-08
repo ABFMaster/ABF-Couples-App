@@ -127,7 +127,14 @@ function AiCoachContent() {
       ? Date.now() - new Date(recentConv.updated_at).getTime() > 24 * 60 * 60 * 1000
       : true;
 
-    if (recentConv && !isStale && !isNewSession) {
+    // Check localStorage for pending couples debrief FIRST — takes priority over resume
+    const pendingCouplesOpener = typeof window !== 'undefined'
+      ? localStorage.getItem('nora_pending_couples_opener')
+      : null;
+
+    if (pendingCouplesOpener) {
+      setPendingOpener(pendingCouplesOpener);
+    } else if (recentConv && !isStale && !isNewSession) {
       // Resume recent conversation (only when not forced fresh)
       await loadConversation(recentConv.id, session);
     } else {
