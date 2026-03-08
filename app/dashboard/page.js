@@ -342,7 +342,7 @@ export default function Dashboard() {
 
       // Check if both partners have completed the new-format assessment
       try {
-        const [myAssessment, partnerAssessment] = await Promise.all([
+        const [myAssessment, partnerAssessment, myProfile] = await Promise.all([
           supabase
             .from('relationship_assessments')
             .select('id, results')
@@ -361,13 +361,20 @@ export default function Dashboard() {
             .limit(1)
             .maybeSingle()
             .then(({ data }) => data),
+          supabase
+            .from('user_profiles')
+            .select('couples_debrief_dismissed')
+            .eq('user_id', user.id)
+            .maybeSingle()
+            .then(({ data }) => data),
         ])
         const myModules = myAssessment?.results?.modules
         const partnerModules = partnerAssessment?.results?.modules
         const bothHaveNewFormat =
           Array.isArray(myModules) && myModules[0]?.moduleId === 'processing_style' &&
           Array.isArray(partnerModules) && partnerModules[0]?.moduleId === 'processing_style'
-        const dismissed = localStorage.getItem('abf_couples_debrief_dismissed') === 'true'
+        const dismissed = myProfile?.couples_debrief_dismissed === true
+          || localStorage.getItem('abf_couples_debrief_dismissed') === 'true'
         if (bothHaveNewFormat && !dismissed) {
           setShowCouplesDebrief(true)
         }
@@ -606,6 +613,7 @@ export default function Dashboard() {
                 onClick={() => {
                   localStorage.setItem('abf_couples_debrief_dismissed', 'true')
                   setShowCouplesDebrief(false)
+                  supabase.from('user_profiles').update({ couples_debrief_dismissed: true }).eq('user_id', user.id).then(() => {}).catch(() => {})
                 }}
                 className="absolute top-4 right-4 w-6 h-6 flex items-center justify-center text-neutral-300 hover:text-neutral-500"
               >
@@ -627,6 +635,7 @@ export default function Dashboard() {
                       }
                       localStorage.setItem('abf_couples_debrief_dismissed', 'true')
                       setShowCouplesDebrief(false)
+                      supabase.from('user_profiles').update({ couples_debrief_dismissed: true }).eq('user_id', user.id).then(() => {}).catch(() => {})
                       router.push('/ai-coach?new=true')
                     }}
                     className="w-full min-h-[44px] bg-[#E8614D] text-white rounded-xl text-[14px] font-semibold active:scale-[0.98] transition-transform"
