@@ -621,7 +621,9 @@ export default function Dashboard() {
                   <button
                     onClick={() => {
                       if (typeof window !== 'undefined') {
-                        sessionStorage.setItem('nora_opener', `${userName || 'Hey'} — I've now read both your profile and ${partnerName}'s. Your combination is really interesting and I want to walk you through it together. There's a lot here about how you naturally complement each other, and a few things worth being mindful of. Where would you like to start — what works, or what to watch for?`)
+                        const opener = `${userName || 'Hey'} — I've now read both your profile and ${partnerName}'s. Your combination is really interesting and I want to walk you through it together. There's a lot here about how you naturally complement each other, and a few things worth being mindful of. Where would you like to start — what works, or what to watch for?`
+                        sessionStorage.setItem('nora_opener', opener)
+                        localStorage.setItem('nora_pending_couples_opener', opener)
                       }
                       localStorage.setItem('abf_couples_debrief_dismissed', 'true')
                       setShowCouplesDebrief(false)

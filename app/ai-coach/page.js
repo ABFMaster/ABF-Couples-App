@@ -24,11 +24,19 @@ function AiCoachContent() {
   const [checkinContext, setCheckinContext] = useState(null);
   const [proactivePrompt, setProactivePrompt] = useState(null);
   const [dismissedProactivePrompt, setDismissedProactivePrompt] = useState(false);
+  const [pendingOpener, setPendingOpener] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
   useEffect(() => {
     checkAuth();
+  }, []);
+
+  useEffect(() => {
+    const pending = typeof window !== 'undefined'
+      ? localStorage.getItem('nora_pending_couples_opener')
+      : null;
+    if (pending) setPendingOpener(pending);
   }, []);
 
   // Check for pre-filled prompt from URL
@@ -359,6 +367,41 @@ function AiCoachContent() {
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="max-w-2xl mx-auto">
+          {/* Couples debrief invitation card */}
+          {pendingOpener && messages.length === 0 && (
+            <div className="mb-6 bg-gradient-to-br from-[#252048] via-[#3E3585] to-[#6B4A72] rounded-2xl p-5 relative overflow-hidden">
+              <div className="relative">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-2 h-2 rounded-full bg-[#F2A090] animate-pulse" />
+                  <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-white/40">Nora</span>
+                </div>
+                <p className="text-white text-[17px] leading-[1.5] mb-5"
+                   style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
+                  I've read both your profiles. I know what comes naturally to you two — and where it gets hard. Ready to talk about what I found?
+                </p>
+                <button
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      sessionStorage.setItem('nora_opener', pendingOpener);
+                      localStorage.removeItem('nora_pending_couples_opener');
+                    }
+                    setPendingOpener(null);
+                    setMessages([{
+                      id: 'opener-' + Date.now(),
+                      role: 'assistant',
+                      content: pendingOpener,
+                      created_at: new Date().toISOString(),
+                      isOpener: true,
+                    }]);
+                  }}
+                  className="w-full min-h-[48px] bg-[#E8614D] text-white rounded-xl font-semibold text-[15px] active:scale-[0.98] transition-transform"
+                >
+                  Let's talk →
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Empty state / Welcome message */}
           {messages.length === 0 && (
             <div className="text-center py-12">
