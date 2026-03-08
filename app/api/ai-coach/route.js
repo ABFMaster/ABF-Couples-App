@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildCoachContext, formatContextForPrompt, getRecentActivity, getConversationHistory } from '@/lib/ai-coach-context';
+import { getNoraBriefing } from '@/lib/nora-knowledge';
 
 // ── NORA PERSONA ──────────────────────────────────────────────────────────────
 
@@ -205,6 +206,38 @@ export async function POST(request) {
     const contextString = formatContextForPrompt(context);
     const recentActivity = getRecentActivity(context);
 
+    // ── NORA BRIEFING ──────────────────────────────────────────────
+    let noraBriefing = '';
+    try {
+      const { data: coupleRow } = await supabase
+        .from('couples')
+        .select('user1_id, user2_id')
+        .eq('id', coupleId)
+        .maybeSingle();
+      const partnerId = coupleRow
+        ? (coupleRow.user1_id === user.id ? coupleRow.user2_id : coupleRow.user1_id)
+        : null;
+
+      const [{ data: userProfile }, { data: partnerProfile }] = await Promise.all([
+        supabase
+          .from('user_profiles')
+          .select('display_name, attachment_style, conflict_style, love_language_primary')
+          .eq('user_id', user.id)
+          .maybeSingle(),
+        partnerId
+          ? supabase
+              .from('user_profiles')
+              .select('display_name, attachment_style, conflict_style, love_language_primary')
+              .eq('user_id', partnerId)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+
+      noraBriefing = getNoraBriefing(userProfile, partnerProfile);
+    } catch (err) {
+      console.error('Nora briefing error:', err);
+    }
+
     // ── RECENT ACTIVITY OPENER ─────────────────────────────────────
     let activityOpener = '';
     if (recentActivity) {
@@ -227,7 +260,7 @@ export async function POST(request) {
     const sessionFocusNote = sessionType === 'couples_debrief'
       ? '\n\nSESSION FOCUS: This is a couples debrief session. The user has just completed their profile assessment and so has their partner. Your entire focus for this conversation is walking them through what their combination means — what works naturally between them, and what to watch for. Do not mention check-ins, streaks, or other features. Stay completely focused on their profiles and what you know about how they work together. This is a significant moment — treat it as such.'
       : '';
-    const fullSystemPrompt = NORA_SYSTEM_PROMPT + '\n\n' + contextString + activityNote + sessionFocusNote;
+    const fullSystemPrompt = NORA_SYSTEM_PROMPT + '\n\n' + contextString + (noraBriefing ? '\n\n' + noraBriefing : '') + activityNote + sessionFocusNote;
 
     // ── CALL CLAUDE ────────────────────────────────────────────────
     if (!process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY) {
