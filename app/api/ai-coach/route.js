@@ -149,7 +149,7 @@ export async function POST(request) {
     }
 
     // ── PARSE REQUEST ──────────────────────────────────────────────
-    const { message, conversationId, coupleId } = await request.json();
+    const { message, conversationId, coupleId, sessionType } = await request.json();
 
     if (!message?.trim()) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
@@ -218,10 +218,16 @@ export async function POST(request) {
     }
 
     // ── FULL SYSTEM PROMPT ────────────────────────────────────────────
+    if (sessionType === 'couples_debrief') {
+      activityOpener = '';
+    }
     const activityNote = activityOpener
       ? `\n\nRECENT ACTIVITY AWARENESS:\nAt the start of the very first message (only), lightly mention: "${activityOpener}" — but only once, and don't push it if they want to talk about something else.`
       : ''
-    const fullSystemPrompt = NORA_SYSTEM_PROMPT + '\n\n' + contextString + activityNote;
+    const sessionFocusNote = sessionType === 'couples_debrief'
+      ? '\n\nSESSION FOCUS: This is a couples debrief session. The user has just completed their profile assessment and so has their partner. Your entire focus for this conversation is walking them through what their combination means — what works naturally between them, and what to watch for. Do not mention check-ins, streaks, or other features. Stay completely focused on their profiles and what you know about how they work together. This is a significant moment — treat it as such.'
+      : '';
+    const fullSystemPrompt = NORA_SYSTEM_PROMPT + '\n\n' + contextString + activityNote + sessionFocusNote;
 
     // ── CALL CLAUDE ────────────────────────────────────────────────
     if (!process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY) {

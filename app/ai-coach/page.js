@@ -25,6 +25,7 @@ function AiCoachContent() {
   const [proactivePrompt, setProactivePrompt] = useState(null);
   const [dismissedProactivePrompt, setDismissedProactivePrompt] = useState(false);
   const [pendingOpener, setPendingOpener] = useState(null);
+  const [sessionType, setSessionType] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -257,6 +258,7 @@ function AiCoachContent() {
           message: userMessage,
           conversationId,
           coupleId,
+          sessionType,
         }),
       });
 
@@ -393,6 +395,7 @@ function AiCoachContent() {
                       localStorage.removeItem('nora_pending_couples_opener');
                     }
                     setPendingOpener(null);
+                    setSessionType('couples_debrief');
                     setMessages([{
                       id: 'opener-' + Date.now(),
                       role: 'assistant',
