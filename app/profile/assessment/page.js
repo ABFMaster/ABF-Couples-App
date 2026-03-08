@@ -189,6 +189,13 @@ export default function ProfileAssessmentPage() {
 
       const completedAt = new Date().toISOString()
 
+      // Fetch couple_id for the assessment record
+      const { data: coupleData } = await supabase
+        .from('couples')
+        .select('id')
+        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+        .maybeSingle()
+
       // Single database operation - either update or insert
       if (existingProfile) {
         // Update existing assessment with all data at once
@@ -199,6 +206,7 @@ export default function ProfileAssessmentPage() {
             results,
             completed_at: completedAt,
             updated_at: completedAt,
+            couple_id: coupleData?.id ?? null,
           })
           .eq('id', existingProfile.id)
 
@@ -215,6 +223,7 @@ export default function ProfileAssessmentPage() {
             answers: finalAnswers,
             results,
             completed_at: completedAt,
+            couple_id: coupleData?.id ?? null,
           }, { onConflict: 'user_id' })
 
         if (error) {
