@@ -166,18 +166,19 @@ Components: Card, PrimaryButton, IconContainer, SectionHeader, ReflectionCard, A
 ---
 
 ## PENDING / NEXT UP
-1. **Cass retakes assessment** → test couples debrief end to end
-2. **Today tab** — wire Nora data signals to personalized feed logic
-3. **Us tab** — add Date Night, Trips, Timeline entry points (feature hub)
-4. **Nora knowledge library** — Gottman research, attachment theory, love language interaction patterns
-5. **Trial retention arc** — feature depth unlocks with engagement ("first date with Nora" framing)
+1. **Us tab** — add Date Night, Trips, Timeline entry points (feature hub)
+2. **Nora knowledge library** — Gottman research, attachment theory, love language interaction patterns
+3. **Invite flow** — "Matt responded to a question about you" web preview page
+4. **Retention mechanics** — streak surfacing, habit anchor notifications, question quality
+5. **Trial retention arc** — feature depth unlocks with engagement
 6. **Feature progression** — map full arc of what Nora unlocks as she learns more about the couple
 
-## BACKLOG (DEFERRED)
-- Nora commentary on content (movie/song reactions) — v2
-- Nora persistent widget — let need reveal organically
-- Loop 3 micro-interactions — not yet built
-- Layout flash on first load — monitoring
+## CLEANUP BACKLOG
+- Assessment save needs to write couple_id automatically on completion
+- Conflict style schema mismatch: code uses 'validator' but DB constraint allows only: talk_immediately, need_space, write_it_out, avoid — needs remapping
+- Today tab Section 1: question/reaction mismatch — fix when Nora question library is built
+- Today tab Section 3: Nora attribution card needs pulse dot + "Nora" label to make it clear it's her voice
+- Nora avatar: replace frightened emoji with something warmer
 
 ---
 
