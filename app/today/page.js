@@ -87,6 +87,8 @@ export default function TodayPage() {
   const [reactionSaved, setReactionSaved] = useState(false)
   const [reactionInput, setReactionInput] = useState('')
   const autoSaveTimer = useRef(null)
+  const [inviteCopied, setInviteCopied] = useState(false)
+  const [inviteLoading, setInviteLoading] = useState(false)
 
   // Section 2 — partner coaching
   const [partnerLoveLanguage, setPartnerLoveLanguage] = useState(null)
@@ -115,6 +117,14 @@ export default function TodayPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
       setUserId(user.id)
+
+      // Record visit time and clear nav badge (fire-and-forget)
+      supabase
+        .from('user_profiles')
+        .update({ last_today_visit: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .then(() => window.dispatchEvent(new CustomEvent('clearTodayBadge')))
+        .catch(() => {})
 
       const { data: couple } = await supabase
         .from('couples')
@@ -396,6 +406,43 @@ export default function TodayPage() {
     return coaching[partnerLoveLanguage] || null
   }
 
+  async function copyInviteLink() {
+    if (inviteLoading) return
+    setInviteLoading(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/invite/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ prompt: noraSurprise, reaction: todayReaction, note: todayNote }),
+      })
+      const json = await res.json()
+      if (json.token) {
+        const url = `${window.location.origin}/invite/${json.token}`
+        try {
+          await navigator.clipboard.writeText(url)
+        } catch {
+          // fallback for environments without clipboard API
+          const el = document.createElement('textarea')
+          el.value = url
+          document.body.appendChild(el)
+          el.select()
+          document.execCommand('copy')
+          document.body.removeChild(el)
+        }
+        setInviteCopied(true)
+        setTimeout(() => setInviteCopied(false), 2000)
+      }
+    } catch (err) {
+      console.error('copyInviteLink error:', err)
+    } finally {
+      setInviteLoading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F7F4EF] flex items-center justify-center">
@@ -491,6 +538,19 @@ export default function TodayPage() {
                       {partnerName} said: {partnerReaction}{partnerNote ? ` — ${partnerNote}` : ''}
                     </p>
                   )}
+                </div>
+              )}
+
+              {reactionSaved && partnerName === 'your partner' && (
+                <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
+                  <p className="text-white/50 text-[13px]">Share this with your partner</p>
+                  <button
+                    onClick={copyInviteLink}
+                    disabled={inviteLoading}
+                    className="text-[13px] font-semibold text-white/80 hover:text-white transition-colors disabled:opacity-50"
+                  >
+                    {inviteCopied ? 'Link copied!' : inviteLoading ? 'Copying…' : 'Copy invite link →'}
+                  </button>
                 </div>
               )}
             </div>

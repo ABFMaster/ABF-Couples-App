@@ -338,6 +338,32 @@ export default function Dashboard() {
           } catch { /* ignore */ }
         })(),
 
+        // Today badge — partner responded to today's Nora prompt
+        partnerId ? (async () => {
+          try {
+            const today = new Date().toISOString().split('T')[0]
+            const [{ data: partnerResponse }, { data: myVisit }] = await Promise.all([
+              supabase
+                .from('today_responses')
+                .select('created_at')
+                .eq('user_id', partnerId)
+                .eq('prompt_date', today)
+                .maybeSingle(),
+              supabase
+                .from('user_profiles')
+                .select('last_today_visit')
+                .eq('user_id', user.id)
+                .maybeSingle(),
+            ])
+            if (
+              partnerResponse &&
+              (!myVisit?.last_today_visit || new Date(partnerResponse.created_at) > new Date(myVisit.last_today_visit))
+            ) {
+              window.dispatchEvent(new CustomEvent('setTodayBadge'))
+            }
+          } catch { /* ignore */ }
+        })() : Promise.resolve(),
+
       ])
 
       // Check if both partners have completed the new-format assessment

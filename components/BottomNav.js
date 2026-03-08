@@ -14,7 +14,7 @@ const TABS = [
   { href: '/profile',   icon: User,     label: 'Profile' },
 ]
 
-export default function BottomNav() {
+export default function BottomNav({ badgeTabs = {} }) {
   const pathname = usePathname()
 
   if (EXCLUDED.some(p => pathname.startsWith(p))) return null
@@ -26,6 +26,8 @@ export default function BottomNav() {
           const active =
             pathname === tab.href ||
             (tab.href !== '/dashboard' && pathname.startsWith(tab.href))
+          const tabKey = tab.href.replace('/', '') || 'dashboard'
+          const hasBadge = !!badgeTabs[tabKey]
           return (
             <Link
               key={tab.href}
@@ -34,7 +36,12 @@ export default function BottomNav() {
                 active ? 'text-[#E8614D]' : 'text-gray-400 hover:text-gray-600'
               }`}
             >
-              <tab.icon size={22} strokeWidth={1.75} />
+              <div className="relative">
+                <tab.icon size={22} strokeWidth={1.75} />
+                {hasBadge && (
+                  <span className="absolute top-0 right-0 w-2 h-2 bg-[#E8614D] rounded-full" />
+                )}
+              </div>
               <span className={`text-[10px] font-semibold tracking-wide ${active ? 'text-[#E8614D]' : 'text-gray-400'}`}>
                 {tab.label}
               </span>
