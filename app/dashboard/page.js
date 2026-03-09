@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { todayPST } from '@/lib/date-utils'
 import { generateNoraTrigger } from '@/lib/nora-triggers'
+import { registerPushSubscription } from '@/lib/push-notifications'
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -163,6 +164,9 @@ export default function Dashboard() {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) { router.push('/login'); return }
       setUser(user)
+      if (typeof window !== 'undefined') {
+        registerPushSubscription(supabase, user.id).catch((err) => console.error('Push reg error:', err))
+      }
 
       const { data: coupleData } = await supabase
         .from('couples')

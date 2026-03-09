@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { notifyPartnerTodayResponse } from '@/lib/notify'
 
 const FEATURE_SPOTLIGHTS = [
   {
@@ -103,9 +104,10 @@ export default function TodayPage() {
   const [myConflictStyle, setMyConflictStyle] = useState(null)
   const [myLoveLanguage, setMyLoveLanguage] = useState(null)
 
-  // IDs needed for today_responses upsert
+  // IDs needed for today_responses upsert + notifications
   const [userId, setUserId] = useState(null)
   const [coupleId, setCoupleId] = useState(null)
+  const [partnerId, setPartnerId] = useState(null)
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -135,6 +137,7 @@ export default function TodayPage() {
       setCoupleId(couple.id)
 
       const partnerId = couple.user1_id === user.id ? couple.user2_id : couple.user1_id
+      setPartnerId(partnerId)
       const days = Math.floor((Date.now() - new Date(couple.created_at).getTime()) / 86400000)
       setDaysTogether(days)
 
@@ -369,6 +372,9 @@ export default function TodayPage() {
         }, { onConflict: 'user_id,prompt_date' })
       setTodayNote(note)
       setReactionSaved(true)
+      if (partnerId && userName) {
+        notifyPartnerTodayResponse(supabase, partnerId, userName, reaction).catch(() => {})
+      }
     } catch (err) {
       console.error('Save reaction error:', err)
     }
