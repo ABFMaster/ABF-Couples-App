@@ -156,7 +156,6 @@ function OnboardingFlow() {
   const [checkinTime, setCheckinTime] = useState(null)
   const [hobbies, setHobbies] = useState([])
   const [datePrefs, setDatePrefs] = useState([])
-  const [stressResponse, setStressResponse] = useState('')
   const [step3Saving, setStep3Saving] = useState(false)
   const [step3Error, setStep3Error] = useState('')
 
@@ -207,7 +206,7 @@ function OnboardingFlow() {
       // Check if display_name is already set
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('display_name, partner_display_name, hobbies, date_preferences, preferred_checkin_time, stress_response')
+        .select('display_name, partner_display_name, hobbies, date_preferences, preferred_checkin_time')
         .eq('user_id', authUser.id)
         .maybeSingle()
 
@@ -218,7 +217,6 @@ function OnboardingFlow() {
         setHobbies(profile.hobbies || [])
         setDatePrefs(profile.date_preferences || [])
         setCheckinTime(profile.preferred_checkin_time || null)
-        setStressResponse(profile.stress_response || '')
         setStep(2)
         return
       }
@@ -227,7 +225,6 @@ function OnboardingFlow() {
         setHobbies(profile.hobbies || [])
         setDatePrefs(profile.date_preferences || [])
         setCheckinTime(profile.preferred_checkin_time || null)
-        setStressResponse(profile.stress_response || '')
       }
 
       setStep(1)
@@ -336,7 +333,6 @@ function OnboardingFlow() {
           hobbies,
           date_preferences: datePrefs,
           preferred_checkin_time: checkinTime,
-          stress_response: stressResponse,
           updated_at: new Date().toISOString(),
         }, { onConflict: 'user_id' })
 
@@ -589,20 +585,6 @@ function OnboardingFlow() {
                 </div>
               </div>
 
-              {/* Stress response */}
-              <div>
-                <p className="text-sm font-semibold text-gray-700 mb-1">
-                  When stressed, I need…{' '}
-                  <span className="text-gray-400 font-normal">(optional)</span>
-                </p>
-                <textarea
-                  value={stressResponse}
-                  onChange={e => setStressResponse(e.target.value)}
-                  placeholder="e.g., A hug, some space, words of reassurance…"
-                  rows={3}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-coral-300 focus:border-transparent resize-none"
-                />
-              </div>
             </div>
 
             <button

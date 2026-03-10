@@ -23,13 +23,9 @@ const LOVE_LANGUAGE_LABELS = {
 }
 
 const CONFLICT_STYLE_LABELS = {
-  talk_immediately: 'Talk it out right away',
-  need_space: 'Take some space first',
-  write_it_out: 'Write it out',
-  avoid: 'Let it cool down',
-  validator: 'Validator',
+  validating: 'Validator',
   volatile: 'Passionate Fighter',
-  avoider: 'Peacekeeper',
+  avoiding: 'Peacekeeper',
   hostile: 'Reactive Fighter',
 }
 
