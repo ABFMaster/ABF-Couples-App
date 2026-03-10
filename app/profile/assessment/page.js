@@ -7,6 +7,7 @@ import {
   PROFILE_MODULES,
   PROFILE_QUESTIONS,
   generateProfileInsights,
+  scoreFullAssessment,
   PROFILE_ATTRIBUTION,
 } from '@/lib/individual-profile-questions'
 
@@ -232,44 +233,40 @@ export default function ProfileAssessmentPage() {
         }
       }
 
-      // Extract and save love language from love_needs module
+      // Save all profile dimensions to user_profiles
       try {
-        const loveNeedsResult = moduleResults.find(r => r?.moduleId === 'love_needs')
-        if (loveNeedsResult?.traits) {
-          const t = loveNeedsResult.traits
-          let loveLanguage = null
-          const scores = {
-            touch: t.touch_need || 0,
-            words: t.verbal_intimacy || 0,
-            quality_time: t.quality_time || 0,
-            acts: t.acts || 0,
-          }
-          const dominant = Object.entries(scores).sort((a, b) => b[1] - a[1])[0]
-          if (dominant && dominant[1] > 0) loveLanguage = dominant[0]
-          if (loveLanguage) {
-            await supabase
-              .from('user_profiles')
-              .update({ love_language_primary: loveLanguage })
-              .eq('user_id', user.id)
-          }
-        }
+        const fullScore = scoreFullAssessment(finalAnswers)
+        await supabase
+          .from('user_profiles')
+          .update({
+            love_language_primary: fullScore.love_language_primary,
+            love_language_profile: fullScore.love_language_profile,
+            conflict_style: fullScore.conflict_style,
+            conflict_secondary: fullScore.conflict_secondary,
+            attachment_style: fullScore.attachment_style,
+            attachment_anxiety_score: fullScore.attachment_anxiety,
+            attachment_avoidance_score: fullScore.attachment_avoidance,
+            flooding_prone: fullScore.flooding_prone,
+            repair_style: fullScore.repair_style,
+            assessment_completed_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id)
       } catch (err) {
-        console.error('Love language save error:', err)
+        console.error('Profile dimensions save error:', err)
       }
 
       // Pre-load Nora debrief opener for when user taps "Talk to Nora"
       try {
-        const topModule = moduleResults
-          .filter(r => r?.title && r?.insights?.headline)
-          .sort((a, b) => (b.percentage || 0) - (a.percentage || 0))[0]
-        const loveNeedsResult = moduleResults.find(r => r?.moduleId === 'love_needs')
-        const loveNeedsStrength = loveNeedsResult?.insights?.strengths?.[0]
+        const conflictResult = moduleResults.find(r => r?.moduleId === 'conflict_style')
+        const attachmentResult = moduleResults.find(r => r?.moduleId === 'attachment_style')
+        const loveResult = moduleResults.find(r => r?.moduleId === 'love_language')
 
         const opener = [
-          `I've just finished reading through your profile — and there's a lot here worth talking about.`,
-          topModule ? `Your strongest dimension is ${topModule.title}: "${topModule.insights.headline}". That tells me something important about how you show up in relationships.` : null,
-          loveNeedsStrength ? `And when it comes to how you need to feel loved — ${loveNeedsStrength.toLowerCase()} came through clearly.` : null,
-          `I want to walk you through what all of this means for you — and for your relationship. Where would you like to start?`
+          `I've just finished reading through your profile — and there's quite a bit here worth talking about.`,
+          conflictResult?.insights?.headline ? `When it comes to conflict: "${conflictResult.insights.headline}".` : null,
+          attachmentResult?.insights?.headline ? `In how you connect: "${attachmentResult.insights.headline}".` : null,
+          loveResult?.insights?.headline ? `And in how love lands for you: "${loveResult.insights.headline}".` : null,
+          `I want to walk you through what all of this means for your relationship. Where would you like to start?`
         ].filter(Boolean).join(' ')
 
         if (typeof window !== 'undefined') {
