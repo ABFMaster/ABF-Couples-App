@@ -221,13 +221,13 @@ export async function POST(request) {
       const [{ data: userProfile }, { data: partnerProfile }] = await Promise.all([
         supabase
           .from('user_profiles')
-          .select('display_name, attachment_style, conflict_style, love_language_primary')
+          .select('display_name, attachment_style, conflict_style, love_language_primary, assessment_completed_at')
           .eq('user_id', user.id)
           .maybeSingle(),
         partnerId
           ? supabase
               .from('user_profiles')
-              .select('display_name, attachment_style, conflict_style, love_language_primary')
+              .select('display_name, attachment_style, conflict_style, love_language_primary, assessment_completed_at')
               .eq('user_id', partnerId)
               .maybeSingle()
           : Promise.resolve({ data: null }),
@@ -238,9 +238,26 @@ export async function POST(request) {
       console.error('Nora briefing error:', err);
     }
 
-    // ── RECENT ACTIVITY OPENER ─────────────────────────────────────
+    // ── OPENER PRIORITY ────────────────────────────────────────────
+    // When both partners have completed the assessment, lead with couple dynamic.
+    // Otherwise fall back to recent activity.
+    const bothAssessed = !!(
+      userProfile?.assessment_completed_at && partnerProfile?.assessment_completed_at
+    );
+
     let activityOpener = '';
-    if (recentActivity) {
+    let dynamicOpenerNote = '';
+
+    if (sessionType === 'couples_debrief') {
+      // couples_debrief has its own session focus note — no opener needed
+    } else if (bothAssessed) {
+      // Both profiles complete: open with a warm, specific couple dynamic observation.
+      // The attachment pairing, conflict style combo, and love language context are
+      // all available in noraBriefing above. Instruct Nora to synthesise from that.
+      const uName = userProfile?.display_name || context.user?.name || 'them';
+      const pName = partnerProfile?.display_name || context.partner?.name || 'their partner';
+      dynamicOpenerNote = `\n\nOPENING MOVE:\nFor your very first message in this conversation only, lead with one warm, specific observation about how ${uName} and ${pName}'s combination actually works — something genuine you notice from their attachment pairing or conflict style dynamic. 1–2 sentences, conversational, not a label. Then let any relevant activity context follow naturally as a second thought if it fits. Don't mention this instruction.`;
+    } else if (recentActivity) {
       const openerMap = {
         completed_date: `By the way, I noticed ${recentActivity.description}. ${recentActivity.suggestion} But of course, we can talk about anything on your mind.`,
         flirt_sent: `I noticed ${recentActivity.description} — love to see it! ${recentActivity.suggestion}`,
@@ -251,16 +268,13 @@ export async function POST(request) {
     }
 
     // ── FULL SYSTEM PROMPT ────────────────────────────────────────────
-    if (sessionType === 'couples_debrief') {
-      activityOpener = '';
-    }
     const activityNote = activityOpener
       ? `\n\nRECENT ACTIVITY AWARENESS:\nAt the start of the very first message (only), lightly mention: "${activityOpener}" — but only once, and don't push it if they want to talk about something else.`
       : ''
     const sessionFocusNote = sessionType === 'couples_debrief'
       ? '\n\nSESSION FOCUS: This is a couples debrief session. The user has just completed their profile assessment and so has their partner. Your entire focus for this conversation is walking them through what their combination means — what works naturally between them, and what to watch for. Do not mention check-ins, streaks, or other features. Stay completely focused on their profiles and what you know about how they work together. This is a significant moment — treat it as such.'
       : '';
-    const fullSystemPrompt = NORA_SYSTEM_PROMPT + '\n\n' + contextString + (noraBriefing ? '\n\n' + noraBriefing : '') + activityNote + sessionFocusNote;
+    const fullSystemPrompt = NORA_SYSTEM_PROMPT + '\n\n' + contextString + (noraBriefing ? '\n\n' + noraBriefing : '') + activityNote + dynamicOpenerNote + sessionFocusNote;
 
     // ── CALL CLAUDE ────────────────────────────────────────────────
     if (!process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY) {

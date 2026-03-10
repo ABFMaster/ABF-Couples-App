@@ -236,8 +236,6 @@ export default function ProfileAssessmentPage() {
 
       // Save all profile dimensions to user_profiles
       const fullScore = scoreFullAssessment(finalAnswers)
-      console.log('[Assessment] finalAnswers keys:', Object.keys(finalAnswers))
-      console.log('[Assessment] fullScore:', JSON.stringify(fullScore))
       const { error: profileError } = await supabase
         .from('user_profiles')
         .update({
