@@ -208,6 +208,8 @@ export async function POST(request) {
 
     // ── NORA BRIEFING ──────────────────────────────────────────────
     let noraBriefing = '';
+    let userProfile = null;
+    let partnerProfile = null;
     try {
       const { data: coupleRow } = await supabase
         .from('couples')
@@ -218,7 +220,7 @@ export async function POST(request) {
         ? (coupleRow.user1_id === user.id ? coupleRow.user2_id : coupleRow.user1_id)
         : null;
 
-      const [{ data: userProfile }, { data: partnerProfile }] = await Promise.all([
+      [{ data: userProfile }, { data: partnerProfile }] = await Promise.all([
         supabase
           .from('user_profiles')
           .select('display_name, attachment_style, conflict_style, conflict_secondary, love_language_primary, love_language_profile, attachment_anxiety_score, attachment_avoidance_score, flooding_prone, repair_style, assessment_completed_at')
