@@ -38,7 +38,25 @@ export async function POST(request) {
     )
 
     const sent = results.filter(r => r.status === 'fulfilled').length
-    return Response.json({ sent })
+    const errors = results
+      .filter(r => r.status === 'rejected')
+      .map(r => r.reason?.message || String(r.reason))
+    console.error('Push errors:', errors)
+
+    // Remove expired subscriptions
+    for (let i = 0; i < results.length; i++) {
+      if (results[i].status === 'rejected') {
+        const reason = results[i].reason
+        if (reason?.statusCode === 410 || reason?.statusCode === 404) {
+          const endpoint = subscriptions[i].subscription?.endpoint
+          if (endpoint) {
+            await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint)
+          }
+        }
+      }
+    }
+
+    return Response.json({ sent, errors })
   } catch (err) {
     console.error('Push send error:', err)
     return Response.json({ error: err.message }, { status: 500 })
