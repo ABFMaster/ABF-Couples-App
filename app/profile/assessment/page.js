@@ -21,6 +21,7 @@ export default function ProfileAssessmentPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState({})
   const [moduleIntroShown, setModuleIntroShown] = useState(false)
+  const [noraIntroShown, setNoraIntroShown] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [existingProfile, setExistingProfile] = useState(null)
 
@@ -291,6 +292,53 @@ export default function ProfileAssessmentPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent mx-auto mb-4"></div>
           <p className="text-[#6B7280] text-lg">Loading your profile...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Nora Intro Screen — shown once before assessment starts, only if no answers yet
+  if (!noraIntroShown && Object.keys(answers).length === 0) {
+    return (
+      <div className="min-h-screen bg-[#F8F6F3] flex flex-col items-center justify-center px-4 py-10">
+        <div className="max-w-md w-full">
+          {/* Nora header */}
+          <div className="flex items-center gap-3 mb-6">
+            <img src="/nora-avatar.svg" alt="Nora" className="w-10 h-10 rounded-full flex-shrink-0 shadow-md" />
+            <span className="text-[13px] font-semibold text-[#E8614D] tracking-wide uppercase">Nora</span>
+          </div>
+
+          {/* Message card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-[#E5E2DD] p-6 md:p-8">
+            <p className="text-[#2D3648] font-semibold text-base mb-4">
+              Before we start — a few things worth knowing.
+            </p>
+            <div className="space-y-4 text-[#6B7280] text-[15px] leading-relaxed">
+              <p>
+                These questions don't have right or wrong answers. They're designed to help me
+                understand how you move through relationships, not grade you on it.
+              </p>
+              <p>
+                You might find some questions harder to answer than you expect. That's normal —
+                it usually means something worth paying attention to.
+              </p>
+              <p>
+                Your answers will evolve over time, and so will my understanding of you. This
+                is a starting point, not a verdict.
+              </p>
+              <p>
+                I'll be here when you're done if you want to talk through what came up.
+              </p>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <button
+            onClick={() => setNoraIntroShown(true)}
+            className="mt-6 w-full bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white py-4 rounded-full font-bold text-lg hover:opacity-90 transition-opacity"
+          >
+            Let's begin
+          </button>
         </div>
       </div>
     )
