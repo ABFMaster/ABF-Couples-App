@@ -221,13 +221,13 @@ export async function POST(request) {
       const [{ data: userProfile }, { data: partnerProfile }] = await Promise.all([
         supabase
           .from('user_profiles')
-          .select('display_name, attachment_style, conflict_style, love_language_primary, assessment_completed_at')
+          .select('display_name, attachment_style, conflict_style, conflict_secondary, love_language_primary, love_language_profile, attachment_anxiety_score, attachment_avoidance_score, flooding_prone, repair_style, assessment_completed_at')
           .eq('user_id', user.id)
           .maybeSingle(),
         partnerId
           ? supabase
               .from('user_profiles')
-              .select('display_name, attachment_style, conflict_style, love_language_primary, assessment_completed_at')
+              .select('display_name, attachment_style, conflict_style, conflict_secondary, love_language_primary, love_language_profile, attachment_anxiety_score, attachment_avoidance_score, flooding_prone, repair_style, assessment_completed_at')
               .eq('user_id', partnerId)
               .maybeSingle()
           : Promise.resolve({ data: null }),
