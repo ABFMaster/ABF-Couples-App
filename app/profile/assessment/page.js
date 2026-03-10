@@ -234,27 +234,26 @@ export default function ProfileAssessmentPage() {
       }
 
       // Save all profile dimensions to user_profiles
-      try {
-        const fullScore = scoreFullAssessment(finalAnswers)
-        console.log('[Assessment] finalAnswers keys:', Object.keys(finalAnswers))
-        console.log('[Assessment] fullScore:', JSON.stringify(fullScore))
-        await supabase
-          .from('user_profiles')
-          .update({
-            love_language_primary: fullScore.love_language_primary,
-            love_language_profile: fullScore.love_language_profile,
-            conflict_style: fullScore.conflict_style,
-            conflict_secondary: fullScore.conflict_secondary,
-            attachment_style: fullScore.attachment_style,
-            attachment_anxiety_score: fullScore.attachment_anxiety,
-            attachment_avoidance_score: fullScore.attachment_avoidance,
-            flooding_prone: fullScore.flooding_prone,
-            repair_style: fullScore.repair_style,
-            assessment_completed_at: new Date().toISOString(),
-          })
-          .eq('user_id', user.id)
-      } catch (err) {
-        console.error('Profile dimensions save error:', err)
+      const fullScore = scoreFullAssessment(finalAnswers)
+      console.log('[Assessment] finalAnswers keys:', Object.keys(finalAnswers))
+      console.log('[Assessment] fullScore:', JSON.stringify(fullScore))
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .update({
+          love_language_primary: fullScore.love_language_primary,
+          love_language_profile: fullScore.love_language_profile,
+          conflict_style: fullScore.conflict_style,
+          conflict_secondary: fullScore.conflict_secondary,
+          attachment_style: fullScore.attachment_style,
+          attachment_anxiety_score: fullScore.attachment_anxiety,
+          attachment_avoidance_score: fullScore.attachment_avoidance,
+          flooding_prone: fullScore.flooding_prone,
+          repair_style: fullScore.repair_style,
+          assessment_completed_at: new Date().toISOString(),
+        })
+        .eq('user_id', user.id)
+      if (profileError) {
+        console.error('[Assessment] Profile save error:', JSON.stringify(profileError))
       }
 
       // Pre-load Nora debrief opener for when user taps "Talk to Nora"
