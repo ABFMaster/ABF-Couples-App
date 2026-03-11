@@ -314,9 +314,11 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Failed to save AI response' }, { status: 500 });
     }
 
-    maybeUpdateNoraMemory(activeConversationId, coupleId, supabase).catch(err =>
-      console.error('[NoraMemory] Background update failed:', err)
-    );
+    try {
+      await maybeUpdateNoraMemory(activeConversationId, coupleId, supabase);
+    } catch (err) {
+      console.error('[NoraMemory] Memory update failed:', err);
+    }
 
     // ── INCREMENT USAGE (after successful AI call) ─────────────────
     let messagesRemaining = null;
