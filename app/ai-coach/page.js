@@ -202,7 +202,7 @@ function AiCoachContent() {
       }
 
       // Build a warm opener message from recent activity
-      if (data.recentActivity) {
+      if (data.recentActivity && !data.hasMemory) {
         const { type, description, suggestion } = data.recentActivity;
         const nameGreeting = data.userName ? `Hey ${data.userName}! ` : 'Hey! ';
 

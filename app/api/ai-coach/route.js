@@ -377,7 +377,9 @@ export async function GET(request) {
         const context = await buildCoachContext(user.id, openerCoupleId, supabase);
         const activity = getRecentActivity(context);
         const userName = context.user?.name || null;
-        return NextResponse.json({ recentActivity: activity, userName, messagesRemaining, isPremium: premium });
+        const memoryData = await getNoraMemory(openerCoupleId, supabase);
+        const hasMemory = !!memoryData;
+        return NextResponse.json({ recentActivity: activity, userName, messagesRemaining, isPremium: premium, hasMemory });
       } catch (e) {
         console.error('Coach opener error:', e);
         return NextResponse.json({ recentActivity: null, userName: null, messagesRemaining, isPremium: premium });
