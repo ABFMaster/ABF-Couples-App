@@ -311,12 +311,13 @@ export default function TodayPage() {
     const channel = supabase
       .channel(`spark-${coupleId}-${today}`)
       .on('postgres_changes', {
-        event: 'INSERT',
+        event: '*',
         schema: 'public',
         table: 'today_responses',
         filter: `couple_id=eq.${coupleId}`
       }, payload => {
         if (
+          (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') &&
           payload.new.user_id === partnerId &&
           payload.new.spark_answer &&
           payload.new.prompt_date === today
