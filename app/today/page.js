@@ -421,7 +421,7 @@ export default function TodayPage() {
   const submitSparkAnswer = async () => {
     if (!userId || !coupleId || !sparkAnswer.trim() || !todaySparkQuestion) return
     try {
-      await supabase
+      const { error: sparkError } = await supabase
         .from('today_responses')
         .upsert({
           user_id: userId,
@@ -431,6 +431,7 @@ export default function TodayPage() {
           spark_answer: sparkAnswer.trim(),
           spark_submitted_at: new Date().toISOString(),
         }, { onConflict: 'user_id,prompt_date' })
+      if (sparkError) console.error('Spark save error detail:', JSON.stringify(sparkError))
       setSparkSubmitted(true)
     } catch (err) {
       console.error('Submit spark error:', err)
