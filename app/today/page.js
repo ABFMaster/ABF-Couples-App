@@ -274,6 +274,7 @@ export default function TodayPage() {
               setPartnerNote(theirs.note || '')
               if (theirs.spark_answer) {
                 setPartnerHasAnswered(true)
+                window.dispatchEvent(new CustomEvent('setTodayBadge'))
                 setPartnerSparkAnswer(theirs.spark_answer)
                 if (mine?.spark_answer) {
                   setSparkRevealed(true)
@@ -322,6 +323,7 @@ export default function TodayPage() {
           payload.new.prompt_date === today
         ) {
           setPartnerHasAnswered(true)
+          window.dispatchEvent(new CustomEvent('setTodayBadge'))
           setPartnerSparkAnswer(payload.new.spark_answer)
         }
       })
