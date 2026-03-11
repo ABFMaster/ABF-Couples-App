@@ -280,6 +280,16 @@ export default function TodayPage() {
                 }
               }
             }
+            if (theirs?.spark_question && !mine?.spark_answer) {
+              const eligible = sparkQuestionsData.filter(q => {
+                if (days < 30) return q.level === 1
+                if (days < 90) return q.level <= 2
+                return true
+              })
+              const found = eligible.find(q => q.question === theirs.spark_question)
+                || sparkQuestionsData.find(q => q.question === theirs.spark_question)
+              if (found) setOverrideSparkQuestion(found)
+            }
           } catch { /* table may not exist yet */ }
         })(),
 
@@ -464,18 +474,22 @@ export default function TodayPage() {
   }
 
   const handleSparkSkip = async () => {
-    if (partnerHasAnswered) return
+    if (partnerHasAnswered || sparkSubmitted) return
     const newSkipCount = sparkSkipCount + 1
     setSparkSkipCount(newSkipCount)
 
     if (newSkipCount >= 3) return
 
+    let newQuestion
     if (newSkipCount === 2) {
       const allLevel1 = sparkQuestionsData.filter(q => q.level === 1)
-      setOverrideSparkQuestion(allLevel1[(getDayIndex() + 1) % allLevel1.length])
+      newQuestion = allLevel1[(getDayIndex() + 1) % allLevel1.length]
+      setOverrideSparkQuestion(newQuestion)
     } else {
       setOverrideSparkQuestion(null)
-      setSparkQuestionIndex(prev => (prev + 1) % Math.max(eligibleSparkQuestions.length, 1))
+      const newIndex = (sparkQuestionIndex + 1) % Math.max(eligibleSparkQuestions.length, 1)
+      setSparkQuestionIndex(newIndex)
+      newQuestion = eligibleSparkQuestions[newIndex]
     }
 
     setSparkAnswer('')
@@ -486,14 +500,14 @@ export default function TodayPage() {
     setNoraSparkReaction('')
     hasGeneratedReaction.current = false
 
-    if (userId && coupleId) {
+    if (userId && coupleId && newQuestion) {
       await supabase
         .from('today_responses')
         .upsert({
           user_id: userId,
           couple_id: coupleId,
           prompt_date: getTodayString(),
-          spark_question: null,
+          spark_question: newQuestion.question,
           spark_answer: null,
           spark_submitted_at: null,
         }, { onConflict: 'user_id,prompt_date' })
