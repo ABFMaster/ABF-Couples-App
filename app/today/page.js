@@ -154,11 +154,7 @@ export default function TodayPage() {
       setUserId(user.id)
 
       // Record visit time (fire-and-forget)
-      supabase
-        .from('user_profiles')
-        .update({ last_today_visit: new Date().toISOString() })
-        .eq('user_id', user.id)
-        .catch(() => {})
+      ;(async () => { try { await supabase.from('user_profiles').update({ last_today_visit: new Date().toISOString() }).eq('user_id', user.id) } catch {} })()
 
       const { data: couple } = await supabase
         .from('couples')
