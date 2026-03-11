@@ -269,7 +269,7 @@ export default function TodayPage() {
               setPartnerNote(theirs.note || '')
               if (theirs.spark_answer) {
                 setPartnerHasAnswered(true)
-                window.dispatchEvent(new CustomEvent('setTodayBadge'))
+                if (!mine?.spark_answer) window.dispatchEvent(new CustomEvent('setTodayBadge'))
                 setPartnerSparkAnswer(theirs.spark_answer)
                 if (mine?.spark_answer) {
                   setSparkRevealed(true)
@@ -392,6 +392,11 @@ export default function TodayPage() {
       generateSparkReaction(todaySparkQuestion.question, sparkAnswer, partnerSparkAnswer)
     }
   }, [sparkSubmitted, partnerSparkAnswer, todaySparkQuestion]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clear badge once the reveal is visible
+  useEffect(() => {
+    if (sparkRevealed) window.dispatchEvent(new CustomEvent('clearTodayBadge'))
+  }, [sparkRevealed])
 
   // Article insight fetch
   useEffect(() => {
