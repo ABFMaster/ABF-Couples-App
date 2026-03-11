@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildCoachContext, formatContextForPrompt, getRecentActivity, getConversationHistory } from '@/lib/ai-coach-context';
 import { getNoraBriefing } from '@/lib/nora-knowledge';
+import { maybeUpdateNoraMemory, getNoraMemory } from '@/lib/nora-memory';
 
 // ── NORA PERSONA ──────────────────────────────────────────────────────────────
 
@@ -240,6 +241,8 @@ export async function POST(request) {
       console.error('Nora briefing error:', err);
     }
 
+    const noraMemory = await getNoraMemory(coupleId, supabase);
+
     // ── OPENER PRIORITY ────────────────────────────────────────────
     // When both partners have completed the assessment, lead with couple dynamic.
     // Otherwise fall back to recent activity.
@@ -276,7 +279,7 @@ export async function POST(request) {
     const sessionFocusNote = sessionType === 'couples_debrief'
       ? '\n\nSESSION FOCUS: This is a couples debrief session. The user has just completed their profile assessment and so has their partner. Your entire focus for this conversation is walking them through what their combination means — what works naturally between them, and what to watch for. Do not mention check-ins, streaks, or other features. Stay completely focused on their profiles and what you know about how they work together. This is a significant moment — treat it as such.'
       : '';
-    const fullSystemPrompt = NORA_SYSTEM_PROMPT + '\n\n' + contextString + (noraBriefing ? '\n\n' + noraBriefing : '') + activityNote + dynamicOpenerNote + sessionFocusNote;
+    const fullSystemPrompt = NORA_SYSTEM_PROMPT + '\n\n' + contextString + (noraBriefing ? '\n\n' + noraBriefing : '') + activityNote + dynamicOpenerNote + sessionFocusNote + (noraMemory ? `\n\nWHAT NORA REMEMBERS ABOUT THIS COUPLE:\nThese are your private notes from previous conversations. Use them to make this conversation feel continuous — reference what you know naturally, never announce that you remember something. Just know it.\n\n${noraMemory}` : '');
 
     // ── CALL CLAUDE ────────────────────────────────────────────────
     if (!process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY) {
@@ -310,6 +313,10 @@ export async function POST(request) {
       console.error('Error saving AI response:', aiMsgError);
       return NextResponse.json({ error: 'Failed to save AI response' }, { status: 500 });
     }
+
+    maybeUpdateNoraMemory(activeConversationId, coupleId, supabase).catch(err =>
+      console.error('[NoraMemory] Background update failed:', err)
+    );
 
     // ── INCREMENT USAGE (after successful AI call) ─────────────────
     let messagesRemaining = null;
