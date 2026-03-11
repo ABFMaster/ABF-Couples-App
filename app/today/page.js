@@ -153,12 +153,11 @@ export default function TodayPage() {
       if (!user) { router.push('/login'); return }
       setUserId(user.id)
 
-      // Record visit time and clear nav badge (fire-and-forget)
+      // Record visit time (fire-and-forget)
       supabase
         .from('user_profiles')
         .update({ last_today_visit: new Date().toISOString() })
         .eq('user_id', user.id)
-        .then(() => window.dispatchEvent(new CustomEvent('clearTodayBadge')))
         .catch(() => {})
 
       const { data: couple } = await supabase
@@ -469,6 +468,7 @@ export default function TodayPage() {
           spark_submitted_at: new Date().toISOString(),
         }, { onConflict: 'user_id,prompt_date' })
       if (sparkError) console.error('Spark save error detail:', JSON.stringify(sparkError))
+      window.dispatchEvent(new CustomEvent('clearTodayBadge'))
       setSparkSubmitted(true)
     } catch (err) {
       console.error('Submit spark error:', err)
