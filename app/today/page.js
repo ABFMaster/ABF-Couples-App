@@ -294,6 +294,31 @@ export default function TodayPage() {
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
+  // Realtime subscription — detect partner spark answer without page reload
+  useEffect(() => {
+    if (!coupleId || !partnerId) return
+    const today = getTodayString()
+    const channel = supabase
+      .channel(`spark-${coupleId}-${today}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'today_responses',
+        filter: `couple_id=eq.${coupleId}`
+      }, payload => {
+        if (
+          payload.new.user_id === partnerId &&
+          payload.new.spark_answer &&
+          payload.new.prompt_date === today
+        ) {
+          setPartnerHasAnswered(true)
+          setPartnerSparkAnswer(payload.new.spark_answer)
+        }
+      })
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [coupleId, partnerId])
+
   // Compute derived state after data loads
   useEffect(() => {
     if (loading) return
@@ -438,7 +463,7 @@ export default function TodayPage() {
     }
   }
 
-  const handleSparkSkip = () => {
+  const handleSparkSkip = async () => {
     if (partnerHasAnswered) return
     const newSkipCount = sparkSkipCount + 1
     setSparkSkipCount(newSkipCount)
@@ -448,11 +473,31 @@ export default function TodayPage() {
     if (newSkipCount === 2) {
       const allLevel1 = sparkQuestionsData.filter(q => q.level === 1)
       setOverrideSparkQuestion(allLevel1[(getDayIndex() + 1) % allLevel1.length])
-      return
+    } else {
+      setOverrideSparkQuestion(null)
+      setSparkQuestionIndex(prev => (prev + 1) % Math.max(eligibleSparkQuestions.length, 1))
     }
 
-    setOverrideSparkQuestion(null)
-    setSparkQuestionIndex(prev => (prev + 1) % Math.max(eligibleSparkQuestions.length, 1))
+    setSparkAnswer('')
+    setSparkSubmitted(false)
+    setPartnerSparkAnswer('')
+    setPartnerHasAnswered(false)
+    setSparkRevealed(false)
+    setNoraSparkReaction('')
+    hasGeneratedReaction.current = false
+
+    if (userId && coupleId) {
+      await supabase
+        .from('today_responses')
+        .upsert({
+          user_id: userId,
+          couple_id: coupleId,
+          prompt_date: getTodayString(),
+          spark_question: null,
+          spark_answer: null,
+          spark_submitted_at: null,
+        }, { onConflict: 'user_id,prompt_date' })
+    }
   }
 
   const handleReaction = (reaction) => {
