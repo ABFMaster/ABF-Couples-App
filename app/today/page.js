@@ -71,7 +71,7 @@ function getTodayString() {
 
 function getTodayGameType() {
   const day = new Date().getDay() // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
-  if (day === 3) return 'bet'
+  if (day === 3) return 'spark'
   if (day === 5) return 'ritual'
   if (day === 6) return 'bet_live'
   if (day === 0) return 'reflection'
