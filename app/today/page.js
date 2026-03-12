@@ -319,12 +319,13 @@ export default function TodayPage() {
         if (
           (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') &&
           payload.new.user_id === partnerId &&
-          payload.new.spark_answer &&
           payload.new.prompt_date === today
         ) {
-          setPartnerHasAnswered(true)
-          if (!sparkSubmitted) window.dispatchEvent(new CustomEvent('setTodayBadge'))
-          setPartnerSparkAnswer(payload.new.spark_answer)
+          if (payload.new.spark_answer) {
+            setPartnerHasAnswered(true)
+            if (!sparkSubmitted) window.dispatchEvent(new CustomEvent('setTodayBadge'))
+            setPartnerSparkAnswer(payload.new.spark_answer)
+          }
         }
       })
       .subscribe()
