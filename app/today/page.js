@@ -141,10 +141,6 @@ export default function TodayPage() {
   const hasGeneratedReaction = useRef(false)
   const sparkSubmittedRef = useRef(false)
 
-  // Nora flirt state
-  const [noraFlirt, setNoraFlirt] = useState(null)
-  const [noraFlirtLoading, setNoraFlirtLoading] = useState(false)
-  const [noraFlirtSent, setNoraFlirtSent] = useState(false)
 
   const todaySparkQuestion = overrideSparkQuestion || eligibleSparkQuestions[sparkQuestionIndex] || null
 
@@ -552,40 +548,6 @@ export default function TodayPage() {
     }
   }
 
-  const generateNoraFlirt = async () => {
-    setNoraFlirtLoading(true)
-    setNoraFlirt(null)
-    try {
-      const response = await fetch('/api/flirt/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ partnerName, partnerLoveLanguage, userName }),
-      })
-      const data = await response.json()
-      if (data.flirt) setNoraFlirt(data.flirt)
-    } catch (e) {
-      console.error('Flirt generate error:', e)
-    } finally {
-      setNoraFlirtLoading(false)
-    }
-  }
-
-  const sendNoraFlirt = async () => {
-    if (!noraFlirt || !userId || !coupleId || !partnerId) return
-    try {
-      await supabase.from('flirts').insert({
-        couple_id: coupleId,
-        sender_id: userId,
-        receiver_id: partnerId,
-        message: noraFlirt,
-        type: 'text',
-        nora_generated: true,
-      })
-      setNoraFlirtSent(true)
-    } catch (e) {
-      console.error('Send flirt error:', e)
-    }
-  }
 
   const handleReaction = (reaction) => {
     if (reactionSaved) return
@@ -1046,49 +1008,6 @@ export default function TodayPage() {
           ) : null}
         </section>
 
-        {/* SECTION 2B — NORA FLIRT */}
-        {partnerLoveLanguage && (
-          <section>
-            <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
-              A flirt from Nora
-            </div>
-            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-5">
-              {noraFlirtSent ? (
-                <p className="text-[13px] font-medium text-[#E8614D]">Sent to {partnerName} ✓</p>
-              ) : noraFlirt ? (
-                <div>
-                  <p className="text-[18px] text-neutral-900 leading-snug mb-4"
-                     style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                    {noraFlirt}
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={sendNoraFlirt}
-                      className="px-4 py-2 bg-[#E8614D] text-white rounded-full text-[13px] font-semibold"
-                    >
-                      Send to {partnerName}
-                    </button>
-                    <button
-                      onClick={() => { setNoraFlirtSent(false); generateNoraFlirt() }}
-                      className="px-4 py-2 bg-neutral-100 text-neutral-600 rounded-full text-[13px] font-semibold"
-                    >
-                      Get another
-                    </button>
-                  </div>
-                </div>
-              ) : noraFlirtLoading ? (
-                <p className="text-[12px] text-neutral-400">Nora is thinking…</p>
-              ) : (
-                <button
-                  onClick={generateNoraFlirt}
-                  className="px-4 py-2 bg-neutral-100 text-neutral-700 rounded-full text-[13px] font-semibold"
-                >
-                  Get a flirt idea
-                </button>
-              )}
-            </div>
-          </section>
-        )}
 
         {/* SECTION 3 — RELATIONSHIP INSIGHT */}
         {articleInsight && (
