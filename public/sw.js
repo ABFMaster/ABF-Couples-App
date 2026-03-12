@@ -10,6 +10,7 @@ self.addEventListener('push', function(event) {
       vibrate: [100, 50, 100],
     })
   )
+  if (navigator.setAppBadge) { navigator.setAppBadge(1) }
 })
 
 self.addEventListener('notificationclick', function(event) {
@@ -17,4 +18,9 @@ self.addEventListener('notificationclick', function(event) {
   event.waitUntil(
     clients.openWindow(event.notification.data.url || '/')
   )
+  if (navigator.clearAppBadge) { navigator.clearAppBadge() }
+})
+
+self.addEventListener('activate', function(event) {
+  if (navigator.clearAppBadge) { navigator.clearAppBadge() }
 })
