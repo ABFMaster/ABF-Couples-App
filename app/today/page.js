@@ -1006,6 +1006,24 @@ export default function TodayPage() {
               <span className="text-neutral-300 text-xl flex-shrink-0">›</span>
             </button>
           ) : null}
+
+          <button
+            onClick={() => router.push('/flirts')}
+            className="w-full mt-3 bg-white rounded-2xl border border-neutral-200 shadow-sm p-5 flex items-center gap-4 text-left active:scale-[0.98] transition-transform"
+          >
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 mb-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#F2A090]" />
+                <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400">Nora</span>
+              </div>
+              <p className="text-[16px] text-neutral-900 leading-snug"
+                 style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
+                Send {partnerName} something
+              </p>
+              <p className="text-[12px] text-neutral-400 mt-0.5">Nora has an idea for you</p>
+            </div>
+            <span className="text-neutral-300 text-xl flex-shrink-0">›</span>
+          </button>
         </section>
 
 
