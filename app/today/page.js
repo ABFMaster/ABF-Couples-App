@@ -139,6 +139,7 @@ export default function TodayPage() {
   const [overrideSparkQuestion, setOverrideSparkQuestion] = useState(null)
   const [sparkSkipCount, setSparkSkipCount] = useState(0)
   const hasGeneratedReaction = useRef(false)
+  const sparkSubmittedRef = useRef(false)
 
   const todaySparkQuestion = overrideSparkQuestion || eligibleSparkQuestions[sparkQuestionIndex] || null
 
@@ -262,6 +263,7 @@ export default function TodayPage() {
               if (mine.spark_answer) {
                 setSparkAnswer(mine.spark_answer)
                 setSparkSubmitted(true)
+                sparkSubmittedRef.current = true
               }
             }
             if (theirs) {
@@ -323,7 +325,7 @@ export default function TodayPage() {
         ) {
           if (payload.new.spark_answer) {
             setPartnerHasAnswered(true)
-            if (!sparkSubmitted) window.dispatchEvent(new CustomEvent('setTodayBadge'))
+            if (!sparkSubmittedRef.current) window.dispatchEvent(new CustomEvent('setTodayBadge'))
             setPartnerSparkAnswer(payload.new.spark_answer)
           }
         }
@@ -476,6 +478,7 @@ export default function TodayPage() {
         }, { onConflict: 'user_id,prompt_date' })
       if (sparkError) console.error('Spark save error detail:', JSON.stringify(sparkError))
       window.dispatchEvent(new CustomEvent('clearTodayBadge'))
+      sparkSubmittedRef.current = true
       setSparkSubmitted(true)
     } catch (err) {
       console.error('Submit spark error:', err)
@@ -502,6 +505,7 @@ export default function TodayPage() {
     }
 
     setSparkAnswer('')
+    sparkSubmittedRef.current = false
     setSparkSubmitted(false)
     setPartnerSparkAnswer('')
     setPartnerHasAnswered(false)
