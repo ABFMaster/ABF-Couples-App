@@ -771,13 +771,14 @@ export default function TodayPage() {
                     </div>
                   </div>
                   <div className="mt-4 pt-4 border-t border-neutral-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-2 h-2 rounded-full bg-[#F2A090] animate-pulse" />
+                      <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400">Nora</span>
+                    </div>
                     {noraSparkReaction ? (
-                      <div className="flex items-start gap-2">
-                        <div className="w-2 h-2 rounded-full bg-[#F2A090] animate-pulse mt-1.5 flex-shrink-0" />
-                        <p className="text-[13px] text-neutral-500 italic leading-relaxed">
-                          {noraSparkReaction}
-                        </p>
-                      </div>
+                      <p className="text-[13px] text-neutral-500 italic leading-relaxed">
+                        {noraSparkReaction}
+                      </p>
                     ) : (
                       <p className="text-[12px] text-neutral-400">Nora is thinking…</p>
                     )}
