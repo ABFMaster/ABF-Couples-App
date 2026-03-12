@@ -47,7 +47,12 @@ export default function NoraConversation({
         }),
       })
       const data = await res.json()
-      const content = data.content || ''
+      const content = data.content
+
+      if (!content) {
+        console.error('[NoraConversation] empty response:', data)
+        return
+      }
 
       const assistantMsg = { role: 'assistant', content }
       const finalMessages = [...nextMessages, assistantMsg]
