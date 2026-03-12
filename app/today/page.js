@@ -409,10 +409,14 @@ export default function TodayPage() {
     }
   }, [sparkSubmitted, partnerSparkAnswer, todaySparkQuestion]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Clear badge once the reveal is visible
+  // Clear badge and record reveal seen once the reveal is visible
   useEffect(() => {
-    if (sparkRevealed) window.dispatchEvent(new CustomEvent('clearTodayBadge'))
-  }, [sparkRevealed])
+    if (!sparkRevealed) return
+    window.dispatchEvent(new CustomEvent('clearTodayBadge'))
+    if (userId && coupleId) {
+      ;(async () => { try { await supabase.from('today_responses').upsert({ user_id: userId, couple_id: coupleId, prompt_date: getTodayString(), spark_reveal_seen_at: new Date().toISOString() }, { onConflict: 'user_id,prompt_date' }) } catch {} })()
+    }
+  }, [sparkRevealed, userId, coupleId])
 
   // Article insight fetch
   useEffect(() => {

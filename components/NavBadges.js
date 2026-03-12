@@ -23,7 +23,7 @@ export default function NavBadges() {
 
       const { data } = await supabase
         .from('today_responses')
-        .select('user_id, spark_answer')
+        .select('user_id, spark_answer, spark_reveal_seen_at')
         .eq('couple_id', couple.id)
         .eq('prompt_date', today)
 
@@ -31,6 +31,8 @@ export default function NavBadges() {
       const theirs = data?.find(r => r.user_id === partnerId)
 
       if (theirs?.spark_answer && !mine?.spark_answer) {
+        setTodayHasBadge(true)
+      } else if (theirs?.spark_answer && mine?.spark_answer && !mine?.spark_reveal_seen_at) {
         setTodayHasBadge(true)
       } else {
         setTodayHasBadge(false)
