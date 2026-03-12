@@ -250,7 +250,7 @@ export default function TodayPage() {
           try {
             const { data } = await supabase
               .from('today_responses')
-              .select('user_id, reaction, note, spark_question, spark_answer, spark_submitted_at')
+              .select('user_id, reaction, note, spark_question, spark_answer, spark_submitted_at, spark_nora_reaction')
               .eq('couple_id', couple.id)
               .eq('prompt_date', today)
             if (!data) return
@@ -264,6 +264,10 @@ export default function TodayPage() {
                 setSparkAnswer(mine.spark_answer)
                 setSparkSubmitted(true)
                 sparkSubmittedRef.current = true
+              }
+              if (mine.spark_nora_reaction) {
+                setNoraSparkReaction(mine.spark_nora_reaction)
+                hasGeneratedReaction.current = true
               }
             }
             if (theirs) {
@@ -457,7 +461,19 @@ export default function TodayPage() {
         body: JSON.stringify({ question, myAnswer, partnerAnswer, userName, partnerName })
       })
       const data = await response.json()
-      if (data.reaction) setNoraSparkReaction(data.reaction)
+      if (data.reaction) {
+        setNoraSparkReaction(data.reaction)
+        if (userId && coupleId) {
+          await supabase
+            .from('today_responses')
+            .upsert({
+              user_id: userId,
+              couple_id: coupleId,
+              prompt_date: getTodayString(),
+              spark_nora_reaction: data.reaction,
+            }, { onConflict: 'user_id,prompt_date' })
+        }
+      }
     } catch (e) {
       console.error('Spark reaction error:', e)
     }
