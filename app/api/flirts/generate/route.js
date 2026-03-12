@@ -1,7 +1,6 @@
-import { createClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
-import { cookies } from 'next/headers'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -11,15 +10,9 @@ export async function POST(request) {
   try {
     const { partnerId } = await request.json()
 
-    const cookieStore = cookies()
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      {
-        cookies: {
-          get(name) { return cookieStore.get(name)?.value },
-        },
-      }
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     )
 
     const { data: { user } } = await supabase.auth.getUser()

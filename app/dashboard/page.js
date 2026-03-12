@@ -705,7 +705,7 @@ export default function Dashboard() {
             {displayActions.map(action => (
               <button
                 key={action.id}
-                onClick={() => window.location.href = action.href}
+                onClick={() => router.push(action.href)}
                 className={`rounded-2xl p-4 min-h-[120px] flex flex-col text-left border active:scale-[0.97] transition-transform ${
                   action.urgent
                     ? 'bg-[#FEF3F1] border-[#F5C9C2]'
