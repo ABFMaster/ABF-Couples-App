@@ -269,12 +269,16 @@ export default function TodayPage() {
               setPartnerNote(theirs.note || '')
               if (theirs.spark_answer) {
                 setPartnerHasAnswered(true)
-                if (!mine?.spark_answer) window.dispatchEvent(new CustomEvent('setTodayBadge'))
                 setPartnerSparkAnswer(theirs.spark_answer)
                 if (mine?.spark_answer) {
                   setSparkRevealed(true)
                 }
               }
+            }
+            if (theirs?.spark_answer && !mine?.spark_answer) {
+              window.dispatchEvent(new CustomEvent('setTodayBadge'))
+            } else if (mine?.spark_answer) {
+              window.dispatchEvent(new CustomEvent('clearTodayBadge'))
             }
             if (theirs?.spark_question && !mine?.spark_answer) {
               const eligible = sparkQuestionsData.filter(q => {
@@ -319,7 +323,7 @@ export default function TodayPage() {
           payload.new.prompt_date === today
         ) {
           setPartnerHasAnswered(true)
-          window.dispatchEvent(new CustomEvent('setTodayBadge'))
+          if (!sparkSubmitted) window.dispatchEvent(new CustomEvent('setTodayBadge'))
           setPartnerSparkAnswer(payload.new.spark_answer)
         }
       })
