@@ -106,7 +106,7 @@ Respond with a JSON object only, no other text:
     const { data: saved, error: saveError } = await supabase
       .from('flirts')
       .insert({
-        user_id: userId,
+        sender_id: userId,
         partner_id: partnerId,
         mode: flirtData.mode,
         suggestion: flirtData.suggestion,

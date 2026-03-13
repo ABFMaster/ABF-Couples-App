@@ -89,7 +89,7 @@ export default function FlirtsPage() {
       const { data: past } = await supabase
         .from('flirts')
         .select('id, mode, suggestion, nora_note, created_at')
-        .eq('user_id', user.id)
+        .eq('sender_id', user.id)
         .eq('nora_generated', true)
         .order('created_at', { ascending: false })
         .limit(5)
