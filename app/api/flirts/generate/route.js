@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { searchGifs } from '@/lib/giphy'
 import { searchMovies, searchShows } from '@/lib/omdb'
+import { searchSpotifyTracks } from '@/lib/spotify'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -121,10 +122,9 @@ Respond with a JSON object only, no other text:
 
     if (flirtData.mode === 'song') {
       try {
-        const spotifyRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/spotify/search?q=${encodeURIComponent(flirtData.suggestion)}&userId=${userId}`)
-        const spotifyData = await spotifyRes.json()
-        if (spotifyData.tracks?.[0]) {
-          const track = spotifyData.tracks[0]
+        const tracks = await searchSpotifyTracks(supabase, userId, flirtData.suggestion)
+        if (tracks?.[0]) {
+          const track = tracks[0]
           enriched.spotify_track_id = track.id
           enriched.spotify_track_name = track.name
           enriched.spotify_artist = track.artist
