@@ -165,7 +165,7 @@ Respond with a JSON object only, no other text:
         nora_generated: true,
         ...enriched,
       })
-      .select('id, mode, suggestion, nora_note')
+      .select('id, mode, suggestion, nora_note, gif_url, gif_id, spotify_track_id, spotify_track_name, spotify_artist, spotify_album_art, spotify_track_url, media_title, media_year, media_poster')
       .single()
 
     if (saveError) {
