@@ -108,7 +108,7 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
 
       {/* Sheet */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-lg transition-transform duration-300 ease-out ${
+        className={`fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-lg transition-transform duration-300 ease-out max-h-[85vh] overflow-y-auto ${
           isOpen ? 'translate-y-0' : 'translate-y-full'
         }`}
       >
@@ -219,7 +219,7 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
                   {/* GIF */}
                   {flirt.mode === 'gif' && flirt.gif_url && (
                     <div className="mb-4 rounded-xl overflow-hidden border border-neutral-100">
-                      <img src={flirt.gif_url} alt={flirt.suggestion} className="w-full" />
+                      <img src={flirt.gif_url} alt={flirt.suggestion} className="w-full max-h-48 object-cover" />
                     </div>
                   )}
 
