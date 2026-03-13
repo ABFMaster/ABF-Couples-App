@@ -112,7 +112,7 @@ Respond with a JSON object only, no other text:
       .from('flirts')
       .insert({
         sender_id: userId,
-        partner_id: partnerId,
+        receiver_id: partnerId,
         couple_id: couple?.id,
         mode: flirtData.mode,
         suggestion: flirtData.suggestion,
