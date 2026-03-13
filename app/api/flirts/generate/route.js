@@ -14,8 +14,6 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('[FlirtGenerate] userId:', userId, 'partnerId:', partnerId)
-
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -54,8 +52,6 @@ export async function POST(request) {
         .maybeSingle()
       noraMemory = memoryRow?.memory_summary || null
     }
-
-    console.log('[FlirtGenerate] myProfile:', myProfile, 'couple:', couple)
 
     const mode = FLIRT_MODES[Math.floor(Math.random() * FLIRT_MODES.length)]
 
@@ -102,7 +98,6 @@ Respond with a JSON object only, no other text:
       const raw = response.content[0].text.trim()
       const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
       flirtData = JSON.parse(cleaned)
-      console.log('[FlirtGenerate] flirtData:', flirtData)
     } catch (err) {
       console.error('[FlirtGenerate] Extraction failed:', err)
       return NextResponse.json({ error: 'generation failed' }, { status: 500 })
@@ -111,9 +106,10 @@ Respond with a JSON object only, no other text:
     const { data: saved, error: saveError } = await supabase
       .from('flirts')
       .insert({
+        couple_id: couple?.id,
         sender_id: userId,
         receiver_id: partnerId,
-        couple_id: couple?.id,
+        type: flirtData.mode,
         mode: flirtData.mode,
         suggestion: flirtData.suggestion,
         nora_note: flirtData.nora_note,
@@ -121,8 +117,6 @@ Respond with a JSON object only, no other text:
       })
       .select('id, mode, suggestion, nora_note')
       .single()
-
-    console.log('[FlirtGenerate] saved:', saved, 'saveError:', saveError)
 
     if (saveError) {
       console.error('[FlirtGenerate] Save error:', saveError)
