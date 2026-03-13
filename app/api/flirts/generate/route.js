@@ -86,7 +86,7 @@ Respond with a JSON object only, no other text:
 {
   mode: string,
   suggestion: string (the actual song/gif terms/place/memory reference/prompt — actionable and specific),
-  nora_note: string (Nora's 1-2 sentence explanation of why this will work for this specific couple)
+  nora_note: string (Nora's 1-2 sentence explanation of why this will work — written directly to the sender using 'you' and 'her', never referring to the couple in third person (never use their names))
 }`
 
     let flirtData
