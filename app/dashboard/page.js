@@ -770,14 +770,14 @@ export default function Dashboard() {
         )}
 
       </div>
-    </div>
 
-    <FlirtSheet
-      isOpen={flirtSheetOpen}
-      onClose={() => setFlirtSheetOpen(false)}
-      partnerName={partnerName}
-      partnerId={partnerId}
-      userId={user?.id}
-    />
+      <FlirtSheet
+        isOpen={flirtSheetOpen}
+        onClose={() => setFlirtSheetOpen(false)}
+        partnerName={partnerName}
+        partnerId={partnerId}
+        userId={user?.id}
+      />
+    </div>
   )
 }
