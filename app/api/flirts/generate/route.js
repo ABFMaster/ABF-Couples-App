@@ -151,6 +151,8 @@ Respond with a JSON object only, no other text:
       }
     }
 
+    console.log('[FlirtGenerate] enriched:', enriched)
+
     const { data: saved, error: saveError } = await supabase
       .from('flirts')
       .insert({
