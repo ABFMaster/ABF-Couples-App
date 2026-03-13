@@ -218,8 +218,8 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
 
                   {/* GIF */}
                   {flirt.mode === 'gif' && flirt.gif_url && (
-                    <div className="mb-4 rounded-xl overflow-hidden border border-neutral-100">
-                      <img src={flirt.gif_url} alt={flirt.suggestion} className="w-full max-h-48 object-cover" />
+                    <div className="mb-4 border border-neutral-100">
+                      <img src={flirt.gif_url} alt={flirt.suggestion} className="w-full h-40 object-cover rounded-xl" />
                     </div>
                   )}
 
