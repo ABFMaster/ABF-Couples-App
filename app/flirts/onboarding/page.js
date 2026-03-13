@@ -1,6 +1,8 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
 import NoraConversation from '@/components/NoraConversation'
 
 const SYSTEM_PROMPT = `You are Nora, an off-the-clock relationship therapist who genuinely knows this couple. You are having a warm, curious, playful conversation to build a flirt profile for this user so you can suggest personalized flirts for their partner.
@@ -22,13 +24,20 @@ const INITIAL_MESSAGE = `Okay, before I start sending you flirt ideas — I need
 
 export default function FlirtOnboardingPage() {
   const router = useRouter()
+  const [userId, setUserId] = useState(null)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setUserId(user.id)
+    })
+  }, [])
 
   const handleComplete = async (messages) => {
     try {
       await fetch('/api/flirts/save-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ messages, userId }),
       })
     } catch (err) {
       console.error('[FlirtOnboarding] save-profile error:', err)

@@ -14,17 +14,16 @@ const EXTRACTION_PROMPT = `Read this conversation and extract the following as a
 
 export async function POST(request) {
   try {
-    const { messages } = await request.json()
+    const { messages, userId } = await request.json()
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     )
-
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     // Format conversation for extraction
     const conversationText = messages
@@ -51,7 +50,7 @@ export async function POST(request) {
     await supabase
       .from('user_profiles')
       .upsert({
-        user_id: user.id,
+        user_id: userId,
         humor_style: profile.humor_style ?? null,
         flirt_style: profile.flirt_style ?? null,
         media_touchstones: profile.media_touchstones ?? [],
