@@ -33,6 +33,8 @@ export default function FlirtOnboardingPage() {
   }, [])
 
   const handleComplete = async (messages) => {
+    if (!userId) { console.error('[FlirtOnboarding] no userId at completion'); return }
+    console.log('[FlirtOnboarding] userId:', userId)
     try {
       await fetch('/api/flirts/save-profile', {
         method: 'POST',
