@@ -11,7 +11,7 @@ const FLIRT_MODES = ['song', 'gif', 'place', 'memory', 'prompt', 'movie', 'show'
 
 export async function POST(request) {
   try {
-    const { partnerId, userId } = await request.json()
+    const { partnerId, userId, mode: requestedMode } = await request.json()
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -56,7 +56,7 @@ export async function POST(request) {
       noraMemory = memoryRow?.memory_summary || null
     }
 
-    const mode = FLIRT_MODES[Math.floor(Math.random() * FLIRT_MODES.length)]
+    const mode = requestedMode || FLIRT_MODES[Math.floor(Math.random() * FLIRT_MODES.length)]
 
     const systemPrompt = `You are Nora, a relationship therapist who knows this couple well. You are acting as a creative director helping one partner send a meaningful, personalized flirt to the other.
 
