@@ -15,6 +15,7 @@ const MODE_ICONS = {
 export default function FlirtsPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
+  const [userId, setUserId] = useState(null)
   const [partnerId, setPartnerId] = useState(null)
   const [partnerName, setPartnerName] = useState('your partner')
   const [currentFlirt, setCurrentFlirt] = useState(null)
@@ -22,14 +23,14 @@ export default function FlirtsPage() {
   const [generating, setGenerating] = useState(false)
   const [generateError, setGenerateError] = useState(false)
 
-  const generateFlirt = useCallback(async (pid) => {
+  const generateFlirt = useCallback(async (pid, uid) => {
     setGenerating(true)
     setGenerateError(false)
     try {
       const res = await fetch('/api/flirts/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ partnerId: pid }),
+        body: JSON.stringify({ partnerId: pid, userId: uid }),
       })
       const data = await res.json()
       if (data.flirt) {
@@ -49,6 +50,7 @@ export default function FlirtsPage() {
     async function init() {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) { router.push('/login'); return }
+      setUserId(user.id)
 
       // Check flirt profile completion
       const { data: myProfile } = await supabase
@@ -96,7 +98,7 @@ export default function FlirtsPage() {
       setLoading(false)
 
       // Auto-generate first suggestion
-      await generateFlirt(pid)
+      await generateFlirt(pid, user.id)
     }
 
     init()
@@ -142,7 +144,7 @@ export default function FlirtsPage() {
             <div className="flex flex-col items-center py-8 gap-4">
               <p className="text-[14px] text-neutral-500">Something went wrong.</p>
               <button
-                onClick={() => generateFlirt(partnerId)}
+                onClick={() => generateFlirt(partnerId, userId)}
                 className="px-5 py-2 bg-[#E8614D] text-white text-[13px] font-semibold rounded-full"
               >
                 Try again
@@ -174,7 +176,7 @@ export default function FlirtsPage() {
 
               {/* Actions */}
               <button
-                onClick={() => generateFlirt(partnerId)}
+                onClick={() => generateFlirt(partnerId, userId)}
                 disabled={generating}
                 className="w-full py-3 bg-[#E8614D] text-white text-[15px] font-semibold rounded-full mb-3 disabled:opacity-50 transition-opacity"
               >
@@ -182,7 +184,7 @@ export default function FlirtsPage() {
               </button>
               <div className="text-center">
                 <button
-                  onClick={() => generateFlirt(partnerId)}
+                  onClick={() => generateFlirt(partnerId, userId)}
                   disabled={generating}
                   className="text-[13px] text-neutral-400 hover:text-neutral-600 transition-colors disabled:opacity-50"
                 >

@@ -8,17 +8,16 @@ const FLIRT_MODES = ['song', 'gif', 'place', 'memory', 'prompt']
 
 export async function POST(request) {
   try {
-    const { partnerId } = await request.json()
+    const { partnerId, userId } = await request.json()
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     )
-
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     // Fetch sender profile, partner profile, and couple in parallel
     const [
@@ -29,7 +28,7 @@ export async function POST(request) {
       supabase
         .from('user_profiles')
         .select('humor_style, flirt_style, media_touchstones, inside_joke, love_language_primary')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .maybeSingle(),
       supabase
         .from('user_profiles')
@@ -39,7 +38,7 @@ export async function POST(request) {
       supabase
         .from('couples')
         .select('id')
-        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+        .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
         .maybeSingle(),
     ])
 
@@ -107,7 +106,7 @@ Respond with a JSON object only, no other text:
     const { data: saved, error: saveError } = await supabase
       .from('flirts')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         partner_id: partnerId,
         mode: flirtData.mode,
         suggestion: flirtData.suggestion,
