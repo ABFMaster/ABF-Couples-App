@@ -109,7 +109,6 @@ Respond with a JSON object only, no other text:
         couple_id: couple?.id,
         sender_id: userId,
         receiver_id: partnerId,
-        type: flirtData.mode,
         mode: flirtData.mode,
         suggestion: flirtData.suggestion,
         nora_note: flirtData.nora_note,
