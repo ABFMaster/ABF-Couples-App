@@ -125,6 +125,7 @@ export default function Dashboard() {
   const [partnerName, setPartnerName]           = useState('your partner')
   const [showCouplesDebrief, setShowCouplesDebrief] = useState(false)
   const [flirtSheetOpen, setFlirtSheetOpen] = useState(false)
+  const [partnerId, setPartnerId] = useState(null)
   const [hasPartner, setHasPartner]             = useState(false)
   const [connectCode, setConnectCode]           = useState(null)
   const [inviteDismissed, setInviteDismissed]   = useState(true)
@@ -176,6 +177,7 @@ export default function Dashboard() {
       setCouple(coupleData)
 
       const partnerId = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id
+      setPartnerId(partnerId)
       setHasPartner(!!partnerId)
       setConnectCode(coupleData.connect_code || null)
       setDaysTogether(Math.floor((Date.now() - new Date(coupleData.created_at).getTime()) / 86400000))
