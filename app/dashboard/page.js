@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { todayPST } from '@/lib/date-utils'
 import { generateNoraTrigger } from '@/lib/nora-triggers'
+import FlirtSheet from '@/components/FlirtSheet'
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -123,6 +124,7 @@ export default function Dashboard() {
   const [couple, setCouple]                     = useState(null)
   const [partnerName, setPartnerName]           = useState('your partner')
   const [showCouplesDebrief, setShowCouplesDebrief] = useState(false)
+  const [flirtSheetOpen, setFlirtSheetOpen] = useState(false)
   const [hasPartner, setHasPartner]             = useState(false)
   const [connectCode, setConnectCode]           = useState(null)
   const [inviteDismissed, setInviteDismissed]   = useState(true)
@@ -460,7 +462,7 @@ export default function Dashboard() {
       hint: 'Keep the spark going',
       nudge: lastFlirtDaysAgo >= 2 ? `${lastFlirtDaysAgo} days since last one` : null,
       urgent: lastFlirtDaysAgo >= 3,
-      href: '/flirts',
+      onClick: () => setFlirtSheetOpen(true),
     })
   }
 
@@ -705,7 +707,7 @@ export default function Dashboard() {
             {displayActions.map(action => (
               <button
                 key={action.id}
-                onClick={() => router.push(action.href)}
+                onClick={() => action.onClick?.() ?? router.push(action.href)}
                 className={`rounded-2xl p-4 min-h-[120px] flex flex-col text-left border active:scale-[0.97] transition-transform ${
                   action.urgent
                     ? 'bg-[#FEF3F1] border-[#F5C9C2]'
@@ -769,5 +771,13 @@ export default function Dashboard() {
 
       </div>
     </div>
+
+    <FlirtSheet
+      isOpen={flirtSheetOpen}
+      onClose={() => setFlirtSheetOpen(false)}
+      partnerName={partnerName}
+      partnerId={partnerId}
+      userId={user?.id}
+    />
   )
 }
