@@ -1,10 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { searchGifs } from '@/lib/giphy'
+import { searchMovies, searchShows } from '@/lib/omdb'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-const FLIRT_MODES = ['song', 'gif', 'place', 'memory', 'prompt']
+const FLIRT_MODES = ['song', 'gif', 'place', 'memory', 'prompt', 'movie', 'show']
 
 export async function POST(request) {
   try {
@@ -103,6 +105,52 @@ Respond with a JSON object only, no other text:
       return NextResponse.json({ error: 'generation failed' }, { status: 500 })
     }
 
+    let enriched = {}
+
+    if (flirtData.mode === 'gif') {
+      try {
+        const gifs = await searchGifs(flirtData.suggestion, 5)
+        if (gifs?.length > 0) {
+          enriched.gif_url = gifs[0].url
+          enriched.gif_id = gifs[0].id
+        }
+      } catch (err) {
+        console.error('[FlirtGenerate] Giphy error:', err)
+      }
+    }
+
+    if (flirtData.mode === 'song') {
+      try {
+        const spotifyRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/spotify/search?q=${encodeURIComponent(flirtData.suggestion)}&userId=${userId}`)
+        const spotifyData = await spotifyRes.json()
+        if (spotifyData.tracks?.[0]) {
+          const track = spotifyData.tracks[0]
+          enriched.spotify_track_id = track.id
+          enriched.spotify_track_name = track.name
+          enriched.spotify_artist = track.artist
+          enriched.spotify_album_art = track.albumArt
+          enriched.spotify_track_url = track.spotifyUrl
+        }
+      } catch (err) {
+        console.error('[FlirtGenerate] Spotify error:', err)
+      }
+    }
+
+    if (flirtData.mode === 'movie' || flirtData.mode === 'show') {
+      try {
+        const results = flirtData.mode === 'movie'
+          ? await searchMovies(flirtData.suggestion)
+          : await searchShows(flirtData.suggestion)
+        if (results?.[0]) {
+          enriched.media_title = results[0].Title
+          enriched.media_year = results[0].Year
+          enriched.media_poster = results[0].Poster
+        }
+      } catch (err) {
+        console.error('[FlirtGenerate] OMDB error:', err)
+      }
+    }
+
     const { data: saved, error: saveError } = await supabase
       .from('flirts')
       .insert({
@@ -113,6 +161,7 @@ Respond with a JSON object only, no other text:
         suggestion: flirtData.suggestion,
         nora_note: flirtData.nora_note,
         nora_generated: true,
+        ...enriched,
       })
       .select('id, mode, suggestion, nora_note')
       .single()
