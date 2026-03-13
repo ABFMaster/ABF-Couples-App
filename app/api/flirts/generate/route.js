@@ -77,7 +77,7 @@ Your job is to suggest one flirt in the mode: ${mode}
 
 Mode definitions:
 - song: Suggest a specific real song with artist. Explain in 1 sentence why it fits them.
-- gif: Describe a specific gif to search for (search terms). Explain in 1 sentence why it will land.
+- gif: Return a clean 2-4 word Giphy search term only — no punctuation, no 'search:', no alternatives, no sentences. Just the search term itself as the suggestion.
 - place: Suggest a specific type of place or actual place for a spontaneous moment. 1 sentence why.
 - memory: Reference a specific shared memory or inside joke. Suggest how to bring it up as a flirt.
 - prompt: Give the sender a single question or line to say/text that will draw out a flirty response.
