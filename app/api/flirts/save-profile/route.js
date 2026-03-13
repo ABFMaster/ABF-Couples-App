@@ -34,16 +34,18 @@ export async function POST(request) {
     try {
       const response = await anthropic.messages.create({
         model: 'claude-sonnet-4-6',
-        max_tokens: 400,
+        max_tokens: 600,
         messages: [{ role: 'user', content: `${EXTRACTION_PROMPT}\n\n${conversationText}` }],
       })
 
       const raw = response.content[0].text.trim()
       // Strip markdown code fences if present
       const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
+      console.log('[FlirtSaveProfile] raw:', raw)
       profile = JSON.parse(cleaned)
+      console.log('[FlirtSaveProfile] profile:', profile)
     } catch (err) {
-      console.error('[FlirtSaveProfile] Extraction failed:', err)
+      console.error('[FlirtSaveProfile] Extraction failed:', err, err.message)
       return NextResponse.json({ success: false, error: 'extraction failed' })
     }
 
