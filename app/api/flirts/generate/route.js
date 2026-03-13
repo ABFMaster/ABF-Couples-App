@@ -113,6 +113,7 @@ Respond with a JSON object only, no other text:
       .insert({
         sender_id: userId,
         partner_id: partnerId,
+        couple_id: couple?.id,
         mode: flirtData.mode,
         suggestion: flirtData.suggestion,
         nora_note: flirtData.nora_note,
