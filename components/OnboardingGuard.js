@@ -35,6 +35,7 @@ export default function OnboardingGuard({ children }) {
   const checkedRef = useRef(false);
 
   useEffect(() => {
+    if (!pathname) return;
     // Skip excluded paths
     const isExcluded = EXCLUDED_PATHS.some(p => pathname.startsWith(p));
     if (isExcluded) {
