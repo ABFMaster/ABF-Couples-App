@@ -113,7 +113,7 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
 
       {/* Sheet */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-lg transition-transform duration-300 ease-out max-h-[85vh] overflow-y-auto relative ${
+        className={`fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-lg transition-transform duration-300 ease-out max-h-[85vh] overflow-y-auto ${
           isOpen ? 'translate-y-0' : 'translate-y-full'
         }`}
       >
@@ -277,7 +277,6 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
                   )}
 
                   {/* Movie / Show */}
-                  {console.log(flirt)}
                   {(flirt.mode === 'movie' || flirt.mode === 'show' || flirt.mode === 'movie_show') && flirt.media_poster && flirt.media_poster !== 'N/A' && (
                     <div className="flex items-start gap-3 mb-4 bg-neutral-50 rounded-xl p-3">
                       <img
