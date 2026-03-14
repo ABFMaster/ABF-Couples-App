@@ -80,7 +80,7 @@ CRITICAL RULES:
 - Use the shared media/culture list directly when relevant — these are real things they love
 - For song mode: draw from their actual taste, not generic love songs. Never suggest "Better Together" or other overused romantic clichés unless it genuinely fits their specific profile
 - Speak directly to the sender using "you" and "her" — never use their names or refer to them in third person
-- nora_note must be one sentence, maximum 15 words
+- nora_note: string (one sentence, max 15 words, speaks directly to the person reading it using 'you' — never 'she', 'he', or third person)
 
 Mode definitions:
 - song: A specific real song and artist that fits their taste and the moment. Suggestion format: "Song Title by Artist"
