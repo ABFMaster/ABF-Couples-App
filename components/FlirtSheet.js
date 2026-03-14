@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const MODE_DEFS = [
   {
@@ -57,7 +57,7 @@ function formatModeLabel(mode) {
   return mode === 'movie_show' ? 'MOVIE / SHOW' : mode.toUpperCase()
 }
 
-export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, userId }) {
+export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, userId, receivedFlirt, onViewed }) {
   const [view, setView] = useState('modes') // 'modes' | 'loading' | 'result'
   const [selectedMode, setSelectedMode] = useState(null)
   const [flirt, setFlirt] = useState(null)
@@ -88,11 +88,25 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
     }
   }
 
+  useEffect(() => {
+    if (isOpen && receivedFlirt) {
+      setView('result')
+      setFlirt(receivedFlirt)
+      setSelectedMode(receivedFlirt.mode)
+      fetch('/api/flirts/mark-viewed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ flirtId: receivedFlirt.id, userId: receivedFlirt.receiver_id }),
+      })
+    }
+  }, [isOpen, receivedFlirt])
+
   const handleClose = () => {
     setView('modes')
     setSelectedMode(null)
     setFlirt(null)
     setError(false)
+    if (onViewed) onViewed()
     onClose()
   }
 
@@ -331,13 +345,23 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
                   )}
 
                   {/* Actions */}
-                  <button
-                    onClick={sendFlirt}
-                    disabled={sending}
-                    className="w-full py-3 bg-[#E8614D] text-white text-[15px] font-semibold rounded-full mb-3 active:scale-[0.98] transition-transform disabled:opacity-60"
-                  >
-                    {sending ? 'Sending...' : 'Send it'}
-                  </button>
+                  {receivedFlirt && (flirt.mode === 'song' || flirt.mode === 'movie_show') && (
+                    <button
+                      onClick={handleClose}
+                      className="w-full py-3 bg-[#E8614D] text-white text-[15px] font-semibold rounded-full mb-3 active:scale-[0.98] transition-transform"
+                    >
+                      Save to Us
+                    </button>
+                  )}
+                  {!receivedFlirt && (
+                    <button
+                      onClick={sendFlirt}
+                      disabled={sending}
+                      className="w-full py-3 bg-[#E8614D] text-white text-[15px] font-semibold rounded-full mb-3 active:scale-[0.98] transition-transform disabled:opacity-60"
+                    >
+                      {sending ? 'Sending...' : 'Send it'}
+                    </button>
+                  )}
                   <div className="text-center">
                     <button
                       onClick={() => generate(selectedMode, flirt.suggestion)}
