@@ -126,6 +126,7 @@ export default function TodayPage() {
   // IDs needed for today_responses upsert + notifications
   const [userId, setUserId] = useState(null)
   const [flirtSheetOpen, setFlirtSheetOpen] = useState(false)
+  const [receivedFlirt, setReceivedFlirt] = useState(null)
   const [coupleId, setCoupleId] = useState(null)
   const [partnerId, setPartnerId] = useState(null)
 
@@ -156,6 +157,18 @@ export default function TodayPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
       setUserId(user.id)
+
+      // Check for unread flirts
+      ;(async () => {
+        try {
+          const res = await fetch('/api/flirts/unread?userId=' + user.id)
+          const data = await res.json()
+          if (data.flirt) {
+            setReceivedFlirt(data.flirt)
+            setFlirtSheetOpen(true)
+          }
+        } catch {}
+      })()
 
       // Record visit time (fire-and-forget)
       ;(async () => { try { await supabase.from('user_profiles').update({ last_today_visit: new Date().toISOString() }).eq('user_id', user.id) } catch {} })()
@@ -1104,6 +1117,8 @@ export default function TodayPage() {
         partnerName={partnerName}
         partnerId={partnerId}
         userId={userId}
+        receivedFlirt={receivedFlirt}
+        onViewed={() => setReceivedFlirt(null)}
       />
     </div>
   )
