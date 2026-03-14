@@ -113,13 +113,25 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
 
       {/* Sheet */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-lg transition-transform duration-300 ease-out max-h-[85vh] overflow-y-auto ${
+        className={`fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-lg transition-transform duration-300 ease-out max-h-[85vh] overflow-y-auto relative ${
           isOpen ? 'translate-y-0' : 'translate-y-full'
         }`}
       >
         {/* Handle bar */}
-        <div className="flex justify-center pt-3 pb-1">
+        <div className="flex justify-center pt-3 pb-1 cursor-pointer" onClick={handleClose}>
           <div className="w-10 h-1 rounded-full bg-neutral-200" />
+        </div>
+
+        {/* Close button */}
+        <div className="absolute top-3 right-4">
+          <button
+            onClick={handleClose}
+            className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
         </div>
 
         <div className="px-5 pb-24 pt-2 max-h-[85vh] overflow-y-auto">
