@@ -101,10 +101,7 @@ export default function Timeline() {
     const months = Math.floor((totalDays % 365) / 30)
     const days = totalDays % 30
 
-    const { count: flirtCount } = await supabase
-      .from('flirts')
-      .select('*', { count: 'exact', head: true })
-      .eq('couple_id', coupleData.id)
+    const flirtCount = coupleData.flirts_sent || 0
 
     const { count: checkinCount } = await supabase
       .from('daily_checkins')
