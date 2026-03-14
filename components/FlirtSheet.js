@@ -189,7 +189,17 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
           )}
 
           {/* RESULT */}
-          {view === 'result' && (
+          {view === 'result' && !flirt && !error && (
+            <div className="flex flex-col items-center py-14 gap-4">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 bg-[#E8614D] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2.5 h-2.5 bg-[#E8614D] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2.5 h-2.5 bg-[#E8614D] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+              <p className="text-[13px] text-neutral-400">Nora is thinking…</p>
+            </div>
+          )}
+          {view === 'result' && (flirt || error) && (
             <>
               {/* Back */}
               <button
