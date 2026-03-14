@@ -118,7 +118,7 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
         }`}
       >
         {/* Handle bar */}
-        <div className="flex justify-center pt-3 pb-1 cursor-pointer" onClick={handleClose}>
+        <div className="flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 rounded-full bg-neutral-200" />
         </div>
 
