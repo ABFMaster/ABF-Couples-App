@@ -122,7 +122,7 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
           <div className="w-10 h-1 rounded-full bg-neutral-200" />
         </div>
 
-        <div className="px-5 pb-10 pt-2 max-h-[85vh] overflow-y-auto">
+        <div className="px-5 pb-24 pt-2 max-h-[85vh] overflow-y-auto">
 
           {/* MODE SELECTION */}
           {view === 'modes' && (
