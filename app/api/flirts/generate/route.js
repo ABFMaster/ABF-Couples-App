@@ -81,6 +81,7 @@ Mode definitions:
 - place: Suggest a specific type of place or actual place for a spontaneous moment. 1 sentence why.
 - memory: Reference a specific shared memory or inside joke. Suggest how to bring it up as a flirt.
 - prompt: Give the sender a single question or line to say/text that will draw out a flirty response.
+- movie_show: Suggest one specific movie or TV show you think they would both enjoy watching together. Return only the title as the suggestion — no explanation, no 'Text her', just the title. Example: 'The Bear' or 'Eternal Sunshine of the Spotless Mind'.
 
 Respond with a JSON object only, no other text:
 {
