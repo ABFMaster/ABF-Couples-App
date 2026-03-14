@@ -113,7 +113,7 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
 
       {/* Sheet */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-lg transition-transform duration-300 ease-out max-h-[85vh] overflow-y-auto ${
+        className={`fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-lg transition-transform duration-300 ease-out h-auto overflow-y-auto ${
           isOpen ? 'translate-y-0' : 'translate-y-full'
         }`}
       >
@@ -297,7 +297,7 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
 
                   {/* Suggestion */}
                   <p
-                    className="text-[20px] text-neutral-900 leading-snug mb-3"
+                    className="text-[20px] text-neutral-900 leading-snug mb-3 text-center"
                     style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}
                   >
                     {flirt.suggestion}
@@ -305,7 +305,7 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
 
                   {/* Nora's note */}
                   {flirt.nora_note && (
-                    <p className="text-[13px] text-neutral-400 italic leading-relaxed mb-6">
+                    <p className="text-[13px] text-neutral-400 italic leading-relaxed mb-6 text-center">
                       {flirt.nora_note}
                     </p>
                   )}
