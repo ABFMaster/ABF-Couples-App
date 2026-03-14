@@ -62,6 +62,7 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
   const [selectedMode, setSelectedMode] = useState(null)
   const [flirt, setFlirt] = useState(null)
   const [error, setError] = useState(false)
+  const [sending, setSending] = useState(false)
 
   const generate = async (mode, previousSuggestion) => {
     setSelectedMode(mode)
@@ -93,6 +94,25 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
     setFlirt(null)
     setError(false)
     onClose()
+  }
+
+  const sendFlirt = async () => {
+    setSending(true)
+    try {
+      await fetch('/api/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: partnerId, title: "You've got a flirt 💌", body: "Open ABF to see what they sent you", url: "/flirts/inbox" }),
+      })
+      await fetch('/api/flirts/mark-sent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ flirtId: flirt.id }),
+      })
+    } finally {
+      setSending(false)
+      handleClose()
+    }
   }
 
   const handleBack = () => {
@@ -312,10 +332,11 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
 
                   {/* Actions */}
                   <button
-                    onClick={handleClose}
-                    className="w-full py-3 bg-[#E8614D] text-white text-[15px] font-semibold rounded-full mb-3 active:scale-[0.98] transition-transform"
+                    onClick={sendFlirt}
+                    disabled={sending}
+                    className="w-full py-3 bg-[#E8614D] text-white text-[15px] font-semibold rounded-full mb-3 active:scale-[0.98] transition-transform disabled:opacity-60"
                   >
-                    Send it
+                    {sending ? 'Sending...' : 'Send it'}
                   </button>
                   <div className="text-center">
                     <button
