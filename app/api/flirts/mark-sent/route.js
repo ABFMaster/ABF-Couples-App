@@ -25,6 +25,17 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Failed to mark flirt as sent' }, { status: 500 })
     }
 
+    // Increment couples.flirts_sent
+    const { data: flirtRow } = await supabase
+      .from('flirts')
+      .select('couple_id')
+      .eq('id', flirtId)
+      .maybeSingle()
+
+    if (flirtRow?.couple_id) {
+      await supabase.rpc('increment_flirts_sent', { couple_id_input: flirtRow.couple_id })
+    }
+
     return NextResponse.json({ success: true })
   } catch (err) {
     console.error('[mark-sent] Unexpected error:', err)
