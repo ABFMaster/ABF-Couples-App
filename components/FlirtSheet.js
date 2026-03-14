@@ -245,8 +245,10 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
 
                   {/* GIF */}
                   {flirt.mode === 'gif' && flirt.gif_url && (
-                    <div className="mb-4" style={{width:'100px', height:'100px', borderRadius:'8px', overflow:'hidden', flexShrink:0}}>
-                      <img src={flirt.gif_url} alt={flirt.suggestion} style={{width:'100px', height:'100px', objectFit:'cover', display:'block'}} />
+                    <div className="flex justify-center mb-4">
+                      <div style={{width:'100px', height:'100px', borderRadius:'8px', overflow:'hidden', flexShrink:0}}>
+                        <img src={flirt.gif_url} alt={flirt.suggestion} style={{width:'100px', height:'100px', objectFit:'cover', display:'block'}} />
+                      </div>
                     </div>
                   )}
 
