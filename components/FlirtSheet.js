@@ -53,8 +53,8 @@ const MODE_DEFS = [
 ]
 
 function formatModeLabel(mode) {
-  if (mode === 'movie_show') return 'MOVIE / SHOW'
-  return mode?.toUpperCase() || ''
+  if (!mode) return ''
+  return mode === 'movie_show' ? 'MOVIE / SHOW' : mode.toUpperCase()
 }
 
 export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, userId }) {
