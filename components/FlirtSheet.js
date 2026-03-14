@@ -63,7 +63,7 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
   const [flirt, setFlirt] = useState(null)
   const [error, setError] = useState(false)
 
-  const generate = async (mode) => {
+  const generate = async (mode, previousSuggestion) => {
     setSelectedMode(mode)
     setView('loading')
     setError(false)
@@ -71,7 +71,7 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
       const res = await fetch('/api/flirts/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ partnerId, userId, mode }),
+        body: JSON.stringify({ partnerId, userId, mode, previousSuggestion: previousSuggestion || null }),
       })
       const data = await res.json()
       if (data.flirt) {
@@ -319,7 +319,7 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
                   </button>
                   <div className="text-center">
                     <button
-                      onClick={() => generate(selectedMode)}
+                      onClick={() => generate(selectedMode, flirt.suggestion)}
                       className="text-[13px] text-neutral-400 hover:text-neutral-600 transition-colors"
                     >
                       Get another
