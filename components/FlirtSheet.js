@@ -52,6 +52,11 @@ const MODE_DEFS = [
   },
 ]
 
+function formatModeLabel(mode) {
+  if (mode === 'movie_show') return 'MOVIE / SHOW'
+  return mode?.toUpperCase() || ''
+}
+
 export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, userId }) {
   const [view, setView] = useState('modes') // 'modes' | 'loading' | 'result'
   const [selectedMode, setSelectedMode] = useState(null)
@@ -212,7 +217,7 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
                   {/* Mode badge */}
                   <div className="mb-4">
                     <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-[#E8614D]">
-                      {flirt.mode}
+                      {formatModeLabel(flirt.mode)}
                     </span>
                   </div>
 
@@ -250,7 +255,8 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
                   )}
 
                   {/* Movie / Show */}
-                  {(flirt.mode === 'movie' || flirt.mode === 'show') && flirt.media_poster && flirt.media_poster !== 'N/A' && (
+                  {console.log(flirt)}
+                  {(flirt.mode === 'movie' || flirt.mode === 'show' || flirt.mode === 'movie_show') && flirt.media_poster && flirt.media_poster !== 'N/A' && (
                     <div className="flex items-start gap-3 mb-4 bg-neutral-50 rounded-xl p-3">
                       <img
                         src={flirt.media_poster}
