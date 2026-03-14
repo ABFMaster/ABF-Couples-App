@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { notifyPartnerTodayResponse } from '@/lib/notify'
 import sparkQuestionsData from '@/lib/spark-questions.json'
+import FlirtSheet from '@/components/FlirtSheet'
 
 const FEATURE_SPOTLIGHTS = [
   {
@@ -124,6 +125,7 @@ export default function TodayPage() {
 
   // IDs needed for today_responses upsert + notifications
   const [userId, setUserId] = useState(null)
+  const [flirtSheetOpen, setFlirtSheetOpen] = useState(false)
   const [coupleId, setCoupleId] = useState(null)
   const [partnerId, setPartnerId] = useState(null)
 
@@ -1008,7 +1010,7 @@ export default function TodayPage() {
           ) : null}
 
           <button
-            onClick={() => router.push('/flirts')}
+            onClick={() => setFlirtSheetOpen(true)}
             className="w-full mt-3 bg-white rounded-2xl border border-neutral-200 shadow-sm p-5 flex items-center gap-4 text-left active:scale-[0.98] transition-transform"
           >
             <div className="flex-1 min-w-0">
@@ -1096,6 +1098,13 @@ export default function TodayPage() {
         )}
 
       </div>
+      <FlirtSheet
+        isOpen={flirtSheetOpen}
+        onClose={() => setFlirtSheetOpen(false)}
+        partnerName={partnerName}
+        partnerId={partnerId}
+        userId={userId}
+      />
     </div>
   )
 }
