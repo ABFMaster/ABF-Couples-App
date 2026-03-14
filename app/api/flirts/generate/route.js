@@ -11,7 +11,7 @@ const FLIRT_MODES = ['song', 'gif', 'place', 'memory', 'prompt', 'movie', 'show'
 
 export async function POST(request) {
   try {
-    const { partnerId, userId, mode: requestedMode } = await request.json()
+    const { partnerId, userId, mode: requestedMode, previousSuggestion } = await request.json()
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -88,7 +88,7 @@ Mode definitions:
 - movie_show: A specific movie or TV show title only — no explanation, just the title
 - prompt: A single question or line for the sender to say or text — not a script, just an opener that invites her in
 - memory: A specific reference to something from their shared history or inside joke — brief, actionable
-
+${previousSuggestion ? `\nIMPORTANT: Do not suggest '${previousSuggestion}' — find a completely different angle.` : ''}
 Respond with a JSON object only, no other text:
 {
   mode: string,
