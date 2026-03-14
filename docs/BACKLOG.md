@@ -255,6 +255,16 @@ Feature is complete and functional. Blocked on Spotify developer account approva
 
 Needs a name and backstory like Wander. Warm, research-grounded. Save for product session with Cass before implementing.
 
+#### NORA VOICE REFINEMENT — System Prompt Pass
+**Effort:** Small
+**Value:** High — directly improves every conversation
+
+Current system prompt produces patterns that undermine the quality of responses. Specific issues to fix:
+- **Response restatement:** Nora often mirrors the user's message back before engaging — cut this entirely
+- **Entry point variety:** Too many responses open the same way — vary the lead-in structurally
+- **Affirmation formula:** "That's such an important thing to notice" and equivalents precede almost every substantive response — move substance to the front
+- **Closing questions:** Closing questions tend to summarize what was just said as a question — they should open genuinely new territory instead
+
 #### Notable Coach Sessions
 **Effort:** Small
 **Value:** Medium
@@ -383,6 +393,18 @@ Add analytics to understand:
 ---
 
 ## 🎨 UI/UX Improvements
+
+### UI SWEEP — Design System Compliance Audit
+**Status:** Not Started
+**Effort:** Medium
+
+Audit all subpages against the locked design system. Known offenders exist in trips, date night, and profile subpages. Checklist per page:
+- Typography: Fraunces for emotional content, DM Sans for UI — no system fonts or mismatched weights
+- Color palette: bg `#F7F4EF`, coral `#E8614D`, purple gradient only — no ad hoc colors
+- Card structure: rounded-2xl, border-neutral-200, shadow-sm — no raw divs standing in for cards
+- One primary action per screen — no competing CTAs
+- No emoji in UI — Lucide icons only throughout
+- Max 4 sections per screen
 
 ### Design System Documentation
 **Status:** Not Started
