@@ -25,7 +25,7 @@ export default function BottomNav({ badgeTabs = {} }) {
         {TABS.map(tab => {
           const active =
             pathname === tab.href ||
-            (tab.href !== '/dashboard' && pathname.startsWith(tab.href))
+            (tab.href !== '/dashboard' && !!pathname && pathname.startsWith(tab.href))
           const tabKey = tab.href.replace('/', '') || 'dashboard'
           const hasBadge = !!badgeTabs[tabKey]
           return (
