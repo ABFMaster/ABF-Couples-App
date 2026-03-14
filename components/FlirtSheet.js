@@ -107,7 +107,7 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
       await fetch('/api/flirts/mark-sent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ flirtId: flirt.id }),
+        body: JSON.stringify({ flirtId: flirt.id, userId }),
       })
     } finally {
       setSending(false)
