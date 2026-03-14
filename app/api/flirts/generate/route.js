@@ -156,8 +156,6 @@ Respond with a JSON object only, no other text:
       }
     }
 
-    console.log('[FlirtGenerate] enriched:', enriched)
-
     const { data: saved, error: saveError } = await supabase
       .from('flirts')
       .insert({
@@ -171,7 +169,7 @@ Respond with a JSON object only, no other text:
         ...enriched,
       })
       .select('id, mode, suggestion, nora_note, gif_url, gif_id, spotify_track_id, spotify_track_name, spotify_artist, spotify_album_art, spotify_track_url, media_title, media_year, media_poster')
-      .single()
+      .maybeSingle()
 
     if (saveError) {
       console.error('[FlirtGenerate] Save error:', saveError)
