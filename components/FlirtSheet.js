@@ -27,7 +27,7 @@ const MODE_DEFS = [
     ),
   },
   {
-    id: 'movie',
+    id: 'movie_show',
     label: 'Movie / Show',
     desc: 'Watch together',
     icon: (
