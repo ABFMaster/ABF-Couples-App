@@ -137,11 +137,9 @@ Respond with a JSON object only, no other text:
       }
     }
 
-    if (flirtData.mode === 'movie' || flirtData.mode === 'show') {
+    if (flirtData.mode === 'movie_show') {
       try {
-        const results = flirtData.mode === 'movie'
-          ? await searchMovies(flirtData.suggestion)
-          : await searchShows(flirtData.suggestion)
+        const results = await searchMovies(flirtData.suggestion)
         if (results?.[0]) {
           enriched.media_title = results[0].Title
           enriched.media_year = results[0].Year
