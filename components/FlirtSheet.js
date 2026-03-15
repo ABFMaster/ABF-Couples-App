@@ -63,6 +63,7 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
   const [flirt, setFlirt] = useState(null)
   const [error, setError] = useState(false)
   const [sending, setSending] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const generate = async (mode, previousSuggestion) => {
     setSelectedMode(mode)
@@ -126,6 +127,28 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
     } finally {
       setSending(false)
       handleClose()
+    }
+  }
+
+  const saveToUs = async () => {
+    setSaving(true)
+    try {
+      await fetch('/api/us/save-flirt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          flirtId: receivedFlirt.id,
+          userId,
+          mode: flirt.mode,
+          title: flirt.suggestion,
+          posterPath: flirt.media_poster || flirt.spotify_album_art || null,
+        }),
+      })
+      handleClose()
+    } catch (err) {
+      console.error('[saveToUs] error:', err)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -349,10 +372,11 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
                   {/* Actions */}
                   {receivedFlirt && (flirt.mode === 'song' || flirt.mode === 'movie_show') && (
                     <button
-                      onClick={handleClose}
-                      className="w-full py-3 bg-[#E8614D] text-white text-[15px] font-semibold rounded-full mb-3 active:scale-[0.98] transition-transform"
+                      onClick={saveToUs}
+                      disabled={saving}
+                      className="w-full py-3 bg-[#E8614D] text-white text-[15px] font-semibold rounded-full mb-3 active:scale-[0.98] transition-transform disabled:opacity-60"
                     >
-                      Save to Us
+                      {saving ? 'Saving...' : 'Save to Us'}
                     </button>
                   )}
                   {!receivedFlirt && (
