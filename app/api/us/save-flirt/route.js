@@ -5,6 +5,8 @@ export async function POST(request) {
   try {
     const { flirtId, userId, mode, title, posterPath } = await request.json()
 
+    console.log('[SaveFlirt] received:', { flirtId, userId, mode, title })
+
     if (!flirtId || !userId || !mode || !title) {
       return NextResponse.json({ error: 'flirtId, userId, mode, and title are required' }, { status: 400 })
     }
