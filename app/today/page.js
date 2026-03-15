@@ -6,7 +6,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { notifyPartnerTodayResponse } from '@/lib/notify'
-import sparkQuestionsData from '@/lib/spark-questions.json'
+import SparkCard from '@/components/SparkCard'
 import FlirtSheet from '@/components/FlirtSheet'
 
 const FEATURE_SPOTLIGHTS = [
@@ -131,21 +131,9 @@ export default function TodayPage() {
   const [partnerId, setPartnerId] = useState(null)
 
   // Spark state
-  const [sparkAnswer, setSparkAnswer] = useState('')
-  const [sparkSubmitted, setSparkSubmitted] = useState(false)
-  const [partnerSparkAnswer, setPartnerSparkAnswer] = useState(null)
-  const [partnerHasAnswered, setPartnerHasAnswered] = useState(false)
-  const [sparkRevealed, setSparkRevealed] = useState(false)
-  const [noraSparkReaction, setNoraSparkReaction] = useState('')
-  const [eligibleSparkQuestions, setEligibleSparkQuestions] = useState([])
-  const [sparkQuestionIndex, setSparkQuestionIndex] = useState(0)
-  const [overrideSparkQuestion, setOverrideSparkQuestion] = useState(null)
-  const [sparkSkipCount, setSparkSkipCount] = useState(0)
-  const hasGeneratedReaction = useRef(false)
-  const sparkSubmittedRef = useRef(false)
-
-
-  const todaySparkQuestion = overrideSparkQuestion || eligibleSparkQuestions[sparkQuestionIndex] || null
+  const [sparkData, setSparkData] = useState(null)
+  const [sparkLoading, setSparkLoading] = useState(true)
+  const [sparkIntroShown, setSparkIntroShown] = useState(false)
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -261,12 +249,12 @@ export default function TodayPage() {
           setMemoryCount(count || 0)
         })(),
 
-        // Today's responses (reactions + spark answers)
+        // Today's responses (reactions only)
         (async () => {
           try {
             const { data } = await supabase
               .from('today_responses')
-              .select('user_id, reaction, note, spark_question, spark_answer, spark_submitted_at, spark_nora_reaction')
+              .select('user_id, reaction, note')
               .eq('couple_id', couple.id)
               .eq('prompt_date', today)
             if (!data) return
@@ -276,41 +264,10 @@ export default function TodayPage() {
               setTodayReaction(mine.reaction)
               setTodayNote(mine.note || '')
               setReactionSaved(!!mine.reaction)
-              if (mine.spark_answer) {
-                setSparkAnswer(mine.spark_answer)
-                setSparkSubmitted(true)
-                sparkSubmittedRef.current = true
-              }
-              if (mine.spark_nora_reaction) {
-                setNoraSparkReaction(mine.spark_nora_reaction)
-                hasGeneratedReaction.current = true
-              }
             }
             if (theirs) {
               setPartnerReaction(theirs.reaction)
               setPartnerNote(theirs.note || '')
-              if (theirs.spark_answer) {
-                setPartnerHasAnswered(true)
-                setPartnerSparkAnswer(theirs.spark_answer)
-                if (mine?.spark_answer) {
-                  setSparkRevealed(true)
-                }
-              }
-            }
-            if (theirs?.spark_answer && !mine?.spark_answer) {
-              window.dispatchEvent(new CustomEvent('setTodayBadge'))
-            } else if (mine?.spark_answer) {
-              window.dispatchEvent(new CustomEvent('clearTodayBadge'))
-            }
-            if (theirs?.spark_question && !mine?.spark_answer) {
-              const eligible = sparkQuestionsData.filter(q => {
-                if (days < 30) return q.level === 1
-                if (days < 90) return q.level <= 2
-                return true
-              })
-              const found = eligible.find(q => q.question === theirs.spark_question)
-                || sparkQuestionsData.find(q => q.question === theirs.spark_question)
-              if (found) setOverrideSparkQuestion(found)
             }
           } catch { /* table may not exist yet */ }
         })(),
@@ -324,35 +281,23 @@ export default function TodayPage() {
     }
   }, [router])
 
-  useEffect(() => { fetchAll() }, [fetchAll])
-
-  // Realtime subscription — detect partner spark answer without page reload
-  useEffect(() => {
-    if (!coupleId || !partnerId) return
-    const today = getTodayString()
-    const channel = supabase
-      .channel(`spark-${coupleId}-${today}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'today_responses',
-        filter: `couple_id=eq.${coupleId}`
-      }, payload => {
-        if (
-          (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') &&
-          payload.new.user_id === partnerId &&
-          payload.new.prompt_date === today
-        ) {
-          if (payload.new.spark_answer) {
-            setPartnerHasAnswered(true)
-            if (!sparkSubmittedRef.current) window.dispatchEvent(new CustomEvent('setTodayBadge'))
-            setPartnerSparkAnswer(payload.new.spark_answer)
-          }
-        }
+  const fetchSpark = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const res = await fetch('/api/spark/today', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
       })
-      .subscribe()
-    return () => supabase.removeChannel(channel)
-  }, [coupleId, partnerId])
+      const data = await res.json()
+      setSparkData(data)
+      if (data.mine?.responded_at) setSparkIntroShown(true)
+    } catch {} finally {
+      setSparkLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchAll(); fetchSpark() }, [fetchAll, fetchSpark])
+
 
   // Compute derived state after data loads
   useEffect(() => {
@@ -360,15 +305,6 @@ export default function TodayPage() {
     const dayIndex = getDayIndex()
 
     setNoraSurprise(NORA_SURPRISES[dayIndex % NORA_SURPRISES.length])
-
-    // Eligible spark questions based on couple age
-    const eligible = sparkQuestionsData.filter(q => {
-      if (daysTogether < 30) return q.level === 1
-      if (daysTogether < 90) return q.level <= 2
-      return true
-    })
-    setEligibleSparkQuestions(eligible)
-    if (eligible.length > 0) setSparkQuestionIndex(dayIndex % eligible.length)
 
     // Neglected feature fallback (used if no partner love language)
     let computed = null
@@ -411,24 +347,6 @@ export default function TodayPage() {
 
   }, [loading, checkinDone, lastFlirtDaysAgo, memoryCount, streak, flirtCount, daysTogether, partnerName])
 
-  // Auto-trigger Nora spark reaction when both answers are available
-  useEffect(() => {
-    if (sparkSubmitted && partnerSparkAnswer && todaySparkQuestion && !hasGeneratedReaction.current) {
-      hasGeneratedReaction.current = true
-      setSparkRevealed(true)
-      generateSparkReaction(todaySparkQuestion.question, sparkAnswer, partnerSparkAnswer)
-    }
-  }, [sparkSubmitted, partnerSparkAnswer, todaySparkQuestion]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Clear badge and record reveal seen once the reveal is visible
-  useEffect(() => {
-    if (!sparkRevealed) return
-    window.dispatchEvent(new CustomEvent('clearTodayBadge'))
-    if (userId && coupleId) {
-      ;(async () => { try { await supabase.from('today_responses').upsert({ user_id: userId, couple_id: coupleId, prompt_date: getTodayString(), spark_reveal_seen_at: new Date().toISOString() }, { onConflict: 'user_id,prompt_date' }) } catch {} })()
-    }
-  }, [sparkRevealed, userId, coupleId])
-
   // Article insight fetch
   useEffect(() => {
     if (loading) return
@@ -469,100 +387,35 @@ export default function TodayPage() {
       .catch(() => {})
   }, [loading, myAttachmentStyle, myConflictStyle, myLoveLanguage])
 
-  const generateSparkReaction = async (question, myAnswer, partnerAnswer) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const response = await fetch('/api/spark-reaction', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ question, myAnswer, partnerAnswer, userName, partnerName })
-      })
-      const data = await response.json()
-      if (data.reaction) {
-        setNoraSparkReaction(data.reaction)
-        if (userId && coupleId) {
-          await supabase
-            .from('today_responses')
-            .upsert({
-              user_id: userId,
-              couple_id: coupleId,
-              prompt_date: getTodayString(),
-              spark_nora_reaction: data.reaction,
-            }, { onConflict: 'user_id,prompt_date' })
-        }
-      }
-    } catch (e) {
-      console.error('Spark reaction error:', e)
-    }
-  }
-
-  const submitSparkAnswer = async () => {
-    if (!userId || !coupleId || !sparkAnswer.trim() || !todaySparkQuestion) return
-    try {
-      const { error: sparkError } = await supabase
-        .from('today_responses')
-        .upsert({
-          user_id: userId,
-          couple_id: coupleId,
-          prompt_date: getTodayString(),
-          spark_question: todaySparkQuestion.question,
-          spark_answer: sparkAnswer.trim(),
-          spark_submitted_at: new Date().toISOString(),
-        }, { onConflict: 'user_id,prompt_date' })
-      if (sparkError) console.error('Spark save error detail:', JSON.stringify(sparkError))
-      window.dispatchEvent(new CustomEvent('clearTodayBadge'))
-      sparkSubmittedRef.current = true
-      setSparkSubmitted(true)
-    } catch (err) {
-      console.error('Submit spark error:', err)
-    }
+  const handleSparkRespond = async (text) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    await fetch('/api/spark/respond', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ sparkId: sparkData.spark.id, responseText: text }),
+    })
+    await fetchSpark()
   }
 
   const handleSparkSkip = async () => {
-    if (partnerHasAnswered || sparkSubmitted) return
-    const newSkipCount = sparkSkipCount + 1
-    setSparkSkipCount(newSkipCount)
-
-    if (newSkipCount >= 3) return
-
-    let newQuestion
-    if (newSkipCount === 2) {
-      const allLevel1 = sparkQuestionsData.filter(q => q.level === 1)
-      newQuestion = allLevel1[(getDayIndex() + 1) % allLevel1.length]
-      setOverrideSparkQuestion(newQuestion)
-    } else {
-      setOverrideSparkQuestion(null)
-      const newIndex = (sparkQuestionIndex + 1) % Math.max(eligibleSparkQuestions.length, 1)
-      setSparkQuestionIndex(newIndex)
-      newQuestion = eligibleSparkQuestions[newIndex]
-    }
-
-    setSparkAnswer('')
-    sparkSubmittedRef.current = false
-    setSparkSubmitted(false)
-    setPartnerSparkAnswer('')
-    setPartnerHasAnswered(false)
-    setSparkRevealed(false)
-    setNoraSparkReaction('')
-    hasGeneratedReaction.current = false
-
-    if (userId && coupleId && newQuestion) {
-      await supabase
-        .from('today_responses')
-        .upsert({
-          user_id: userId,
-          couple_id: coupleId,
-          prompt_date: getTodayString(),
-          spark_question: newQuestion.question,
-          spark_answer: null,
-          spark_submitted_at: null,
-        }, { onConflict: 'user_id,prompt_date' })
-    }
+    const { data: { session } } = await supabase.auth.getSession()
+    await fetch('/api/spark/skip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ sparkId: sparkData.spark.id, coupleId }),
+    })
+    await fetchSpark()
   }
 
+  const handleSparkReact = async (icon, rating) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    await fetch('/api/spark/react', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ sparkId: sparkData.spark.id, reactionIcon: icon, questionRating: rating }),
+    })
+    await fetchSpark()
+  }
 
   const handleReaction = (reaction) => {
     if (reactionSaved) return
@@ -742,138 +595,20 @@ export default function TodayPage() {
               <span className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400">
                 Daily Spark
               </span>
-              {todaySparkQuestion && sparkSkipCount < 3 && (
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-400 uppercase tracking-wide">
-                  {todaySparkQuestion.tone}
-                </span>
-              )}
             </div>
-
-            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-6">
-              {sparkSkipCount >= 3 ? (
-                /* Third skip — redirect to Nora */
-                <div>
-                  <p className="text-[17px] text-neutral-700 leading-relaxed mb-5"
-                     style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                    Some questions are harder to land on than others — that's okay. Want to talk about what's coming up for you?
-                  </p>
-                  <button
-                    onClick={() => router.push('/ai-coach')}
-                    className="px-5 py-2.5 bg-[#E8614D] text-white rounded-full text-[14px] font-semibold"
-                  >
-                    Talk to Nora
-                  </button>
-                </div>
-
-              ) : !todaySparkQuestion ? null : sparkRevealed ? (
-                /* State C — Both answered, reveal */
-                <div>
-                  <p className="text-[13px] text-neutral-400 leading-relaxed mb-4">
-                    {todaySparkQuestion.question}
-                  </p>
-                  <div className="space-y-3">
-                    <div className="bg-neutral-50 rounded-xl p-4">
-                      <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-neutral-400 mb-1.5">
-                        {userName || 'You'}
-                      </p>
-                      <p className="text-[16px] text-neutral-900 leading-snug"
-                         style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                        {sparkAnswer}
-                      </p>
-                    </div>
-                    <div className="bg-neutral-50 rounded-xl p-4">
-                      <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-neutral-400 mb-1.5">
-                        {partnerName}
-                      </p>
-                      <p className="text-[16px] text-neutral-900 leading-snug"
-                         style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                        {partnerSparkAnswer}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-4 pt-4 border-t border-neutral-100">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-2 h-2 rounded-full bg-[#F2A090] animate-pulse" />
-                      <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400">Nora</span>
-                    </div>
-                    {noraSparkReaction ? (
-                      <p className="text-[13px] text-neutral-500 italic leading-relaxed">
-                        {noraSparkReaction}
-                      </p>
-                    ) : (
-                      <p className="text-[12px] text-neutral-400">Nora is thinking…</p>
-                    )}
-                  </div>
-                </div>
-
-              ) : sparkSubmitted ? (
-                /* State B — User answered, waiting for partner */
-                <div>
-                  <p className="text-[13px] text-neutral-400 leading-relaxed mb-4">
-                    {todaySparkQuestion.question}
-                  </p>
-                  <div className="bg-neutral-50 rounded-xl p-4 mb-4">
-                    <p className="text-[10px] font-bold tracking-[0.08em] uppercase text-neutral-400 mb-1.5">
-                      Your answer
-                    </p>
-                    <p className="text-[16px] text-neutral-900 leading-snug"
-                       style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                      {sparkAnswer}
-                    </p>
-                  </div>
-                  <p className="text-[13px] text-neutral-400">
-                    {partnerName} hasn't answered yet — check back later
-                  </p>
-                </div>
-
-              ) : (
-                /* State A — Before user answers */
-                <div>
-                  <p className="text-[22px] text-neutral-900 leading-[1.35] mb-5"
-                     style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                    {todaySparkQuestion.question}
-                  </p>
-
-                  {partnerHasAnswered && (
-                    <p className="text-[12px] font-medium text-[#E8614D] mb-4">
-                      {partnerName} has answered — your turn
-                    </p>
-                  )}
-
-                  <input
-                    type="text"
-                    value={sparkAnswer}
-                    onChange={e => setSparkAnswer(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && sparkAnswer.trim() && submitSparkAnswer()}
-                    placeholder="Your answer…"
-                    className="w-full border border-neutral-200 rounded-xl px-4 py-3 text-[15px] text-neutral-900 placeholder-neutral-300 focus:outline-none focus:border-neutral-400 transition-colors mb-3"
-                  />
-
-                  <button
-                    onClick={submitSparkAnswer}
-                    disabled={!sparkAnswer.trim()}
-                    className="w-full py-3 bg-[#E8614D] text-white rounded-xl text-[15px] font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
-                  >
-                    Submit
-                  </button>
-
-                  <div className="mt-4 text-center">
-                    {partnerHasAnswered ? (
-                      <p className="text-[12px] text-neutral-400">
-                        {partnerName} already answered — this one's locked in.
-                      </p>
-                    ) : (
-                      <button
-                        onClick={handleSparkSkip}
-                        className="text-[12px] text-neutral-400 hover:text-neutral-600 transition-colors"
-                      >
-                        Not today →
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+            {sparkLoading && null}
+            {!sparkLoading && sparkData?.sparkDay && (
+              <SparkCard
+                spark={sparkData.spark}
+                mine={sparkData.mine}
+                theirs={sparkData.theirs}
+                partnerName={partnerName}
+                sparkIntroShown={sparkIntroShown}
+                onRespond={handleSparkRespond}
+                onSkip={handleSparkSkip}
+                onReact={handleSparkReact}
+              />
+            )}
           </section>
 
         ) : (
