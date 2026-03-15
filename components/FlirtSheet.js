@@ -364,14 +364,16 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
                       {sending ? 'Sending...' : 'Send it'}
                     </button>
                   )}
-                  <div className="text-center">
-                    <button
-                      onClick={() => generate(selectedMode, flirt.suggestion)}
-                      className="text-[13px] text-neutral-400 hover:text-neutral-600 transition-colors"
-                    >
-                      Get another
-                    </button>
-                  </div>
+                  {!receivedFlirt && (
+                    <div className="text-center">
+                      <button
+                        onClick={() => generate(selectedMode, flirt.suggestion)}
+                        className="text-[13px] text-neutral-400 hover:text-neutral-600 transition-colors"
+                      >
+                        Get another
+                      </button>
+                    </div>
+                  )}
                 </>
               ) : null}
             </>
