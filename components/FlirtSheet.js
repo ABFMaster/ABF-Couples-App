@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 const MODE_DEFS = [
   {
@@ -58,6 +59,7 @@ function formatModeLabel(mode) {
 }
 
 export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, userId, receivedFlirt, onViewed }) {
+  const router = useRouter()
   const [view, setView] = useState('modes') // 'modes' | 'loading' | 'result'
   const [selectedMode, setSelectedMode] = useState(null)
   const [flirt, setFlirt] = useState(null)
@@ -88,6 +90,20 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
       setView('result')
     }
   }
+
+  useEffect(() => {
+    if (isOpen && !receivedFlirt && userId) {
+      fetch(`/api/flirts/check-profile?userId=${userId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.flirt_profile_completed === false) {
+            handleClose()
+            router.push('/flirts/onboarding')
+          }
+        })
+        .catch(() => {})
+    }
+  }, [isOpen])
 
   useEffect(() => {
     if (isOpen && receivedFlirt) {
