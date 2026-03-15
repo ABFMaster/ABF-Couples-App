@@ -291,6 +291,7 @@ export default function TodayPage() {
         headers: { Authorization: `Bearer ${session.access_token}` },
       })
       const data = await res.json()
+      console.log('fetchSpark response:', data)
       setSparkData(data)
       if (data.mine?.responded_at) setSparkIntroShown(true)
     } catch {} finally {
