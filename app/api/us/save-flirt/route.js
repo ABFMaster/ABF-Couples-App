@@ -38,7 +38,8 @@ export async function POST(request) {
         couple_id: flirtRow.couple_id,
         type,
         title,
-        poster_path: posterPath || null,
+        ...(type === 'movie' ? { poster_url: posterPath } : {}),
+        ...(type === 'song' ? { artwork_url: posterPath } : {}),
         user_id: userId,
       })
 
