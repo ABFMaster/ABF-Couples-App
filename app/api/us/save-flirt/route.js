@@ -39,7 +39,7 @@ export async function POST(request) {
         type,
         title,
         poster_path: posterPath || null,
-        added_by: userId,
+        user_id: userId,
       })
 
     if (error) {
