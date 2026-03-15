@@ -287,7 +287,10 @@ export default function TodayPage() {
       setSparkLoading(true)
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
-      const res = await fetch('/api/spark/today', {
+      const params = new URLSearchParams(window.location.search)
+      const sparkOverride = params.get('spark') === 'true'
+      const sparkUrl = sparkOverride ? '/api/spark/today?spark=true' : '/api/spark/today'
+      const res = await fetch(sparkUrl, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       })
       const data = await res.json()
