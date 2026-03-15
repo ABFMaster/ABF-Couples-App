@@ -1,5 +1,5 @@
 # ABF — Developer Handoff Briefing
-# Last Updated: 2026-03-14
+# Last Updated: 2026-03-15
 
 ---
 
@@ -106,15 +106,22 @@ Do Together entry cards: Date Night, Trips, Timeline, Weekly Reflection. Shared 
 ### Nora (`app/ai-coach/page.js`)
 Full chat with rich context builder. Cross-session memory via `nora_memory` table — `maybeUpdateNoraMemory` fires post-conversation. Knowledge library in `lib/nora-knowledge.js` (Gottman, attachment, love languages, conflict styles, pairing matrix). Context builder in `lib/ai-coach-context.js`. Fresh session via `?new=true`. Pre-loaded opener via `sessionStorage`. Persistent couples debrief opener via `localStorage`.
 
-### Flirts
-- `components/FlirtSheet.js` — bottom sheet used on Dashboard and Today tab
+### Flirts ✅ FULLY SHIPPED
+- `components/FlirtSheet.js` — bottom sheet used on Dashboard and Today tab; dual-mode (send + receive)
 - 4 modes: GIF (Giphy), Song (Spotify), Movie/Show (OMDB), Prompt
 - `components/NoraConversation.js` — reusable Nora chat component
 - `/flirts/onboarding` — flirt profile onboarding (humor style, flirt style, media touchstones, inside joke)
 - `app/api/flirts/generate/route.js` — Claude generates suggestion, enriched via Giphy/Spotify/OMDB
-- `app/api/flirts/mark-sent/route.js` — sets `sent_at` on flirt row
-- "Send it" fires push notification to partner via `/api/push/send`
+- `app/api/flirts/mark-sent/route.js` — sets `sent_at`, increments `couples.flirts_sent` via RPC
+- `app/api/flirts/mark-viewed/route.js` — sets `viewed_at` when receiver opens FlirtSheet
+- `app/api/flirts/unread/route.js` — GET returns latest unseen flirt for a user
+- `app/api/flirts/check-profile/route.js` — GET checks `flirt_profile_completed`; redirects to onboarding if false
+- `app/api/us/save-flirt/route.js` — saves song/movie_show flirt to `shared_items` with correct image column
+- "Send it" fires push notification to partner via `/api/push/send` (URL: `/today`)
 - "Get another" passes `previousSuggestion` to avoid repetition
+- Receive flow: Today page fetches unread flirt on load → auto-opens FlirtSheet in receive mode → marks viewed on close
+- "Save to Us" button shown for song/movie_show in receive mode; maps to `artwork_url`/`poster_url` respectively
+- Opening FlirtSheet in send mode checks profile completion — incomplete users are redirected to `/flirts/onboarding`
 
 ### Our Timeline (`app/timeline/page.js`)
 Horizontal scrollable, oldest to newest. Stats header: together X years, X months, X days. 8 event types with icons/colors. Photo uploads to `timeline-photos` Supabase bucket.
@@ -141,7 +148,11 @@ Trip list with status badges. Trip detail with tabs: Overview / Itinerary / Pack
 | `app/ai-coach/page.js` | Nora chat |
 | `app/api/ai-coach/route.js` | Nora API |
 | `app/api/flirts/generate/route.js` | Flirt generation via Claude |
-| `app/api/flirts/mark-sent/route.js` | Mark flirt sent |
+| `app/api/flirts/mark-sent/route.js` | Mark flirt sent + increment flirts_sent counter |
+| `app/api/flirts/mark-viewed/route.js` | Mark flirt viewed by receiver |
+| `app/api/flirts/unread/route.js` | Fetch latest unread flirt for a user |
+| `app/api/flirts/check-profile/route.js` | Check flirt_profile_completed for a user |
+| `app/api/us/save-flirt/route.js` | Save received flirt to shared_items |
 | `app/api/push/send/route.js` | Push notification sender |
 | `app/flirts/onboarding/page.js` | Flirt profile onboarding |
 | `app/invite/[token]/page.js` | Public invite preview |
@@ -222,8 +233,7 @@ Must exist in both `.env.local` AND Vercel environment settings. Missing server-
 Full list in `docs/BUGS.md`. Summary:
 
 - `pathname.startsWith` crash in `BottomNav` is intermittent — null guard added but not fully confirmed resolved
-- Cass has not completed flirt onboarding — `flirt_profile_completed` is false, so generate route falls back to null profile fields
-- Push notification URL goes to `/flirts/inbox` which does not exist yet — will 404 on tap
+- Push notification URL now goes to `/today` — auto-opens FlirtSheet in receive mode on arrival
 - Google Places API returning 503 for date suggestions (`/api/dates/suggestions`)
 - Google Maps race condition in `/dates/custom` — AutocompleteService not initializing reliably
 
@@ -233,14 +243,10 @@ Full list in `docs/BUGS.md`. Summary:
 
 In priority order:
 
-1. Persistent flirt counter — increment `couples.flirts_sent` on send
-2. Receive UI for Cass — FlirtSheet receive mode, auto-open on Today/Dashboard when unseen flirt exists
-3. Save to Us button on Song and Movie/Show receive view
-4. Timeline entry created on save
-5. 3-day retention cleanup job
-6. Cass flirt onboarding
-7. Daily Spark feature
-8. Nora voice refinement pass (parking lot)
+1. 3-day retention cleanup job — delete GIF/Prompt flirts after 3 days; Song/Movie only if not saved to Us
+2. Daily Spark feature build
+3. Nora voice refinement pass
+4. UI sweep (standing backlog)
 
 ---
 
