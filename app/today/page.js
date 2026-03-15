@@ -71,6 +71,7 @@ function getTodayString() {
 }
 
 function getTodayGameType() {
+  if (typeof window !== 'undefined' && window.location.search.includes('spark=true')) return 'spark'
   const day = new Date().getDay() // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
   if (day === 3) return 'spark'
   if (day === 5) return 'ritual'
@@ -283,6 +284,7 @@ export default function TodayPage() {
 
   const fetchSpark = useCallback(async () => {
     try {
+      setSparkLoading(true)
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
       const res = await fetch('/api/spark/today', {
