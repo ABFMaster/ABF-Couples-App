@@ -420,7 +420,6 @@ export default function TodayPage() {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
       body: JSON.stringify({ sparkId: sparkData.spark.id, reactionIcon: icon, questionRating: rating }),
     })
-    await fetchSpark()
   }
 
   const handleReaction = (reaction) => {
