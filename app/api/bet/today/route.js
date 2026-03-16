@@ -64,9 +64,10 @@ export async function GET(request) {
         (Date.now() - new Date(couple.created_at).getTime()) / 86400000
       )
 
-      const q = getBetQuestion({ coupleAgeDays, usedIds })
+      let q
+      try { q = getBetQuestion({ coupleAgeDays, usedIds }) } catch (qErr) { console.error('[bet/today] getBetQuestion error:', qErr); return NextResponse.json({ error: qErr.message }, { status: 500 }) }
 
-      const { data: inserted } = await supabase
+      const { data: inserted, error: insertError } = await supabase
         .from('bets')
         .insert({
           couple_id: coupleId,
@@ -78,6 +79,8 @@ export async function GET(request) {
         })
         .select('id, question, question_id, question_level, question_category, bet_date')
         .maybeSingle()
+
+      if (insertError) console.error('[bet/today] insert error:', insertError)
 
       bet = inserted
     }
