@@ -4,10 +4,10 @@ import { useState } from 'react'
 import { Clock, Heart, Smile, Zap, HeartHandshake, Flame, Waves } from 'lucide-react'
 
 const REACTIONS = [
-  { icon: Heart, key: 'heart' },
-  { icon: Smile, key: 'smile' },
-  { icon: Zap, key: 'zap' },
-  { icon: HeartHandshake, key: 'handshake' },
+  { icon: Heart, key: 'heart', label: 'Loved it' },
+  { icon: Smile, key: 'smile', label: 'Made me smile' },
+  { icon: Zap, key: 'zap', label: 'Surprised me' },
+  { icon: HeartHandshake, key: 'handshake', label: 'Felt so us' },
 ]
 
 const RATINGS = [
@@ -142,18 +142,19 @@ export default function SparkCard({
         <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400 mb-2.5">
           How did their answer land?
         </p>
-        <div className="flex gap-2">
-          {REACTIONS.map(({ icon: Icon, key }) => (
+        <div className="flex flex-col gap-2">
+          {REACTIONS.map(({ icon: Icon, key, label }) => (
             <button
               key={key}
               onClick={() => handleReaction(key)}
-              className={`flex-1 py-2.5 rounded-full border flex items-center justify-center transition-all active:scale-[0.95] ${
+              className={`w-full py-2.5 px-4 rounded-full border flex items-center gap-2 transition-all active:scale-[0.98] ${
                 activeReaction === key
                   ? 'bg-[#E8614D] border-[#E8614D] text-white'
                   : 'bg-white border-neutral-200 text-neutral-500'
               }`}
             >
-              <Icon size={18} strokeWidth={1.75} />
+              <Icon size={16} strokeWidth={1.75} />
+              <span className="text-[13px] font-medium">{label}</span>
             </button>
           ))}
         </div>
