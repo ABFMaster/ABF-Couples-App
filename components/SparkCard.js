@@ -26,21 +26,20 @@ export default function SparkCard({
   onReact,
 }) {
   const [answerText, setAnswerText] = useState('')
-  const [selectedReaction, setSelectedReaction] = useState(null)
-  const [selectedRating, setSelectedRating] = useState(null)
+  const [selectedReaction, setSelectedReaction] = useState(mine?.reaction_icon ?? null)
+  const [selectedRating, setSelectedRating] = useState(mine?.question_rating ?? null)
 
   const hasAnswered = !!mine?.responded_at
   const partnerAnswered = !!theirs?.responded_at
-  const hasReacted = !!mine?.reaction_icon
+
+  const activeReaction = mine?.reaction_icon || selectedReaction
+  const activeRating = mine?.question_rating || selectedRating
 
   let state
   if (!hasAnswered) state = 'A'
   else if (!partnerAnswered) state = 'B'
-  else if (!hasReacted) state = 'C'
-  else state = 'D'
-
-  const activeReaction = mine?.reaction_icon || selectedReaction
-  const activeRating = mine?.question_rating || selectedRating
+  else if (mine?.reaction_icon || (selectedReaction && selectedRating)) state = 'D'
+  else state = 'C'
 
   const handleRespond = async () => {
     if (!answerText.trim()) return
@@ -122,7 +121,55 @@ export default function SparkCard({
     )
   }
 
-  // State C and D
+  if (state === 'D') {
+    const reactionObj = REACTIONS.find(r => r.key === activeReaction)
+    const ratingObj = RATINGS.find(r => r.key === activeRating)
+    const ReactionIcon = reactionObj?.icon
+    const RatingIcon = ratingObj?.icon
+    return (
+      <div>
+        <div className="mb-5">{questionEl}</div>
+        <div className="flex flex-col gap-3">
+          <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
+            <p className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-2">You</p>
+            <p className="text-[15px] text-neutral-800 leading-relaxed">{mine?.response_text}</p>
+          </div>
+          <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
+            <p className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-2">{partnerName}</p>
+            <p className="text-[15px] text-neutral-800 leading-relaxed">{theirs?.response_text}</p>
+          </div>
+        </div>
+        {ReactionIcon && (
+          <div className="mt-5 flex items-center gap-2">
+            <span className="text-[#E8614D]"><ReactionIcon size={16} strokeWidth={1.75} /></span>
+            <span className="text-[13px] text-neutral-500">{reactionObj.label}</span>
+          </div>
+        )}
+        {RatingIcon && (
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-[#E8614D]"><RatingIcon size={14} strokeWidth={1.75} /></span>
+            <span className="text-[13px] text-neutral-500">{ratingObj.label}</span>
+          </div>
+        )}
+        {mine?.nora_reaction && (
+          <div className="mt-5 flex items-start gap-2.5">
+            <div className="w-2 h-2 rounded-full bg-[#E8614D] animate-pulse flex-shrink-0 mt-1.5" />
+            <div>
+              <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400">Nora</span>
+              <p
+                className="text-[13px] text-neutral-500 italic leading-relaxed mt-0.5"
+                style={{ fontFamily: "'Fraunces', Georgia, serif" }}
+              >
+                {mine.nora_reaction}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // State C
   return (
     <div>
       <div className="mb-5">{questionEl}</div>
@@ -182,20 +229,6 @@ export default function SparkCard({
         </div>
       </div>
 
-      {state === 'D' && mine?.nora_reaction && (
-        <div className="mt-5 flex items-start gap-2.5">
-          <div className="w-2 h-2 rounded-full bg-[#E8614D] animate-pulse flex-shrink-0 mt-1.5" />
-          <div>
-            <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400">Nora</span>
-            <p
-              className="text-[13px] text-neutral-500 italic leading-relaxed mt-0.5"
-              style={{ fontFamily: "'Fraunces', Georgia, serif" }}
-            >
-              {mine.nora_reaction}
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
