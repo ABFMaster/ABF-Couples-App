@@ -55,9 +55,6 @@ export async function POST(request) {
       .eq('user_id', partnerId)
       .maybeSingle()
 
-    console.log('[spark/respond] partner row:', JSON.stringify(partnerResponse))
-    console.log('[spark/respond] bothAnswered:', !!partnerResponse?.responded_at)
-
     // Steps 7 & 8: Fetch both user names
     const [{ data: myProfile }, { data: partnerProfile }] = await Promise.all([
       supabase.from('user_profiles').select('name').eq('user_id', user.id).maybeSingle(),
