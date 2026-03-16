@@ -80,7 +80,7 @@ export async function GET(request) {
         .select('id, question, question_id, question_level, question_category, bet_date')
         .maybeSingle()
 
-      if (insertError) console.error('[bet/today] insert error:', insertError)
+      if (insertError) { console.error('[bet/today] insert error:', insertError); return NextResponse.json({ error: insertError.message, code: insertError.code, details: insertError.details }, { status: 500 }); }
 
       bet = inserted
     }
