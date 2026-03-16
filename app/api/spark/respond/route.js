@@ -141,6 +141,23 @@ React to what you see in these two answers. Be specific to what they actually sa
           .eq('spark_id', sparkId)
           .eq('user_id', partnerId),
       ])
+
+      // Update Nora memory with what was learned from this Spark
+      const newMemoryEntry = `Spark question: "${sparkRow.question}". ${currentUserName} answered: "${responseText}". ${partnerName} answered: "${partnerResponse.response_text}". Nora's observation: "${noraReaction}".`
+
+      const { data: existingMemory } = await supabase
+        .from('nora_memory')
+        .select('memory_summary')
+        .eq('couple_id', coupleId)
+        .maybeSingle()
+
+      const updatedSummary = existingMemory?.memory_summary
+        ? `${existingMemory.memory_summary}\n${newMemoryEntry}`
+        : newMemoryEntry
+
+      await supabase
+        .from('nora_memory')
+        .upsert({ couple_id: coupleId, memory_summary: updatedSummary }, { onConflict: 'couple_id' })
     }
 
     return NextResponse.json({ success: true, bothAnswered, partnerName })
