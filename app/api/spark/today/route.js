@@ -93,6 +93,41 @@ export async function GET(request) {
         .maybeSingle()
 
       spark = inserted
+
+      // Notify both users that a new Spark is ready
+      try {
+        const { data: myProfile } = await supabase
+          .from('user_profiles')
+          .select('name')
+          .eq('user_id', user.id)
+          .maybeSingle()
+
+        const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
+        await Promise.all([
+          fetch(`${appBase}/api/push/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: couple.user1_id,
+              title: 'The Spark',
+              body: 'A new Spark is waiting for you.',
+              url: '/today',
+            }),
+          }),
+          fetch(`${appBase}/api/push/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: couple.user2_id,
+              title: 'The Spark',
+              body: 'A new Spark is waiting for you.',
+              url: '/today',
+            }),
+          }),
+        ])
+      } catch (notifyErr) {
+        console.error('[spark/today] Notification error:', notifyErr)
+      }
     }
 
     if (!spark) {
