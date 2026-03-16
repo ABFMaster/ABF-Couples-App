@@ -49,12 +49,12 @@ export default function SparkCard({
 
   const handleReaction = (icon) => {
     setSelectedReaction(icon)
-    onReact(icon, activeRating)
+    onReact(icon, activeRating).catch(() => {})
   }
 
   const handleRating = (rating) => {
     setSelectedRating(rating)
-    onReact(activeReaction, rating)
+    onReact(activeReaction, rating).catch(() => {})
   }
 
   const questionEl = (
