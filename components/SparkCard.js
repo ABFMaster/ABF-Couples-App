@@ -11,8 +11,8 @@ const REACTIONS = [
 ]
 
 const RATINGS = [
-  { icon: Flame, key: 'more', label: 'More' },
-  { icon: Waves, key: 'easier', label: 'Easier' },
+  { icon: Flame, key: 'more', label: 'Keep it coming' },
+  { icon: Waves, key: 'easier', label: 'Ease up a bit' },
 ]
 
 export default function SparkCard({
@@ -39,23 +39,23 @@ export default function SparkCard({
   else if (!hasReacted) state = 'C'
   else state = 'D'
 
+  const activeReaction = mine?.reaction_icon || selectedReaction
+  const activeRating = mine?.question_rating || selectedRating
+
   const handleRespond = async () => {
     if (!answerText.trim()) return
     await onRespond(answerText.trim())
   }
 
-  const handleReaction = async (icon) => {
+  const handleReaction = (icon) => {
     setSelectedReaction(icon)
-    await onReact(icon, null)
+    onReact(icon, activeRating)
   }
 
-  const handleRating = async (rating) => {
+  const handleRating = (rating) => {
     setSelectedRating(rating)
-    await onReact(null, rating)
+    onReact(activeReaction, rating)
   }
-
-  const activeReaction = mine?.reaction_icon || selectedReaction
-  const activeRating = mine?.question_rating || selectedRating
 
   const questionEl = (
     <p
@@ -161,7 +161,7 @@ export default function SparkCard({
 
       <div className="mt-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400 mb-2.5">
-          How was the question?
+          Was this the right depth?
         </p>
         <div className="flex gap-2">
           {RATINGS.map(({ icon: Icon, key, label }) => (
