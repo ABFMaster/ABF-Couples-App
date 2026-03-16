@@ -287,9 +287,7 @@ export default function TodayPage() {
       setSparkLoading(true)
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
-      const params = new URLSearchParams(window.location.search)
-      const sparkOverride = params.get('spark') === 'true'
-      const sparkUrl = sparkOverride ? '/api/spark/today?spark=true' : '/api/spark/today'
+      const sparkUrl = '/api/spark/today?spark=true'
       const res = await fetch(sparkUrl, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       })
@@ -592,119 +590,26 @@ export default function TodayPage() {
           </h1>
         </div>
 
-        {/* SECTION 1 — DAILY SPARK or NORA PROMPT */}
-        {gameType === 'spark' ? (
-          <section>
-            <div className="flex items-center justify-between mb-3 px-1">
-              <span className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400">
-                Daily Spark
-              </span>
-            </div>
-            {sparkLoading && null}
-            {!sparkLoading && sparkData?.sparkDay && (
-              <SparkCard
-                spark={sparkData.spark}
-                mine={sparkData.mine}
-                theirs={sparkData.theirs}
-                partnerName={partnerName}
-                sparkIntroShown={sparkIntroShown}
-                onRespond={handleSparkRespond}
-                onSkip={handleSparkSkip}
-                onReact={handleSparkReact}
-              />
-            )}
-          </section>
-
-        ) : (
-          /* Non-spark days — existing Nora prompt unchanged */
-          <section>
-            <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
-              From Nora
-            </div>
-            <div className="bg-gradient-to-br from-[#252048] via-[#3E3585] to-[#6B4A72] rounded-2xl p-6 relative overflow-hidden">
-              <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-[#E8614D]/10 pointer-events-none" />
-              <div className="relative">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-2 h-2 rounded-full bg-[#F2A090] animate-pulse" />
-                  <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-white/40">Nora</span>
-                </div>
-                <p className="text-white text-[20px] leading-[1.45] mb-5"
-                   style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                  {noraSurprise}
-                </p>
-
-                {!reactionSaved ? (
-                  <div>
-                    <div className="flex gap-2 flex-wrap">
-                      {REACTIONS.map(r => (
-                        <button
-                          key={r}
-                          onClick={() => handleReaction(r)}
-                          className={`px-4 py-2 rounded-full text-[13px] font-semibold transition-colors ${
-                            todayReaction === r
-                              ? 'bg-[#E8614D] text-white'
-                              : 'bg-white/15 text-white/80 hover:bg-white/25'
-                          }`}
-                        >
-                          {r}
-                        </button>
-                      ))}
-                    </div>
-                    {todayReaction && (
-                      <div className="mt-4">
-                        <input
-                          type="text"
-                          value={reactionInput}
-                          onChange={e => {
-                            setReactionInput(e.target.value)
-                            if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
-                          }}
-                          placeholder="Want to add anything? (optional)"
-                          className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/40 text-[14px] focus:outline-none focus:border-white/40"
-                        />
-                        <button
-                          onClick={handleSaveReaction}
-                          className="mt-2 px-5 py-2 bg-white/20 text-white text-[13px] font-semibold rounded-full hover:bg-white/30 transition-colors"
-                        >
-                          Save
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-4 py-2 rounded-full text-[13px] font-semibold bg-[#E8614D] text-white">
-                        {todayReaction}
-                      </span>
-                      {todayNote && (
-                        <span className="text-white/60 text-[13px]">— {todayNote}</span>
-                      )}
-                    </div>
-                    {partnerReaction && (
-                      <p className="text-white/50 text-[12px]">
-                        {partnerName} said: {partnerReaction}{partnerNote ? ` — ${partnerNote}` : ''}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {reactionSaved && partnerName === 'your partner' && (
-                  <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
-                    <p className="text-white/50 text-[13px]">Share this with your partner</p>
-                    <button
-                      onClick={copyInviteLink}
-                      disabled={inviteLoading}
-                      className="text-[13px] font-semibold text-white/80 hover:text-white transition-colors disabled:opacity-50"
-                    >
-                      {inviteCopied ? 'Link copied!' : inviteLoading ? 'Copying…' : 'Copy invite link →'}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        )}
+        {/* SECTION 1 — THE SPARK */}
+        <section>
+          <div className="flex items-center justify-between mb-3 px-1">
+            <span className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400">
+              The Spark
+            </span>
+          </div>
+          {!sparkLoading && sparkData?.sparkDay && (
+            <SparkCard
+              spark={sparkData.spark}
+              mine={sparkData.mine}
+              theirs={sparkData.theirs}
+              partnerName={partnerName}
+              sparkIntroShown={sparkIntroShown}
+              onRespond={handleSparkRespond}
+              onSkip={handleSparkSkip}
+              onReact={handleSparkReact}
+            />
+          )}
+        </section>
 
         {/* SECTION 2 — FOR YOUR PARTNER */}
         <section>
