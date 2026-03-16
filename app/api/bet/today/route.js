@@ -80,7 +80,7 @@ export async function GET(request) {
         .select('id, question, question_id, question_level, question_category, bet_date')
         .maybeSingle()
 
-      if (insertError) { console.error('[bet/today] insert error:', insertError); return NextResponse.json({ error: insertError.message, code: insertError.code, details: insertError.details }, { status: 500 }); }
+      if (insertError) { console.error('[bet/today] insert error:', insertError); }
 
       bet = inserted
     }
@@ -127,6 +127,6 @@ export async function GET(request) {
     })
   } catch (err) {
     console.error('[bet/today] Error:', err)
-    return NextResponse.json({ error: err.message, stack: err.stack }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
