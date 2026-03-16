@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { notifyPartnerTodayResponse } from '@/lib/notify'
 import SparkCard from '@/components/SparkCard'
+import BetCard from '@/components/BetCard'
 import FlirtSheet from '@/components/FlirtSheet'
 
 const FEATURE_SPOTLIGHTS = [
@@ -135,6 +136,10 @@ export default function TodayPage() {
   const [sparkData, setSparkData] = useState(null)
   const [sparkLoading, setSparkLoading] = useState(true)
   const [sparkIntroShown, setSparkIntroShown] = useState(false)
+
+  // Bet state
+  const [betData, setBetData] = useState(null)
+  const [betLoading, setBetLoading] = useState(true)
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -299,7 +304,20 @@ export default function TodayPage() {
     }
   }, [])
 
-  useEffect(() => { fetchAll(); fetchSpark() }, [fetchAll, fetchSpark])
+  const fetchBet = useCallback(async () => {
+    try {
+      setBetLoading(true)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const res = await fetch(`/api/bet/today?userId=${user.id}&bet=true`)
+      const data = await res.json()
+      setBetData(data)
+    } catch {} finally {
+      setBetLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchAll(); fetchSpark(); fetchBet() }, [fetchAll, fetchSpark, fetchBet])
 
 
   // Compute derived state after data loads
@@ -590,26 +608,47 @@ export default function TodayPage() {
           </h1>
         </div>
 
-        {/* SECTION 1 — THE SPARK */}
-        <section>
-          <div className="flex items-center justify-between mb-3 px-1">
-            <span className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400">
-              The Spark
-            </span>
-          </div>
-          {!sparkLoading && sparkData?.sparkDay && (
-            <SparkCard
-              spark={sparkData.spark}
-              mine={sparkData.mine}
-              theirs={sparkData.theirs}
-              partnerName={partnerName}
-              sparkIntroShown={sparkIntroShown}
-              onRespond={handleSparkRespond}
-              onSkip={handleSparkSkip}
-              onReact={handleSparkReact}
-            />
-          )}
-        </section>
+        {/* SECTION 1 — THE BET or THE SPARK */}
+        {(new Date().getDay() === 3 || window.location.search.includes('bet=true')) ? (
+          <section>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <span className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400">
+                The Bet
+              </span>
+            </div>
+            {!betLoading && betData?.betDay && betData.bet && (
+              <BetCard
+                bet={betData.bet}
+                mine={betData.mine}
+                theirs={betData.theirs}
+                partnerId={betData.partnerId || partnerId}
+                partnerName={betData.partnerName || partnerName}
+                userId={userId}
+                coupleId={coupleId}
+              />
+            )}
+          </section>
+        ) : (
+          <section>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <span className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400">
+                The Spark
+              </span>
+            </div>
+            {!sparkLoading && sparkData?.sparkDay && (
+              <SparkCard
+                spark={sparkData.spark}
+                mine={sparkData.mine}
+                theirs={sparkData.theirs}
+                partnerName={partnerName}
+                sparkIntroShown={sparkIntroShown}
+                onRespond={handleSparkRespond}
+                onSkip={handleSparkSkip}
+                onReact={handleSparkReact}
+              />
+            )}
+          </section>
+        )}
 
         {/* SECTION 2 — FOR YOUR PARTNER */}
         <section>
