@@ -21,18 +21,29 @@ export default function NavBadges() {
       const partnerId = couple.user1_id === user.id ? couple.user2_id : couple.user1_id
       const today = new Date().toISOString().split('T')[0]
 
-      const { data } = await supabase
-        .from('today_responses')
-        .select('user_id, spark_answer, spark_reveal_seen_at')
+      const { data: spark } = await supabase
+        .from('sparks')
+        .select('id')
         .eq('couple_id', couple.id)
-        .eq('prompt_date', today)
+        .eq('spark_date', today)
+        .maybeSingle()
 
-      const mine = data?.find(r => r.user_id === user.id)
-      const theirs = data?.find(r => r.user_id === partnerId)
+      if (!spark) {
+        setTodayHasBadge(false)
+        return
+      }
 
-      if (theirs?.spark_answer && !mine?.spark_answer) {
+      const { data: responses } = await supabase
+        .from('spark_responses')
+        .select('user_id, responded_at, reaction_icon')
+        .eq('spark_id', spark.id)
+
+      const mine = responses?.find(r => r.user_id === user.id)
+      const theirs = responses?.find(r => r.user_id === partnerId)
+
+      if (theirs?.responded_at && !mine?.responded_at) {
         setTodayHasBadge(true)
-      } else if (theirs?.spark_answer && mine?.spark_answer && !mine?.spark_reveal_seen_at) {
+      } else if (theirs?.responded_at && mine?.responded_at && !mine?.reaction_icon) {
         setTodayHasBadge(true)
       } else {
         setTodayHasBadge(false)
