@@ -110,7 +110,9 @@ export async function GET(request) {
         .maybeSingle(),
     ])
 
-    // Step 6: Return response
+    // Step 6: Return response (blind partner's response until user has submitted their own prediction)
+    const blindedTheirs = mine?.prediction ? (theirs || null) : null
+
     return NextResponse.json({
       betDay: true,
       bet: {
@@ -121,7 +123,7 @@ export async function GET(request) {
         bet_date: bet.bet_date,
       },
       mine: mine || null,
-      theirs: theirs || null,
+      theirs: blindedTheirs,
       partnerId,
       partnerName: partnerProfile?.display_name || null,
     })
