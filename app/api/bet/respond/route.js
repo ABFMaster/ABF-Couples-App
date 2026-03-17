@@ -66,15 +66,18 @@ export async function POST(request) {
       }
     }
 
-    // Upsert the response row
-    await supabase
-      .from('bet_responses')
-      .upsert({
-        bet_id: betId,
-        user_id: userId,
-        couple_id: resolvedCoupleId,
-        ...updatePayload,
-      }, { onConflict: 'bet_id,user_id' })
+    // Insert or update the response row
+    if (existingRow) {
+      await supabase
+        .from('bet_responses')
+        .update(updatePayload)
+        .eq('bet_id', betId)
+        .eq('user_id', userId)
+    } else {
+      await supabase
+        .from('bet_responses')
+        .insert({ bet_id: betId, user_id: userId, couple_id: resolvedCoupleId, ...updatePayload })
+    }
 
     // Fetch both response rows after save
     const [{ data: mine }, { data: theirs }] = await Promise.all([
