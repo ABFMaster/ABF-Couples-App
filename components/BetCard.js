@@ -125,11 +125,11 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
 
         <div className="bg-neutral-50 rounded-xl border border-neutral-200 p-4 mb-3">
           <p className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-0.5">Your answer</p>
-          <p className="text-[12px] text-neutral-400 mb-2">What would you do?</p>
+          <p className="text-[12px] text-neutral-400 mb-2">Answer for yourself — who do you think it is?</p>
           <textarea
             value={actualText}
             onChange={e => setActualText(e.target.value)}
-            placeholder="Describe what you'd actually do..."
+            placeholder="Give your honest answer..."
             rows={3}
             className="w-full bg-white border border-neutral-200 rounded-lg p-3 text-[15px] text-neutral-900 placeholder:text-neutral-400 resize-none focus:outline-none focus:border-[#E8614D] transition-colors"
           />
@@ -137,11 +137,11 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
 
         <div className="bg-neutral-50 rounded-xl border border-neutral-200 p-4 mb-4">
           <p className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-0.5">Your bet</p>
-          <p className="text-[12px] text-neutral-400 mb-2">What do you think {partnerName} would do?</p>
+          <p className="text-[12px] text-neutral-400 mb-2">What will {partnerName} say?</p>
           <textarea
             value={predictionText}
             onChange={e => setPredictionText(e.target.value)}
-            placeholder="What's your read on them?"
+            placeholder="Predict their answer..."
             rows={3}
             className="w-full bg-white border border-neutral-200 rounded-lg p-3 text-[15px] text-neutral-900 placeholder:text-neutral-400 resize-none focus:outline-none focus:border-[#E8614D] transition-colors"
           />
