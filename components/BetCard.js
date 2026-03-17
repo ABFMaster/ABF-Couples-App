@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Heart, Smile, Zap, HeartHandshake, Flame, Waves } from 'lucide-react'
 
 const REACTIONS = [
@@ -27,15 +27,38 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
   const hasSubmitted = !!(localMine?.prediction && localMine?.actual_answer)
   const partnerSubmitted = !!(localTheirs?.prediction && localTheirs?.actual_answer)
   const bothSubmitted = hasSubmitted && partnerSubmitted
+  const noraReaction = localMine?.nora_reaction
 
   let state
   if (!hasSubmitted) state = 'A'
   else if (!bothSubmitted) state = 'B'
+  else if (!noraReaction) state = 'NORA_LOADING'
   else state = 'D'
 
   const activeReaction = localMine?.reaction_icon || selectedReaction
   const activeRating = localMine?.question_rating || selectedRating
   const isSealed = !!(activeReaction && activeRating)
+
+  // Animation states — pre-set if component mounts already in State D
+  const initiallyInD = !!(
+    mine?.prediction && mine?.actual_answer &&
+    theirs?.prediction && theirs?.actual_answer &&
+    mine?.nora_reaction
+  )
+  const [panelsVisible, setPanelsVisible] = useState(initiallyInD)
+  const [noraVisible, setNoraVisible] = useState(initiallyInD)
+  const [pillsVisible, setPillsVisible] = useState(initiallyInD)
+  const animationFired = useRef(initiallyInD)
+
+  useEffect(() => {
+    if (state !== 'D') return
+    if (animationFired.current) return
+    animationFired.current = true
+    const t1 = setTimeout(() => setPanelsVisible(true), 50)
+    const t2 = setTimeout(() => setNoraVisible(true), 850)
+    const t3 = setTimeout(() => setPillsVisible(true), 1250)
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
+  }, [state])
 
   const poll = useCallback(async () => {
     try {
@@ -47,8 +70,8 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
   }, [userId])
 
   useEffect(() => {
-    if (state !== 'B' && state !== 'D') return
-    const interval = setInterval(poll, 8000)
+    if (state !== 'B' && state !== 'NORA_LOADING') return
+    const interval = setInterval(poll, state === 'NORA_LOADING' ? 2000 : 8000)
     return () => clearInterval(interval)
   }, [state, poll])
 
@@ -184,19 +207,32 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
     )
   }
 
-  // State D — Full reveal
+  // NORA_LOADING — Both submitted, waiting for Nora reaction
+  if (state === 'NORA_LOADING') {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p
+          className="text-[18px] text-neutral-400 animate-pulse"
+          style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}
+        >
+          Nora is reading the room…
+        </p>
+      </div>
+    )
+  }
+
+  // State D — Full reveal with sequential fade-in animations
   const reactionObj = REACTIONS.find(r => r.key === activeReaction)
   const ratingObj = RATINGS.find(r => r.key === activeRating)
   const ReactionIcon = reactionObj?.icon
   const RatingIcon = ratingObj?.icon
-  const noraReaction = localMine?.nora_reaction
 
   return (
     <div>
       <div className="mb-5">{questionEl}</div>
 
-      {/* 2x2 reveal grid */}
-      <div className="grid grid-cols-2 gap-2">
+      {/* 2x2 reveal grid — fades in first */}
+      <div className={`grid grid-cols-2 gap-2 transition-all duration-700 ease-out ${panelsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
         <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
           <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-2 leading-tight">
             {partnerName} said
@@ -223,87 +259,92 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
         </div>
       </div>
 
-      {/* Nora reaction */}
-      {noraReaction && (
-        <div className="mt-5 flex items-start gap-2.5">
-          <div className="w-2 h-2 rounded-full bg-[#E8614D] animate-pulse flex-shrink-0 mt-1.5" />
-          <div>
-            <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400">Nora</span>
-            <p
-              className="text-[13px] text-neutral-500 italic leading-relaxed mt-0.5"
-              style={{ fontFamily: "'Fraunces', Georgia, serif" }}
-            >
-              {noraReaction}
-            </p>
+      {/* Nora reaction — fades in 800ms after panels */}
+      <div className={`mt-5 transition-all duration-700 ease-out ${noraVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+        {noraReaction && (
+          <div className="flex items-start gap-2.5">
+            <div className="w-2 h-2 rounded-full bg-[#E8614D] animate-pulse flex-shrink-0 mt-1.5" />
+            <div>
+              <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400">Nora</span>
+              <p
+                className="text-[13px] text-neutral-500 italic leading-relaxed mt-0.5"
+                style={{ fontFamily: "'Fraunces', Georgia, serif" }}
+              >
+                {noraReaction}
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Sealed state — show selected reactions as read-only */}
-      {isSealed ? (
-        <div className="mt-5">
-          {ReactionIcon && (
-            <div className="flex items-center gap-2">
-              <span className="text-[#E8614D]"><ReactionIcon size={16} strokeWidth={1.75} /></span>
-              <span className="text-[13px] text-neutral-500">{reactionObj.label}</span>
-            </div>
-          )}
-          {RatingIcon && (
-            <div className="mt-2 flex items-center gap-2">
-              <span className="text-[#E8614D]"><RatingIcon size={14} strokeWidth={1.75} /></span>
-              <span className="text-[13px] text-neutral-500">{ratingObj.label}</span>
-            </div>
-          )}
-        </div>
-      ) : (
-        <>
-          {/* Reaction pills */}
+      {/* Reaction + rating pills — fades in 1200ms after panels */}
+      <div className={`transition-all duration-700 ease-out ${pillsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+        {/* Sealed state — show selected reactions as read-only */}
+        {isSealed ? (
           <div className="mt-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400 mb-2.5">
-              How did this land?
-            </p>
-            <div className="flex flex-col gap-2">
-              {REACTIONS.map(({ icon: Icon, key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => handleReaction(key)}
-                  className={`w-full py-2.5 px-4 rounded-full border flex items-center gap-2 transition-all active:scale-[0.98] ${
-                    activeReaction === key
-                      ? 'bg-[#E8614D] border-[#E8614D] text-white'
-                      : 'bg-white border-neutral-200 text-neutral-500'
-                  }`}
-                >
-                  <Icon size={16} strokeWidth={1.75} />
-                  <span className="text-[13px] font-medium">{label}</span>
-                </button>
-              ))}
-            </div>
+            {ReactionIcon && (
+              <div className="flex items-center gap-2">
+                <span className="text-[#E8614D]"><ReactionIcon size={16} strokeWidth={1.75} /></span>
+                <span className="text-[13px] text-neutral-500">{reactionObj.label}</span>
+              </div>
+            )}
+            {RatingIcon && (
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-[#E8614D]"><RatingIcon size={14} strokeWidth={1.75} /></span>
+                <span className="text-[13px] text-neutral-500">{ratingObj.label}</span>
+              </div>
+            )}
           </div>
+        ) : (
+          <>
+            {/* Reaction pills */}
+            <div className="mt-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400 mb-2.5">
+                How did this land?
+              </p>
+              <div className="flex flex-col gap-2">
+                {REACTIONS.map(({ icon: Icon, key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => handleReaction(key)}
+                    className={`w-full py-2.5 px-4 rounded-full border flex items-center gap-2 transition-all active:scale-[0.98] ${
+                      activeReaction === key
+                        ? 'bg-[#E8614D] border-[#E8614D] text-white'
+                        : 'bg-white border-neutral-200 text-neutral-500'
+                    }`}
+                  >
+                    <Icon size={16} strokeWidth={1.75} />
+                    <span className="text-[13px] font-medium">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          {/* Rating pills */}
-          <div className="mt-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400 mb-2.5">
-              Was this the right depth?
-            </p>
-            <div className="flex gap-2">
-              {RATINGS.map(({ icon: Icon, key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => handleRating(key)}
-                  className={`flex-1 py-2.5 rounded-full border flex items-center justify-center gap-1.5 text-[12px] font-semibold transition-all active:scale-[0.95] ${
-                    activeRating === key
-                      ? 'bg-[#E8614D] border-[#E8614D] text-white'
-                      : 'bg-white border-neutral-200 text-neutral-500'
-                  }`}
-                >
-                  <Icon size={14} strokeWidth={1.75} />
-                  {label}
-                </button>
-              ))}
+            {/* Rating pills */}
+            <div className="mt-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400 mb-2.5">
+                Was this the right depth?
+              </p>
+              <div className="flex gap-2">
+                {RATINGS.map(({ icon: Icon, key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => handleRating(key)}
+                    className={`flex-1 py-2.5 rounded-full border flex items-center justify-center gap-1.5 text-[12px] font-semibold transition-all active:scale-[0.95] ${
+                      activeRating === key
+                        ? 'bg-[#E8614D] border-[#E8614D] text-white'
+                        : 'bg-white border-neutral-200 text-neutral-500'
+                    }`}
+                  >
+                    <Icon size={14} strokeWidth={1.75} />
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   )
 }
