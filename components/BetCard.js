@@ -408,25 +408,20 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
         ))}
       </div>
 
-      {/* Placeholder reserves space for Nora + pills before they fade in */}
-      <div style={{ minHeight: '280px' }}>
-
-      {/* Nora reaction — fades in 500ms after all cards flipped */}
-      {noraReaction && (
-        <div style={{ marginTop: '20px', ...fadeStyle(noraReactionShown, 500) }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-            <div className="animate-pulse" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D4A853', flexShrink: 0, marginTop: '4px' }} />
-            <div>
-              <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#D4A853', textTransform: 'uppercase', marginBottom: '4px' }}>Nora</p>
-              <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '13px', color: '#C4B49A', fontStyle: 'italic', lineHeight: 1.5 }}>
-                {noraReaction}
-              </p>
-            </div>
+      {/* Nora reaction — always in DOM, fades in 500ms after all cards flipped */}
+      <div style={{ marginTop: '20px', ...fadeStyle(noraReactionShown, 500) }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+          <div className="animate-pulse" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D4A853', flexShrink: 0, marginTop: '4px' }} />
+          <div>
+            <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#D4A853', textTransform: 'uppercase', marginBottom: '4px' }}>Nora</p>
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '13px', color: '#C4B49A', fontStyle: 'italic', lineHeight: 1.5 }}>
+              {noraReaction}
+            </p>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Reaction + rating pills — fades in 300ms after Nora */}
+      {/* Reaction + rating pills — always in DOM, fades in 300ms after Nora */}
       <div style={fadeStyle(pillsShown, 300)}>
         {isSealed ? (
           <div style={{ marginTop: '20px' }}>
@@ -520,8 +515,6 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
           </>
         )}
       </div>
-
-      </div>{/* end placeholder */}
     </div>
   )
 }
