@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Heart, Smile, Zap, HeartHandshake, Flame, Waves } from 'lucide-react'
 
 const REACTIONS = [
@@ -18,31 +18,25 @@ const RATINGS = [
 export default function BetCard({ bet, mine, theirs, partnerId, partnerName, userId, coupleId }) {
   const [localMine, setLocalMine] = useState(mine)
   const [localTheirs, setLocalTheirs] = useState(theirs)
-  const [predictionText, setPredictionText] = useState('')
   const [actualText, setActualText] = useState('')
+  const [predictionText, setPredictionText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [selectedReaction, setSelectedReaction] = useState(mine?.reaction_icon ?? null)
   const [selectedRating, setSelectedRating] = useState(mine?.question_rating ?? null)
-  const lockFired = useRef(false)
 
-  // Derive state
-  const hasMine = !!localMine?.prediction
-  const hasTheirs = !!localTheirs?.prediction
-  const hasMineActual = !!localMine?.actual_answer
-  const hasTheirsActual = !!localTheirs?.actual_answer
+  const hasSubmitted = !!(localMine?.prediction && localMine?.actual_answer)
+  const partnerSubmitted = !!(localTheirs?.prediction && localTheirs?.actual_answer)
+  const bothSubmitted = hasSubmitted && partnerSubmitted
 
   let state
-  if (!hasMine) state = 'A'
-  else if (!hasTheirs) state = 'B'
-  else if (!hasMineActual) state = 'C'
-  else if (!hasTheirsActual) state = 'C_WAIT'
+  if (!hasSubmitted) state = 'A'
+  else if (!bothSubmitted) state = 'B'
   else state = 'D'
 
   const activeReaction = localMine?.reaction_icon || selectedReaction
   const activeRating = localMine?.question_rating || selectedRating
   const isSealed = !!(activeReaction && activeRating)
 
-  // Polling for waiting states
   const poll = useCallback(async () => {
     try {
       const res = await fetch(`/api/bet/today?userId=${userId}&bet=true`)
@@ -53,49 +47,13 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
   }, [userId])
 
   useEffect(() => {
-    if (state !== 'B' && state !== 'C_WAIT') return
+    if (state !== 'B' && state !== 'D') return
     const interval = setInterval(poll, 8000)
     return () => clearInterval(interval)
   }, [state, poll])
 
-  const handleLock = () => {
-    if (lockFired.current) return
-    lockFired.current = true
-    fetch('/api/bet/lock', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ betId: bet.id, userId, coupleId }),
-    }).catch(() => {})
-  }
-
-  const handleSubmitPrediction = async () => {
-    if (!predictionText.trim() || submitting) return
-    setSubmitting(true)
-    try {
-      await fetch('/api/bet/respond', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          betId: bet.id,
-          userId,
-          coupleId,
-          responseType: 'prediction',
-          responseText: predictionText.trim(),
-        }),
-      })
-      setLocalMine(prev => ({
-        ...(prev || {}),
-        prediction: predictionText.trim(),
-        responded_at: new Date().toISOString(),
-      }))
-      setPredictionText('')
-    } catch {} finally {
-      setSubmitting(false)
-    }
-  }
-
-  const handleSubmitActual = async () => {
-    if (!actualText.trim() || submitting) return
+  const handleSubmit = async () => {
+    if (!actualText.trim() || !predictionText.trim() || submitting) return
     setSubmitting(true)
     try {
       const res = await fetch('/api/bet/respond', {
@@ -105,18 +63,19 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
           betId: bet.id,
           userId,
           coupleId,
-          responseType: 'actual',
-          responseText: actualText.trim(),
+          prediction: predictionText.trim(),
+          actualAnswer: actualText.trim(),
         }),
       })
       const data = await res.json()
       setLocalMine(prev => ({
         ...(prev || {}),
+        prediction: predictionText.trim(),
         actual_answer: actualText.trim(),
-        ...(data.noraReaction ? { nora_reaction: data.noraReaction } : {}),
+        responded_at: new Date().toISOString(),
+        ...(data.mine || {}),
       }))
       if (data.theirs) setLocalTheirs(data.theirs)
-      setActualText('')
     } catch {} finally {
       setSubmitting(false)
     }
@@ -149,91 +108,77 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
     </p>
   )
 
-  // State A — Enter prediction
+  const questionSmall = (
+    <p
+      className="text-[15px] text-neutral-400 leading-snug text-center"
+      style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}
+    >
+      {bet.question}
+    </p>
+  )
+
+  // State A — Enter both answers at once
   if (state === 'A') {
     return (
       <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
         <div className="mb-6">{questionEl}</div>
-        <textarea
-          value={predictionText}
-          onChange={e => setPredictionText(e.target.value)}
-          onFocus={handleLock}
-          placeholder="What do you think they'll say?"
-          rows={4}
-          className="w-full bg-neutral-50 border border-neutral-200 rounded-xl p-4 text-[15px] text-neutral-900 placeholder:text-neutral-400 resize-none focus:outline-none focus:border-[#E8614D] transition-colors"
-        />
+
+        <div className="bg-neutral-50 rounded-xl border border-neutral-200 p-4 mb-3">
+          <p className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-0.5">Your answer</p>
+          <p className="text-[12px] text-neutral-400 mb-2">What would you do?</p>
+          <textarea
+            value={actualText}
+            onChange={e => setActualText(e.target.value)}
+            placeholder="Describe what you'd actually do..."
+            rows={3}
+            className="w-full bg-white border border-neutral-200 rounded-lg p-3 text-[15px] text-neutral-900 placeholder:text-neutral-400 resize-none focus:outline-none focus:border-[#E8614D] transition-colors"
+          />
+        </div>
+
+        <div className="bg-neutral-50 rounded-xl border border-neutral-200 p-4 mb-4">
+          <p className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-0.5">Your bet</p>
+          <p className="text-[12px] text-neutral-400 mb-2">What do you think {partnerName} would do?</p>
+          <textarea
+            value={predictionText}
+            onChange={e => setPredictionText(e.target.value)}
+            placeholder="What's your read on them?"
+            rows={3}
+            className="w-full bg-white border border-neutral-200 rounded-lg p-3 text-[15px] text-neutral-900 placeholder:text-neutral-400 resize-none focus:outline-none focus:border-[#E8614D] transition-colors"
+          />
+        </div>
+
         <button
-          onClick={handleSubmitPrediction}
-          disabled={!predictionText.trim() || submitting}
-          className="w-full mt-3 py-3 bg-[#E8614D] text-white text-[15px] font-semibold rounded-full active:scale-[0.98] transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
+          onClick={handleSubmit}
+          disabled={!actualText.trim() || !predictionText.trim() || submitting}
+          className="w-full py-3 bg-[#E8614D] text-white text-[15px] font-semibold rounded-full active:scale-[0.98] transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          Lock in my prediction
+          Lock in my bet
         </button>
       </div>
     )
   }
 
-  // State B — Waiting for partner's prediction
+  // State B — Waiting for partner
   if (state === 'B') {
     return (
       <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
-        <div className="mb-5">{questionEl}</div>
-        <div className="bg-neutral-50 rounded-xl border border-neutral-100 p-4">
-          <p className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-2">Your prediction</p>
-          <p className="text-[15px] text-neutral-800 leading-relaxed">{localMine?.prediction}</p>
-        </div>
-        <div className="flex items-center gap-2 mt-4 text-neutral-400">
-          <div className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-pulse flex-shrink-0" />
-          <p className="text-[13px]">{partnerName} is writing their prediction…</p>
-        </div>
-      </div>
-    )
-  }
+        <div className="mb-5">{questionSmall}</div>
 
-  // State C — Enter actual answer
-  if (state === 'C') {
-    return (
-      <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
-        <div className="mb-6">{questionEl}</div>
-        <div className="bg-neutral-50 rounded-xl border border-neutral-100 p-3 mb-4">
-          <p className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-1">Your prediction</p>
-          <p
-            className="text-[13px] text-neutral-500 italic leading-relaxed"
-            style={{ fontFamily: "'Fraunces', Georgia, serif" }}
-          >
-            {localMine?.prediction}
-          </p>
-        </div>
-        <textarea
-          value={actualText}
-          onChange={e => setActualText(e.target.value)}
-          placeholder="What's your real answer?"
-          rows={4}
-          className="w-full bg-neutral-50 border border-neutral-200 rounded-xl p-4 text-[15px] text-neutral-900 placeholder:text-neutral-400 resize-none focus:outline-none focus:border-[#E8614D] transition-colors"
-        />
-        <button
-          onClick={handleSubmitActual}
-          disabled={!actualText.trim() || submitting}
-          className="w-full mt-3 py-3 bg-[#E8614D] text-white text-[15px] font-semibold rounded-full active:scale-[0.98] transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Reveal my answer
-        </button>
-      </div>
-    )
-  }
-
-  // State C_WAIT — Waiting for partner's actual answer
-  if (state === 'C_WAIT') {
-    return (
-      <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-6">
-        <div className="mb-5">{questionEl}</div>
-        <div className="bg-neutral-50 rounded-xl border border-neutral-100 p-4">
+        <div className="bg-neutral-50 rounded-xl border border-neutral-100 p-4 mb-2">
           <p className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-2">Your answer</p>
           <p className="text-[15px] text-neutral-800 leading-relaxed">{localMine?.actual_answer}</p>
         </div>
-        <div className="flex items-center gap-2 mt-4 text-neutral-400">
+
+        <div className="bg-neutral-50 rounded-xl border border-neutral-100 p-4 mb-4">
+          <p className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-2">
+            Your bet on {partnerName}
+          </p>
+          <p className="text-[15px] text-neutral-800 leading-relaxed">{localMine?.prediction}</p>
+        </div>
+
+        <div className="flex items-center gap-2 text-neutral-400">
           <div className="w-1.5 h-1.5 rounded-full bg-neutral-300 animate-pulse flex-shrink-0" />
-          <p className="text-[13px]">Waiting for {partnerName} to reveal their answer…</p>
+          <p className="text-[13px]">{partnerName} is thinking…</p>
         </div>
       </div>
     )
@@ -254,27 +199,27 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
           <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-2 leading-tight">
-            {partnerName} predicted you'd say
+            {partnerName} said
           </p>
-          <p className="text-[14px] text-neutral-800 leading-relaxed">{localTheirs?.prediction}</p>
+          <p className="text-[14px] text-neutral-800 leading-relaxed">{localTheirs?.actual_answer}</p>
         </div>
         <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
           <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-2 leading-tight">
-            You actually said
-          </p>
-          <p className="text-[14px] text-neutral-800 leading-relaxed">{localMine?.actual_answer}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
-          <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-2 leading-tight">
-            You predicted {partnerName} would say
+            You bet {partnerName} would say
           </p>
           <p className="text-[14px] text-neutral-800 leading-relaxed">{localMine?.prediction}</p>
         </div>
         <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
           <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-2 leading-tight">
-            {partnerName} actually said
+            You said
           </p>
-          <p className="text-[14px] text-neutral-800 leading-relaxed">{localTheirs?.actual_answer}</p>
+          <p className="text-[14px] text-neutral-800 leading-relaxed">{localMine?.actual_answer}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
+          <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-2 leading-tight">
+            {partnerName} bet you would say
+          </p>
+          <p className="text-[14px] text-neutral-800 leading-relaxed">{localTheirs?.prediction}</p>
         </div>
       </div>
 
