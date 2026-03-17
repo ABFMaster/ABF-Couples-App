@@ -4,14 +4,10 @@ import Anthropic from '@anthropic-ai/sdk'
 
 export async function POST(request) {
   try {
-    const { betId, userId, coupleId, responseType, responseText } = await request.json()
+    const { betId, userId, coupleId, prediction, actualAnswer } = await request.json()
 
-    if (!betId || !userId || !responseType || !responseText) {
-      return NextResponse.json({ error: 'betId, userId, responseType, and responseText required' }, { status: 400 })
-    }
-
-    if (responseType !== 'prediction' && responseType !== 'actual') {
-      return NextResponse.json({ error: 'responseType must be "prediction" or "actual"' }, { status: 400 })
+    if (!betId || !userId) {
+      return NextResponse.json({ error: 'betId and userId required' }, { status: 400 })
     }
 
     const supabase = createClient(
@@ -51,19 +47,10 @@ export async function POST(request) {
 
     // Build update payload
     const now = new Date().toISOString()
-    let updatePayload = {}
-
-    if (responseType === 'prediction') {
-      updatePayload = {
-        prediction: responseText,
-        responded_at: now,
-      }
-    } else {
-      updatePayload = {
-        actual_answer: responseText,
-        // Only set responded_at if not already set
-        ...(existingRow?.responded_at ? {} : { responded_at: now }),
-      }
+    const updatePayload = {
+      prediction,
+      actual_answer: actualAnswer,
+      responded_at: now,
     }
 
     // Insert or update the response row
@@ -106,9 +93,7 @@ export async function POST(request) {
 
     // Push notification to partner
     const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
-    const pushBody = responseType === 'prediction'
-      ? `${myName} made their prediction. Your turn.`
-      : `${myName} revealed their actual answer.`
+    const pushBody = `${myName} submitted their bet response.`
 
     await fetch(`${appBase}/api/push/send`, {
       method: 'POST',
