@@ -352,7 +352,7 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
   const RatingIcon = ratingObj?.icon
 
   return (
-    <div style={{ background: '#1C1510', borderRadius: '20px', padding: '24px' }}>
+    <div style={{ background: '#1C1510', borderRadius: '20px', padding: '24px', minHeight: '680px' }}>
       <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '18px', color: '#C4B49A', textAlign: 'center', lineHeight: 1.35, marginBottom: '20px', fontWeight: 400 }}>
         {bet.question}
       </p>
@@ -408,21 +408,23 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
         ))}
       </div>
 
-      {/* Nora reaction — always in DOM, fades in 500ms after all cards flipped */}
-      <div style={{ marginTop: '20px', ...fadeStyle(noraReactionShown, 500), visibility: noraReactionShown ? 'visible' : 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-          <div className="animate-pulse" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D4A853', flexShrink: 0, marginTop: '4px' }} />
-          <div>
-            <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#D4A853', textTransform: 'uppercase', marginBottom: '4px' }}>Nora</p>
-            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '13px', color: '#C4B49A', fontStyle: 'italic', lineHeight: 1.5 }}>
-              {noraReaction}
-            </p>
+      {/* Nora reaction — rendered only after all cards flipped, then fades in */}
+      {allFlipped && (
+        <div style={{ marginTop: '20px', ...fadeStyle(noraReactionShown, 500) }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+            <div className="animate-pulse" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D4A853', flexShrink: 0, marginTop: '4px' }} />
+            <div>
+              <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#D4A853', textTransform: 'uppercase', marginBottom: '4px' }}>Nora</p>
+              <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '13px', color: '#C4B49A', fontStyle: 'italic', lineHeight: 1.5 }}>
+                {noraReaction}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Reaction + rating pills — always in DOM, fades in 300ms after Nora */}
-      <div style={{ ...fadeStyle(pillsShown, 300), visibility: pillsShown ? 'visible' : 'hidden' }}>
+      {/* Reaction + rating pills — rendered only after all cards flipped, then fades in */}
+      {allFlipped && <div style={fadeStyle(pillsShown, 300)}>
         {isSealed ? (
           <div style={{ marginTop: '20px' }}>
             {ReactionIcon && (
@@ -514,7 +516,7 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
             </div>
           </>
         )}
-      </div>
+      </div>}
     </div>
   )
 }
