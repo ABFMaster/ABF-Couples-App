@@ -20,7 +20,7 @@ const TRELLIS = [
   'repeating-linear-gradient(-45deg, rgba(212,168,83,0.06) 0px, rgba(212,168,83,0.06) 1px, transparent 1px, transparent 8px)',
 ].join(', ')
 
-function CardBack() {
+function CardBack({ label }) {
   return (
     <div style={{
       height: '100%',
@@ -33,10 +33,14 @@ function CardBack() {
       alignItems: 'center',
       justifyContent: 'center',
       gap: '6px',
+      padding: '8px',
     }}>
       <div style={{ width: '20px', height: '20px', background: '#D4A853', transform: 'rotate(45deg)', opacity: 0.8 }} />
       <p style={{ fontSize: '11px', letterSpacing: '0.2em', color: '#D4A853', textTransform: 'uppercase', marginTop: '2px' }}>The Bet</p>
-      <p style={{ fontSize: '11px', color: '#5A4A38', marginTop: '4px' }}>tap to reveal</p>
+      {label && (
+        <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#D4A853', textTransform: 'uppercase', textAlign: 'center', marginTop: '4px', lineHeight: 1.3 }}>{label}</p>
+      )}
+      <p style={{ fontSize: '11px', color: '#5A4A38', marginTop: '2px' }}>tap to reveal</p>
     </div>
   )
 }
@@ -377,7 +381,7 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
                 backfaceVisibility: 'hidden',
                 WebkitBackfaceVisibility: 'hidden',
               }}>
-                <CardBack />
+                <CardBack label={card.label} />
               </div>
               {/* Back: answer content */}
               <div style={{
