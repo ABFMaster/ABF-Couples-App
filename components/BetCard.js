@@ -45,19 +45,29 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
     theirs?.prediction && theirs?.actual_answer &&
     mine?.nora_reaction
   )
-  const [panelsVisible, setPanelsVisible] = useState(initiallyInD)
-  const [noraVisible, setNoraVisible] = useState(initiallyInD)
-  const [pillsVisible, setPillsVisible] = useState(initiallyInD)
+  const [panel1Shown, setPanel1Shown] = useState(initiallyInD)
+  const [panel2Shown, setPanel2Shown] = useState(initiallyInD)
+  const [panel3Shown, setPanel3Shown] = useState(initiallyInD)
+  const [panel4Shown, setPanel4Shown] = useState(initiallyInD)
+  const [noraShown, setNoraShown] = useState(initiallyInD)
+  const [pillsShown, setPillsShown] = useState(initiallyInD)
   const animationFired = useRef(initiallyInD)
+
+  // Reaction pill tap pulse
+  const [pulsingDown, setPulsingDown] = useState(null)
+  const [pulsingUp, setPulsingUp] = useState(null)
 
   useEffect(() => {
     if (state !== 'D') return
     if (animationFired.current) return
     animationFired.current = true
-    const t1 = setTimeout(() => setPanelsVisible(true), 50)
-    const t2 = setTimeout(() => setNoraVisible(true), 850)
-    const t3 = setTimeout(() => setPillsVisible(true), 1250)
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
+    const t1 = setTimeout(() => setPanel1Shown(true), 50)
+    const t2 = setTimeout(() => setPanel2Shown(true), 200)
+    const t3 = setTimeout(() => setPanel3Shown(true), 350)
+    const t4 = setTimeout(() => setPanel4Shown(true), 500)
+    const t5 = setTimeout(() => setNoraShown(true), 650)
+    const t6 = setTimeout(() => setPillsShown(true), 950)
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); clearTimeout(t5); clearTimeout(t6) }
   }, [state])
 
   const poll = useCallback(async () => {
@@ -74,6 +84,12 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
     const interval = setInterval(poll, state === 'NORA_LOADING' ? 2000 : 8000)
     return () => clearInterval(interval)
   }, [state, poll])
+
+  const triggerPulse = (key) => {
+    setPulsingDown(key)
+    setTimeout(() => { setPulsingDown(null); setPulsingUp(key) }, 75)
+    setTimeout(() => setPulsingUp(null), 150)
+  }
 
   const handleSubmit = async () => {
     if (!actualText.trim() || !predictionText.trim() || submitting) return
@@ -105,6 +121,7 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
   }
 
   const handleReaction = (icon) => {
+    triggerPulse(icon)
     setSelectedReaction(icon)
     fetch('/api/bet/react', {
       method: 'POST',
@@ -114,6 +131,7 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
   }
 
   const handleRating = (rating) => {
+    triggerPulse(rating)
     setSelectedRating(rating)
     fetch('/api/bet/react', {
       method: 'POST',
@@ -121,6 +139,12 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
       body: JSON.stringify({ betId: bet.id, userId, reactionIcon: activeReaction, questionRating: rating }),
     }).catch(() => {})
   }
+
+  const revealStyle = (shown) => ({
+    opacity: shown ? 1 : 0,
+    transform: shown ? 'translateY(0)' : 'translateY(8px)',
+    transition: 'opacity 300ms ease-out, transform 300ms ease-out',
+  })
 
   const questionEl = (
     <p
@@ -221,7 +245,7 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
     )
   }
 
-  // State D — Full reveal with sequential fade-in animations
+  // State D — Full reveal with sequential animations
   const reactionObj = REACTIONS.find(r => r.key === activeReaction)
   const ratingObj = RATINGS.find(r => r.key === activeRating)
   const ReactionIcon = reactionObj?.icon
@@ -231,27 +255,27 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
     <div>
       <div className="mb-5">{questionEl}</div>
 
-      {/* 2x2 reveal grid — fades in first */}
-      <div className={`grid grid-cols-2 gap-2 transition-all duration-700 ease-out ${panelsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
-        <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
+      {/* 2x2 reveal grid — panels stagger 150ms apart */}
+      <div className="grid grid-cols-2 gap-2">
+        <div style={revealStyle(panel1Shown)} className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
           <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-2 leading-tight">
             {partnerName} said
           </p>
           <p className="text-[14px] text-neutral-800 leading-relaxed">{localTheirs?.actual_answer}</p>
         </div>
-        <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
+        <div style={revealStyle(panel2Shown)} className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
           <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-2 leading-tight">
             You bet {partnerName} would say
           </p>
           <p className="text-[14px] text-neutral-800 leading-relaxed">{localMine?.prediction}</p>
         </div>
-        <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
+        <div style={revealStyle(panel3Shown)} className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
           <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-2 leading-tight">
             You said
           </p>
           <p className="text-[14px] text-neutral-800 leading-relaxed">{localMine?.actual_answer}</p>
         </div>
-        <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
+        <div style={revealStyle(panel4Shown)} className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
           <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-2 leading-tight">
             {partnerName} bet you would say
           </p>
@@ -259,27 +283,24 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
         </div>
       </div>
 
-      {/* Nora reaction — fades in 800ms after panels */}
-      <div className={`mt-5 transition-all duration-700 ease-out ${noraVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
-        {noraReaction && (
-          <div className="flex items-start gap-2.5">
-            <div className="w-2 h-2 rounded-full bg-[#E8614D] animate-pulse flex-shrink-0 mt-1.5" />
-            <div>
-              <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400">Nora</span>
-              <p
-                className="text-[13px] text-neutral-500 italic leading-relaxed mt-0.5"
-                style={{ fontFamily: "'Fraunces', Georgia, serif" }}
-              >
-                {noraReaction}
-              </p>
-            </div>
+      {/* Nora reaction — 600ms after first panel */}
+      {noraReaction && (
+        <div style={{ marginTop: '1.25rem', ...revealStyle(noraShown) }} className="flex items-start gap-2.5">
+          <div className="w-2 h-2 rounded-full bg-[#E8614D] animate-pulse flex-shrink-0 mt-1.5" />
+          <div>
+            <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400">Nora</span>
+            <p
+              className="text-[13px] text-neutral-500 italic leading-relaxed mt-0.5"
+              style={{ fontFamily: "'Fraunces', Georgia, serif" }}
+            >
+              {noraReaction}
+            </p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Reaction + rating pills — fades in 1200ms after panels */}
-      <div className={`transition-all duration-700 ease-out ${pillsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
-        {/* Sealed state — show selected reactions as read-only */}
+      {/* Reaction + rating pills — 300ms after Nora */}
+      <div style={revealStyle(pillsShown)}>
         {isSealed ? (
           <div className="mt-5">
             {ReactionIcon && (
@@ -297,49 +318,55 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
           </div>
         ) : (
           <>
-            {/* Reaction pills */}
             <div className="mt-5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400 mb-2.5">
                 How did this land?
               </p>
               <div className="flex flex-col gap-2">
-                {REACTIONS.map(({ icon: Icon, key, label }) => (
-                  <button
-                    key={key}
-                    onClick={() => handleReaction(key)}
-                    className={`w-full py-2.5 px-4 rounded-full border flex items-center gap-2 transition-all active:scale-[0.98] ${
-                      activeReaction === key
-                        ? 'bg-[#E8614D] border-[#E8614D] text-white'
-                        : 'bg-white border-neutral-200 text-neutral-500'
-                    }`}
-                  >
-                    <Icon size={16} strokeWidth={1.75} />
-                    <span className="text-[13px] font-medium">{label}</span>
-                  </button>
-                ))}
+                {REACTIONS.map(({ icon: Icon, key, label }) => {
+                  const scale = pulsingDown === key ? 0.97 : pulsingUp === key ? 1.02 : 1
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => handleReaction(key)}
+                      style={{ transform: `scale(${scale})`, transition: 'transform 75ms ease-out' }}
+                      className={`w-full py-2.5 px-4 rounded-full border flex items-center gap-2 transition-colors ${
+                        activeReaction === key
+                          ? 'bg-[#E8614D] border-[#E8614D] text-white'
+                          : 'bg-white border-neutral-200 text-neutral-500'
+                      }`}
+                    >
+                      <Icon size={16} strokeWidth={1.75} />
+                      <span className="text-[13px] font-medium">{label}</span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
-            {/* Rating pills */}
             <div className="mt-3">
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400 mb-2.5">
                 Was this the right depth?
               </p>
               <div className="flex gap-2">
-                {RATINGS.map(({ icon: Icon, key, label }) => (
-                  <button
-                    key={key}
-                    onClick={() => handleRating(key)}
-                    className={`flex-1 py-2.5 rounded-full border flex items-center justify-center gap-1.5 text-[12px] font-semibold transition-all active:scale-[0.95] ${
-                      activeRating === key
-                        ? 'bg-[#E8614D] border-[#E8614D] text-white'
-                        : 'bg-white border-neutral-200 text-neutral-500'
-                    }`}
-                  >
-                    <Icon size={14} strokeWidth={1.75} />
-                    {label}
-                  </button>
-                ))}
+                {RATINGS.map(({ icon: Icon, key, label }) => {
+                  const scale = pulsingDown === key ? 0.97 : pulsingUp === key ? 1.02 : 1
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => handleRating(key)}
+                      style={{ transform: `scale(${scale})`, transition: 'transform 75ms ease-out' }}
+                      className={`flex-1 py-2.5 rounded-full border flex items-center justify-center gap-1.5 text-[12px] font-semibold transition-colors ${
+                        activeRating === key
+                          ? 'bg-[#E8614D] border-[#E8614D] text-white'
+                          : 'bg-white border-neutral-200 text-neutral-500'
+                      }`}
+                    >
+                      <Icon size={14} strokeWidth={1.75} />
+                      {label}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           </>

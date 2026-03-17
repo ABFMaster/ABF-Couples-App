@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Clock, Heart, Smile, Zap, HeartHandshake, Flame, Waves } from 'lucide-react'
 
 const REACTIONS = [
@@ -29,6 +29,16 @@ export default function SparkCard({
   const [selectedReaction, setSelectedReaction] = useState(mine?.reaction_icon ?? null)
   const [selectedRating, setSelectedRating] = useState(mine?.question_rating ?? null)
 
+  // State C reveal animation states
+  const [partnerCardShown, setPartnerCardShown] = useState(false)
+  const [myCardShown, setMyCardShown] = useState(false)
+  const [noraShown, setNoraShown] = useState(false)
+  const [pillsShown, setPillsShown] = useState(false)
+
+  // Reaction pill tap pulse
+  const [pulsingDown, setPulsingDown] = useState(null)
+  const [pulsingUp, setPulsingUp] = useState(null)
+
   const hasAnswered = !!mine?.responded_at
   const partnerAnswered = !!theirs?.responded_at
 
@@ -41,20 +51,43 @@ export default function SparkCard({
   else if (mine?.reaction_icon || (selectedReaction && selectedRating)) state = 'D'
   else state = 'C'
 
+  useEffect(() => {
+    if (state !== 'C') return
+    const t1 = setTimeout(() => setPartnerCardShown(true), 0)
+    const t2 = setTimeout(() => setMyCardShown(true), 150)
+    const t3 = setTimeout(() => setNoraShown(true), 300)
+    const t4 = setTimeout(() => setPillsShown(true), 450)
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4) }
+  }, [state])
+
+  const triggerPulse = (key) => {
+    setPulsingDown(key)
+    setTimeout(() => { setPulsingDown(null); setPulsingUp(key) }, 75)
+    setTimeout(() => setPulsingUp(null), 150)
+  }
+
   const handleRespond = async () => {
     if (!answerText.trim()) return
     await onRespond(answerText.trim())
   }
 
   const handleReaction = (icon) => {
+    triggerPulse(icon)
     setSelectedReaction(icon)
     onReact(icon, activeRating).catch(() => {})
   }
 
   const handleRating = (rating) => {
+    triggerPulse(rating)
     setSelectedRating(rating)
     onReact(activeReaction, rating).catch(() => {})
   }
+
+  const revealStyle = (shown) => ({
+    opacity: shown ? 1 : 0,
+    transform: shown ? 'translateY(0)' : 'translateY(8px)',
+    transition: 'opacity 300ms ease-out, transform 300ms ease-out',
+  })
 
   const questionEl = (
     <p
@@ -169,66 +202,92 @@ export default function SparkCard({
     )
   }
 
-  // State C
+  // State C — animated reveal
   return (
     <div>
       <div className="mb-5">{questionEl}</div>
 
       <div className="flex flex-col gap-3">
-        <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
-          <p className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-2">You</p>
-          <p className="text-[15px] text-neutral-800 leading-relaxed">{mine?.response_text}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
+        {/* Partner's answer first — moment of drama */}
+        <div style={revealStyle(partnerCardShown)} className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
           <p className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-2">{partnerName}</p>
           <p className="text-[15px] text-neutral-800 leading-relaxed">{theirs?.response_text}</p>
         </div>
-      </div>
-
-      <div className="mt-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400 mb-2.5">
-          How did their answer land?
-        </p>
-        <div className="flex flex-col gap-2">
-          {REACTIONS.map(({ icon: Icon, key, label }) => (
-            <button
-              key={key}
-              onClick={() => handleReaction(key)}
-              className={`w-full py-2.5 px-4 rounded-full border flex items-center gap-2 transition-all active:scale-[0.98] ${
-                activeReaction === key
-                  ? 'bg-[#E8614D] border-[#E8614D] text-white'
-                  : 'bg-white border-neutral-200 text-neutral-500'
-              }`}
-            >
-              <Icon size={16} strokeWidth={1.75} />
-              <span className="text-[13px] font-medium">{label}</span>
-            </button>
-          ))}
+        {/* Your answer second */}
+        <div style={revealStyle(myCardShown)} className="bg-white rounded-xl border border-neutral-100 shadow-sm p-4">
+          <p className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-2">You</p>
+          <p className="text-[15px] text-neutral-800 leading-relaxed">{mine?.response_text}</p>
         </div>
       </div>
 
-      <div className="mt-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400 mb-2.5">
-          Was this the right depth?
-        </p>
-        <div className="flex gap-2">
-          {RATINGS.map(({ icon: Icon, key, label }) => (
-            <button
-              key={key}
-              onClick={() => handleRating(key)}
-              className={`flex-1 py-2.5 rounded-full border flex items-center justify-center gap-1.5 text-[12px] font-semibold transition-all active:scale-[0.95] ${
-                activeRating === key
-                  ? 'bg-[#E8614D] border-[#E8614D] text-white'
-                  : 'bg-white border-neutral-200 text-neutral-500'
-              }`}
+      {mine?.nora_reaction && (
+        <div style={{ marginTop: '1.25rem', ...revealStyle(noraShown) }} className="flex items-start gap-2.5">
+          <div className="w-2 h-2 rounded-full bg-[#E8614D] animate-pulse flex-shrink-0 mt-1.5" />
+          <div>
+            <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400">Nora</span>
+            <p
+              className="text-[13px] text-neutral-500 italic leading-relaxed mt-0.5"
+              style={{ fontFamily: "'Fraunces', Georgia, serif" }}
             >
-              <Icon size={14} strokeWidth={1.75} />
-              {label}
-            </button>
-          ))}
+              {mine.nora_reaction}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div style={revealStyle(pillsShown)}>
+        <div className="mt-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400 mb-2.5">
+            How did their answer land?
+          </p>
+          <div className="flex flex-col gap-2">
+            {REACTIONS.map(({ icon: Icon, key, label }) => {
+              const scale = pulsingDown === key ? 0.97 : pulsingUp === key ? 1.02 : 1
+              return (
+                <button
+                  key={key}
+                  onClick={() => handleReaction(key)}
+                  style={{ transform: `scale(${scale})`, transition: 'transform 75ms ease-out' }}
+                  className={`w-full py-2.5 px-4 rounded-full border flex items-center gap-2 transition-colors ${
+                    activeReaction === key
+                      ? 'bg-[#E8614D] border-[#E8614D] text-white'
+                      : 'bg-white border-neutral-200 text-neutral-500'
+                  }`}
+                >
+                  <Icon size={16} strokeWidth={1.75} />
+                  <span className="text-[13px] font-medium">{label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-400 mb-2.5">
+            Was this the right depth?
+          </p>
+          <div className="flex gap-2">
+            {RATINGS.map(({ icon: Icon, key, label }) => {
+              const scale = pulsingDown === key ? 0.97 : pulsingUp === key ? 1.02 : 1
+              return (
+                <button
+                  key={key}
+                  onClick={() => handleRating(key)}
+                  style={{ transform: `scale(${scale})`, transition: 'transform 75ms ease-out' }}
+                  className={`flex-1 py-2.5 rounded-full border flex items-center justify-center gap-1.5 text-[12px] font-semibold transition-colors ${
+                    activeRating === key
+                      ? 'bg-[#E8614D] border-[#E8614D] text-white'
+                      : 'bg-white border-neutral-200 text-neutral-500'
+                  }`}
+                >
+                  <Icon size={14} strokeWidth={1.75} />
+                  {label}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
-
     </div>
   )
 }
