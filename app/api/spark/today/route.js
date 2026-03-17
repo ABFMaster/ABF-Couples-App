@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { getSparkQuestion } from '@/lib/spark-questions'
+import { getTodayString } from '@/lib/dates'
 
 const SPARK_DAYS = new Set([1, 2, 4]) // Mon, Tue, Thu
 
@@ -18,10 +19,10 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Step 2: Get couple_id from user_profiles
+    // Step 2: Get couple_id and timezone from user_profiles
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('couple_id')
+      .select('couple_id, timezone')
       .eq('user_id', user.id)
       .maybeSingle()
 
@@ -47,14 +48,12 @@ export async function GET(request) {
     // Step 4: Check if today is a spark day
     const { searchParams } = new URL(request.url)
     const forceOverride = searchParams.get('spark') === 'true'
-    const today = new Date()
-    const dayOfWeek = today.getDay()
+    const todayStr = getTodayString(profile?.timezone)
+    const dayOfWeek = new Date(todayStr + 'T12:00:00').getDay()
 
     if (!forceOverride && !SPARK_DAYS.has(dayOfWeek)) {
       return NextResponse.json({ sparkDay: false })
     }
-
-    const todayStr = today.toISOString().split('T')[0]
 
     // Step 5: Check for existing spark today
     let { data: spark } = await supabase

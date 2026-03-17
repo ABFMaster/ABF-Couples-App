@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { getBetQuestion } from '@/lib/bet-questions'
+import { getTodayString } from '@/lib/dates'
 
 const BET_DAYS = new Set([3]) // Wednesday
 
@@ -33,15 +34,20 @@ export async function GET(request) {
     const coupleId = couple.id
     const partnerId = couple.user1_id === userId ? couple.user2_id : couple.user1_id
 
+    // Fetch user's timezone for date calculation
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('timezone')
+      .eq('user_id', userId)
+      .maybeSingle()
+
     // Step 2: Check if today is a Bet day
-    const today = new Date()
-    const dayOfWeek = today.getDay()
+    const todayStr = getTodayString(userProfile?.timezone)
+    const dayOfWeek = new Date(todayStr + 'T12:00:00').getDay()
 
     if (!forceOverride && !BET_DAYS.has(dayOfWeek)) {
       return NextResponse.json({ betDay: false })
     }
-
-    const todayStr = today.toISOString().split('T')[0]
 
     // Step 3: Check for existing bet today
     let { data: bet } = await supabase
