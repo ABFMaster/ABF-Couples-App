@@ -409,7 +409,7 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
       </div>
 
       {/* Nora reaction — always in DOM, fades in 500ms after all cards flipped */}
-      <div style={{ marginTop: '20px', ...fadeStyle(noraReactionShown, 500) }}>
+      <div style={{ marginTop: '20px', ...fadeStyle(noraReactionShown, 500), visibility: noraReactionShown ? 'visible' : 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
           <div className="animate-pulse" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D4A853', flexShrink: 0, marginTop: '4px' }} />
           <div>
@@ -422,7 +422,7 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
       </div>
 
       {/* Reaction + rating pills — always in DOM, fades in 300ms after Nora */}
-      <div style={fadeStyle(pillsShown, 300)}>
+      <div style={{ ...fadeStyle(pillsShown, 300), visibility: pillsShown ? 'visible' : 'hidden' }}>
         {isSealed ? (
           <div style={{ marginTop: '20px' }}>
             {ReactionIcon && (
