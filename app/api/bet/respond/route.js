@@ -1,3 +1,5 @@
+// DB migration: ALTER TABLE bet_responses ADD COLUMN IF NOT EXISTS nora_intro text;
+
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
@@ -115,8 +117,9 @@ export async function POST(request) {
     )
 
     let noraReaction = mine?.nora_reaction || null
+    let noraIntro = mine?.nora_intro || null
 
-    // Generate Nora reaction if all filled and not already generated
+    // Generate Nora reaction and intro if all filled and not already generated
     if (allFilled && !mine?.nora_reaction) {
       try {
         const userPrompt = `The Bet question was: "${betRow.question}"
@@ -140,16 +143,29 @@ React to what the predictions and actual answers reveal about how well these two
 
         noraReaction = completion.content[0]?.text || ''
 
-        // Save nora_reaction to both response rows
+        // Generate Nora pre-reveal intro (short host line shown before cards flip)
+        try {
+          const introCompletion = await anthropic.messages.create({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 60,
+            system: "You are Nora, the host of a couples game called The Bet. You are warm, witty, and a little mischievous — like the most fun person at the dinner table who also happens to have a PhD. Generate ONE short line (max 12 words) to say before revealing the answers. Reference the question topic if possible. Be playful, not therapeutic. Never use the word 'alright'.",
+            messages: [{ role: 'user', content: `The question was: "${betRow.question}"` }],
+          })
+          noraIntro = introCompletion.content[0]?.text || ''
+        } catch (introErr) {
+          console.error('[bet/respond] Nora intro error:', introErr)
+        }
+
+        // Save nora_reaction and nora_intro to both response rows
         await Promise.all([
           supabase
             .from('bet_responses')
-            .update({ nora_reaction: noraReaction })
+            .update({ nora_reaction: noraReaction, nora_intro: noraIntro })
             .eq('bet_id', betId)
             .eq('user_id', userId),
           supabase
             .from('bet_responses')
-            .update({ nora_reaction: noraReaction })
+            .update({ nora_reaction: noraReaction, nora_intro: noraIntro })
             .eq('bet_id', betId)
             .eq('user_id', partnerId),
         ])
@@ -160,7 +176,7 @@ React to what the predictions and actual answers reveal about how well these two
 
     const bothAnswered = !!(mine?.responded_at && theirs?.responded_at)
 
-    return NextResponse.json({ success: true, mine, theirs, bothAnswered, noraReaction })
+    return NextResponse.json({ success: true, mine, theirs, bothAnswered, noraReaction, noraIntro })
   } catch (err) {
     console.error('[bet/respond] Error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
