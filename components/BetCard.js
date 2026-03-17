@@ -408,6 +408,9 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
         ))}
       </div>
 
+      {/* Placeholder reserves space for Nora + pills before they fade in */}
+      <div style={{ minHeight: '280px' }}>
+
       {/* Nora reaction — fades in 500ms after all cards flipped */}
       {noraReaction && (
         <div style={{ marginTop: '20px', ...fadeStyle(noraReactionShown, 500) }}>
@@ -517,6 +520,8 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
           </>
         )}
       </div>
+
+      </div>{/* end placeholder */}
     </div>
   )
 }
