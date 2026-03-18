@@ -1,0 +1,704 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { RITUAL_SUGGESTIONS } from '@/lib/ritual-suggestions'
+
+const TIER1 = RITUAL_SUGGESTIONS.filter(r => r.tier === 1)
+
+const NORA_WEEK_MESSAGES = {
+  1: "First week. The hardest part is just starting — and you did. Check in next Friday and let Nora know how it went.",
+  2: "Two weeks in. Research shows it takes about 21 days for something to feel automatic. You're most of the way there. Keep going.",
+  3: "Week three. If this has shown up in your week at all — even imperfectly — that's the ritual working. One more week and you can make it official.",
+}
+
+function getWeekStart() {
+  const d = new Date()
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+  return d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })
+}
+
+// ─── Shared style helpers ─────────────────────────────────────────────────────
+
+const WRAPPER = {
+  background: '#FAF6F0',
+  border: '0.5px solid #E8DDD0',
+  borderRadius: '20px',
+  padding: '28px 20px',
+}
+
+function RitualLabel() {
+  return (
+    <p style={{ fontSize: '11px', letterSpacing: '0.2em', color: '#2D5016', textTransform: 'uppercase', textAlign: 'center', marginBottom: '16px' }}>
+      The Ritual
+    </p>
+  )
+}
+
+function NoraBlock({ text }) {
+  return (
+    <div style={{ background: '#F4FAF0', border: '0.5px solid #C4DDB4', borderRadius: '14px', padding: '18px 20px', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3D6B22', flexShrink: 0 }} />
+        <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#2D5016', textTransform: 'uppercase' }}>Nora</p>
+      </div>
+      <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#2D5016', fontStyle: 'italic', lineHeight: 1.65 }}>
+        {text}
+      </p>
+    </div>
+  )
+}
+
+function PrimaryBtn({ onClick, children, disabled }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={!!disabled}
+      style={{
+        width: '100%',
+        padding: '14px',
+        background: '#3D6B22',
+        color: '#FAF6F0',
+        border: 'none',
+        borderRadius: '30px',
+        fontSize: '15px',
+        fontWeight: 600,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.4 : 1,
+        transition: 'opacity 150ms',
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
+function GhostBtn({ onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: '100%',
+        padding: '12px',
+        background: 'transparent',
+        border: '0.5px solid #D4E8C4',
+        borderRadius: '30px',
+        color: '#7A8C6E',
+        fontSize: '14px',
+        cursor: 'pointer',
+      }}
+    >
+      {children}
+    </button>
+  )
+}
+
+function StreakPill({ label }) {
+  return (
+    <span style={{ background: '#EAF5E0', border: '0.5px solid #C4DDB4', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', color: '#2D5016' }}>
+      {label}
+    </span>
+  )
+}
+
+function SectionLabel({ text }) {
+  return (
+    <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#7A8C6E', textTransform: 'uppercase', marginBottom: '10px' }}>
+      {text}
+    </p>
+  )
+}
+
+function Divider() {
+  return <div style={{ borderTop: '0.5px solid #E8EEE2', margin: '20px 0' }} />
+}
+
+function RitualAccentCard({ label, title, description }) {
+  return (
+    <div style={{ background: '#FFFFFF', borderLeft: '3px solid #3D6B22', borderRadius: '0 14px 14px 0', padding: '18px 20px' }}>
+      {label && <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#3D6B22', textTransform: 'uppercase', marginBottom: '8px' }}>{label}</p>}
+      {title && <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#1A2E10', lineHeight: 1.55, fontWeight: 500 }}>{title}</p>}
+      {description && <p style={{ fontSize: '13px', color: '#7A8C6E', lineHeight: 1.5, marginTop: '6px' }}>{description}</p>}
+    </div>
+  )
+}
+
+// Suggestion cycling UI — used in State 1 suggestion mode, retired mode, and State 3 discover mode
+function SuggestionCycle({ index, onNext, onSelect, submitting }) {
+  const suggestion = TIER1[index % TIER1.length]
+  return (
+    <div>
+      <div style={{ marginBottom: '16px' }}>
+        <RitualAccentCard
+          label={suggestion.frequency}
+          title={suggestion.title}
+          description={suggestion.description}
+        />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <PrimaryBtn onClick={() => onSelect(suggestion)} disabled={submitting}>
+          We'll try this one
+        </PrimaryBtn>
+        <GhostBtn onClick={onNext}>Show me another</GhostBtn>
+      </div>
+    </div>
+  )
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
+
+export default function RitualCard({ userId, coupleId, partnerName }) {
+  const [loading, setLoading] = useState(true)
+  const [rituals, setRituals] = useState([])
+  const [completions, setCompletions] = useState([])
+  const [hasRituals, setHasRituals] = useState(false)
+
+  // State 1 — own ritual entry
+  const [textarea1, setTextarea1] = useState('')
+  const [textarea2, setTextarea2] = useState('')
+  const [suggestionMode, setSuggestionMode] = useState(false)
+  const [suggestionIndex, setSuggestionIndex] = useState(0)
+
+  // State 2 — discovering / check-in flow
+  const [checkinResult, setCheckinResult] = useState(null) // 'completed' | 'missed' | 'retired'
+  const [updatedStreak, setUpdatedStreak] = useState(null)
+  const [adoptionReady, setAdoptionReady] = useState(false)
+  // Separate suggestion index for retired mode so it doesn't share with State 1
+  const [retiredSuggestionIndex, setRetiredSuggestionIndex] = useState(0)
+
+  // State 3 — library + discover more
+  const [discoverMode, setDiscoverMode] = useState(false)
+  const [discoverIndex, setDiscoverIndex] = useState(0)
+
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    fetch(`/api/ritual/status?userId=${userId}&coupleId=${coupleId}`)
+      .then(r => r.json())
+      .then(data => {
+        setHasRituals(data.hasRituals || false)
+        setRituals(data.rituals || [])
+        setCompletions(data.completions || [])
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [userId, coupleId])
+
+  // ─── Derived state ──────────────────────────────────────────────────────────
+
+  const activeRituals = rituals.filter(r => r.status !== 'retired')
+  const discoveringRituals = activeRituals.filter(r => r.status === 'discovering')
+  const adoptedRituals = activeRituals.filter(r => r.status === 'adopted')
+  const restingRituals = activeRituals.filter(r => r.status === 'resting')
+
+  let appState
+  if (loading) appState = 'LOADING'
+  else if (!hasRituals || activeRituals.length === 0) appState = 'NONE'
+  else if (discoveringRituals.length > 0) appState = 'DISCOVERING'
+  else appState = 'LIBRARY'
+
+  // ─── Handlers ───────────────────────────────────────────────────────────────
+
+  const handleAddOwn = async () => {
+    if (!textarea1.trim() || submitting) return
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/ritual/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          coupleId,
+          title: textarea1.trim(),
+          description: textarea2.trim() || null,
+          frequency: 'weekly',
+          tier: 1,
+        }),
+      })
+      const data = await res.json()
+      if (data.ritual) {
+        setRituals([data.ritual])
+        setHasRituals(true)
+        setSuggestionMode(false)
+      }
+    } catch {} finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleSelectSuggestion = async (suggestion) => {
+    if (submitting) return
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/ritual/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          coupleId,
+          suggestionId: suggestion.id,
+          title: suggestion.title,
+          description: suggestion.description,
+          frequency: suggestion.frequency,
+          tier: suggestion.tier,
+        }),
+      })
+      const data = await res.json()
+      if (data.ritual) {
+        setRituals(prev => [data.ritual, ...prev.filter(r => r.status !== 'discovering')])
+        setHasRituals(true)
+        setSuggestionMode(false)
+        setCheckinResult(null)
+        setAdoptionReady(false)
+      }
+    } catch {} finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleCheckin = async (completed, ritual) => {
+    if (submitting) return
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/ritual/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          coupleId,
+          ritualId: ritual.id,
+          completed,
+          weekStart: getWeekStart(),
+        }),
+      })
+      const data = await res.json()
+      if (data.ritual) {
+        setRituals(prev => prev.map(r => r.id === data.ritual.id ? data.ritual : r))
+        setUpdatedStreak(data.ritual.streak)
+        if (completed && data.ritual.streak >= 3) {
+          setAdoptionReady(true)
+        }
+      }
+      setCheckinResult(completed ? 'completed' : 'missed')
+    } catch {} finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleRetire = async (ritual) => {
+    if (submitting) return
+    setSubmitting(true)
+    try {
+      await fetch('/api/ritual/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          coupleId,
+          ritualId: ritual.id,
+          completed: false,
+          weekStart: getWeekStart(),
+        }),
+      })
+      setRituals(prev => prev.map(r => r.id === ritual.id ? { ...r, status: 'retired' } : r))
+      setCheckinResult('retired')
+    } catch {} finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleAdopt = async (ritual) => {
+    if (submitting) return
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/ritual/adopt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, coupleId, ritualId: ritual.id }),
+      })
+      const data = await res.json()
+      if (data.ritual) {
+        setRituals(prev => prev.map(r => r.id === data.ritual.id ? data.ritual : r))
+        setCheckinResult(null)
+        setAdoptionReady(false)
+        setUpdatedStreak(null)
+      }
+    } catch {} finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDiscoverMore = async (suggestion) => {
+    if (submitting) return
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/ritual/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          coupleId,
+          suggestionId: suggestion.id,
+          title: suggestion.title,
+          description: suggestion.description,
+          frequency: suggestion.frequency,
+          tier: suggestion.tier,
+        }),
+      })
+      const data = await res.json()
+      if (data.ritual) {
+        setRituals(prev => [...prev, data.ritual])
+        setDiscoverMode(false)
+        setCheckinResult(null)
+        setAdoptionReady(false)
+        setUpdatedStreak(null)
+      }
+    } catch {} finally {
+      setSubmitting(false)
+    }
+  }
+
+  // ─── Render ──────────────────────────────────────────────────────────────────
+
+  // STATE 4 — Loading
+  if (appState === 'LOADING') {
+    return (
+      <div style={WRAPPER}>
+        <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center' }}>
+          Nora is checking in...
+        </p>
+      </div>
+    )
+  }
+
+  // STATE 1 — No rituals
+  if (appState === 'NONE') {
+    // Suggestion cycling mode
+    if (suggestionMode) {
+      return (
+        <div style={WRAPPER}>
+          <RitualLabel />
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '22px', color: '#1A2E10', textAlign: 'center', marginBottom: '8px', fontWeight: 400 }}>
+            Try something together
+          </p>
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center', marginBottom: '20px' }}>
+            Something from Nora's list.
+          </p>
+          <SuggestionCycle
+            index={suggestionIndex}
+            onNext={() => setSuggestionIndex(prev => (prev + 1) % TIER1.length)}
+            onSelect={handleSelectSuggestion}
+            submitting={submitting}
+          />
+          <div style={{ marginTop: '10px' }}>
+            <GhostBtn onClick={() => setSuggestionMode(false)}>Add something we already do</GhostBtn>
+          </div>
+        </div>
+      )
+    }
+
+    // Default: own ritual entry
+    return (
+      <div style={WRAPPER}>
+        <RitualLabel />
+        <NoraBlock text="Before I start suggesting things — tell me something you two already do together. Could be tiny, could be weird. Cook dinner together on Thursday. The Sunday walk. Anything that's become a thing." />
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+          {/* Card 1 */}
+          <div style={{ background: '#FFFFFF', borderLeft: '3px solid #3D6B22', borderRadius: '0 14px 14px 0', padding: '18px 20px' }}>
+            <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#3D6B22', textTransform: 'uppercase', marginBottom: '4px' }}>
+              What do you do together?
+            </p>
+            <p style={{ fontSize: '13px', color: '#7A8C6E', lineHeight: 1.5, marginBottom: '10px' }}>
+              A habit, a tradition, something that repeats and feels like yours.
+            </p>
+            <textarea
+              value={textarea1}
+              onChange={e => setTextarea1(e.target.value)}
+              placeholder="We cook dinner together every Thursday night..."
+              style={{
+                width: '100%',
+                background: '#FAF6F0',
+                border: '0.5px solid #D4E8C4',
+                borderRadius: '10px',
+                padding: '12px',
+                fontFamily: "'Fraunces', Georgia, serif",
+                fontSize: '14px',
+                color: '#1A2E10',
+                resize: 'none',
+                height: '80px',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+
+          {/* Card 2 */}
+          <div style={{ background: '#FFFFFF', borderLeft: '3px solid #3D6B22', borderRadius: '0 14px 14px 0', padding: '18px 20px' }}>
+            <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#3D6B22', textTransform: 'uppercase', marginBottom: '4px' }}>
+              What makes it feel like yours?{' '}
+              <span style={{ color: '#B8A898', fontSize: '10px', letterSpacing: 'normal', textTransform: 'none' }}>optional</span>
+            </p>
+            <p style={{ fontSize: '13px', color: '#7A8C6E', lineHeight: 1.5, marginBottom: '10px' }}>
+              Why does it stick? What does it give you?
+            </p>
+            <textarea
+              value={textarea2}
+              onChange={e => setTextarea2(e.target.value)}
+              placeholder="It's the one hour where we're not thinking about anything else..."
+              style={{
+                width: '100%',
+                background: '#FAF6F0',
+                border: '0.5px solid #D4E8C4',
+                borderRadius: '10px',
+                padding: '12px',
+                fontFamily: "'Fraunces', Georgia, serif",
+                fontSize: '14px',
+                color: '#1A2E10',
+                resize: 'none',
+                height: '60px',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <PrimaryBtn onClick={handleAddOwn} disabled={!textarea1.trim() || submitting}>
+            Add to our library
+          </PrimaryBtn>
+          <GhostBtn onClick={() => setSuggestionMode(true)}>
+            We don't have one yet — suggest something
+          </GhostBtn>
+        </div>
+      </div>
+    )
+  }
+
+  // STATE 2 — Discovering
+  if (appState === 'DISCOVERING') {
+    const ritual = discoveringRituals[0]
+    const weekNum = Math.min(ritual.streak + 1, 3)
+
+    // Retired → suggestion cycling
+    if (checkinResult === 'retired') {
+      return (
+        <div style={WRAPPER}>
+          <RitualLabel />
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '22px', color: '#1A2E10', textAlign: 'center', marginBottom: '8px', fontWeight: 400 }}>
+            Try something together
+          </p>
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center', marginBottom: '20px' }}>
+            No worries. Let's find something that fits better.
+          </p>
+          <SuggestionCycle
+            index={retiredSuggestionIndex}
+            onNext={() => setRetiredSuggestionIndex(prev => (prev + 1) % TIER1.length)}
+            onSelect={handleSelectSuggestion}
+            submitting={submitting}
+          />
+        </div>
+      )
+    }
+
+    // Adoption prompt (after week 3 completion)
+    if (checkinResult === 'completed' && adoptionReady) {
+      return (
+        <div style={WRAPPER}>
+          <RitualLabel />
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <StreakPill label="3 weeks" />
+          </div>
+          <div style={{ marginBottom: '20px' }}>
+            <RitualAccentCard label={ritual.frequency} title={ritual.title} description={ritual.description} />
+          </div>
+          <NoraBlock text="Three weeks. That's not a habit yet — but it's becoming one. Want to make it official?" />
+          <PrimaryBtn onClick={() => handleAdopt(ritual)} disabled={submitting}>
+            Make it ours
+          </PrimaryBtn>
+        </div>
+      )
+    }
+
+    // Completed confirmation (streak < 3)
+    if (checkinResult === 'completed' && !adoptionReady) {
+      const streak = updatedStreak ?? ritual.streak
+      return (
+        <div style={WRAPPER}>
+          <RitualLabel />
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <StreakPill label={`${streak} ${streak === 1 ? 'week' : 'weeks'}`} />
+          </div>
+          <div style={{ marginBottom: '20px' }}>
+            <RitualAccentCard label={ritual.frequency} title={ritual.title} description={ritual.description} />
+          </div>
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center' }}>
+            Logged. See you next Friday.
+          </p>
+        </div>
+      )
+    }
+
+    // Missed confirmation
+    if (checkinResult === 'missed') {
+      return (
+        <div style={WRAPPER}>
+          <RitualLabel />
+          <div style={{ marginBottom: '20px' }}>
+            <RitualAccentCard label={ritual.frequency} title={ritual.title} description={ritual.description} />
+          </div>
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center' }}>
+            That's ok. The ritual is still there when you're ready.
+          </p>
+        </div>
+      )
+    }
+
+    // Normal discovering view
+    return (
+      <div style={WRAPPER}>
+        <RitualLabel />
+        <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+          <StreakPill label={`Week ${weekNum} of 3`} />
+        </div>
+        <div style={{ marginBottom: '16px' }}>
+          <RitualAccentCard label={ritual.frequency} title={ritual.title} description={ritual.description} />
+        </div>
+        <NoraBlock text={NORA_WEEK_MESSAGES[weekNum] || NORA_WEEK_MESSAGES[1]} />
+        <SectionLabel text="HOW DID THIS WEEK GO?" />
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => handleCheckin(true, ritual)}
+            disabled={submitting}
+            style={{ flex: 1, background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '10px', padding: '11px 8px', fontSize: '13px', color: '#3D6B22', cursor: 'pointer' }}
+          >
+            We did it
+          </button>
+          <button
+            onClick={() => handleCheckin(false, ritual)}
+            disabled={submitting}
+            style={{ flex: 1, background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '10px', padding: '11px 8px', fontSize: '13px', color: '#7A8C6E', cursor: 'pointer' }}
+          >
+            Not this week
+          </button>
+          <button
+            onClick={() => handleRetire(ritual)}
+            disabled={submitting}
+            style={{ flex: 1, background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '10px', padding: '11px 8px', fontSize: '13px', color: '#B8A898', cursor: 'pointer' }}
+          >
+            Not for us
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // STATE 3 — Library
+
+  // Discover mode: suggestion cycling to add a new ritual
+  if (discoverMode) {
+    return (
+      <div style={WRAPPER}>
+        <RitualLabel />
+        <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '22px', color: '#1A2E10', textAlign: 'center', marginBottom: '8px', fontWeight: 400 }}>
+          Discover a ritual
+        </p>
+        <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center', marginBottom: '20px' }}>
+          Something to try together.
+        </p>
+        <SuggestionCycle
+          index={discoverIndex}
+          onNext={() => setDiscoverIndex(prev => (prev + 1) % TIER1.length)}
+          onSelect={handleDiscoverMore}
+          submitting={submitting}
+        />
+        <div style={{ marginTop: '10px' }}>
+          <GhostBtn onClick={() => setDiscoverMode(false)}>Back to your rituals</GhostBtn>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={WRAPPER}>
+      <RitualLabel />
+      <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '18px', color: '#1A2E10', textAlign: 'center', marginBottom: '4px', fontWeight: 400 }}>
+        Your rituals
+      </p>
+      <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center', marginBottom: '24px' }}>
+        The small things that make you you.
+      </p>
+
+      {adoptedRituals.length > 0 && (
+        <div>
+          <SectionLabel text="ADOPTED" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {adoptedRituals.map(r => (
+              <div
+                key={r.id}
+                style={{ background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '12px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              >
+                <div>
+                  <p style={{ fontSize: '14px', color: '#1A2E10', fontWeight: 500 }}>{r.title}</p>
+                  {r.frequency && (
+                    <p style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#7A8C6E', textTransform: 'uppercase', marginTop: '4px' }}>{r.frequency}</p>
+                  )}
+                </div>
+                <StreakPill label={`${r.streak || 0} weeks`} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {restingRituals.length > 0 && (
+        <div>
+          <Divider />
+          <SectionLabel text="SEASONAL" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', opacity: 0.6 }}>
+            {restingRituals.map(r => (
+              <div
+                key={r.id}
+                style={{ background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '12px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              >
+                <div>
+                  <p style={{ fontSize: '14px', color: '#1A2E10', fontWeight: 500 }}>{r.title}</p>
+                  {r.frequency && (
+                    <p style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#7A8C6E', textTransform: 'uppercase', marginTop: '4px' }}>{r.frequency}</p>
+                  )}
+                </div>
+                <span style={{ fontSize: '12px', color: '#7A8C6E' }}>Resting</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {discoveringRituals.length > 0 && (
+        <div>
+          {(adoptedRituals.length > 0 || restingRituals.length > 0) && <Divider />}
+          <SectionLabel text="STILL TRYING" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {discoveringRituals.map(r => (
+              <div
+                key={r.id}
+                style={{ background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '12px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              >
+                <div>
+                  <p style={{ fontSize: '14px', color: '#1A2E10', fontWeight: 500 }}>{r.title}</p>
+                  {r.frequency && (
+                    <p style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#7A8C6E', textTransform: 'uppercase', marginTop: '4px' }}>{r.frequency}</p>
+                  )}
+                </div>
+                <StreakPill label={`Week ${Math.min(r.streak + 1, 3)} of 3`} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <Divider />
+      <GhostBtn onClick={() => setDiscoverMode(true)}>Discover another ritual</GhostBtn>
+    </div>
+  )
+}
