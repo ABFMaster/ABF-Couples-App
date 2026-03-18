@@ -170,6 +170,8 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
   const [discoverIndex, setDiscoverIndex] = useState(0)
 
   const [submitting, setSubmitting] = useState(false)
+  const [pendingConfirmation, setPendingConfirmation] = useState(null)
+  const [discussConfirmed, setDiscussConfirmed] = useState(false)
 
   useEffect(() => {
     fetch(`/api/ritual/status?userId=${userId}&coupleId=${coupleId}`)
@@ -178,6 +180,10 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
         setHasRituals(data.hasRituals || false)
         setRituals(data.rituals || [])
         setCompletions(data.completions || [])
+        const pending = (data.rituals || []).find(
+          r => r.status === 'pending' && r.proposed_by !== userId && !r.needs_discussion
+        )
+        setPendingConfirmation(pending || null)
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -189,6 +195,7 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
   const discoveringRituals = activeRituals.filter(r => r.status === 'discovering')
   const adoptedRituals = activeRituals.filter(r => r.status === 'adopted')
   const restingRituals = activeRituals.filter(r => r.status === 'resting')
+  const needsDiscussionRituals = rituals.filter(r => r.needs_discussion === true)
 
   let appState
   if (loading) appState = 'LOADING'
@@ -197,6 +204,60 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
   else appState = 'LIBRARY'
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
+
+  const refetchAndCheckPending = async () => {
+    const res = await fetch(`/api/ritual/status?userId=${userId}&coupleId=${coupleId}`)
+    const data = await res.json()
+    setHasRituals(data.hasRituals || false)
+    setRituals(data.rituals || [])
+    setCompletions(data.completions || [])
+    const nextPending = (data.rituals || []).find(
+      r => r.status === 'pending' && r.proposed_by !== userId && !r.needs_discussion
+    )
+    setPendingConfirmation(nextPending || null)
+  }
+
+  const handleConfirmPending = async (action) => {
+    if (submitting || !pendingConfirmation) return
+    setSubmitting(true)
+    try {
+      await fetch('/api/ritual/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, coupleId, ritualId: pendingConfirmation.id, action }),
+      })
+      if (action === 'discuss') {
+        setDiscussConfirmed(true)
+        setTimeout(() => {
+          setDiscussConfirmed(false)
+          refetchAndCheckPending()
+        }, 3000)
+      } else {
+        await refetchAndCheckPending()
+      }
+    } catch {} finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleRevisit = async (ritual) => {
+    if (submitting) return
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/ritual/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, coupleId, ritualId: ritual.id, action: 'confirm' }),
+      })
+      const data = await res.json()
+      if (data.ritual) {
+        setRituals(prev => prev.map(r => r.id === data.ritual.id ? data.ritual : r))
+        setHasRituals(true)
+      }
+    } catch {} finally {
+      setSubmitting(false)
+    }
+  }
 
   const handleAddOwn = async () => {
     if (!textarea1.trim() || submitting) return
@@ -366,6 +427,43 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
         <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center' }}>
           Nora is checking in...
         </p>
+      </div>
+    )
+  }
+
+  // STATE 0 — Pending confirmation (takes priority over all other states)
+  if (pendingConfirmation) {
+    if (discussConfirmed) {
+      return (
+        <div style={WRAPPER}>
+          <RitualLabel />
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#2D5016', textAlign: 'center', fontStyle: 'italic', lineHeight: 1.6, padding: '20px 0' }}>
+            Flagged for discussion. You'll see it on your home page until you two sort it out.
+          </p>
+        </div>
+      )
+    }
+    return (
+      <div style={WRAPPER}>
+        <RitualLabel />
+        <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '22px', color: '#1A2E10', textAlign: 'center', marginBottom: '20px', fontWeight: 400 }}>
+          {partnerName} wants to add a ritual
+        </p>
+        <NoraBlock text={`Rituals only work when you both want them. Take a look at what ${partnerName} is suggesting and let Nora know where you stand.`} />
+        <div style={{ marginBottom: '20px' }}>
+          <RitualAccentCard
+            title={pendingConfirmation.title}
+            description={pendingConfirmation.description}
+          />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <PrimaryBtn onClick={() => handleConfirmPending('confirm')} disabled={submitting}>
+            I'm in — add it
+          </PrimaryBtn>
+          <GhostBtn onClick={() => handleConfirmPending('discuss')}>
+            Let's talk about it
+          </GhostBtn>
+        </div>
       </div>
     )
   }
@@ -691,6 +789,35 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
                   )}
                 </div>
                 <StreakPill label={`Week ${Math.min(r.streak + 1, 3)} of 3`} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {needsDiscussionRituals.length > 0 && (
+        <div>
+          <Divider />
+          <SectionLabel text="NEEDS DISCUSSION" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {needsDiscussionRituals.map(r => (
+              <div
+                key={r.id}
+                style={{ background: '#FFFFFF', borderLeft: '3px solid #C1440E', borderRadius: '0 12px 12px 0', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              >
+                <div>
+                  <p style={{ fontSize: '14px', color: '#1A2E10', fontWeight: 500 }}>{r.title}</p>
+                  {r.frequency && (
+                    <p style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#7A8C6E', textTransform: 'uppercase', marginTop: '4px' }}>{r.frequency}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => handleRevisit(r)}
+                  disabled={submitting}
+                  style={{ fontSize: '12px', color: '#C1440E', background: 'transparent', border: '0.5px solid #C1440E', borderRadius: '20px', padding: '4px 12px', cursor: 'pointer', opacity: submitting ? 0.5 : 1 }}
+                >
+                  Revisit
+                </button>
               </div>
             ))}
           </div>
