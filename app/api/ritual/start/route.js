@@ -20,7 +20,6 @@ export async function POST(request) {
       .from('rituals')
       .insert({
         couple_id: coupleId,
-        created_by: userId,
         suggestion_id: suggestionId || null,
         title,
         description: description || null,
@@ -37,7 +36,7 @@ export async function POST(request) {
       .maybeSingle()
 
     if (error) {
-      console.error('[ritual/start] insert error:', error)
+      console.error('[ritual/start] insert error — message:', error.message, '| code:', error.code, '| details:', error.details, '| hint:', error.hint)
       return NextResponse.json({ error: 'Failed to create ritual' }, { status: 500 })
     }
 
