@@ -11,6 +11,7 @@ import SparkCard from '@/components/SparkCard'
 import BetCard from '@/components/BetCard'
 import FlirtSheet from '@/components/FlirtSheet'
 import RitualCard from '@/components/RitualCard'
+import ReflectionCard from '@/components/ReflectionCard'
 
 const FEATURE_SPOTLIGHTS = [
   {
@@ -666,8 +667,10 @@ export default function TodayPage() {
 
         {/* SECTION — WEEKLY REFLECTION (Sunday) */}
         {showReflection && (
-          // Weekly Reflection component — coming soon
-          null
+          <div style={{ marginBottom: '24px' }}>
+            <p style={{ fontSize: '11px', fontWeight: '500', letterSpacing: '0.1em', color: '#6B7280', marginBottom: '12px' }}>WEEKLY REFLECTION</p>
+            <ReflectionCard userId={userId} coupleId={coupleId} partnerName={partnerName} />
+          </div>
         )}
 
         {/* Nothing scheduled today */}
