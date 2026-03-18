@@ -4,6 +4,7 @@
 'use client'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
+import { getTodayString } from '@/lib/dates'
 import { useRouter } from 'next/navigation'
 import { notifyPartnerTodayResponse } from '@/lib/notify'
 import SparkCard from '@/components/SparkCard'
@@ -68,26 +69,11 @@ function getDayIndex() {
   return Math.floor((today - start) / 86400000)
 }
 
-function getTodayString() {
-  return new Date().toISOString().split('T')[0]
-}
-
-function getTodayGameType() {
-  if (typeof window !== 'undefined' && window.location.search.includes('spark=true')) return 'spark'
-  const day = new Date().getDay() // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
-  if (day === 3) return 'spark'
-  if (day === 5) return 'ritual'
-  if (day === 6) return 'bet_live'
-  if (day === 0) return 'reflection'
-  return 'spark'
-}
-
 export default function TodayPage() {
   const router = useRouter()
 
   const hour = new Date().getHours()
   const timeOfDay = hour >= 5 && hour < 12 ? 'morning' : hour >= 12 && hour < 17 ? 'afternoon' : 'evening'
-  const gameType = getTodayGameType()
 
   const [loading, setLoading] = useState(true)
   const [userName, setUserName] = useState('')
@@ -557,9 +543,13 @@ export default function TodayPage() {
 
   const partnerCoaching = getPartnerCoaching()
 
-  const todayPacific = new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long' })
-  const isFriday = todayPacific === 'Friday'
-  const forceRitual = typeof window !== 'undefined' && window.location.search.includes('ritual=true')
+  const todayName = new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long' })
+  const params = typeof window !== 'undefined' ? window.location.search : ''
+  const showSpark = ['Monday', 'Tuesday', 'Thursday'].includes(todayName) || params.includes('spark=true')
+  const showBet = todayName === 'Wednesday' || params.includes('bet=true')
+  const showRitual = todayName === 'Friday' || params.includes('ritual=true')
+  const showReflection = todayName === 'Sunday' || params.includes('reflection=true')
+  const anyScheduled = showSpark || showBet || showRitual || showReflection
 
   const headerGradient = {
     morning: 'linear-gradient(135deg, rgba(251,191,36,0.14) 0%, rgba(249,115,22,0.08) 100%)',
@@ -613,27 +603,8 @@ export default function TodayPage() {
           </h1>
         </div>
 
-        {/* SECTION 1 — THE BET or THE SPARK */}
-        {(new Date().getDay() === 3 || window.location.search.includes('bet=true')) ? (
-          <section>
-            <div className="flex items-center justify-between mb-3 px-1">
-              <span className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400">
-                The Bet
-              </span>
-            </div>
-            {!betLoading && betData?.betDay && betData.bet && (
-              <BetCard
-                bet={betData.bet}
-                mine={betData.mine}
-                theirs={betData.theirs}
-                partnerId={betData.partnerId || partnerId}
-                partnerName={betData.partnerName || partnerName}
-                userId={userId}
-                coupleId={coupleId}
-              />
-            )}
-          </section>
-        ) : (
+        {/* SECTION — THE SPARK (Monday, Tuesday, Thursday) */}
+        {showSpark && (
           <section>
             <div className="flex items-center justify-between mb-3 px-1">
               <span className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400">
@@ -655,8 +626,30 @@ export default function TodayPage() {
           </section>
         )}
 
-        {/* SECTION — THE RITUAL (Fridays only, or ?ritual=true) */}
-        {(isFriday || forceRitual) && userId && coupleId && (
+        {/* SECTION — THE BET (Wednesday) */}
+        {showBet && (
+          <section>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <span className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400">
+                The Bet
+              </span>
+            </div>
+            {!betLoading && betData?.betDay && betData.bet && (
+              <BetCard
+                bet={betData.bet}
+                mine={betData.mine}
+                theirs={betData.theirs}
+                partnerId={betData.partnerId || partnerId}
+                partnerName={betData.partnerName || partnerName}
+                userId={userId}
+                coupleId={coupleId}
+              />
+            )}
+          </section>
+        )}
+
+        {/* SECTION — THE RITUAL (Friday) */}
+        {showRitual && userId && coupleId && (
           <section>
             <div className="flex items-center justify-between mb-3 px-1">
               <span className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400">
@@ -669,6 +662,19 @@ export default function TodayPage() {
               partnerName={partnerName}
             />
           </section>
+        )}
+
+        {/* SECTION — WEEKLY REFLECTION (Sunday) */}
+        {showReflection && (
+          // Weekly Reflection component — coming soon
+          null
+        )}
+
+        {/* Nothing scheduled today */}
+        {!anyScheduled && (
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: 'italic', color: '#B8A898', textAlign: 'center', padding: '24px 0' }}>
+            Nothing scheduled today. Enjoy the day.
+          </p>
         )}
 
         {/* SECTION 2 — FOR YOUR PARTNER */}
