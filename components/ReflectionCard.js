@@ -13,8 +13,8 @@ export default function ReflectionCard({ userId, coupleId, partnerName }) {
   const [weekAheadShown, setWeekAheadShown] = useState(false)
   const [buttonShown, setButtonShown] = useState(false)
 
-  // Moment reactions: { [index]: 'lands' | 'not-quite' | null }
-  const [reactions, setReactions] = useState({})
+  // Moment reactions: { [index]: 'lands' | 'not_quite' }
+  const [momentReactions, setMomentReactions] = useState({})
 
   // Viewed
   const [viewed, setViewed] = useState(false)
@@ -214,14 +214,14 @@ export default function ReflectionCard({ userId, coupleId, partnerName }) {
           <div style={{ display: 'flex', gap: '8px' }}>
             {[
               { label: 'That lands', key: 'lands' },
-              { label: 'Not quite', key: 'not-quite' },
+              { label: 'Not quite', key: 'not_quite' },
             ].map(({ label, key }) => {
-              const selected = reactions[i] === key
+              const selected = momentReactions[i] === key
               return (
                 <button
                   key={key}
                   onClick={() =>
-                    setReactions(prev => ({ ...prev, [i]: selected ? null : key }))
+                    setMomentReactions(prev => ({ ...prev, [i]: key }))
                   }
                   style={{
                     background: 'transparent',
