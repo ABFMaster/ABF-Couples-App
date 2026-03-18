@@ -44,6 +44,7 @@ export default function ReflectionCard({ userId, coupleId, partnerName }) {
 
       if (data.reflection) {
         setReflection(data.reflection)
+        setMomentReactions(data.reflection.moment_reactions || {})
       }
       setLoading(false)
     }
@@ -220,9 +221,14 @@ export default function ReflectionCard({ userId, coupleId, partnerName }) {
               return (
                 <button
                   key={key}
-                  onClick={() =>
+                  onClick={() => {
                     setMomentReactions(prev => ({ ...prev, [i]: key }))
-                  }
+                    fetch('/api/reflection/react', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ coupleId, momentIndex: i, reaction: key }),
+                    }).catch(() => {})
+                  }}
                   style={{
                     background: 'transparent',
                     border: `0.5px solid ${selected ? '#6B4E8A' : '#E8DDD0'}`,
