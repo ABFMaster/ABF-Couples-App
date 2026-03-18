@@ -9,6 +9,7 @@ import { notifyPartnerTodayResponse } from '@/lib/notify'
 import SparkCard from '@/components/SparkCard'
 import BetCard from '@/components/BetCard'
 import FlirtSheet from '@/components/FlirtSheet'
+import RitualCard from '@/components/RitualCard'
 
 const FEATURE_SPOTLIGHTS = [
   {
@@ -556,6 +557,10 @@ export default function TodayPage() {
 
   const partnerCoaching = getPartnerCoaching()
 
+  const todayPacific = new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long' })
+  const isFriday = todayPacific === 'Friday'
+  const forceRitual = typeof window !== 'undefined' && window.location.search.includes('ritual=true')
+
   const headerGradient = {
     morning: 'linear-gradient(135deg, rgba(251,191,36,0.14) 0%, rgba(249,115,22,0.08) 100%)',
     afternoon: 'linear-gradient(135deg, rgba(250,204,21,0.12) 0%, rgba(251,191,36,0.08) 100%)',
@@ -647,6 +652,22 @@ export default function TodayPage() {
                 onReact={handleSparkReact}
               />
             )}
+          </section>
+        )}
+
+        {/* SECTION — THE RITUAL (Fridays only, or ?ritual=true) */}
+        {(isFriday || forceRitual) && userId && coupleId && (
+          <section>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <span className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400">
+                The Ritual
+              </span>
+            </div>
+            <RitualCard
+              userId={userId}
+              coupleId={coupleId}
+              partnerName={partnerName}
+            />
           </section>
         )}
 
