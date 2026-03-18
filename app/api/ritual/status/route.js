@@ -25,8 +25,10 @@ export async function GET(request) {
       .order('created_at', { ascending: true })
 
     if (!rituals || rituals.length === 0) {
-      return NextResponse.json({ hasRituals: false, rituals: [], completions: [] })
+      return NextResponse.json({ hasRituals: false, rituals: [], completions: [], usedSuggestionIds: [] })
     }
+
+    const usedSuggestionIds = rituals.map(r => r.suggestion_id).filter(Boolean)
 
     // Compute Monday of current week in Pacific time
     const d = new Date()
@@ -45,6 +47,7 @@ export async function GET(request) {
       hasRituals: true,
       rituals,
       completions: completions || [],
+      usedSuggestionIds,
     })
   } catch (err) {
     console.error('[ritual/status] Error:', err)

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { RITUAL_SUGGESTIONS } from '@/lib/ritual-suggestions'
+import { RITUAL_SUGGESTIONS, getStarterRituals } from '@/lib/ritual-suggestions'
 
 const TIER1 = RITUAL_SUGGESTIONS.filter(r => r.tier === 1)
 
@@ -123,8 +123,10 @@ function RitualAccentCard({ label, title, description }) {
 }
 
 // Suggestion cycling UI — used in State 1 suggestion mode, retired mode, and State 3 discover mode
-function SuggestionCycle({ index, onNext, onSelect, submitting }) {
-  const suggestion = TIER1[index % TIER1.length]
+function SuggestionCycle({ index, onNext, onSelect, submitting, usedIds = [] }) {
+  const available = TIER1.filter(s => !usedIds.includes(s.id))
+  const list = available.length > 0 ? available : TIER1
+  const suggestion = list[index % list.length]
   return (
     <div>
       <div style={{ marginBottom: '16px' }}>
@@ -172,6 +174,8 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
   const [submitting, setSubmitting] = useState(false)
   const [pendingConfirmation, setPendingConfirmation] = useState(null)
   const [discussConfirmed, setDiscussConfirmed] = useState(false)
+  const [nextSuggestion, setNextSuggestion] = useState(null)
+  const [usedSuggestionIds, setUsedSuggestionIds] = useState([])
 
   useEffect(() => {
     fetch(`/api/ritual/status?userId=${userId}&coupleId=${coupleId}`)
@@ -184,6 +188,10 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
           r => r.status === 'pending' && String(r.proposed_by) !== String(userId) && !r.needs_discussion
         )
         setPendingConfirmation(pending || null)
+        const used = data.usedSuggestionIds || []
+        setUsedSuggestionIds(used)
+        const tier1 = getStarterRituals()
+        setNextSuggestion(tier1.find(s => !used.includes(s.id)) || null)
         setLoading(false)
       })
       .catch(() => setLoading(false))
@@ -215,6 +223,10 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
       r => r.status === 'pending' && String(r.proposed_by) !== String(userId) && !r.needs_discussion
     )
     setPendingConfirmation(nextPending || null)
+    const used = data.usedSuggestionIds || []
+    setUsedSuggestionIds(used)
+    const tier1 = getStarterRituals()
+    setNextSuggestion(tier1.find(s => !used.includes(s.id)) || null)
   }
 
   const handleConfirmPending = async (action) => {
@@ -257,6 +269,13 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
     } catch {} finally {
       setSubmitting(false)
     }
+  }
+
+  const handleNextLibrarySuggestion = () => {
+    const tier1 = getStarterRituals()
+    const currentIdx = nextSuggestion ? tier1.findIndex(s => s.id === nextSuggestion.id) : -1
+    const rest = [...tier1.slice(currentIdx + 1), ...tier1.slice(0, currentIdx + 1)]
+    setNextSuggestion(rest.find(s => !usedSuggestionIds.includes(s.id)) || null)
   }
 
   const handleAddOwn = async () => {
@@ -412,6 +431,12 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
         setCheckinResult(null)
         setAdoptionReady(false)
         setUpdatedStreak(null)
+        if (suggestion.id) {
+          const newUsed = [...usedSuggestionIds, suggestion.id]
+          setUsedSuggestionIds(newUsed)
+          const tier1 = getStarterRituals()
+          setNextSuggestion(tier1.find(s => !newUsed.includes(s.id)) || null)
+        }
       }
     } catch {} finally {
       setSubmitting(false)
@@ -486,6 +511,7 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
             onNext={() => setSuggestionIndex(prev => (prev + 1) % TIER1.length)}
             onSelect={handleSelectSuggestion}
             submitting={submitting}
+            usedIds={usedSuggestionIds}
           />
           <div style={{ marginTop: '10px' }}>
             <GhostBtn onClick={() => setSuggestionMode(false)}>Add something we already do</GhostBtn>
@@ -825,7 +851,25 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
       )}
 
       <Divider />
-      <GhostBtn onClick={() => setDiscoverMode(true)}>Discover another ritual</GhostBtn>
+      {nextSuggestion ? (
+        <div>
+          <NoraBlock text={`You have ${activeRituals.length} ritual${activeRituals.length === 1 ? '' : 's'} going. Ready to try another? Here's one that fits what Nora knows about you two.`} />
+          <div style={{ marginBottom: '16px' }}>
+            <RitualAccentCard
+              title={nextSuggestion.title}
+              description={nextSuggestion.description}
+            />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <PrimaryBtn onClick={() => handleDiscoverMore(nextSuggestion)} disabled={submitting}>
+              We'll try this one
+            </PrimaryBtn>
+            <GhostBtn onClick={handleNextLibrarySuggestion}>Show me another</GhostBtn>
+          </div>
+        </div>
+      ) : (
+        <GhostBtn onClick={() => setDiscoverMode(true)}>Discover another ritual</GhostBtn>
+      )}
     </div>
   )
 }
