@@ -230,12 +230,12 @@ export default function ReflectionCard({ userId, coupleId, partnerName }) {
                     }).catch(() => {})
                   }}
                   style={{
-                    background: 'transparent',
+                    background: selected ? '#6B4E8A' : 'transparent',
                     border: `0.5px solid ${selected ? '#6B4E8A' : '#E8DDD0'}`,
                     borderRadius: '20px',
                     padding: '6px 14px',
                     fontSize: '12px',
-                    color: selected ? '#6B4E8A' : '#7A8C6E',
+                    color: selected ? '#FFFFFF' : '#7A8C6E',
                     cursor: 'pointer',
                   }}
                 >
