@@ -36,7 +36,7 @@ export async function POST(request) {
       .maybeSingle()
 
     if (error) {
-      console.error('[ritual/start] insert error — message:', error.message, '| code:', error.code, '| details:', error.details, '| hint:', error.hint)
+      console.error('[ritual/start] insert error:', error)
       return NextResponse.json({ error: 'Failed to create ritual' }, { status: 500 })
     }
 

@@ -177,28 +177,16 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
     fetch(`/api/ritual/status?userId=${userId}&coupleId=${coupleId}`)
       .then(r => r.json())
       .then(data => {
-        console.log('[RitualCard] userId:', userId, 'type:', typeof userId)
-        console.log('[RitualCard] status fetch rituals:', (data.rituals || []).map(r => ({
-          id: r.id,
-          status: r.status,
-          proposed_by: r.proposed_by,
-          proposed_by_type: typeof r.proposed_by,
-          needs_discussion: r.needs_discussion,
-        })))
         setHasRituals(data.hasRituals || false)
         setRituals(data.rituals || [])
         setCompletions(data.completions || [])
         const pending = (data.rituals || []).find(
           r => r.status === 'pending' && String(r.proposed_by) !== String(userId) && !r.needs_discussion
         )
-        console.log('[RitualCard] pendingConfirmation found:', pending || null)
         setPendingConfirmation(pending || null)
         setLoading(false)
       })
-      .catch((err) => {
-        console.error('[RitualCard] status fetch error:', err)
-        setLoading(false)
-      })
+      .catch(() => setLoading(false))
   }, [userId, coupleId])
 
   // ─── Derived state ──────────────────────────────────────────────────────────
@@ -273,7 +261,6 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
 
   const handleAddOwn = async () => {
     if (!textarea1.trim() || submitting) return
-    console.log('[RitualCard] handleAddOwn fired, title:', textarea1.trim())
     setSubmitting(true)
     try {
       const res = await fetch('/api/ritual/start', {
@@ -289,15 +276,12 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
         }),
       })
       const data = await res.json()
-      console.log('[RitualCard] /api/ritual/start response:', data)
       if (data.ritual) {
         setRituals([data.ritual])
         setHasRituals(true)
         setSuggestionMode(false)
       }
-    } catch (err) {
-      console.error('[RitualCard] handleAddOwn error:', err)
-    } finally {
+    } catch {} finally {
       setSubmitting(false)
     }
   }
