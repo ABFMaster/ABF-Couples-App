@@ -21,6 +21,7 @@ export default function NavBadges() {
       const partnerId = couple.user1_id === user.id ? couple.user2_id : couple.user1_id
       const today = new Date().toISOString().split('T')[0]
 
+      // Check Spark badge
       const { data: spark } = await supabase
         .from('sparks')
         .select('id')
@@ -28,26 +29,42 @@ export default function NavBadges() {
         .eq('spark_date', today)
         .maybeSingle()
 
-      if (!spark) {
-        setTodayHasBadge(false)
-        return
+      if (spark) {
+        const { data: responses } = await supabase
+          .from('spark_responses')
+          .select('user_id, responded_at, reaction_icon')
+          .eq('spark_id', spark.id)
+
+        const mine = responses?.find(r => r.user_id === user.id)
+        const theirs = responses?.find(r => r.user_id === partnerId)
+
+        if (theirs?.responded_at && !mine?.responded_at) {
+          setTodayHasBadge(true)
+          return
+        }
+        if (theirs?.responded_at && mine?.responded_at && !mine?.reaction_icon) {
+          setTodayHasBadge(true)
+          return
+        }
       }
 
-      const { data: responses } = await supabase
-        .from('spark_responses')
-        .select('user_id, responded_at, reaction_icon')
-        .eq('spark_id', spark.id)
+      // Check Bet badge
+      try {
+        const res = await fetch(`/api/bet/today?userId=${user.id}&coupleId=${couple.id}`)
+        const betData = await res.json()
+        if (betData.betDay) {
+          const { mine, theirs } = betData
+          const neitherAnswered = !mine && !theirs
+          const partnerAnsweredIMissed = theirs && !mine
+          const bothAnsweredRevealUnseen = mine && theirs && !mine.nora_reaction
+          if (neitherAnswered || partnerAnsweredIMissed || bothAnsweredRevealUnseen) {
+            setTodayHasBadge(true)
+            return
+          }
+        }
+      } catch {}
 
-      const mine = responses?.find(r => r.user_id === user.id)
-      const theirs = responses?.find(r => r.user_id === partnerId)
-
-      if (theirs?.responded_at && !mine?.responded_at) {
-        setTodayHasBadge(true)
-      } else if (theirs?.responded_at && mine?.responded_at && !mine?.reaction_icon) {
-        setTodayHasBadge(true)
-      } else {
-        setTodayHasBadge(false)
-      }
+      setTodayHasBadge(false)
     }
 
     checkBadge()
