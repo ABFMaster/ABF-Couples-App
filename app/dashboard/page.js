@@ -411,7 +411,7 @@ export default function Dashboard() {
       .then(d => setMemoryCard(d))
       .catch(() => setMemoryCard(null))
       .finally(() => setMemoryLoading(false))
-  }, [user?.id, couple?.id])
+  }, [user, couple])
 
   useEffect(() => {
     const initPush = async () => {
