@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
-import { getTodayString } from '@/lib/dates'
+import { getTodayString, getDayOfWeek, getDateDayLabel } from '@/lib/dates'
 
 export async function GET(request) {
   try {
@@ -23,7 +23,7 @@ export async function GET(request) {
     )
 
     const todayStr  = getTodayString('America/Los_Angeles')
-    const dayOfWeek = new Date(todayStr + 'T12:00:00').getDay() // 0=Sun, 1=Mon, ..., 6=Sat
+    const dayOfWeek = getDayOfWeek('America/Los_Angeles')
 
     // ── Fetch partner id ──────────────────────────────────────────────────────
     const { data: couple } = await supabase
@@ -130,8 +130,8 @@ export async function GET(request) {
     }
 
     if (nextDate && daysUntilDate !== null && daysUntilDate <= 7) {
-      const dateDay = new Date(nextDate.date_time).getDay()
-      pills.push(`${DAY_ABBR[dateDay]} · ${nextDate.title}`)
+      const dateDay = getDateDayLabel(nextDate.date_time, 'America/Los_Angeles')
+      pills.push(`${dateDay} · ${nextDate.title}`)
     }
 
     // ── Weather (optional) ────────────────────────────────────────────────────
