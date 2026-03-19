@@ -189,7 +189,7 @@ export async function GET(request) {
     if (priority === 5 && nextDate && daysUntilDate <= 3) {
       priority  = 4
       cta_label = 'View the plan'
-      cta_href  = '/date-night'
+      cta_href  = `/dates/${nextDate.id}`
     }
 
     // ── Build Claude prompt ───────────────────────────────────────────────────
