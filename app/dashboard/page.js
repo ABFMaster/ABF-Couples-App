@@ -438,24 +438,13 @@ export default function Dashboard() {
     )
   }
 
-  const noraMessage = noraTrigger?.message || `Good ${getGreetingWord()}, ${userName}. How are you two doing today?`
+  const noraMessage = noraTrigger?.message || `Good ${getGreetingWord()}, ${userName}.`
 
   const pendingDateAction = pendingDate
   const checkinDone = todayCheckinDone
 
   // Section 3 — build 2 contextual action cards + 1 Nora surprise slot
   const suggestedActions = []
-
-  if (!checkinDone) {
-    suggestedActions.push({
-      id: 'checkin',
-      verb: 'Check in together',
-      hint: 'Takes 2 minutes',
-      nudge: null,
-      urgent: true,
-      href: '/checkin',
-    })
-  }
 
   if (lastFlirtDaysAgo === null || lastFlirtDaysAgo >= 2) {
     suggestedActions.push({
@@ -558,16 +547,6 @@ export default function Dashboard() {
                 <span className="text-white/20 text-xs">·</span>
                 <span className="text-white/40 text-xs capitalize">Good {getGreetingWord()}</span>
               </div>
-
-              {upcomingEvent && (
-                <div className="flex items-center gap-2 bg-white/10 border border-white/10 rounded-xl px-3 py-2.5 mb-4">
-                  <span className="text-base">{upcomingEvent.icon}</span>
-                  <span className="text-[13px] text-white/80 font-medium flex-1 leading-snug">
-                    {upcomingEvent.text}
-                    {upcomingEvent.strong && <span className="text-white font-semibold"> {upcomingEvent.strong}</span>}
-                  </span>
-                </div>
-              )}
 
               <p className="text-white text-[20px] leading-[1.4] mb-5"
                  style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
