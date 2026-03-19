@@ -103,7 +103,7 @@ export async function GET(request) {
       : null
 
     // ── Pills: next two feature days + upcoming date ─────────────────────────
-    const DAY_NAMES    = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    const DAY_ABBR      = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
     const FEATURE_LABEL = { 0: 'Reflection', 1: 'The Spark', 2: 'The Spark', 3: 'The Bet', 4: 'The Spark', 5: 'Ritual' }
 
     const pills = []
@@ -111,14 +111,14 @@ export async function GET(request) {
     let scanned = 0
     while (pills.length < 2 && scanned < 7) {
       const label = FEATURE_LABEL[scan]
-      if (label) pills.push(`${label} ${DAY_NAMES[scan]}`)
+      if (label) pills.push(`${DAY_ABBR[scan]} · ${label}`)
       scan = (scan + 1) % 7
       scanned++
     }
 
     if (nextDate && daysUntilDate !== null && daysUntilDate <= 7) {
       const dateDay = new Date(nextDate.date_time).getDay()
-      pills.push(`${nextDate.title} ${DAY_NAMES[dateDay]}`)
+      pills.push(`${DAY_ABBR[dateDay]} · ${nextDate.title}`)
     }
 
     // ── Weather (optional) ────────────────────────────────────────────────────
@@ -218,7 +218,7 @@ export async function GET(request) {
       : null
       : null
 
-    const systemPrompt = `You are Nora, a warm and perceptive relationship coach. Write a single short message (1-2 sentences, max 20 words) for the dashboard hero card. Be direct and human — no fluff, no filler. Do not start with "Hey" or "Hi". Use the user's name if provided. Reference specific context if available. Tone: warm, grounded, occasionally a little playful.`
+    const systemPrompt = `You are Nora, a warm and perceptive relationship coach. Write a single short message (1-2 sentences, max 20 words) for the dashboard hero card. Be direct and human — no fluff, no filler. Do not start with "Hey" or "Hi". Use the user's name if provided. Reference specific context if available. Tone: warm, grounded, occasionally a little playful. When referencing a feature, always use its full name — "The Bet", "The Spark", "The Ritual", or "Weekly Reflection". Never substitute with "it", "this", or "today's activity".`
 
     const userPrompt = [
       `User's name: ${name}`,

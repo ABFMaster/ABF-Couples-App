@@ -30,7 +30,9 @@ export async function GET(request) {
       return NextResponse.json({ empty: true })
     }
 
-    const event = events[Math.floor(Math.random() * events.length)]
+    const eventsWithPhotos = events.filter(e => e.photo_urls?.length > 0)
+    const pool = eventsWithPhotos.length > 0 ? eventsWithPhotos : events
+    const event = pool[Math.floor(Math.random() * pool.length)]
     return NextResponse.json(event)
   } catch (err) {
     console.error('[dashboard/memory] Error:', err)
