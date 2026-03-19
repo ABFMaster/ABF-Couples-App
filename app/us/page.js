@@ -445,7 +445,7 @@ export default function UsPage() {
 
           <FeatureCard
             router={router}
-            href="/today?ritual=true"
+            href="/ritual"
             title="The Ritual"
             status={ritualStatus}
             action={ritualAction}

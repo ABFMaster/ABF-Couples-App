@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { RITUAL_SUGGESTIONS, getStarterRituals } from '@/lib/ritual-suggestions'
+import { getWeekStart } from '@/lib/dates'
 
 const TIER1 = RITUAL_SUGGESTIONS.filter(r => r.tier === 1)
 
@@ -9,12 +10,6 @@ const NORA_WEEK_MESSAGES = {
   1: "Give this three weeks before you decide. That's the minimum for something to start feeling natural. Check in here each Friday and let Nora know how it's going.",
   2: "Two weeks in. Research shows it takes about 21 days for something to feel automatic. You're most of the way there. Keep going.",
   3: "Week three. If this has shown up in your week at all — even imperfectly — that's the ritual working. One more week and you can make it official.",
-}
-
-function getWeekStart() {
-  const d = new Date()
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
-  return d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })
 }
 
 // ─── Shared style helpers ─────────────────────────────────────────────────────
