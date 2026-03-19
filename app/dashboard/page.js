@@ -148,6 +148,9 @@ export default function Dashboard() {
   const [noraTrigger, setNoraTrigger]           = useState(null)
   const [todaysRead, setTodaysRead]             = useState(null)
 
+  const [memoryCard, setMemoryCard]             = useState(null)
+  const [memoryLoading, setMemoryLoading]       = useState(true)
+
   // Hydrate localStorage on client only
   useEffect(() => {
     setInviteDismissed(localStorage.getItem('abf_invite_dismissed') === 'true')
@@ -401,6 +404,16 @@ export default function Dashboard() {
   useEffect(() => { fetchAll() }, [fetchAll])
 
   useEffect(() => {
+    if (!user?.id || !couple?.id) return
+    setMemoryLoading(true)
+    fetch(`/api/dashboard/memory?userId=${user.id}&coupleId=${couple.id}`)
+      .then(r => r.json())
+      .then(d => setMemoryCard(d))
+      .catch(() => setMemoryCard(null))
+      .finally(() => setMemoryLoading(false))
+  }, [user?.id, couple?.id])
+
+  useEffect(() => {
     const initPush = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser()
@@ -601,6 +614,69 @@ export default function Dashboard() {
 
         </section>
 
+        {/* TIMELINE MEMORY CARD */}
+        {memoryLoading ? (
+          <section>
+            <div className="h-4 w-32 bg-neutral-200 rounded mb-3 animate-pulse" />
+            <div className="bg-white rounded-2xl border border-neutral-200 p-5 h-24 animate-pulse" />
+          </section>
+        ) : memoryCard?.empty ? (
+          <section>
+            <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
+              Your Story
+            </div>
+            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-5">
+              <div className="flex items-center gap-1.5 mb-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#F2A090]" />
+                <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-[#E8614D]">Nora</span>
+              </div>
+              <p className="text-[14px] text-neutral-600 leading-relaxed mb-3">
+                Every relationship has a story. Add your first memory — your first date, a trip, anything that matters.
+              </p>
+              <button
+                onClick={() => router.push('/timeline')}
+                className="text-[14px] font-semibold text-[#E8614D]"
+              >
+                Add a memory →
+              </button>
+            </div>
+          </section>
+        ) : memoryCard?.event ? (
+          <section>
+            <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
+              From Your Timeline
+            </div>
+            <button
+              onClick={() => router.push('/timeline')}
+              className="w-full bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden text-left active:scale-[0.99] transition-transform"
+            >
+              {memoryCard.event.photo_urls?.[0] && (
+                <img
+                  src={memoryCard.event.photo_urls[0]}
+                  alt={memoryCard.event.title}
+                  className="w-full h-36 object-cover"
+                />
+              )}
+              <div className="p-5">
+                {memoryCard.event.event_type && (
+                  <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-1">
+                    {memoryCard.event.event_type.replace(/_/g, ' ')}
+                  </p>
+                )}
+                <p className="text-[18px] text-neutral-900 leading-snug mb-1"
+                   style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
+                  {memoryCard.event.title}
+                </p>
+                {memoryCard.event.event_date && (
+                  <p className="text-[12px] text-neutral-400">
+                    {new Date(memoryCard.event.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  </p>
+                )}
+              </div>
+            </button>
+          </section>
+        ) : null}
+
         {/* COUPLES DEBRIEF CARD */}
         {showCouplesDebrief && (
           <section>
@@ -679,38 +755,6 @@ export default function Dashboard() {
           </section>
         )}
 
-        {/* SECTION 3 — SUGGESTED ACTIONS */}
-        <section>
-          <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
-            Do something together
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {displayActions.map(action => (
-              <button
-                key={action.id}
-                onClick={() => action.onClick?.() ?? router.push(action.href)}
-                className={`rounded-2xl p-4 min-h-[120px] flex flex-col text-left border active:scale-[0.97] transition-transform ${
-                  action.urgent
-                    ? 'bg-[#FEF3F1] border-[#F5C9C2]'
-                    : 'bg-white border-neutral-200'
-                } shadow-sm`}
-              >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 text-lg ${
-                  action.urgent ? 'bg-[rgba(232,97,77,0.1)]' : 'bg-neutral-100'
-                }`}>
-                  {action.id === 'checkin' && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8614D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
-                  {action.id === 'flirt' && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>}
-                  {action.id === 'date' && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>}
-                  {action.id === 'trip' && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>}
-                  {action.id === 'reflection' && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>}
-                </div>
-                <p className="text-[13px] font-semibold text-neutral-900 leading-snug mb-1">{action.verb}</p>
-                {action.hint && <p className="text-[11px] text-neutral-400 leading-snug mt-auto">{action.hint}</p>}
-                {action.nudge && <p className="text-[11px] font-semibold text-[#E8614D] mt-2">{action.nudge}</p>}
-              </button>
-            ))}
-          </div>
-        </section>
 
         {/* SECTION 4 — OPTIONAL CONTENT: Today's Read */}
         {todaysRead && (
