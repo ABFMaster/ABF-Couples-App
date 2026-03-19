@@ -122,7 +122,7 @@ export async function GET(request) {
     const pills = []
     let scan = (dayOfWeek + 1) % 7
     let scanned = 0
-    while (pills.length < 2 && scanned < 7) {
+    while (scanned < 7) {
       const label = FEATURE_LABEL[scan]
       if (label) pills.push(`${DAY_ABBR[scan]} · ${label}`)
       scan = (scan + 1) % 7
@@ -231,7 +231,7 @@ export async function GET(request) {
       : null
       : null
 
-    const systemPrompt = `You are Nora, a warm and perceptive relationship coach. Write a single short message (1-2 sentences, max 20 words) for the dashboard hero card. Be direct and human — no fluff, no filler. Do not start with "Hey" or "Hi". Use the user's name if provided. Reference specific context if available. Tone: warm, grounded, occasionally a little playful. When referencing a feature, always use its full name — "The Bet", "The Spark", "The Ritual", or "Weekly Reflection". Never substitute with "it", "this", or "today's activity". If a feature is present in the context, you MUST begin your message by naming it — start with "The Bet", "The Spark", "The Ritual", or "Weekly Reflection" as the first words of your message.`
+    const systemPrompt = `You are Nora, a warm and perceptive relationship coach. Write a single short message (1-2 sentences, max 20 words) for the dashboard hero card. Be direct and human — no fluff, no filler. Do not start with "Hey" or "Hi". Use the user's name if provided. Reference specific context if available. Tone: warm, grounded, occasionally a little playful. When referencing a feature, always use its full name — "The Bet", "The Spark", "The Ritual", or "Weekly Reflection". Never substitute with "it", "this", or "today's activity". If a feature is present in the context, you MUST begin your message by naming it — start with "The Bet", "The Spark", "The Ritual", or "Weekly Reflection" as the first words of your message. Never wrap a date title or feature name in quotes. When referencing an upcoming date, lead with excitement and specificity — name the date, say how far away it is, make it feel anticipated not administrative.`
 
     const userPrompt = [
       `User's name: ${name}`,
