@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { getTodayString } from '@/lib/dates'
 
 export async function GET(request) {
   try {
@@ -32,7 +33,10 @@ export async function GET(request) {
 
     const eventsWithPhotos = events.filter(e => e.photo_urls?.length > 0)
     const pool = eventsWithPhotos.length > 0 ? eventsWithPhotos : events
-    const event = pool[Math.floor(Math.random() * pool.length)]
+    const todayStr = getTodayString()
+    const seedStr = coupleId + todayStr
+    const seed = seedStr.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
+    const event = pool[seed % pool.length]
     return NextResponse.json(event)
   } catch (err) {
     console.error('[dashboard/memory] Error:', err)
