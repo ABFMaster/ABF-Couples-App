@@ -558,7 +558,7 @@ export default function Dashboard() {
                   if (noraTrigger?.message) sessionStorage.setItem('nora_opener', noraTrigger.message)
                   window.location.href = primaryCTA.href
                 }}
-                className="w-full min-h-[52px] bg-white text-[#E8614D] rounded-xl font-semibold text-[15px] flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-md"
+                className="text-[14px] font-semibold text-[#E8614D]"
               >
                 {primaryCTA.label}
               </button>
