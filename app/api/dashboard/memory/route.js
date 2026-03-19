@@ -18,7 +18,7 @@ export async function GET(request) {
 
     const { data: events, error } = await supabase
       .from('timeline_events')
-      .select('id, title, event_type, event_date, photo_urls, notes')
+      .select('id, title, event_type, event_date, photo_urls')
       .eq('couple_id', coupleId)
 
     if (error) {
