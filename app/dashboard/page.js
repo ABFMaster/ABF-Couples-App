@@ -641,7 +641,7 @@ export default function Dashboard() {
               </button>
             </div>
           </section>
-        ) : memoryCard?.event ? (
+        ) : memoryCard && !memoryCard.empty ? (
           <section>
             <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
               From Your Timeline
@@ -650,26 +650,26 @@ export default function Dashboard() {
               onClick={() => router.push('/timeline')}
               className="w-full bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden text-left active:scale-[0.99] transition-transform"
             >
-              {memoryCard.event.photo_urls?.[0] && (
+              {memoryCard.photo_urls?.[0] && (
                 <img
-                  src={memoryCard.event.photo_urls[0]}
-                  alt={memoryCard.event.title}
+                  src={memoryCard.photo_urls[0]}
+                  alt={memoryCard.title}
                   className="w-full h-36 object-cover"
                 />
               )}
               <div className="p-5">
-                {memoryCard.event.event_type && (
+                {memoryCard.event_type && (
                   <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-1">
-                    {memoryCard.event.event_type.replace(/_/g, ' ')}
+                    {memoryCard.event_type.replace(/_/g, ' ')}
                   </p>
                 )}
                 <p className="text-[18px] text-neutral-900 leading-snug mb-1"
                    style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                  {memoryCard.event.title}
+                  {memoryCard.title}
                 </p>
-                {memoryCard.event.event_date && (
+                {memoryCard.event_date && (
                   <p className="text-[12px] text-neutral-400">
-                    {new Date(memoryCard.event.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    {new Date(memoryCard.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                   </p>
                 )}
               </div>
