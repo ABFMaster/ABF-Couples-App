@@ -680,80 +680,48 @@ export default function TodayPage() {
           </p>
         )}
 
-        {/* SECTION 2 — FOR YOUR PARTNER */}
-        <section>
-          <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
-            For {partnerName}
+        {/* SECTION — SEND SOMETHING */}
+        <button
+          onClick={() => setFlirtSheetOpen(true)}
+          style={{
+            width: '100%',
+            background: '#FFFFFF',
+            border: '0.5px solid #E8DDD0',
+            borderRadius: '20px',
+            padding: '16px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            textAlign: 'left',
+            cursor: 'pointer',
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{
+              fontSize: '11px',
+              fontWeight: 700,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: '#E8614D',
+              margin: '0 0 4px',
+            }}>
+              Nora
+            </p>
+            <p style={{
+              fontFamily: "'Fraunces', Georgia, serif",
+              fontSize: '18px',
+              fontWeight: 400,
+              color: '#1A1A1A',
+              margin: '0 0 3px',
+              lineHeight: 1.3,
+            }}>
+              Send {partnerName} something
+            </p>
+            <p style={{ fontSize: '13px', color: '#9CA3AF', margin: 0 }}>
+              Nora has an idea for you
+            </p>
           </div>
-          {partnerCoaching ? (
-            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
-              <div className="flex">
-                <div className="w-1 bg-[#E8614D] flex-shrink-0" />
-                <div className="p-5 flex-1">
-                  <p className="text-[16px] text-neutral-900 leading-snug"
-                     style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                    {partnerCoaching.action}
-                  </p>
-                  <button
-                    onClick={() => setWhyOpen(w => !w)}
-                    className="mt-3 text-[12px] text-neutral-400 underline underline-offset-2"
-                  >
-                    {whyOpen ? 'Hide' : 'Why this?'}
-                  </button>
-                  {whyOpen && (
-                    <p className="mt-2 text-[12px] text-neutral-500 leading-relaxed">
-                      {partnerCoaching.why}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : neglectedFeature ? (
-            <button
-              onClick={() => router.push(neglectedFeature.href)}
-              className={`w-full rounded-2xl p-5 flex items-center gap-4 text-left border active:scale-[0.98] transition-transform shadow-sm ${
-                neglectedFeature.urgent
-                  ? 'bg-[#FEF3F1] border-[#F5C9C2]'
-                  : 'bg-white border-neutral-200'
-              }`}
-            >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                neglectedFeature.urgent ? 'bg-[rgba(232,97,77,0.1)]' : 'bg-neutral-100'
-              }`}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-                     stroke={neglectedFeature.urgent ? '#E8614D' : '#6B6560'}
-                     strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12 6 12 12 16 14"/>
-                </svg>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[15px] font-semibold text-neutral-900 leading-snug">{neglectedFeature.verb}</p>
-                <p className="text-[12px] text-neutral-400 mt-0.5">{neglectedFeature.hint}</p>
-              </div>
-              <span className="text-neutral-300 text-xl flex-shrink-0">›</span>
-            </button>
-          ) : null}
-
-          <button
-            onClick={() => setFlirtSheetOpen(true)}
-            className="w-full mt-3 bg-white rounded-2xl border border-neutral-200 shadow-sm p-5 flex items-center gap-4 text-left active:scale-[0.98] transition-transform"
-          >
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 mb-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#F2A090]" />
-                <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400">Nora</span>
-              </div>
-              <p className="text-[16px] text-neutral-900 leading-snug"
-                 style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                Send {partnerName} something
-              </p>
-              <p className="text-[12px] text-neutral-400 mt-0.5">Nora has an idea for you</p>
-            </div>
-            <span className="text-neutral-300 text-xl flex-shrink-0">›</span>
-          </button>
-        </section>
-
+          <span style={{ color: '#D1D5DB', fontSize: '20px', flexShrink: 0 }}>›</span>
+        </button>
 
         {/* SECTION 3 — RELATIONSHIP INSIGHT */}
         {articleInsight && (
@@ -761,11 +729,6 @@ export default function TodayPage() {
             <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
               Worth reading
             </div>
-            {noraCommentary && (
-              <div className="bg-white rounded-xl border-l-4 border-[#E8614D] px-4 py-3 mb-3">
-                <p className="text-[13px] text-neutral-500 italic leading-relaxed">{noraCommentary}</p>
-              </div>
-            )}
             <a href={articleInsight.url} target="_blank" rel="noopener noreferrer" className="block">
               <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-5">
                 <div className="flex items-start gap-4">
@@ -799,29 +762,6 @@ export default function TodayPage() {
           </section>
         )}
 
-        {/* SECTION 4 — FEATURE SPOTLIGHT */}
-        {spotlight && (
-          <section>
-            <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
-              Try this together
-            </div>
-            <button
-              onClick={() => router.push(spotlight.href)}
-              className="w-full bg-white rounded-2xl border border-neutral-200 shadow-sm p-6 text-left active:scale-[0.98] transition-transform"
-            >
-              <p className="text-[18px] text-neutral-900 mb-2 leading-snug"
-                 style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                {spotlight.title}
-              </p>
-              <p className="text-[13px] text-neutral-400 leading-relaxed mb-4">
-                {spotlight.description}
-              </p>
-              <span className="text-[13px] font-semibold text-[#E8614D]">
-                {spotlight.action}
-              </span>
-            </button>
-          </section>
-        )}
 
       </div>
       <FlirtSheet
