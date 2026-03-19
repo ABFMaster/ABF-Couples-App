@@ -375,7 +375,7 @@ export default function RitualPage() {
         {activeRituals.length > 0 && <Divider />}
         {nextSuggestion && (
           <div style={{ marginBottom: '16px' }}>
-            <NoraBlock text={`${activeRituals.length > 0 ? `You have ${activeRituals.length} ritual${activeRituals.length === 1 ? '' : 's'} going. Ready to try another?' : 'Here's one to start with.'} Here's one that might fit.`} />
+            <NoraBlock text={activeRituals.length > 0 ? `You have ${activeRituals.length} ritual${activeRituals.length === 1 ? '' : 's'} going. Ready to try another? Here's one that might fit.` : "Here's one to start with. This might fit."} />
             <div style={{ marginBottom: '16px' }}>
               <RitualAccentCard title={nextSuggestion.title} description={nextSuggestion.description} />
             </div>
