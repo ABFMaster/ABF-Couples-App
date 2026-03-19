@@ -714,7 +714,7 @@ export default function TodayPage() {
               margin: '0 0 3px',
               lineHeight: 1.3,
             }}>
-              Send {partnerName} something
+              Send {partnerName} a Flirt
             </p>
             <p style={{ fontSize: '13px', color: '#9CA3AF', margin: 0 }}>
               Let Nora do the work
