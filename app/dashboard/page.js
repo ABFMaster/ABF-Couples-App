@@ -590,12 +590,12 @@ export default function Dashboard() {
                 <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-white/40">Nora</span>
                 <span className="text-white/20 text-xs">·</span>
                 <span className="text-white/40 text-xs capitalize">Good {getGreetingWord()}</span>
+                {weather && (
+                  <div style={{ marginLeft: 'auto' }}>
+                    <WeatherWidget temp={weather.temp} condition={weather.condition} dark />
+                  </div>
+                )}
               </div>
-              {weather && (
-                <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
-                  <WeatherWidget temp={weather.temp} condition={weather.condition} dark />
-                </div>
-              )}
 
               <p className="text-white text-[20px] leading-[1.4] mb-5"
                  style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
