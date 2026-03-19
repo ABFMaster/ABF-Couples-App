@@ -122,7 +122,7 @@ export async function GET(request) {
     const pills = []
     let scan = (dayOfWeek + 1) % 7
     let scanned = 0
-    while (scanned < 7) {
+    while (scanned < 3) {
       const label = FEATURE_LABEL[scan]
       if (label) pills.push(`${DAY_ABBR[scan]} · ${label}`)
       scan = (scan + 1) % 7
