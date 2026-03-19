@@ -1,5 +1,5 @@
 # ABF — Developer Handoff Briefing
-# Last Updated: 2026-03-18
+# Last Updated: 2026-03-19
 
 ---
 
@@ -124,7 +124,11 @@ No feature scheduled → shows "Nothing scheduled today. Enjoy the day." in Frau
 Email/password signup via Supabase Auth. `OnboardingGuard` redirects incomplete users to `/onboarding/welcome`. 28-question compatibility assessment on first run. Partner connection via 6-character code.
 
 ### Dashboard (`app/dashboard/page.js`)
-4-section structure: Nora hero / upcoming date / suggested actions / today's read. Couples debrief card appears when BOTH partners have new-format assessments. **Needs cleanup pass** — hype board redesign earmarked for next sprint.
+4-section structure: Nora hero / upcoming date / suggested actions / today's read. Couples debrief card appears when BOTH partners have new-format assessments.
+
+**Hero card** — AI-powered dynamic message via `GET /api/dashboard/hero`. Fires on mount using geolocation (with 5s timeout + silent fallback). Returns `{ message, cta_label, cta_href, pills }`. Pulse skeleton while loading. Pills displayed as small schedule chips below CTA (`rgba(255,255,255,0.1)` background, "THU · The Spark" format).
+
+**Memory card** — Random timeline event via `GET /api/dashboard/memory`. Prefers events with photos. Returns flat event object (`{ id, title, event_type, event_date, photo_urls }`). Returns `{ empty: true }` when no events exist. Renders with event_type label mapping (custom→"Memory", trip→"Trip", etc.).
 
 ### Today Tab (`app/today/page.js`)
 Day-gated feature delivery. Pacific-time day detection via `getTodayString()` from `lib/dates.js`. Each feature rendered in its section with a section label above. Bypass params for testing. "Nothing scheduled today" fallback for Saturday and unscheduled days.
@@ -232,6 +236,8 @@ Full chat with rich context builder. Cross-session memory via `nora_memory` tabl
 | `app/api/reflection/generate/route.js` | Generate weekly reflection via Claude |
 | `app/api/reflection/status/route.js` | Fetch this week's reflection |
 | `app/api/reflection/viewed/route.js` | Mark reflection viewed per user |
+| `app/api/dashboard/hero/route.js` | AI hero message: feature status, upcoming date, weather, priority, CTA, pills |
+| `app/api/dashboard/memory/route.js` | Random timeline event (prefers photos) for memory card |
 | `PROMPTS/session-handoff.md` | Session handoff prompt |
 | `PRODUCT-BACKLOG.md` | Tabled ideas |
 
@@ -297,7 +303,16 @@ Must exist in both `.env.local` AND Vercel environment settings. `ANTHROPIC_API_
 
 ### Claude Model Usage
 - **Sonnet** (`claude-sonnet-4-6`): All Nora reactions, memory updates, Weekly Reflection generation
-- **Haiku** (`claude-haiku-4-5-20251001`): Short one-liners (Bet pre-reveal nora_intro, max_tokens 60)
+- **Haiku** (`claude-haiku-4-5-20251001`): Short one-liners — Bet pre-reveal `nora_intro` (max_tokens 60), Dashboard hero card message (max_tokens 80)
+
+### Dashboard Hero Route (`app/api/dashboard/hero/route.js`)
+- Priority ladder: P1 feature not started → P2 partner acted, I haven't → P3 both done → P4 date soon → P5 quiet day
+- Feature by Pacific day-of-week: Mon/Tue/Thu=Spark, Wed=Bet, Fri=Ritual (Sun=Reflection, no feature queried)
+- Pills: scan next 3 days for feature pills; date pill if upcoming date within 7 days
+- Pills format: `"THU · The Spark"`, `"FRI · Ritual"`, `"SAT · Dan Savage Date Night"`
+- Queries both `date_plans` AND `custom_dates` for upcoming dates — merges and sorts
+- System prompt enforces: always name feature first, never quote names, excited language for dates
+- Weather: Open-Meteo, notable conditions only (rain/snow/storm/hot≥95/cold≤25), non-blocking
 
 ### New Files
 Always use `git add -A` (not `git add -u`) when adding new files — `git add -u` only stages existing tracked files.
@@ -316,7 +331,7 @@ Always use `git add -A` (not `git add -u`) when adding new files — `git add -u
 
 ## 14. BACKLOG (Priority Order)
 
-1. **Today page + Dashboard cleanup pass** — hype board redesign, remove orphaned dead code, uniform section design, schedule-aware content. Full hour design conversation needed first.
+1. **Today page + Dashboard cleanup pass** — hype board redesign, remove orphaned dead code, uniform section design. Hero card and memory card are now dynamic (shipped this session). Full design conversation still needed for broader layout refresh.
 2. **Saturday feature ("The Dare")** — Saturday is open. Direction: couple is together, in-room energy, something that makes them do something in the real world together. "The Dare" as a term feels right. Dedicated design session needed.
 3. **Nora voice refinement pass** — reduce restatement, vary entry points, cut affirmation formula before substance, closing questions should open new territory. System prompt pass across all surfaces.
 4. **Nora onboarding tour** — dedicated pass. Nora introduces the weekly rhythm, each feature, what to expect. Conversational, not a slideshow. First-time feature view flag (`first_seen` per feature per user).

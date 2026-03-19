@@ -124,6 +124,7 @@ export default function SparkCard({
           </p>
         )}
         <div style={{ marginBottom: '24px' }}>{questionLarge}</div>
+        <p style={{ fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#A09080', marginBottom: '8px', fontWeight: 600 }}>Your Answer</p>
         <textarea
           value={answerText}
           onChange={e => setAnswerText(e.target.value)}
