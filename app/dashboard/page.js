@@ -596,7 +596,6 @@ export default function Dashboard() {
                   <WeatherWidget temp={weather.temp} condition={weather.condition} dark />
                 </div>
               )}
-              <div style={{ display: 'none' }}>
 
               <p className="text-white text-[20px] leading-[1.4] mb-5"
                  style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
