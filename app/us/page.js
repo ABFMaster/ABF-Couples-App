@@ -133,6 +133,9 @@ export default function UsPage() {
   const [nextTrip, setNextTrip] = useState(null)
   const [memoryCount, setMemoryCount] = useState(null)
   const [lastReflectionDays, setLastReflectionDays] = useState(undefined) // undefined = not loaded, null = never
+  const [ritual, setRitual] = useState(undefined) // undefined=loading, null=none
+  const [userId2, setUserId2] = useState(null)
+  const [partnerName2, setPartnerName2] = useState('your partner')
 
   const fetchData = useCallback(async () => {
     try {
@@ -148,6 +151,8 @@ export default function UsPage() {
       if (!coupleData) { router.push('/connect'); return }
 
       const userIds = [coupleData.user1_id, coupleData.user2_id].filter(Boolean)
+      const partnerId2 = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id
+      setUserId2(user.id)
       const { data: profiles } = await supabase
         .from('user_profiles')
         .select('user_id, display_name')
@@ -226,6 +231,32 @@ export default function UsPage() {
           } catch { /* ignore */ }
         })(),
 
+        // Ritual
+        (async () => {
+          try {
+            const { data } = await supabase
+              .from('rituals')
+              .select('id, title, status, streak, proposed_by, partner_confirmed, needs_discussion')
+              .eq('couple_id', cid)
+              .neq('status', 'retired')
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+            setRitual(data || null)
+            if (data) {
+              const pid = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id
+              const { data: pProfile } = await supabase
+                .from('user_profiles')
+                .select('display_name')
+                .eq('user_id', pid)
+                .maybeSingle()
+              if (pProfile?.display_name) setPartnerName2(pProfile.display_name)
+            }
+          } catch {
+            setRitual(null)
+          }
+        })(),
+
         // Last weekly reflection
         (async () => {
           try {
@@ -292,6 +323,26 @@ export default function UsPage() {
     : memoryCount > 0
       ? `${memoryCount} ${memoryCount === 1 ? 'memory' : 'memories'} together`
       : 'No memories yet'
+
+  const ritualStatus = ritual === undefined
+    ? 'Loading…'
+    : ritual === null
+      ? 'Start your first ritual'
+      : ritual.needs_discussion
+        ? 'You flagged this for a conversation'
+        : ritual.status === 'pending' && ritual.proposed_by === userId2
+          ? `Waiting for ${partnerName2} to confirm`
+          : ritual.status === 'pending'
+            ? `${partnerName2} proposed a ritual`
+            : ritual.streak > 0
+              ? `${ritual.title} · ${ritual.streak} week${ritual.streak === 1 ? '' : 's'}`
+              : ritual.title
+
+  const ritualAction = ritual === null
+    ? 'Propose one'
+    : ritual.status === 'pending' && ritual.proposed_by !== userId2
+      ? 'Review'
+      : 'See ritual'
 
   const reflectionStatus = lastReflectionDays === undefined
     ? 'Loading…'
@@ -390,6 +441,20 @@ export default function UsPage() {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 20h9"/>
                 <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+              </svg>
+            }
+          />
+
+          <FeatureCard
+            router={router}
+            href="/today?ritual=true"
+            title="The Ritual"
+            status={ritualStatus}
+            action={ritualAction}
+            icon={
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+                <path d="M12 6v6l4 2"/>
               </svg>
             }
           />
