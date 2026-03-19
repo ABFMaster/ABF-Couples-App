@@ -12,6 +12,7 @@ import BetCard from '@/components/BetCard'
 import FlirtSheet from '@/components/FlirtSheet'
 import RitualCard from '@/components/RitualCard'
 import ReflectionCard from '@/components/ReflectionCard'
+import WeatherWidget from '@/components/WeatherWidget'
 
 const FEATURE_SPOTLIGHTS = [
   {
@@ -88,6 +89,7 @@ export default function TodayPage() {
   const [neglectedFeature, setNeglectedFeature] = useState(null)
   const [spotlight, setSpotlight] = useState(null)
   const [noraSurprise, setNoraSurprise] = useState('')
+  const [weather, setWeather] = useState(null)
 
   // Section 1 — reaction state
   const [todayReaction, setTodayReaction] = useState(null)
@@ -132,6 +134,20 @@ export default function TodayPage() {
   // Cleanup timer on unmount
   useEffect(() => {
     return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
+  }, [])
+
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        fetch(`/api/weather?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`)
+          .then(r => r.json())
+          .then(d => { if (d.temp != null) setWeather(d) })
+          .catch(() => {})
+      },
+      () => {},
+      { timeout: 5000 }
+    )
   }, [])
 
   const fetchAll = useCallback(async () => {
@@ -576,6 +592,7 @@ export default function TodayPage() {
             <p className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400">
               {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </p>
+            {weather && <WeatherWidget temp={weather.temp} condition={weather.condition} />}
             {timeOfDay === 'evening' ? (
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
                    stroke={timeIconColor.evening} strokeWidth="1.75"
