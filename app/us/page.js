@@ -324,21 +324,19 @@ export default function UsPage() {
       ? `${memoryCount} ${memoryCount === 1 ? 'memory' : 'memories'} together`
       : 'No memories yet'
 
-  const ritualStatus = ritual === undefined
-    ? 'Loading…'
-    : ritual === null
-      ? 'Start your first ritual'
-      : ritual.needs_discussion
-        ? 'You flagged this for a conversation'
-        : ritual.status === 'pending' && ritual.proposed_by === userId2
-          ? `Waiting for ${partnerName2} to confirm`
-          : ritual.status === 'pending'
-            ? `${partnerName2} proposed a ritual`
-            : ritual.streak > 0
-              ? `${ritual.title} · ${ritual.streak} week${ritual.streak === 1 ? '' : 's'}`
-              : ritual.title
+  const ritualStatus = !ritual
+    ? (ritual === null ? 'Start your first ritual' : 'Loading…')
+    : ritual.needs_discussion
+      ? 'You flagged this for a conversation'
+      : ritual.status === 'pending' && ritual.proposed_by === userId2
+        ? `Waiting for ${partnerName2} to confirm`
+        : ritual.status === 'pending'
+          ? `${partnerName2} proposed a ritual`
+          : ritual.streak > 0
+            ? `${ritual.title} · ${ritual.streak} week${ritual.streak === 1 ? '' : 's'}`
+            : ritual.title || 'Active ritual'
 
-  const ritualAction = ritual === null
+  const ritualAction = !ritual || ritual === undefined
     ? 'Propose one'
     : ritual.status === 'pending' && ritual.proposed_by !== userId2
       ? 'Review'
