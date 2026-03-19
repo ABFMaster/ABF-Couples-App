@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { getTodayString } from '@/lib/dates'
 import FlirtSheet from '@/components/FlirtSheet'
+import WeatherWidget from '@/components/WeatherWidget'
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -151,6 +152,7 @@ export default function Dashboard() {
 
   const [heroData, setHeroData]                 = useState(null)
   const [heroLoading, setHeroLoading]           = useState(true)
+  const [weather, setWeather] = useState(null)
 
   // Hydrate localStorage on client only
   useEffect(() => {
@@ -422,6 +424,10 @@ export default function Dashboard() {
       if (lat != null && lon != null) {
         params.set('lat', lat)
         params.set('lon', lon)
+        fetch(`/api/weather?lat=${lat}&lon=${lon}`)
+          .then(r => r.json())
+          .then(d => { if (d.temp != null) setWeather(d) })
+          .catch(() => {})
       }
       fetch(`/api/dashboard/hero?${params}`)
         .then(r => r.json())
@@ -585,6 +591,12 @@ export default function Dashboard() {
                 <span className="text-white/20 text-xs">·</span>
                 <span className="text-white/40 text-xs capitalize">Good {getGreetingWord()}</span>
               </div>
+              {weather && (
+                <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
+                  <WeatherWidget temp={weather.temp} condition={weather.condition} dark />
+                </div>
+              )}
+              <div style={{ display: 'none' }}>
 
               <p className="text-white text-[20px] leading-[1.4] mb-5"
                  style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
