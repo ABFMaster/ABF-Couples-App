@@ -603,6 +603,16 @@ export default function Dashboard() {
                 {heroData?.cta_label || primaryCTA.label}
               </button>
 
+              {heroData?.pills?.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '16px' }}>
+                  {heroData.pills.map((pill, i) => (
+                    <span key={i} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '10px', padding: '6px 12px', fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>
+                      {pill}
+                    </span>
+                  ))}
+                </div>
+              )}
+
               {checkinDone && (
                 <div className="flex justify-center mt-3">
                   <button

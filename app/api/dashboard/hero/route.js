@@ -102,6 +102,25 @@ export async function GET(request) {
       ? Math.round((new Date(nextDate.date_time) - new Date()) / 86400000)
       : null
 
+    // ── Pills: next two feature days + upcoming date ─────────────────────────
+    const DAY_NAMES    = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    const FEATURE_LABEL = { 0: 'Reflection', 1: 'The Spark', 2: 'The Spark', 3: 'The Bet', 4: 'The Spark', 5: 'Ritual' }
+
+    const pills = []
+    let scan = (dayOfWeek + 1) % 7
+    let scanned = 0
+    while (pills.length < 2 && scanned < 7) {
+      const label = FEATURE_LABEL[scan]
+      if (label) pills.push(`${label} ${DAY_NAMES[scan]}`)
+      scan = (scan + 1) % 7
+      scanned++
+    }
+
+    if (nextDate && daysUntilDate !== null && daysUntilDate <= 7) {
+      const dateDay = new Date(nextDate.date_time).getDay()
+      pills.push(`${nextDate.title} ${DAY_NAMES[dateDay]}`)
+    }
+
     // ── Weather (optional) ────────────────────────────────────────────────────
     let weather = null
     if (lat && lon) {
@@ -222,7 +241,7 @@ export async function GET(request) {
 
     const message = aiRes.content?.[0]?.text?.trim() || `Good to see you, ${name}.`
 
-    return NextResponse.json({ message, cta_label, cta_href })
+    return NextResponse.json({ message, cta_label, cta_href, pills })
   } catch (err) {
     console.error('[dashboard/hero] Error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
