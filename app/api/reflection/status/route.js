@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { getWeekStart } from '@/lib/dates'
 
 export async function GET(request) {
   try {
@@ -16,10 +17,7 @@ export async function GET(request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     )
 
-    // Compute Monday of current week in Pacific time
-    const d = new Date()
-    d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
-    const weekStart = d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })
+    const weekStart = getWeekStart()
 
     const { data: reflection } = await supabase
       .from('weekly_reflections')

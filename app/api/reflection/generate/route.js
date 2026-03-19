@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { getWeekStart } from '@/lib/dates'
 
 export async function POST(request) {
   try {
@@ -16,9 +17,7 @@ export async function POST(request) {
     )
 
     // STEP 1 — Compute Monday of current week in Pacific time
-    const d = new Date()
-    d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
-    const weekStart = d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })
+    const weekStart = getWeekStart()
 
     // STEP 2 — Check for existing reflection this week
     const { data: existing } = await supabase
@@ -33,7 +32,7 @@ export async function POST(request) {
     }
 
     // STEP 3 — Fetch week data
-    const weekEnd = new Date(weekStart)
+    const weekEnd = new Date(weekStart + 'T12:00:00')
     weekEnd.setDate(weekEnd.getDate() + 7)
     const weekEndStr = weekEnd.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })
 

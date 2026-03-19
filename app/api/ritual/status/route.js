@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { getWeekStart } from '@/lib/dates'
 
 export async function GET(request) {
   try {
@@ -30,10 +31,7 @@ export async function GET(request) {
 
     const usedSuggestionIds = rituals.map(r => r.suggestion_id).filter(Boolean)
 
-    // Compute Monday of current week in Pacific time
-    const d = new Date()
-    d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
-    const weekStart = d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })
+    const weekStart = getWeekStart()
 
     const ritualIds = rituals.map(r => r.id)
 

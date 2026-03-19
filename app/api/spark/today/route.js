@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { getSparkQuestion } from '@/lib/spark-questions'
-import { getTodayString } from '@/lib/dates'
+import { getTodayString, getDayOfWeek } from '@/lib/dates'
 
 const SPARK_DAYS = new Set([1, 2, 4]) // Mon, Tue, Thu
 
@@ -49,7 +49,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url)
     const forceOverride = searchParams.get('spark') === 'true'
     const todayStr = getTodayString(profile?.timezone)
-    const dayOfWeek = new Date(todayStr + 'T12:00:00').getDay()
+    const dayOfWeek = getDayOfWeek(profile?.timezone)
 
     if (!forceOverride && !SPARK_DAYS.has(dayOfWeek)) {
       return NextResponse.json({ sparkDay: false })

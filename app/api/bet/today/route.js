@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { getBetQuestion } from '@/lib/bet-questions'
-import { getTodayString } from '@/lib/dates'
+import { getTodayString, getDayOfWeek } from '@/lib/dates'
 
 const BET_DAYS = new Set([3]) // Wednesday
 
@@ -43,7 +43,7 @@ export async function GET(request) {
 
     // Step 2: Check if today is a Bet day
     const todayStr = getTodayString(userProfile?.timezone)
-    const dayOfWeek = new Date(todayStr + 'T12:00:00').getDay()
+    const dayOfWeek = getDayOfWeek(userProfile?.timezone)
 
     if (!forceOverride && !BET_DAYS.has(dayOfWeek)) {
       return NextResponse.json({ betDay: false })
