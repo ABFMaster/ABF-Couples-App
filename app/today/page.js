@@ -704,7 +704,7 @@ export default function TodayPage() {
               color: '#E8614D',
               margin: '0 0 4px',
             }}>
-              Nora
+              Flirts
             </p>
             <p style={{
               fontFamily: "'Fraunces', Georgia, serif",
@@ -717,7 +717,7 @@ export default function TodayPage() {
               Send {partnerName} something
             </p>
             <p style={{ fontSize: '13px', color: '#9CA3AF', margin: 0 }}>
-              Nora has an idea for you
+              Let Nora do the work
             </p>
           </div>
           <span style={{ color: '#D1D5DB', fontSize: '20px', flexShrink: 0 }}>›</span>
