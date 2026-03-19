@@ -87,16 +87,29 @@ export async function GET(request) {
       }
     }
 
-    // ── Next upcoming date plan ───────────────────────────────────────────────
-    const { data: nextDate } = await supabase
-      .from('date_plans')
-      .select('id, title, date_time')
-      .eq('couple_id', coupleId)
-      .eq('status', 'planned')
-      .gte('date_time', new Date().toISOString())
-      .order('date_time', { ascending: true })
-      .limit(1)
-      .maybeSingle()
+    // ── Next upcoming date plan (date_plans + custom_dates) ──────────────────
+    const nowIso = new Date().toISOString()
+    const [{ data: planDates }, { data: customDates }] = await Promise.all([
+      supabase
+        .from('date_plans')
+        .select('id, title, date_time, status')
+        .eq('couple_id', coupleId)
+        .in('status', ['planned', 'approved'])
+        .gte('date_time', nowIso)
+        .order('date_time', { ascending: true })
+        .limit(5),
+      supabase
+        .from('custom_dates')
+        .select('id, title, date_time, status')
+        .eq('couple_id', coupleId)
+        .in('status', ['planned', 'approved'])
+        .gte('date_time', nowIso)
+        .order('date_time', { ascending: true })
+        .limit(5),
+    ])
+    const allDates = [...(planDates || []), ...(customDates || [])]
+      .sort((a, b) => new Date(a.date_time) - new Date(b.date_time))
+    const nextDate = allDates[0] || null
 
     const daysUntilDate = nextDate
       ? Math.round((new Date(nextDate.date_time) - new Date()) / 86400000)
