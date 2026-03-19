@@ -31,7 +31,7 @@ export async function GET(request) {
     }
 
     const event = events[Math.floor(Math.random() * events.length)]
-    return NextResponse.json({ event })
+    return NextResponse.json(event)
   } catch (err) {
     console.error('[dashboard/memory] Error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
