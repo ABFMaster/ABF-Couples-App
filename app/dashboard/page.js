@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { todayPST } from '@/lib/date-utils'
-import { generateNoraTrigger } from '@/lib/nora-triggers'
 import FlirtSheet from '@/components/FlirtSheet'
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -145,11 +144,13 @@ export default function Dashboard() {
   const [sharedPreview, setSharedPreview]       = useState([])
   const [pendingDate, setPendingDate]           = useState(null)
   const [upcomingTrip, setUpcomingTrip]         = useState(null)
-  const [noraTrigger, setNoraTrigger]           = useState(null)
   const [todaysRead, setTodaysRead]             = useState(null)
 
   const [memoryCard, setMemoryCard]             = useState(null)
   const [memoryLoading, setMemoryLoading]       = useState(true)
+
+  const [heroData, setHeroData]                 = useState(null)
+  const [heroLoading, setHeroLoading]           = useState(true)
 
   // Hydrate localStorage on client only
   useEffect(() => {
@@ -389,11 +390,6 @@ export default function Dashboard() {
         console.error('Couples debrief check error:', err)
       }
 
-      // Fetch Nora trigger (non-blocking)
-      generateNoraTrigger(user.id, coupleData.id, null, null)
-        .then(trigger => setNoraTrigger(trigger))
-        .catch(() => {})
-
       setLoading(false)
     } catch (err) {
       console.error('Dashboard error:', err)
@@ -412,6 +408,37 @@ export default function Dashboard() {
       .catch(() => setMemoryCard(null))
       .finally(() => setMemoryLoading(false))
   }, [user, couple])
+
+  useEffect(() => {
+    if (!user?.id || !couple?.id) return
+    setHeroLoading(true)
+    const params = new URLSearchParams({
+      userId: user.id,
+      coupleId: couple.id,
+      userName,
+      partnerName,
+    })
+    const doFetch = (lat, lon) => {
+      if (lat != null && lon != null) {
+        params.set('lat', lat)
+        params.set('lon', lon)
+      }
+      fetch(`/api/dashboard/hero?${params}`)
+        .then(r => r.json())
+        .then(d => setHeroData(d))
+        .catch(() => {})
+        .finally(() => setHeroLoading(false))
+    }
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => doFetch(pos.coords.latitude, pos.coords.longitude),
+        () => doFetch(null, null),
+        { timeout: 5000 }
+      )
+    } else {
+      doFetch(null, null)
+    }
+  }, [user, couple, userName, partnerName])
 
   useEffect(() => {
     const initPush = async () => {
@@ -450,8 +477,6 @@ export default function Dashboard() {
       </div>
     )
   }
-
-  const noraMessage = noraTrigger?.message || `Good ${getGreetingWord()}, ${userName}.`
 
   const pendingDateAction = pendingDate
   const checkinDone = todayCheckinDone
@@ -563,17 +588,19 @@ export default function Dashboard() {
 
               <p className="text-white text-[20px] leading-[1.4] mb-5"
                  style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                {noraMessage}
+                {heroLoading
+                  ? <span className="inline-block w-48 h-6 bg-white/20 rounded animate-pulse" />
+                  : heroData?.message || `Good ${getGreetingWord()}, ${userName}.`}
               </p>
 
               <button
                 onClick={() => {
-                  if (noraTrigger?.message) sessionStorage.setItem('nora_opener', noraTrigger.message)
-                  window.location.href = primaryCTA.href
+                  if (heroData?.message) sessionStorage.setItem('nora_opener', heroData.message)
+                  window.location.href = heroData?.cta_href || primaryCTA.href
                 }}
                 className="text-[14px] font-semibold text-[#E8614D]"
               >
-                {primaryCTA.label}
+                {heroData?.cta_label || primaryCTA.label}
               </button>
 
               {checkinDone && (
@@ -660,7 +687,7 @@ export default function Dashboard() {
               <div className="p-5">
                 {memoryCard.event_type && (
                   <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-1">
-                    {memoryCard.event_type.replace(/_/g, ' ')}
+                    {({ custom: 'Memory', trip: 'Trip', milestone: 'Milestone', anniversary: 'Anniversary', first: 'First', other: 'Moment' }[memoryCard.event_type] ?? memoryCard.event_type.charAt(0).toUpperCase() + memoryCard.event_type.slice(1))}
                   </p>
                 )}
                 <p className="text-[18px] text-neutral-900 leading-snug mb-1"

@@ -23,7 +23,7 @@ export async function GET(request) {
 
     if (error) {
       console.error('[dashboard/memory] fetch error:', error)
-      return NextResponse.json({ error: 'Failed to fetch memories', detail: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to fetch memories' }, { status: 500 })
     }
 
     if (!events || events.length === 0) {
