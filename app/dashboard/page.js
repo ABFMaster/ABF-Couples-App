@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { todayPST } from '@/lib/date-utils'
+import { getTodayString } from '@/lib/dates'
 import FlirtSheet from '@/components/FlirtSheet'
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -222,7 +222,7 @@ export default function Dashboard() {
 
         // Check-in streak + today status
         (async () => {
-          const today = todayPST()
+          const today = getTodayString()
           const { data } = await supabase
             .from('daily_checkins')
             .select('check_date')
@@ -236,7 +236,7 @@ export default function Dashboard() {
           let count = 0
           const cursor = new Date(today)
           for (const row of data) {
-            if (row.check_date === cursor.toISOString().split('T')[0]) {
+            if (row.check_date === cursor.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })) {
               count++
               cursor.setDate(cursor.getDate() - 1)
             } else break
@@ -253,7 +253,7 @@ export default function Dashboard() {
             .from('flirts')
             .select('sender_id, created_at')
             .eq('couple_id', coupleData.id)
-            .gte('created_at', weekStart.toISOString())
+            .gte('created_at', new Date(weekStart.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }) + 'T00:00:00-08:00').toISOString())
             .order('created_at', { ascending: false })
           const mine = (data || []).filter(f => f.sender_id === user.id)
           setFlirtsThisWeek(mine.length)
