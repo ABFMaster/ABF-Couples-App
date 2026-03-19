@@ -4,7 +4,7 @@
 'use client'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import { getTodayString } from '@/lib/dates'
+import { getTodayString, getDayLabel } from '@/lib/dates'
 import { useRouter } from 'next/navigation'
 import { notifyPartnerTodayResponse } from '@/lib/notify'
 import SparkCard from '@/components/SparkCard'
@@ -211,7 +211,7 @@ export default function TodayPage() {
           let count = 0
           const cursor = new Date(today)
           for (const row of data) {
-            if (row.check_date === cursor.toISOString().split('T')[0]) {
+            if (row.check_date === cursor.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })) {
               count++
               cursor.setDate(cursor.getDate() - 1)
             } else break
