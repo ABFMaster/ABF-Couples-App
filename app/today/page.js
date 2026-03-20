@@ -566,7 +566,8 @@ export default function TodayPage() {
   const showBet = todayName === 'Wednesday' || params.includes('bet=true')
   const showRitual = todayName === 'Friday' || params.includes('ritual=true')
   const showReflection = todayName === 'Sunday' || params.includes('reflection=true')
-  const anyScheduled = showSpark || showBet || showRitual || showReflection
+  const showGameRoom = todayName === 'Saturday' || params.includes('game=true')
+  const anyScheduled = showSpark || showBet || showRitual || showReflection || showGameRoom
 
   const headerGradient = {
     morning: 'linear-gradient(135deg, rgba(251,191,36,0.14) 0%, rgba(249,115,22,0.08) 100%)',
@@ -672,6 +673,40 @@ export default function TodayPage() {
             <p style={{ fontSize: '11px', fontWeight: '500', letterSpacing: '0.1em', color: '#6B7280', marginBottom: '12px' }}>WEEKLY REFLECTION</p>
             <ReflectionCard userId={userId} coupleId={coupleId} partnerName={partnerName} />
           </div>
+        )}
+
+        {/* SECTION — THE GAME ROOM (Saturday) */}
+        {showGameRoom && userId && (
+          <section>
+            <div className="flex items-center justify-between mb-3 px-1">
+              <span className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400">
+                The Game Room
+              </span>
+            </div>
+            <button
+              onClick={() => window.location.href = '/game-room'}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 60%, #4338CA 100%)',
+                borderRadius: '20px',
+                padding: '24px 20px',
+                textAlign: 'left',
+                cursor: 'pointer',
+                border: 'none',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{ position: 'absolute', top: '-15px', right: '-15px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+              <p style={{ fontSize: '11px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', margin: '0 0 6px' }}>Saturday</p>
+              <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '24px', fontWeight: 400, color: '#FFFFFF', margin: '0 0 6px', lineHeight: 1.2 }}>
+                The Game Room
+              </p>
+              <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', margin: 0 }}>
+                What kind of Saturday is it?
+              </p>
+            </button>
+          </section>
         )}
 
         {/* Nothing scheduled today */}
