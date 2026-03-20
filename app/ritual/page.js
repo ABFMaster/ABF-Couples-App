@@ -148,6 +148,9 @@ export default function RitualPage() {
   const [nextSuggestion, setNextSuggestion] = useState(null)
   const [adoptionDone, setAdoptionDone] = useState({})
   const [editingId, setEditingId] = useState(null)
+  const [showCustomForm, setShowCustomForm] = useState(false)
+  const [customTitle, setCustomTitle] = useState('')
+  const [customDescription, setCustomDescription] = useState('')
 
   useEffect(() => {
     const init = async () => {
@@ -274,6 +277,29 @@ export default function RitualPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, coupleId, suggestionId: suggestion.id, title: suggestion.title, description: suggestion.description, frequency: suggestion.frequency, tier: suggestion.tier }),
       })
+      await refetch()
+    } catch {} finally { setSubmitting(false) }
+  }
+
+  const handleAddCustom = async () => {
+    if (!customTitle.trim() || submitting) return
+    setSubmitting(true)
+    try {
+      await fetch('/api/ritual/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          coupleId,
+          title: customTitle.trim(),
+          description: customDescription.trim() || null,
+          frequency: 'weekly',
+          tier: 1,
+        }),
+      })
+      setCustomTitle('')
+      setCustomDescription('')
+      setShowCustomForm(false)
       await refetch()
     } catch {} finally { setSubmitting(false) }
   }
@@ -466,6 +492,46 @@ export default function RitualPage() {
             />
           </>
         )}
+
+        <div style={{ marginTop: '16px' }}>
+          {!showCustomForm ? (
+            <button
+              onClick={() => setShowCustomForm(true)}
+              style={{ width: '100%', padding: '12px', background: 'transparent', border: '0.5px solid #D4E8C4', borderRadius: '30px', color: '#7A8C6E', fontSize: '14px', cursor: 'pointer' }}
+            >
+              We already do something →
+            </button>
+          ) : (
+            <div style={{ background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '14px', padding: '20px' }}>
+              <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#3D6B22', textTransform: 'uppercase', marginBottom: '16px', marginTop: 0 }}>Add your own ritual</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+                <div>
+                  <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#3D6B22', textTransform: 'uppercase', marginBottom: '6px', marginTop: 0 }}>What do you do together?</p>
+                  <p style={{ fontSize: '13px', color: '#7A8C6E', lineHeight: 1.5, marginBottom: '10px', marginTop: 0 }}>A habit, a tradition, something that repeats and feels like yours.</p>
+                  <textarea
+                    value={customTitle}
+                    onChange={e => setCustomTitle(e.target.value)}
+                    placeholder="We cook dinner together every Thursday night..."
+                    style={{ width: '100%', background: '#FAF6F0', border: '0.5px solid #D4E8C4', borderRadius: '10px', padding: '12px', fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#1A2E10', resize: 'none', height: '80px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#3D6B22', textTransform: 'uppercase', marginBottom: '6px', marginTop: 0 }}>What makes it feel like yours? <span style={{ color: '#B8A898', fontSize: '10px', letterSpacing: 'normal', textTransform: 'none' }}>optional</span></p>
+                  <textarea
+                    value={customDescription}
+                    onChange={e => setCustomDescription(e.target.value)}
+                    placeholder="It's the one hour where we're not thinking about anything else..."
+                    style={{ width: '100%', background: '#FAF6F0', border: '0.5px solid #D4E8C4', borderRadius: '10px', padding: '12px', fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#1A2E10', resize: 'none', height: '60px', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <PrimaryBtn onClick={handleAddCustom} disabled={!customTitle.trim() || submitting}>Add to our rituals</PrimaryBtn>
+                <GhostBtn onClick={() => { setShowCustomForm(false); setCustomTitle(''); setCustomDescription('') }}>Cancel</GhostBtn>
+              </div>
+            </div>
+          )}
+        </div>
 
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
