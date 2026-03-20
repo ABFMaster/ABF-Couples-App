@@ -848,22 +848,36 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
       <Divider />
       {nextSuggestion ? (
         <div>
-          <NoraBlock text={`You have ${activeRituals.length} ritual${activeRituals.length === 1 ? '' : 's'} going. Ready to try another? Here's one that fits what Nora knows about you two.`} />
-          <div style={{ marginBottom: '16px' }}>
-            <RitualAccentCard
-              title={nextSuggestion.title}
-              description={nextSuggestion.description}
-            />
+          <div style={{ background: '#F4FAF0', border: '0.5px solid #C4DDB4', borderRadius: '14px', padding: '20px', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3D6B22', flexShrink: 0 }} />
+              <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#2D5016', textTransform: 'uppercase', margin: 0 }}>Nora</p>
+            </div>
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#2D5016', fontStyle: 'italic', lineHeight: 1.65, marginBottom: '16px', marginTop: 0 }}>
+              {`You have ${activeRituals.length} ritual${activeRituals.length === 1 ? '' : 's'} going. Ready to try another? Here's one that fits.`}
+            </p>
+            <div style={{ background: '#FFFFFF', borderLeft: '3px solid #3D6B22', borderRadius: '0 14px 14px 0', padding: '16px 18px', marginBottom: '16px' }}>
+              <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#1A2E10', lineHeight: 1.55, fontWeight: 500, margin: 0 }}>{nextSuggestion.title}</p>
+              {nextSuggestion.description && <p style={{ fontSize: '13px', color: '#7A8C6E', lineHeight: 1.5, marginTop: '6px', marginBottom: 0 }}>{nextSuggestion.description}</p>}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <PrimaryBtn onClick={() => handleDiscoverMore(nextSuggestion)} disabled={submitting}>
+                We'll try this one
+              </PrimaryBtn>
+              <GhostBtn onClick={handleNextLibrarySuggestion}>Show me another</GhostBtn>
+            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <PrimaryBtn onClick={() => handleDiscoverMore(nextSuggestion)} disabled={submitting}>
-              We'll try this one
-            </PrimaryBtn>
-            <GhostBtn onClick={handleNextLibrarySuggestion}>Show me another</GhostBtn>
-          </div>
+          <a href="/ritual" style={{ display: 'block', textAlign: 'center', fontSize: '13px', color: '#7A8C6E', textDecoration: 'none', padding: '8px 0' }}>
+            See all rituals →
+          </a>
         </div>
       ) : (
-        <GhostBtn onClick={() => setDiscoverMode(true)}>Discover another ritual</GhostBtn>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <GhostBtn onClick={() => setDiscoverMode(true)}>Discover another ritual</GhostBtn>
+          <a href="/ritual" style={{ display: 'block', textAlign: 'center', fontSize: '13px', color: '#7A8C6E', textDecoration: 'none', padding: '8px 0' }}>
+            See all rituals →
+          </a>
+        </div>
       )}
     </div>
   )

@@ -89,6 +89,33 @@ export async function GET(request) {
       if (insertError) { console.error('[bet/today] insert error:', insertError); }
 
       bet = inserted
+
+      // Notify both users that today's Bet is ready
+      if (bet) {
+        const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
+        await Promise.all([
+          fetch(`${appBase}/api/push/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: couple.user1_id,
+              title: 'The Bet',
+              body: "Today's Bet is ready. Make your prediction.",
+              url: '/today',
+            }),
+          }).catch(() => {}),
+          fetch(`${appBase}/api/push/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: couple.user2_id,
+              title: 'The Bet',
+              body: "Today's Bet is ready. Make your prediction.",
+              url: '/today',
+            }),
+          }).catch(() => {}),
+        ])
+      }
     }
 
     if (!bet) {

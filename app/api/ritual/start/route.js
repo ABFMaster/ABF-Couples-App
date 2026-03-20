@@ -40,6 +40,29 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Failed to create ritual' }, { status: 500 })
     }
 
+    // Notify partner that a ritual has been proposed
+    const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
+    try {
+      const { data: couple } = await supabase
+        .from('couples')
+        .select('user1_id, user2_id')
+        .eq('id', coupleId)
+        .maybeSingle()
+      if (couple) {
+        const partnerId = couple.user1_id === userId ? couple.user2_id : couple.user1_id
+        await fetch(`${appBase}/api/push/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: partnerId,
+            title: 'The Ritual',
+            body: `Your partner proposed a new ritual: "${title}"`,
+            url: '/ritual',
+          }),
+        }).catch(() => {})
+      }
+    } catch { /* non-blocking */ }
+
     return NextResponse.json({ ritual })
   } catch (err) {
     console.error('[ritual/start] Error:', err)

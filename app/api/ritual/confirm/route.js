@@ -63,6 +63,32 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Failed to update ritual' }, { status: 500 })
     }
 
+    // Fire push notification
+    const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
+    try {
+      const { data: couple } = await supabase
+        .from('couples')
+        .select('user1_id, user2_id')
+        .eq('id', coupleId)
+        .maybeSingle()
+      const proposerId = ritual?.proposed_by
+      if (proposerId) {
+        const notifBody = action === 'confirm'
+          ? `Your partner is in — the ritual is starting.`
+          : `Your partner wants to talk about the ritual first.`
+        await fetch(`${appBase}/api/push/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: proposerId,
+            title: 'The Ritual',
+            body: notifBody,
+            url: '/ritual',
+          }),
+        }).catch(() => {})
+      }
+    } catch { /* non-blocking */ }
+
     return NextResponse.json({ ritual })
   } catch (err) {
     console.error('[ritual/confirm] Error:', err)
