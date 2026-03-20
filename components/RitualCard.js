@@ -767,7 +767,7 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
                     <p style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#7A8C6E', textTransform: 'uppercase', marginTop: '4px' }}>{r.frequency}</p>
                   )}
                 </div>
-                <StreakPill label={`${r.streak || 0} weeks`} />
+                <StreakPill label={r.source === 'existing' && !r.streak ? 'Ongoing' : `${r.streak || 0} week${r.streak === 1 ? '' : 's'}`} />
               </div>
             ))}
           </div>
