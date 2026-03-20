@@ -319,11 +319,15 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
       })
       const data = await res.json()
       if (data.ritual) {
-        setRituals(prev => [data.ritual, ...prev.filter(r => r.status !== 'discovering')])
+        setRituals(prev => [data.ritual, ...prev.filter(r => r.id !== data.ritual.id)])
         setHasRituals(true)
         setSuggestionMode(false)
         setCheckinResult(null)
         setAdoptionReady(false)
+        // If pending, show confirmation prompt to partner
+        if (data.ritual.status === 'pending') {
+          setPendingConfirmation(null) // partner will see it on their next load
+        }
       }
     } catch {} finally {
       setSubmitting(false)
@@ -421,7 +425,7 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
       })
       const data = await res.json()
       if (data.ritual) {
-        setRituals(prev => [...prev, data.ritual])
+        setRituals(prev => [...prev.filter(r => r.id !== data.ritual.id), data.ritual])
         setDiscoverMode(false)
         setCheckinResult(null)
         setAdoptionReady(false)
