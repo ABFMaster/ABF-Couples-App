@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 export async function POST(request) {
   try {
-    const { userId, coupleId, suggestionId, title, description, frequency, tier } = await request.json()
+    const { userId, coupleId, suggestionId, title, description, frequency, tier, source } = await request.json()
 
     if (!userId || !coupleId || !title) {
       return NextResponse.json({ error: 'userId, coupleId, and title required' }, { status: 400 })
@@ -26,8 +26,11 @@ export async function POST(request) {
         frequency: frequency || null,
         tier: tier || null,
         proposed_by: userId,
-        partner_confirmed: false,
-        status: 'pending',
+        partner_confirmed: source === 'existing' ? true : false,
+        partner_confirmed_at: source === 'existing' ? now : null,
+        status: source === 'existing' ? 'adopted' : 'pending',
+        source: source || 'custom',
+        adopted_at: source === 'existing' ? now : null,
         streak: 0,
         created_at: now,
         updated_at: now,
@@ -56,7 +59,9 @@ export async function POST(request) {
           body: JSON.stringify({
             userId: partnerId,
             title: 'The Ritual',
-            body: `Your partner proposed a new ritual: "${title}"`,
+            body: source === 'existing'
+              ? `Your partner added a ritual you already do: "${title}"`
+              : `Your partner proposed a new ritual: "${title}"`,
             url: '/ritual',
           }),
         }).catch(() => {})

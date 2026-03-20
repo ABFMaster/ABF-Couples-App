@@ -295,6 +295,7 @@ export default function RitualPage() {
           description: customDescription.trim() || null,
           frequency: 'weekly',
           tier: 1,
+          source: 'existing',
         }),
       })
       setCustomTitle('')
@@ -387,7 +388,7 @@ export default function RitualPage() {
                           <button onClick={() => setEditingId(r.id)} style={{ background: 'none', border: 'none', color: '#7A8C6E', fontSize: '12px', cursor: 'pointer', padding: '4px 0 0', textDecoration: 'underline' }}>Edit</button>
                         )}
                       </div>
-                      <StreakPill label={`${r.streak || 0} week${r.streak === 1 ? '' : 's'}`} />
+                      <StreakPill label={r.source === 'existing' && !r.streak ? 'Ongoing' : `${r.streak || 0} week${r.streak === 1 ? '' : 's'}`} />
                     </div>
                   )}
                 </div>
