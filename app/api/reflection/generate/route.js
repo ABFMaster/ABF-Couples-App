@@ -224,6 +224,40 @@ Return only the JSON object. No markdown, no explanation, no wrapper text.`
       .then(() => {})
       .catch(() => {})
 
+    // Notify both users that this week's reflection is ready
+    const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
+    try {
+      const { data: couple } = await supabase
+        .from('couples')
+        .select('user1_id, user2_id')
+        .eq('id', coupleId)
+        .maybeSingle()
+      if (couple) {
+        await Promise.all([
+          fetch(`${appBase}/api/push/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: couple.user1_id,
+              title: 'Weekly Reflection',
+              body: "Your week together is ready to reflect on.",
+              url: '/today',
+            }),
+          }).catch(() => {}),
+          fetch(`${appBase}/api/push/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: couple.user2_id,
+              title: 'Weekly Reflection',
+              body: "Your week together is ready to reflect on.",
+              url: '/today',
+            }),
+          }).catch(() => {}),
+        ])
+      }
+    } catch { /* non-blocking */ }
+
     return NextResponse.json({ reflection: savedReflection, alreadyExists: false })
   } catch (err) {
     console.error('[reflection/generate] Error:', err)
