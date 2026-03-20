@@ -566,7 +566,7 @@ export default function TodayPage() {
   const showBet = todayName === 'Wednesday' || params.includes('bet=true')
   const showRitual = todayName === 'Friday' || params.includes('ritual=true')
   const showReflection = todayName === 'Sunday' || params.includes('reflection=true')
-  const showGameRoom = todayName === 'Saturday' || params.includes('game=true')
+  const showGameRoom = todayName === 'Saturday' || params.includes('game=true') || true
   const anyScheduled = showSpark || showBet || showRitual || showReflection || showGameRoom
 
   const headerGradient = {
