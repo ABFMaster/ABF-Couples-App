@@ -53,7 +53,7 @@ export default function GameRoomOnboardingPage() {
         <NoraConversation
           systemPrompt={SYSTEM_PROMPT}
           initialMessage={INITIAL_MESSAGE}
-          completionToken="GAME_INTERESTS_COMPLETE"
+          completionTrigger="GAME_INTERESTS_COMPLETE"
           onComplete={handleComplete}
           userId={userId}
         />
