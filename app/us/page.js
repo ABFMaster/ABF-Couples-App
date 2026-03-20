@@ -457,6 +457,22 @@ export default function UsPage() {
             }
           />
 
+          <FeatureCard
+            router={router}
+            href="/game-room"
+            title="The Game Room"
+            status="Saturday · Play together"
+            action="Let's play"
+            icon={
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="7" width="20" height="15" rx="2" ry="2"/>
+                <polyline points="17 2 12 7 7 2"/>
+                <circle cx="9" cy="14" r="1" fill="currentColor"/>
+                <circle cx="15" cy="14" r="1" fill="currentColor"/>
+              </svg>
+            }
+          />
+
         </div>
       </div>
 
