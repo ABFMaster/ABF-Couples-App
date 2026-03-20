@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { getWeekStart } from '@/lib/dates'
 import { getStarterRituals } from '@/lib/ritual-suggestions'
 
 const NORA_WEEK_MESSAGES = {
@@ -16,7 +15,7 @@ const NORA_WEEK_MESSAGES = {
 
 function NoraBlock({ text }) {
   return (
-    <div style={{ background: '#F4FAF0', border: '0.5px solid #C4DDB4', borderRadius: '14px', padding: '18px 20px', marginBottom: '20px' }}>
+    <div style={{ background: '#F4FAF0', border: '0.5px solid #C4DDB4', borderRadius: '14px', padding: '18px 20px', marginBottom: '16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
         <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3D6B22', flexShrink: 0 }} />
         <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#2D5016', textTransform: 'uppercase', margin: 0 }}>Nora</p>
@@ -60,16 +59,7 @@ function RitualAccentCard({ label, title, description }) {
 
 function PrimaryBtn({ onClick, children, disabled }) {
   return (
-    <button
-      onClick={onClick}
-      disabled={!!disabled}
-      style={{
-        width: '100%', padding: '14px', background: '#3D6B22', color: '#FAF6F0',
-        border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600,
-        cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.4 : 1,
-        transition: 'opacity 150ms',
-      }}
-    >
+    <button onClick={onClick} disabled={!!disabled} style={{ width: '100%', padding: '14px', background: '#3D6B22', color: '#FAF6F0', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.4 : 1, transition: 'opacity 150ms' }}>
       {children}
     </button>
   )
@@ -77,16 +67,70 @@ function PrimaryBtn({ onClick, children, disabled }) {
 
 function GhostBtn({ onClick, children }) {
   return (
-    <button
-      onClick={onClick}
-      style={{
-        width: '100%', padding: '12px', background: 'transparent',
-        border: '0.5px solid #D4E8C4', borderRadius: '30px',
-        color: '#7A8C6E', fontSize: '14px', cursor: 'pointer',
-      }}
-    >
+    <button onClick={onClick} style={{ width: '100%', padding: '12px', background: 'transparent', border: '0.5px solid #D4E8C4', borderRadius: '30px', color: '#7A8C6E', fontSize: '14px', cursor: 'pointer' }}>
       {children}
     </button>
+  )
+}
+
+function DangerBtn({ onClick, children, disabled }) {
+  return (
+    <button onClick={onClick} disabled={!!disabled} style={{ width: '100%', padding: '12px', background: 'transparent', border: '0.5px solid #E8C4C4', borderRadius: '30px', color: '#C1440E', fontSize: '14px', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.4 : 1 }}>
+      {children}
+    </button>
+  )
+}
+
+// Unified Nora + suggestion card
+function NoraSuggestionCard({ noraText, suggestion, onSelect, onNext, submitting }) {
+  return (
+    <div style={{ background: '#F4FAF0', border: '0.5px solid #C4DDB4', borderRadius: '14px', padding: '20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3D6B22', flexShrink: 0 }} />
+        <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#2D5016', textTransform: 'uppercase', margin: 0 }}>Nora</p>
+      </div>
+      <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#2D5016', fontStyle: 'italic', lineHeight: 1.65, marginBottom: '16px', marginTop: 0 }}>
+        {noraText}
+      </p>
+      <div style={{ background: '#FFFFFF', borderLeft: '3px solid #3D6B22', borderRadius: '0 14px 14px 0', padding: '16px 18px', marginBottom: '16px' }}>
+        <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#1A2E10', lineHeight: 1.55, fontWeight: 500, margin: 0 }}>{suggestion.title}</p>
+        {suggestion.description && <p style={{ fontSize: '13px', color: '#7A8C6E', lineHeight: 1.5, marginTop: '6px', marginBottom: 0 }}>{suggestion.description}</p>}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <PrimaryBtn onClick={() => onSelect(suggestion)} disabled={submitting}>We'll try this one</PrimaryBtn>
+        <GhostBtn onClick={onNext}>Show me another</GhostBtn>
+      </div>
+    </div>
+  )
+}
+
+// Inline edit form for custom rituals
+function EditForm({ ritual, onSave, onCancel, submitting }) {
+  const [title, setTitle] = useState(ritual.title || '')
+  const [description, setDescription] = useState(ritual.description || '')
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div>
+        <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#3D6B22', textTransform: 'uppercase', marginBottom: '6px', marginTop: 0 }}>Ritual name</p>
+        <textarea
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          style={{ width: '100%', background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '10px', padding: '12px', fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#1A2E10', resize: 'none', height: '60px', outline: 'none', boxSizing: 'border-box' }}
+        />
+      </div>
+      <div>
+        <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#3D6B22', textTransform: 'uppercase', marginBottom: '6px', marginTop: 0 }}>Description <span style={{ color: '#B8A898', fontSize: '10px', letterSpacing: 'normal', textTransform: 'none' }}>optional</span></p>
+        <textarea
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          style={{ width: '100%', background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '10px', padding: '12px', fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#1A2E10', resize: 'none', height: '80px', outline: 'none', boxSizing: 'border-box' }}
+        />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <PrimaryBtn onClick={() => onSave(title, description)} disabled={!title.trim() || submitting}>Save changes</PrimaryBtn>
+        <GhostBtn onClick={onCancel}>Cancel</GhostBtn>
+      </div>
+    </div>
   )
 }
 
@@ -102,7 +146,8 @@ export default function RitualPage() {
   const [usedSuggestionIds, setUsedSuggestionIds] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [nextSuggestion, setNextSuggestion] = useState(null)
-  const [adoptionDone, setAdoptionDone] = useState(false)
+  const [adoptionDone, setAdoptionDone] = useState({})
+  const [editingId, setEditingId] = useState(null)
 
   useEffect(() => {
     const init = async () => {
@@ -142,8 +187,8 @@ export default function RitualPage() {
     setLoading(false)
   }
 
-  const refetch = () => {
-    if (userId && coupleId) fetchRituals(userId, coupleId)
+  const refetch = async () => {
+    if (userId && coupleId) await fetchRituals(userId, coupleId)
   }
 
   const handleConfirm = async (ritualId, action) => {
@@ -155,7 +200,7 @@ export default function RitualPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, coupleId, ritualId, action }),
       })
-      await fetchRituals(userId, coupleId)
+      await refetch()
     } catch {} finally { setSubmitting(false) }
   }
 
@@ -168,8 +213,8 @@ export default function RitualPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, coupleId, ritualId }),
       })
-      setAdoptionDone(true)
-      await fetchRituals(userId, coupleId)
+      setAdoptionDone(prev => ({ ...prev, [ritualId]: true }))
+      await refetch()
     } catch {} finally { setSubmitting(false) }
   }
 
@@ -182,7 +227,34 @@ export default function RitualPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, coupleId, ritualId, action: 'confirm' }),
       })
-      await fetchRituals(userId, coupleId)
+      await refetch()
+    } catch {} finally { setSubmitting(false) }
+  }
+
+  const handleRetire = async (ritualId) => {
+    if (submitting) return
+    setSubmitting(true)
+    try {
+      await fetch('/api/ritual/retire', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, coupleId, ritualId }),
+      })
+      await refetch()
+    } catch {} finally { setSubmitting(false) }
+  }
+
+  const handleSaveEdit = async (ritualId, title, description) => {
+    if (submitting) return
+    setSubmitting(true)
+    try {
+      await fetch('/api/ritual/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, coupleId, ritualId, title, description }),
+      })
+      setEditingId(null)
+      await refetch()
     } catch {} finally { setSubmitting(false) }
   }
 
@@ -200,16 +272,9 @@ export default function RitualPage() {
       await fetch('/api/ritual/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId, coupleId,
-          suggestionId: suggestion.id,
-          title: suggestion.title,
-          description: suggestion.description,
-          frequency: suggestion.frequency,
-          tier: suggestion.tier,
-        }),
+        body: JSON.stringify({ userId, coupleId, suggestionId: suggestion.id, title: suggestion.title, description: suggestion.description, frequency: suggestion.frequency, tier: suggestion.tier }),
       })
-      await fetchRituals(userId, coupleId)
+      await refetch()
     } catch {} finally { setSubmitting(false) }
   }
 
@@ -217,6 +282,7 @@ export default function RitualPage() {
     return (
       <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid #3D6B22', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     )
   }
@@ -225,7 +291,12 @@ export default function RitualPage() {
   const adoptedRituals = activeRituals.filter(r => r.status === 'adopted')
   const discoveringRituals = activeRituals.filter(r => r.status === 'discovering')
   const pendingRituals = activeRituals.filter(r => r.status === 'pending')
-  const needsDiscussionRituals = rituals.filter(r => r.needs_discussion === true)
+  const needsDiscussionRituals = rituals.filter(r => r.needs_discussion === true && r.status !== 'retired')
+  const hasActiveRituals = adoptedRituals.length > 0 || discoveringRituals.length > 0
+
+  const noraText = hasActiveRituals
+    ? `You have ${adoptedRituals.length + discoveringRituals.length} ritual${adoptedRituals.length + discoveringRituals.length === 1 ? '' : 's'} going. These are yours now — want to try one from the library that's proven to stick?`
+    : `Before suggesting something new — is there something you two already do together? Or try one from the library.`
 
   return (
     <div style={{ minHeight: '100vh', background: '#FAF6F0' }}>
@@ -240,38 +311,34 @@ export default function RitualPage() {
           The Ritual
         </h1>
 
-        {/* PENDING — both users see, different UI */}
+        {/* PENDING */}
         {pendingRituals.map(r => (
-          <div key={r.id} style={{ marginBottom: '24px' }}>
-            {String(r.proposed_by) === String(userId) ? (
-              // Proposer view — read only
-              <div style={{ background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '14px', padding: '20px' }}>
-                <SectionLabel text="PENDING CONFIRMATION" />
-                <RitualAccentCard title={r.title} description={r.description} label={r.frequency} />
-                <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center', marginTop: '16px', marginBottom: 0 }}>
-                  Waiting for {partnerName} to confirm
-                </p>
-              </div>
+          <div key={r.id} style={{ marginBottom: '24px', background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '14px', padding: '20px' }}>
+            <SectionLabel text="PENDING CONFIRMATION" />
+            {editingId === r.id ? (
+              <EditForm ritual={r} onSave={(t, d) => handleSaveEdit(r.id, t, d)} onCancel={() => setEditingId(null)} submitting={submitting} />
             ) : (
-              // Partner view — confirm or discuss
-              <div style={{ background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '14px', padding: '20px' }}>
-                <SectionLabel text="PENDING CONFIRMATION" />
-                <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '20px', color: '#1A2E10', marginBottom: '16px', marginTop: 0, fontWeight: 400 }}>
-                  {partnerName} wants to add a ritual
-                </p>
-                <NoraBlock text={`Rituals only work when you both want them. Take a look at what ${partnerName} is suggesting.`} />
-                <div style={{ marginBottom: '16px' }}>
-                  <RitualAccentCard title={r.title} description={r.description} label={r.frequency} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <PrimaryBtn onClick={() => handleConfirm(r.id, 'confirm')} disabled={submitting}>
-                    I'm in — add it
-                  </PrimaryBtn>
-                  <GhostBtn onClick={() => handleConfirm(r.id, 'discuss')}>
-                    Let's talk about it
-                  </GhostBtn>
-                </div>
-              </div>
+              <>
+                <RitualAccentCard title={r.title} description={r.description} label={r.frequency} />
+                {!r.suggestion_id && (
+                  <button onClick={() => setEditingId(r.id)} style={{ background: 'none', border: 'none', color: '#7A8C6E', fontSize: '12px', cursor: 'pointer', padding: '8px 0 0', textDecoration: 'underline' }}>
+                    Edit
+                  </button>
+                )}
+                {String(r.proposed_by) === String(userId) ? (
+                  <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center', marginTop: '16px', marginBottom: 0 }}>
+                    Waiting for {partnerName} to confirm
+                  </p>
+                ) : (
+                  <div style={{ marginTop: '16px' }}>
+                    <NoraBlock text={`Rituals only work when you both want them. Take a look at what ${partnerName} is suggesting.`} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <PrimaryBtn onClick={() => handleConfirm(r.id, 'confirm')} disabled={submitting}>I'm in — add it</PrimaryBtn>
+                      <GhostBtn onClick={() => handleConfirm(r.id, 'discuss')}>Let's talk about it</GhostBtn>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         ))}
@@ -282,12 +349,21 @@ export default function RitualPage() {
             <SectionLabel text="ADOPTED" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {adoptedRituals.map(r => (
-                <div key={r.id} style={{ background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div>
-                    <p style={{ fontSize: '15px', color: '#1A2E10', fontWeight: 500, margin: 0 }}>{r.title}</p>
-                    {r.frequency && <p style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#7A8C6E', textTransform: 'uppercase', marginTop: '4px', marginBottom: 0 }}>{r.frequency}</p>}
-                  </div>
-                  <StreakPill label={`${r.streak || 0} week${r.streak === 1 ? '' : 's'}`} />
+                <div key={r.id} style={{ background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '12px', padding: '16px' }}>
+                  {editingId === r.id ? (
+                    <EditForm ritual={r} onSave={(t, d) => handleSaveEdit(r.id, t, d)} onCancel={() => setEditingId(null)} submitting={submitting} />
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <p style={{ fontSize: '15px', color: '#1A2E10', fontWeight: 500, margin: 0 }}>{r.title}</p>
+                        {r.frequency && <p style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#7A8C6E', textTransform: 'uppercase', marginTop: '4px', marginBottom: 0 }}>{r.frequency}</p>}
+                        {!r.suggestion_id && (
+                          <button onClick={() => setEditingId(r.id)} style={{ background: 'none', border: 'none', color: '#7A8C6E', fontSize: '12px', cursor: 'pointer', padding: '4px 0 0', textDecoration: 'underline' }}>Edit</button>
+                        )}
+                      </div>
+                      <StreakPill label={`${r.streak || 0} week${r.streak === 1 ? '' : 's'}`} />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -298,38 +374,50 @@ export default function RitualPage() {
         {discoveringRituals.map(r => {
           const weekNum = Math.min(r.streak + 1, 3)
           const adoptionReady = r.streak >= 3
+          const retireRequested = !!r.retire_requested_by
+          const iRequestedRetire = r.retire_requested_by === userId
           return (
-            <div key={r.id} style={{ marginBottom: '24px' }}>
-              {adoptionReady ? (
-                // Adoption prompt — persists after Friday Week 3
-                <div style={{ background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '14px', padding: '20px' }}>
-                  <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                    <StreakPill label="3 weeks" />
-                  </div>
-                  <div style={{ marginBottom: '16px' }}>
-                    <RitualAccentCard label={r.frequency} title={r.title} description={r.description} />
-                  </div>
+            <div key={r.id} style={{ marginBottom: '24px', background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '14px', padding: '20px' }}>
+              {editingId === r.id ? (
+                <EditForm ritual={r} onSave={(t, d) => handleSaveEdit(r.id, t, d)} onCancel={() => setEditingId(null)} submitting={submitting} />
+              ) : adoptionReady ? (
+                <>
+                  <div style={{ textAlign: 'center', marginBottom: '16px' }}><StreakPill label="3 weeks" /></div>
+                  <div style={{ marginBottom: '16px' }}><RitualAccentCard label={r.frequency} title={r.title} description={r.description} /></div>
+                  {!r.suggestion_id && <button onClick={() => setEditingId(r.id)} style={{ background: 'none', border: 'none', color: '#7A8C6E', fontSize: '12px', cursor: 'pointer', padding: '0 0 12px', textDecoration: 'underline' }}>Edit</button>}
                   <NoraBlock text="Three weeks. That's not a habit yet — but it's becoming one. Want to make it official?" />
-                  {adoptionDone
+                  {adoptionDone[r.id]
                     ? <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#3D6B22', textAlign: 'center', fontStyle: 'italic' }}>Made it yours. ✓</p>
                     : <PrimaryBtn onClick={() => handleAdopt(r.id)} disabled={submitting}>Make it ours</PrimaryBtn>
                   }
-                </div>
+                </>
               ) : (
-                // Still trying — Nora coaching, read only
-                <div style={{ background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '14px', padding: '20px' }}>
+                <>
                   <SectionLabel text="STILL TRYING" />
-                  <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                    <StreakPill label={`Week ${weekNum} of 3`} />
-                  </div>
-                  <div style={{ marginBottom: '16px' }}>
-                    <RitualAccentCard label={r.frequency} title={r.title} description={r.description} />
-                  </div>
+                  <div style={{ textAlign: 'center', marginBottom: '16px' }}><StreakPill label={`Week ${weekNum} of 3`} /></div>
+                  <div style={{ marginBottom: '16px' }}><RitualAccentCard label={r.frequency} title={r.title} description={r.description} /></div>
+                  {!r.suggestion_id && <button onClick={() => setEditingId(r.id)} style={{ background: 'none', border: 'none', color: '#7A8C6E', fontSize: '12px', cursor: 'pointer', padding: '0 0 12px', textDecoration: 'underline' }}>Edit</button>}
                   <NoraBlock text={NORA_WEEK_MESSAGES[weekNum] || NORA_WEEK_MESSAGES[1]} />
-                  <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '13px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center', margin: 0 }}>
+                  <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '13px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center', marginBottom: '16px' }}>
                     Check in with Nora on Friday
                   </p>
-                </div>
+                  {retireRequested ? (
+                    iRequestedRetire ? (
+                      <p style={{ fontSize: '13px', color: '#C1440E', textAlign: 'center', fontStyle: 'italic' }}>
+                        You flagged this to retire — waiting for {partnerName} to confirm
+                      </p>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <p style={{ fontSize: '13px', color: '#C1440E', textAlign: 'center', fontStyle: 'italic', margin: '0 0 8px' }}>
+                          {partnerName} wants to retire this ritual
+                        </p>
+                        <PrimaryBtn onClick={() => handleRetire(r.id)} disabled={submitting}>Confirm — retire it</PrimaryBtn>
+                      </div>
+                    )
+                  ) : (
+                    <DangerBtn onClick={() => handleRetire(r.id)} disabled={submitting}>Not for us</DangerBtn>
+                  )}
+                </>
               )}
             </div>
           )
@@ -346,11 +434,7 @@ export default function RitualPage() {
                     <p style={{ fontSize: '14px', color: '#1A2E10', fontWeight: 500, margin: 0 }}>{r.title}</p>
                     {r.frequency && <p style={{ fontSize: '10px', letterSpacing: '0.1em', color: '#7A8C6E', textTransform: 'uppercase', marginTop: '4px', marginBottom: 0 }}>{r.frequency}</p>}
                   </div>
-                  <button
-                    onClick={() => handleRevisit(r.id)}
-                    disabled={submitting}
-                    style={{ fontSize: '12px', color: '#C1440E', background: 'transparent', border: '0.5px solid #C1440E', borderRadius: '20px', padding: '4px 12px', cursor: 'pointer', opacity: submitting ? 0.5 : 1 }}
-                  >
+                  <button onClick={() => handleRevisit(r.id)} disabled={submitting} style={{ fontSize: '12px', color: '#C1440E', background: 'transparent', border: '0.5px solid #C1440E', borderRadius: '20px', padding: '4px 12px', cursor: 'pointer', opacity: submitting ? 0.5 : 1 }}>
                     Revisit
                   </button>
                 </div>
@@ -362,30 +446,25 @@ export default function RitualPage() {
         {/* EMPTY STATE */}
         {activeRituals.length === 0 && needsDiscussionRituals.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 0 24px' }}>
-            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '20px', color: '#1A2E10', fontWeight: 400, marginBottom: '8px' }}>
-              No rituals yet
-            </p>
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '20px', color: '#1A2E10', fontWeight: 400, marginBottom: '8px' }}>No rituals yet</p>
             <p style={{ fontSize: '14px', color: '#7A8C6E', lineHeight: 1.6, marginBottom: '32px' }}>
               Rituals are the small things that make you you. Start with something you already do.
             </p>
           </div>
         )}
 
-        {/* PROPOSE / DISCOVER */}
-        {activeRituals.length > 0 && <Divider />}
+        {/* NORA + SUGGESTION — unified card */}
         {nextSuggestion && (
-          <div style={{ marginBottom: '16px' }}>
-            <NoraBlock text={activeRituals.length > 0 ? `You have ${activeRituals.length} ritual${activeRituals.length === 1 ? '' : 's'} going. Ready to try another? Here's one that might fit.` : "Here's one to start with. This might fit."} />
-            <div style={{ marginBottom: '16px' }}>
-              <RitualAccentCard title={nextSuggestion.title} description={nextSuggestion.description} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <PrimaryBtn onClick={() => handleSelectSuggestion(nextSuggestion)} disabled={submitting}>
-                We'll try this one
-              </PrimaryBtn>
-              <GhostBtn onClick={handleNextSuggestion}>Show me another</GhostBtn>
-            </div>
-          </div>
+          <>
+            {hasActiveRituals && <Divider />}
+            <NoraSuggestionCard
+              noraText={noraText}
+              suggestion={nextSuggestion}
+              onSelect={handleSelectSuggestion}
+              onNext={handleNextSuggestion}
+              submitting={submitting}
+            />
+          </>
         )}
 
       </div>
