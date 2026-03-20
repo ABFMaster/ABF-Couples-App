@@ -21,7 +21,7 @@ export async function GET(request) {
       .select('*')
       .eq('couple_id', coupleId)
       .eq('mode', mode)
-      .in('status', ['lobby', 'active'])
+      .in('status', ['lobby', 'active', 'completed'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
