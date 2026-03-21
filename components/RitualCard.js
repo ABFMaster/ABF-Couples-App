@@ -688,30 +688,49 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
           <RitualAccentCard label={ritual.frequency} title={ritual.title} description={ritual.description} />
         </div>
         <NoraBlock text={NORA_WEEK_MESSAGES[weekNum] || NORA_WEEK_MESSAGES[1]} />
-        <SectionLabel text="HOW DID THIS WEEK GO?" />
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={() => handleCheckin(true, ritual)}
-            disabled={submitting}
-            style={{ flex: 1, background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '10px', padding: '11px 8px', fontSize: '13px', color: '#3D6B22', cursor: 'pointer' }}
-          >
-            We did it
-          </button>
-          <button
-            onClick={() => handleCheckin(false, ritual)}
-            disabled={submitting}
-            style={{ flex: 1, background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '10px', padding: '11px 8px', fontSize: '13px', color: '#7A8C6E', cursor: 'pointer' }}
-          >
-            Not this week
-          </button>
-          <button
-            onClick={() => handleRetire(ritual)}
-            disabled={submitting}
-            style={{ flex: 1, background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '10px', padding: '11px 8px', fontSize: '13px', color: '#B8A898', cursor: 'pointer' }}
-          >
-            Not for us
-          </button>
-        </div>
+        {(() => {
+          const confirmedAt = ritual.partner_confirmed_at ? new Date(ritual.partner_confirmed_at) : null
+          const confirmedWeek = confirmedAt ? confirmedAt.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }).slice(0, 10) : null
+          const currentWeekStart = getWeekStart('America/Los_Angeles')
+          const confirmedThisWeek = confirmedWeek && confirmedWeek >= currentWeekStart
+          if (confirmedThisWeek) {
+            return <p style={{ textAlign: 'center', fontSize: '13px', color: '#9CA3AF', fontStyle: 'italic', padding: '8px 0' }}>Check back next Friday to see how this week went.</p>
+          }
+          return null
+        })()}
+        {(() => {
+          const confirmedAt = ritual.partner_confirmed_at ? new Date(ritual.partner_confirmed_at) : null
+          const confirmedWeek = confirmedAt ? confirmedAt.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }).slice(0, 10) : null
+          const currentWeekStart = getWeekStart('America/Los_Angeles')
+          const confirmedThisWeek = confirmedWeek && confirmedWeek >= currentWeekStart
+          if (confirmedThisWeek) return null
+          return <>
+            <SectionLabel text="HOW DID THIS WEEK GO?" />
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => handleCheckin(true, ritual)}
+                disabled={submitting}
+                style={{ flex: 1, background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '10px', padding: '11px 8px', fontSize: '13px', color: '#3D6B22', cursor: 'pointer' }}
+              >
+                We did it
+              </button>
+              <button
+                onClick={() => handleCheckin(false, ritual)}
+                disabled={submitting}
+                style={{ flex: 1, background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '10px', padding: '11px 8px', fontSize: '13px', color: '#7A8C6E', cursor: 'pointer' }}
+              >
+                Not this week
+              </button>
+              <button
+                onClick={() => handleRetire(ritual)}
+                disabled={submitting}
+                style={{ flex: 1, background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '10px', padding: '11px 8px', fontSize: '13px', color: '#B8A898', cursor: 'pointer' }}
+              >
+                Not for us
+              </button>
+            </div>
+          </>
+        })()}
       </div>
     )
   }
