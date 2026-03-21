@@ -45,6 +45,10 @@ Cap at 4 weeks visible on a /reflections page. Older reflections summarized into
 *Parked: March 19, 2026*
 Add category field (preferences/likely/reactions/confessions) to all 120 questions in lib/bet-questions.js. question_category column exists in bets table (nullable). Needed before building category-based UI or Nora logic.
 
+### Ritual Proximity Edge Case
+*Parked: March 20, 2026*
+Couples who don't see each other daily will always "fail" daily rituals like The Six-Second Kiss. Fix: add a fourth check-in option "We didn't see each other this week" that skips the week without penalizing the streak. Broader proximity-aware onboarding (how often do you see each other?) should be addressed when building multi-couple-type support. Do not filter ritual suggestions by proximity — let couples choose freely.
+
 ---
 
 ## NORA ARCHITECTURE (priority build — next focused session)
