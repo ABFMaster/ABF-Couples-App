@@ -49,6 +49,36 @@ Add category field (preferences/likely/reactions/confessions) to all 120 questio
 *Parked: March 20, 2026*
 Couples who don't see each other daily will always "fail" daily rituals like The Six-Second Kiss. Fix: add a fourth check-in option "We didn't see each other this week" that skips the week without penalizing the streak. Broader proximity-aware onboarding (how often do you see each other?) should be addressed when building multi-couple-type support. Do not filter ritual suggestions by proximity — let couples choose freely.
 
+### Rabbit Hole — Play UX, Pacing & Mechanics (Full Design)
+*Parked: March 20, 2026*
+
+**Drop a Find flow:**
+User selects specific text on any webpage (long press → drag handles) → Copy → opens ABF → pastes in Drop a Find field → taps Drop it. Four natural steps, trained behavior. No clipboard auto-detection needed. Drop a Find must be front and center — the primary action, always one tap away during active session. Clear in-game instructions explain how to play including how to drop a find.
+
+**Partner find reveal — theatre:**
+A find arriving is an EVENT not a list update. The screen should signal arrival dramatically — card slides or pulses in. "[Cass] dropped a find 🕳️" displayed prominently. Find text large and readable. "Tell me more" button below.
+
+**"Tell me more" mechanic:**
+Button on received find card. Tapping fires a push notification to partner that reads exactly: "Tell me more" — nothing else. It's a reaction signal between partners, not a Nora data point. Nora does NOT track whether it was tapped. Conversation happens off-app. Whether they tapped or just reacted in person — Nora only needs the find text for the debrief.
+
+**Minimum depth before convergence:**
+Both partners must drop minimum 2 finds each before convergence unlocks. If one partner races through, Nora sends a deeper thread: "Go further. Find the why behind what you found." Prevents the escape room with an unlocked exit door problem.
+
+**Asymmetric pacing:**
+If one partner is moving slower, Nora sends a bridge prompt: "Your partner just found something. Here's a new angle while they dig deeper." Keeps both partners engaged without forcing lockstep.
+
+**Timer behavior:**
+Timer is intention-setting (how much time do we have?), not a hard boundary. Three scenarios:
+1. Hard stop before timer — "Pause & save" always available. Session stays open 24 hours.
+2. Done too fast — minimum 2 finds each enforced. Nora controls depth, not the timer.
+3. Going way past timer — Nora says "Don't let me stop you. Keep going." They end when they want. Can ask Nora for more threads.
+
+**24-hour expiry — the payoff is guaranteed:**
+If session is abandoned or night got away from them, Nora fires the convergence and debrief at 24-hour expiry regardless. Couple receives "Rabbit Hole Summary" as a gift. It never just disappears.
+
+**Native build (Expo):**
+Register as iOS/Android Share Sheet target for text-selection share. User selects text in Safari → Share → ABF → pre-filled with snippet + source. Build when going native.
+
 ---
 
 ## NORA ARCHITECTURE (priority build — next focused session)

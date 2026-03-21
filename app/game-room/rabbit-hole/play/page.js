@@ -3,6 +3,8 @@ import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
+const MIN_FINDS_BEFORE_DEBRIEF = 2
+
 export default function RabbitHolePlayPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -11,24 +13,31 @@ export default function RabbitHolePlayPage() {
   const [session, setSession] = useState(null)
   const [hole, setHole] = useState(null)
   const [myThread, setMyThread] = useState(null)
-  const [partnerThread, setPartnerThread] = useState(null)
   const [userName, setUserName] = useState('')
   const [partnerName, setPartnerName] = useState('your partner')
   const [isUser1, setIsUser1] = useState(false)
-  const [phase, setPhase] = useState('drop') // drop | find | dropped | debrief
   const [findText, setFindText] = useState('')
-  const [myFind, setMyFind] = useState(null)
-  const [partnerFind, setPartnerFind] = useState(null)
+  const [myFinds, setMyFinds] = useState([])
+  const [partnerFinds, setPartnerFinds] = useState([])
+  const [newPartnerFind, setNewPartnerFind] = useState(null)
+  const [tellMoreSent, setTellMoreSent] = useState({})
   const [submitting, setSubmitting] = useState(false)
   const [timeLeft, setTimeLeft] = useState(null)
+  const [showInstructions, setShowInstructions] = useState(true)
   const timerRef = useRef(null)
   const pollRef = useRef(null)
+  const newFindTimerRef = useRef(null)
+  const prevPartnerCountRef = useRef(0)
+  const sessionIdRef = useRef(null)
+  const userIdRef = useRef(null)
+  const partnerNameRef = useRef('your partner')
 
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
       setUserId(user.id)
+      userIdRef.current = user.id
 
       const { data: couple } = await supabase
         .from('couples')
@@ -47,7 +56,10 @@ export default function RabbitHolePlayPage() {
         supabase.from('user_profiles').select('display_name').eq('user_id', partnerId).maybeSingle(),
       ])
       if (myProfile?.display_name) setUserName(myProfile.display_name)
-      if (partnerProfile?.display_name) setPartnerName(partnerProfile.display_name)
+      if (partnerProfile?.display_name) {
+        setPartnerName(partnerProfile.display_name)
+        partnerNameRef.current = partnerProfile.display_name
+      }
 
       // Get active session
       const statusRes = await fetch(`/api/game-room/lobby-status?coupleId=${couple.id}&mode=rabbit-hole`)
@@ -57,6 +69,7 @@ export default function RabbitHolePlayPage() {
         return
       }
       setSession(statusData.session)
+      sessionIdRef.current = statusData.session.id
 
       // Generate or fetch the hole
       const holeRes = await fetch('/api/game-room/generate-hole', {
@@ -82,10 +95,12 @@ export default function RabbitHolePlayPage() {
         .order('created_at', { ascending: true })
 
       if (finds?.length > 0) {
-        const mine = finds.find(f => f.user_id === user.id)
-        const theirs = finds.find(f => f.user_id !== user.id)
-        if (mine) { setMyFind(mine); setPhase('dropped') }
-        if (theirs) setPartnerFind(theirs)
+        const mine = finds.filter(f => f.user_id === user.id)
+        const theirs = finds.filter(f => f.user_id !== user.id)
+        setMyFinds(mine)
+        setPartnerFinds(theirs)
+        prevPartnerCountRef.current = theirs.length
+        if (mine.length > 0) setShowInstructions(false)
       }
 
       setLoading(false)
@@ -103,22 +118,35 @@ export default function RabbitHolePlayPage() {
       })
     }, 1000)
     return () => clearInterval(timerRef.current)
-  }, [timeLeft !== null])
+  }, [timeLeft !== null]) // eslint-disable-line
 
-  // Poll for partner's find
+  // Poll for partner finds
   useEffect(() => {
     if (!session?.id || !userId) return
     pollRef.current = setInterval(async () => {
+      const sid = sessionIdRef.current
+      const uid = userIdRef.current
+      if (!sid || !uid) return
+
       const { data: finds } = await supabase
         .from('game_finds')
         .select('*')
-        .eq('session_id', session.id)
+        .eq('session_id', sid)
         .order('created_at', { ascending: true })
-      if (finds?.length > 0) {
-        const theirs = finds.find(f => f.user_id !== userId)
-        if (theirs) setPartnerFind(theirs)
+
+      if (!finds) return
+      const theirs = finds.filter(f => f.user_id !== uid)
+
+      if (theirs.length > prevPartnerCountRef.current) {
+        const newest = theirs[theirs.length - 1]
+        setNewPartnerFind(newest)
+        clearTimeout(newFindTimerRef.current)
+        newFindTimerRef.current = setTimeout(() => setNewPartnerFind(null), 8000)
       }
-    }, 5000)
+
+      prevPartnerCountRef.current = theirs.length
+      setPartnerFinds(theirs)
+    }, 4000)
     return () => clearInterval(pollRef.current)
   }, [session, userId])
 
@@ -133,22 +161,57 @@ export default function RabbitHolePlayPage() {
           couple_id: coupleId,
           user_id: userId,
           find_text: findText.trim(),
-          round: 1,
+          round: myFinds.length + 1,
         })
         .select('*')
         .maybeSingle()
       if (data) {
-        setMyFind(data)
-        setPhase('dropped')
+        setMyFinds(prev => [...prev, data])
         setFindText('')
+        setShowInstructions(false)
       }
     } catch {} finally { setSubmitting(false) }
+  }
+
+  const handleTellMore = async (findId) => {
+    if (tellMoreSent[findId]) return
+    setTellMoreSent(prev => ({ ...prev, [findId]: true }))
+    try {
+      await fetch('/api/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          coupleId,
+          senderId: userId,
+          title: 'Tell me more',
+          body: 'Tell me more',
+          excludeSender: false,
+        }),
+      }).catch(() => {})
+    } catch {}
   }
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60)
     const s = seconds % 60
     return `${m}:${s.toString().padStart(2, '0')}`
+  }
+
+  const myFindCount = myFinds.length
+  const partnerFindCount = partnerFinds.length
+  const bothHaveMinFinds = myFindCount >= MIN_FINDS_BEFORE_DEBRIEF && partnerFindCount >= MIN_FINDS_BEFORE_DEBRIEF
+
+  const getProgressMessage = () => {
+    if (bothHaveMinFinds) return null
+    if (myFindCount < MIN_FINDS_BEFORE_DEBRIEF && partnerFindCount < MIN_FINDS_BEFORE_DEBRIEF) {
+      const need = MIN_FINDS_BEFORE_DEBRIEF - Math.max(myFindCount, partnerFindCount)
+      return `Both partners need ${MIN_FINDS_BEFORE_DEBRIEF} finds before convergence. Go deeper.`
+    }
+    if (myFindCount < MIN_FINDS_BEFORE_DEBRIEF) {
+      const need = MIN_FINDS_BEFORE_DEBRIEF - myFindCount
+      return `Drop ${need} more find${need === 1 ? '' : 's'} before convergence unlocks.`
+    }
+    return `Waiting for ${partnerNameRef.current} to find ${MIN_FINDS_BEFORE_DEBRIEF - partnerFindCount} more thing${MIN_FINDS_BEFORE_DEBRIEF - partnerFindCount === 1 ? '' : 's'}...`
   }
 
   if (loading) {
@@ -208,92 +271,165 @@ export default function RabbitHolePlayPage() {
         </div>
 
         {/* YOUR THREAD */}
-        <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '20px', padding: '20px', marginBottom: '16px' }}>
+        <div style={{ background: '#FFFFFF', border: '1.5px solid #C7D2FE', borderRadius: '20px', padding: '20px', marginBottom: '16px' }}>
           <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#4338CA', textTransform: 'uppercase', margin: '0 0 8px', fontWeight: 700 }}>Your thread</p>
           <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#1A1A1A', lineHeight: 1.55, margin: 0 }}>
             {myThread}
           </p>
         </div>
 
-        {/* PARTNER THREAD — hidden until they drop a find */}
-        {partnerFind && (
-          <div style={{ background: '#F5F3FF', border: '0.5px solid #C4B5FD', borderRadius: '20px', padding: '20px', marginBottom: '16px' }}>
-            <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#7C3AED', textTransform: 'uppercase', margin: '0 0 8px', fontWeight: 700 }}>{partnerName} found something 🕳️</p>
-            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#1A1A1A', lineHeight: 1.55, margin: 0 }}>
-              {partnerFind.find_text}
+        {/* HOW TO PLAY — yellow instructions panel */}
+        {showInstructions && (
+          <div style={{
+            background: '#FFFBEB', border: '1px solid #FDE68A',
+            borderRadius: '16px', padding: '16px 20px', marginBottom: '16px',
+          }}>
+            <p style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#92400E', textTransform: 'uppercase', margin: '0 0 8px', fontWeight: 700 }}>How to play</p>
+            <p style={{ fontSize: '14px', color: '#78350F', lineHeight: 1.6, margin: 0 }}>
+              Follow your thread anywhere — Wikipedia, YouTube, your memory, your neighborhood. When you find something interesting, paste or type it below and tap <strong>Drop it</strong>. You need at least {MIN_FINDS_BEFORE_DEBRIEF} finds each before convergence unlocks.
             </p>
           </div>
         )}
 
-        {/* DROP A FIND */}
-        {phase === 'drop' ? (
-          <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '20px', padding: '20px' }}>
-            <p style={{ fontSize: '13px', fontWeight: 600, color: '#1A1A1A', margin: '0 0 12px' }}>Drop a find</p>
-            <textarea
-              value={findText}
-              onChange={e => setFindText(e.target.value)}
-              placeholder="What did you find? Paste a link, type a fact, share something wild..."
-              style={{
-                width: '100%', background: '#FAF6F0', border: '0.5px solid #E8DDD0',
-                borderRadius: '12px', padding: '14px', fontSize: '14px',
-                fontFamily: "'Fraunces', Georgia, serif", color: '#1A1A1A',
-                resize: 'none', height: '100px', outline: 'none', boxSizing: 'border-box',
-                lineHeight: 1.5,
-              }}
-            />
+        {/* NEW PARTNER FIND — theatre */}
+        {newPartnerFind && (
+          <div style={{
+            background: '#F5F3FF', border: '1.5px solid #8B5CF6',
+            borderRadius: '20px', padding: '20px', marginBottom: '16px',
+            animation: 'slideIn 0.35s ease-out',
+          }}>
+            <p style={{ fontSize: '11px', letterSpacing: '0.14em', color: '#7C3AED', textTransform: 'uppercase', margin: '0 0 6px', fontWeight: 700 }}>
+              {partnerName} dropped a find 🕳️
+            </p>
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '17px', color: '#1A1A1A', lineHeight: 1.55, margin: '0 0 14px' }}>
+              {newPartnerFind.find_text}
+            </p>
             <button
-              onClick={handleDropFind}
-              disabled={!findText.trim() || submitting}
+              onClick={() => handleTellMore(newPartnerFind.id)}
+              disabled={!!tellMoreSent[newPartnerFind.id]}
               style={{
-                width: '100%', marginTop: '12px', padding: '14px',
-                background: findText.trim() ? 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)' : '#E8DDD0',
-                color: findText.trim() ? '#FFFFFF' : '#B8A898',
-                border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600,
-                cursor: findText.trim() && !submitting ? 'pointer' : 'not-allowed',
-                transition: 'all 150ms',
+                background: 'transparent',
+                border: `1.5px solid ${tellMoreSent[newPartnerFind.id] ? '#C4B5FD' : '#7C3AED'}`,
+                borderRadius: '20px', padding: '8px 18px',
+                fontSize: '13px', fontWeight: 600,
+                color: tellMoreSent[newPartnerFind.id] ? '#C4B5FD' : '#7C3AED',
+                cursor: tellMoreSent[newPartnerFind.id] ? 'default' : 'pointer',
               }}
             >
-              {submitting ? 'Dropping...' : 'Drop it 🕳️'}
+              {tellMoreSent[newPartnerFind.id] ? 'Sent ✓' : 'Tell me more'}
             </button>
-          </div>
-        ) : (
-          <div>
-            {/* My find — already dropped */}
-            <div style={{ background: '#EEF2FF', border: '0.5px solid #C7D2FE', borderRadius: '20px', padding: '20px', marginBottom: '16px' }}>
-              <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#4338CA', textTransform: 'uppercase', margin: '0 0 8px', fontWeight: 700 }}>You dropped</p>
-              <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#1A1A1A', lineHeight: 1.55, margin: 0 }}>
-                {myFind?.find_text}
-              </p>
-            </div>
-
-            {!partnerFind && (
-              <div style={{ textAlign: 'center', padding: '16px 0', color: '#9CA3AF', fontSize: '14px' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
-                  Waiting for {partnerName} to drop something...
-                </div>
-              </div>
-            )}
-
-            {/* Both dropped — show debrief CTA */}
-            {myFind && partnerFind && (
-              <button
-                onClick={() => router.push('/game-room/rabbit-hole/debrief')}
-                style={{
-                  width: '100%', padding: '16px', marginTop: '8px',
-                  background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)',
-                  color: '#FFFFFF', border: 'none', borderRadius: '30px',
-                  fontSize: '15px', fontWeight: 600, cursor: 'pointer',
-                }}
-              >
-                We're back — talk to Nora 🕳️
-              </button>
-            )}
           </div>
         )}
 
+        {/* DROP A FIND */}
+        <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '20px', padding: '20px', marginBottom: '16px' }}>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#1A1A1A', margin: '0 0 12px' }}>
+            Drop a find {myFindCount > 0 && <span style={{ fontWeight: 400, color: '#9CA3AF' }}>({myFindCount} dropped)</span>}
+          </p>
+          <textarea
+            value={findText}
+            onChange={e => setFindText(e.target.value)}
+            placeholder="Paste a link, type a fact, share something wild..."
+            style={{
+              width: '100%', background: '#FAF6F0', border: '0.5px solid #E8DDD0',
+              borderRadius: '12px', padding: '14px', fontSize: '14px',
+              fontFamily: "'Fraunces', Georgia, serif", color: '#1A1A1A',
+              resize: 'none', height: '100px', outline: 'none', boxSizing: 'border-box',
+              lineHeight: 1.5,
+            }}
+          />
+          <button
+            onClick={handleDropFind}
+            disabled={!findText.trim() || submitting}
+            style={{
+              width: '100%', marginTop: '12px', padding: '14px',
+              background: findText.trim() ? 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)' : '#E8DDD0',
+              color: findText.trim() ? '#FFFFFF' : '#B8A898',
+              border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600,
+              cursor: findText.trim() && !submitting ? 'pointer' : 'not-allowed',
+              transition: 'all 150ms',
+            }}
+          >
+            {submitting ? 'Dropping...' : 'Drop it 🕳️'}
+          </button>
+        </div>
+
+        {/* FIND HISTORY */}
+        {(myFinds.length > 0 || partnerFinds.length > 0) && (
+          <div style={{ marginBottom: '16px' }}>
+            <p style={{ fontSize: '11px', letterSpacing: '0.14em', color: '#9CA3AF', textTransform: 'uppercase', marginBottom: '12px', fontWeight: 700 }}>
+              Finds so far
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {/* Interleave by created_at */}
+              {[...myFinds.map(f => ({ ...f, mine: true })), ...partnerFinds.map(f => ({ ...f, mine: false }))]
+                .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+                .map((f) => (
+                  <div
+                    key={f.id}
+                    style={{
+                      background: f.mine ? '#EEF2FF' : '#F5F3FF',
+                      border: `0.5px solid ${f.mine ? '#C7D2FE' : '#C4B5FD'}`,
+                      borderRadius: '16px', padding: '16px 18px',
+                    }}
+                  >
+                    <p style={{ fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 6px', color: f.mine ? '#4338CA' : '#7C3AED' }}>
+                      {f.mine ? 'You' : partnerName}
+                    </p>
+                    <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#1A1A1A', lineHeight: 1.5, margin: 0 }}>
+                      {f.find_text}
+                    </p>
+                    {!f.mine && (
+                      <button
+                        onClick={() => handleTellMore(f.id)}
+                        disabled={!!tellMoreSent[f.id]}
+                        style={{
+                          marginTop: '10px', background: 'transparent',
+                          border: `1px solid ${tellMoreSent[f.id] ? '#C4B5FD' : '#7C3AED'}`,
+                          borderRadius: '16px', padding: '5px 14px',
+                          fontSize: '12px', fontWeight: 600,
+                          color: tellMoreSent[f.id] ? '#C4B5FD' : '#7C3AED',
+                          cursor: tellMoreSent[f.id] ? 'default' : 'pointer',
+                        }}
+                      >
+                        {tellMoreSent[f.id] ? 'Sent ✓' : 'Tell me more'}
+                      </button>
+                    )}
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {/* PROGRESS / DEBRIEF */}
+        {!bothHaveMinFinds ? (
+          getProgressMessage() && (
+            <div style={{ textAlign: 'center', padding: '12px 0' }}>
+              <p style={{ fontSize: '13px', color: '#9CA3AF', fontStyle: 'italic', margin: 0 }}>
+                {getProgressMessage()}
+              </p>
+            </div>
+          )
+        ) : (
+          <button
+            onClick={() => router.push('/game-room/rabbit-hole/debrief')}
+            style={{
+              width: '100%', padding: '16px', marginTop: '8px',
+              background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)',
+              color: '#FFFFFF', border: 'none', borderRadius: '30px',
+              fontSize: '15px', fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            We're back — talk to Nora 🕳️
+          </button>
+        )}
+
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
     </div>
   )
 }
