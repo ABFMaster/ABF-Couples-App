@@ -202,7 +202,7 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
   // State A
   if (state === 'A') {
     return (
-      <div style={{ background: '#1C1510', borderRadius: '20px', padding: '24px' }}>
+      <div style={{ background: '#1C1510', borderRadius: '20px', padding: '24px', border: '0.5px solid #3D2E1E', boxShadow: '0 4px 24px rgba(28, 21, 16, 0.15)' }}>
         <p style={{ fontSize: '11px', letterSpacing: '0.2em', color: '#D4A853', textTransform: 'uppercase', textAlign: 'center', marginBottom: '16px' }}>
           The Bet
         </p>
@@ -266,7 +266,7 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
   // State B
   if (state === 'B') {
     return (
-      <div style={{ background: '#1C1510', borderRadius: '20px', padding: '24px' }}>
+      <div style={{ background: '#1C1510', borderRadius: '20px', padding: '24px', border: '0.5px solid #3D2E1E', boxShadow: '0 4px 24px rgba(28, 21, 16, 0.15)' }}>
         <p style={{ fontSize: '11px', letterSpacing: '0.2em', color: '#D4A853', textTransform: 'uppercase', textAlign: 'center', marginBottom: '12px' }}>
           The Bet
         </p>
@@ -297,7 +297,7 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
   // State D — Phase 1: Nora pre-reveal
   if (!revealStarted) {
     return (
-      <div style={{ background: '#1C1510', borderRadius: '20px', padding: '24px' }}>
+      <div style={{ background: '#1C1510', borderRadius: '20px', padding: '24px', border: '0.5px solid #3D2E1E', boxShadow: '0 4px 24px rgba(28, 21, 16, 0.15)' }}>
         <p style={{ fontSize: '11px', letterSpacing: '0.2em', color: '#D4A853', textTransform: 'uppercase', textAlign: 'center', marginBottom: '24px' }}>
           The Bet
         </p>
