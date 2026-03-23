@@ -1,5 +1,5 @@
 # ABF — Developer Handoff Briefing
-# Last Updated: 2026-03-19
+# Last Updated: 2026-03-23
 
 ---
 
@@ -65,9 +65,10 @@ Each feature has its own accent layered on the cream platform base. The Bet is t
 | The Spark | Cream `#FAF6F0` | Terracotta `#C1440E` | Intimate, morning coffee |
 | The Ritual | Cream `#FAF6F0` | Deep green `#3D6B22` | Intentional, repeatable |
 | Weekly Reflection | Cream `#FAF6F0` | Lavender `#6B4E8A` | Reflective, gentle |
+| The Rabbit Hole | Dark `#0D0D0D` | Coral `#FF6B6B` + Indigo `#6366F1` | Mysterious, exploratory |
 
 ### Nora's Voice
-Not a therapist footnote — the most fun person at the dinner table who has a PhD. Warm, witty, mischievous. Finds what neither person said out loud. Never speaks in third person. Never restates the question. Never starts with an affirmation formula. For The Bet: game show host energy. For The Spark: quieter, leans across the table. For The Ritual: coach witnessing progress. For Reflection: perceptive friend synthesizing the week. For the hero card: alarm clock energy — personal, schedule-aware, pulls you forward.
+Not a therapist footnote — the most fun person at the dinner table who has a PhD. Warm, witty, mischievous. Finds what neither person said out loud. Never speaks in third person. Never restates the question. Never starts with an affirmation formula. For The Bet: game show host energy. For The Spark: quieter, leans across the table. For The Ritual: coach witnessing progress. For Reflection: perceptive friend synthesizing the week. For the hero card: alarm clock energy — personal, schedule-aware, pulls you forward. For the Rabbit Hole: museum curator crossed with a mischievous detective.
 
 ### Animation Rules
 - Fade + upward rise: opacity 0→1, translateY 20px→0, 500ms ease-out
@@ -119,7 +120,7 @@ The Today page gates features by day of week (Pacific time). One feature per day
 | Wednesday | The Bet | `?bet=true` |
 | Thursday | The Spark | `?spark=true` |
 | Friday | The Ritual | `?ritual=true` |
-| Saturday | TBD — Saturday feature (see backlog) | — |
+| Saturday | The Rabbit Hole (Game Room) | `?game=true` |
 | Sunday | Weekly Reflection | `?reflection=true` |
 
 No feature scheduled → shows "Nothing scheduled today. Enjoy the day." in Fraunces italic.
@@ -157,9 +158,11 @@ Five sections: Dynamic Nora hero / Streak card / Timeline memory card / Coming U
 ### Today Tab (`app/today/page.js`)
 Day-gated feature delivery. Three sections: daily feature card, Flirt card, Worth Reading.
 
-**Dead features removed this session:** "For Cass" coaching nudge, Nora commentary above Worth Reading, Try This Together spotlight section.
+**Dead features removed:** "For Cass" coaching nudge, Nora commentary above Worth Reading, Try This Together spotlight section.
 
 **Flirt card:** FLIRTS label (coral), "Send [partnerName] a Flirt" title (Fraunces), "Let Nora do the work" subtitle, chevron → opens FlirtSheet.
+
+**Game Room access:** `showGameRoom = todayName === 'Saturday' || params.includes('game=true')` — no debug `|| true` flag.
 
 ### The Spark ✅ FULLY SHIPPED
 - **Component:** `components/SparkCard.js`
@@ -186,6 +189,7 @@ Day-gated feature delivery. Three sections: daily feature card, Flirt card, Wort
 - **Days:** Friday
 - **API routes:** `app/api/ritual/status/route.js`, `app/api/ritual/start/route.js`, `app/api/ritual/checkin/route.js`, `app/api/ritual/adopt/route.js`, `app/api/ritual/confirm/route.js`
 - **DB tables:** `rituals`, `ritual_completions`
+- **`partner_confirmed_at` logic:** In Normal discovering view, if the ritual was confirmed this current week (via `partner_confirmed_at >= getWeekStart('America/Los_Angeles')`), check-in buttons are hidden and "Check back next Friday to see how this week went." is shown instead.
 
 ### Weekly Reflection ✅ FULLY SHIPPED (Phase 1)
 - **Component:** `components/ReflectionCard.js`
@@ -208,6 +212,42 @@ Today tab red dot. Aware of Spark and Bet activity. Rechecks every 60s and on ta
 ### Nora (`app/ai-coach/page.js`)
 Full chat with rich context builder. Cross-session memory via `nora_memory` table. 20 message/week limit on free tier.
 
+### The Rabbit Hole (Game Room) ✅ SHIPPED — Multi-Round
+Saturday feature. A co-op investigation game where Nora picks a real topic (case, event, person, mystery) and gives both players different angles into the same story. They research separately, share finds, and converge in a Nora-guided debrief.
+
+**Flow:** Today tab → `/game-room` → `/game-room/rabbit-hole/lobby` → `/game-room/rabbit-hole/play` → `/game-room/rabbit-hole/debrief`
+
+**Multi-round mechanic:**
+- Timer options: 30 / 60 / 90 minutes
+- `MIN_ROUNDS = { 30: 2, 60: 3, 90: 4 }` — minimum rounds before debrief unlocks
+- Both players must signal ready (`round-ready` API) to advance to next round
+- `game_rounds` table tracks per-round threads and ready states
+- Round generation is idempotent — checks for existing round before generating
+
+**Both-ready signaling:**
+- Player taps "Ready for next →" → POST `/api/game-room/round-ready`
+- API sets `user1_ready` or `user2_ready`, checks if both true
+- If both ready: marks round `status = 'completed'`, notifies both via push, returns `nextRound`
+- Play page polls every 4s — detects `status === 'completed'` on partner side, loads next round
+- `canDebrief = roundNumber >= minRounds && iAmReady && partnerIsReady`
+
+**Debrief — three phases:**
+1. `'factual'` — `session.factual_close` (what actually happened, facts only)
+2. `'truth'` — `session.convergence` (Nora's philosophical layer) + debrief questions
+3. `'chat'` — inline Nora chat seeded with full game context via `buildNoraContext()`
+
+**Pages:**
+- `app/game-room/page.js` — game selection hub
+- `app/game-room/rabbit-hole/lobby/page.js` — waiting room, both-in-lobby detection
+- `app/game-room/rabbit-hole/play/page.js` — multi-round play, finds input, both-ready flow
+- `app/game-room/rabbit-hole/debrief/page.js` — three-phase debrief with inline Nora chat
+
+**API routes:**
+- `app/api/game-room/lobby-status/route.js` — GET: checks session status, `bothInLobby` flag. Status filter: `['lobby', 'active']` only.
+- `app/api/game-room/generate-hole/route.js` — POST: generates round threads. Idempotent. Round 1 saves topic/entry/nora_send_off/convergence/factual_close/topic_media to `game_sessions`. All rounds insert into `game_rounds`.
+- `app/api/game-room/round-ready/route.js` — POST: marks user ready, checks bothReady, notifies partner or both.
+- `app/api/game-room/generate-debrief/route.js` — POST: generates debrief questions
+
 ---
 
 ## 10. KEY FILES
@@ -227,12 +267,20 @@ Full chat with rich context builder. Cross-session memory via `nora_memory` tabl
 | `components/NavBadges.js` | Today/Home tab badge logic |
 | `components/NoraConversation.js` | Reusable Nora chat |
 | `components/BottomNav.js` | Nav bar |
-| `lib/dates.js` | `getTodayString(timezone)` — Pacific time date utility |
+| `app/game-room/page.js` | Game Room hub |
+| `app/game-room/rabbit-hole/lobby/page.js` | Rabbit Hole lobby / waiting room |
+| `app/game-room/rabbit-hole/play/page.js` | Rabbit Hole multi-round play |
+| `app/game-room/rabbit-hole/debrief/page.js` | Rabbit Hole three-phase debrief |
+| `app/api/game-room/lobby-status/route.js` | Session lobby status check |
+| `app/api/game-room/generate-hole/route.js` | Round thread generation (idempotent, multi-round) |
+| `app/api/game-room/round-ready/route.js` | Both-ready signaling |
+| `app/api/game-room/generate-debrief/route.js` | Debrief question generation |
+| `lib/dates.js` | `getTodayString(timezone)`, `getWeekStart(timezone)` — Pacific time utilities |
 | `lib/nora-knowledge.js` | Nora frameworks, pairing matrix, mismatch detection |
 | `lib/bet-questions.js` | 120 Bet questions, weighted selection |
 | `lib/ritual-suggestions.js` | 26 curated rituals, 3 tiers, Gottman-grounded |
-| `docs/sessions/SESSION_HANDOFF.md` | This file |
-| `PRODUCT-BACKLOG.md` | Tabled ideas |
+| `Sessions/session_handoff.md` | This file |
+| `PRODUCT-BACKLOG.md` | Tabled ideas and parking lot |
 
 ---
 
@@ -259,6 +307,9 @@ Full chat with rich context builder. Cross-session memory via `nora_memory` tabl
 | `relationship_assessments` | user_id, couple_id, answers, results (jsonb), completed_at |
 | `shared_items` | couple_id, type, title, poster_path |
 | `invite_previews` | id (token), sender_id, couple_id, sender_name |
+| `game_sessions` | couple_id, mode, status, timer_minutes, hole_topic, hole_entry, nora_send_off, convergence, factual_close, topic_media, user1_in_lobby, user2_in_lobby |
+| `game_rounds` | session_id, couple_id, round_number, user1_thread, user2_thread, user1_ready, user2_ready, status |
+| `game_finds` | session_id, couple_id, user_id, round_number, find_text, created_at |
 
 ---
 
@@ -268,8 +319,9 @@ Full chat with rich context builder. Cross-session memory via `nora_memory` tabl
 All date strings use Pacific time. Never use `toISOString().split('T')[0]` — it's UTC and will cause off-by-one errors.
 
 ```javascript
-import { getTodayString } from '@/lib/dates'
+import { getTodayString, getWeekStart } from '@/lib/dates'
 const todayStr = getTodayString(userProfile.timezone)
+const weekStart = getWeekStart('America/Los_Angeles')
 ```
 
 ### Auth (Service Role Pattern)
@@ -287,7 +339,7 @@ const supabase = createClient(
 - Always verify column names against DB before writing queries — schema drift is a recurring bug source
 
 ### Claude Model Usage
-- **Sonnet** (`claude-sonnet-4-6`): Nora reactions, memory updates, Reflection generation
+- **Sonnet** (`claude-sonnet-4-6`): Nora reactions, memory updates, Reflection generation, Rabbit Hole thread generation
 - **Haiku** (`claude-haiku-4-5-20251001`): Short one-liners (Bet nora_intro, Dashboard hero message)
 
 ### Weather (Open-Meteo)
@@ -299,6 +351,40 @@ Only passed to Nora when condition is notable (rain/snow/storm/≥95°F/≤25°F
 
 ### Upcoming Dates
 Always query BOTH `date_plans` AND `custom_dates` tables — dates can live in either. Merge, sort by `date_time` ASC, take first.
+
+### Push Notifications (Non-blocking pattern)
+```javascript
+const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
+fetch(`${appBase}/api/push/send`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ userId, title, body, url }),
+}).catch(() => {}) // fire and forget — never await, never throw
+```
+
+### Stale Closure in Polling Intervals (Rabbit Hole pattern)
+When you need data inside a `setInterval` that would otherwise be stale, use a ref:
+```javascript
+const coupleRef = useRef(null)
+// set it when couple data loads:
+coupleRef.current = couple
+// read it inside the interval:
+setInterval(() => {
+  const c = coupleRef.current
+  if (!c) return
+  // use c safely
+}, 4000)
+```
+
+### Idempotent Round Generation
+Both players call `generate-hole` independently. The API checks `game_rounds` for an existing row first — if found, returns cached data without re-calling Claude. This prevents double generation when both partners mount the same round simultaneously.
+
+### MIN_ROUNDS Gate
+```javascript
+const MIN_ROUNDS = { 30: 2, 60: 3, 90: 4 }
+const minRounds = MIN_ROUNDS[timerMinutes] || 2
+const canDebrief = roundNumber >= minRounds && iAmReady && partnerIsReady
+```
 
 ---
 
@@ -314,17 +400,16 @@ Always query BOTH `date_plans` AND `custom_dates` tables — dates can live in e
 
 1. **Weather widget on Today + Dashboard headers** — subtle temp + condition icon. Open-Meteo, browser geolocation. Hero route already has weather support built in.
 2. **Date pill day label bug** — hero pills showing wrong day for upcoming dates. Cosmetic, low priority.
-3. **Saturday feature ("The Dare")** — dedicated design session needed.
-4. **Nora voice refinement pass** — all surfaces.
-5. **Nora onboarding tour** — first-time feature view flags.
-6. **Worth Reading rethink** — dedicated session. RSS excerpt bug. Nora as curator concept.
-7. **Ritual `needs_discussion` surface on Home page** — persistent, does not expire.
-8. **Weekly Reflection history view** — cap 4 weeks, older into Nora memory.
-9. **Bet question categories** — add `category` field to `lib/bet-questions.js`.
-10. **Ritual seasonal logic** and **Week 9+ cadence**.
-11. **Native app (Expo)** — long-term target.
-12. **Sound design**.
-13. **Tabled:** CAH licensing, photo bucket, biometric, physical Bet card game, After Dark, community ritual suggestions.
+3. **Nora voice refinement pass** — all surfaces.
+4. **Nora onboarding tour** — first-time feature view flags.
+5. **Worth Reading rethink** — dedicated session. RSS excerpt bug. Nora as curator concept.
+6. **Ritual `needs_discussion` surface on Home page** — persistent, does not expire.
+7. **Weekly Reflection history view** — cap 4 weeks, older into Nora memory.
+8. **Bet question categories** — add `category` field to `lib/bet-questions.js`.
+9. **Ritual seasonal logic** and **Week 9+ cadence**.
+10. **Native app (Expo)** — long-term target.
+11. **Sound design**.
+12. **Tabled:** CAH licensing, photo bucket, biometric, physical Bet card game, After Dark, community ritual suggestions.
 
 ---
 
@@ -347,3 +432,33 @@ git push
 ```
 
 Never use `npx vercel --prod`. Never push without committing first.
+
+---
+
+## 17. GAME ROOM — RABBIT HOLE SCHEMA NOTES
+
+The following columns were added to `game_sessions` for multi-round Rabbit Hole support. Verify they exist before running the game:
+
+- `nora_send_off` (text) — Nora's send-off line for round 1
+- `factual_close` (text) — what actually happened (facts only), shown in debrief phase 1
+- `topic_media` (text, nullable) — book/podcast/documentary/film about the topic
+- `convergence` (text) — Nora's philosophical layer, shown in debrief phase 2
+
+The `game_rounds` table must exist with columns:
+- `session_id` (uuid, FK → game_sessions)
+- `couple_id` (uuid, FK → couples)
+- `round_number` (integer)
+- `user1_thread` (text)
+- `user2_thread` (text)
+- `user1_ready` (boolean, default false)
+- `user2_ready` (boolean, default false)
+- `status` (text — `'active'` | `'completed'`)
+- `created_at`, `updated_at` (timestamptz)
+
+The `game_finds` table must exist with columns:
+- `session_id` (uuid)
+- `couple_id` (uuid)
+- `user_id` (uuid)
+- `round_number` (integer)
+- `find_text` (text)
+- `created_at` (timestamptz)
