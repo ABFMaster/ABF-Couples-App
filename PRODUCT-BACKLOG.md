@@ -49,6 +49,10 @@ Add category field (preferences/likely/reactions/confessions) to all 120 questio
 *Parked: March 20, 2026*
 Couples who don't see each other daily will always "fail" daily rituals like The Six-Second Kiss. Fix: add a fourth check-in option "We didn't see each other this week" that skips the week without penalizing the streak. Broader proximity-aware onboarding (how often do you see each other?) should be addressed when building multi-couple-type support. Do not filter ritual suggestions by proximity — let couples choose freely.
 
+### Per-User Timezone for Notifications
+*Parked: March 21, 2026*
+All timed notifications (3am content creation, noon nudge) must fire at 3am in the USER's timezone, not a fixed UTC time. Timezone is already stored in `user_profiles.timezone`. Eventually geolocation should update this automatically. For now, a single Vercel cron at 3am Pacific covers Matt and Cass (both Pacific). When scaling, implement per-timezone cron scheduling or a worker that reads each couple's timezone and fires at the right UTC offset. Noon nudge (did you interact yet?) also fires in user's local timezone.
+
 ### Rabbit Hole — Play UX, Pacing & Mechanics (Full Design)
 *Parked: March 20, 2026*
 
