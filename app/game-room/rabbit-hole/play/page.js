@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-const MIN_FINDS_BEFORE_DEBRIEF = 2
+const MIN_ROUNDS = { 30: 2, 60: 3, 90: 4 }
 
 export default function RabbitHolePlayPage() {
   const router = useRouter()
@@ -11,6 +11,8 @@ export default function RabbitHolePlayPage() {
   const [userId, setUserId] = useState(null)
   const [coupleId, setCoupleId] = useState(null)
   const [session, setSession] = useState(null)
+  const [currentRound, setCurrentRound] = useState(null)
+  const [roundNumber, setRoundNumber] = useState(1)
   const [hole, setHole] = useState(null)
   const [myThread, setMyThread] = useState(null)
   const [userName, setUserName] = useState('')
@@ -20,24 +22,25 @@ export default function RabbitHolePlayPage() {
   const [myFinds, setMyFinds] = useState([])
   const [partnerFinds, setPartnerFinds] = useState([])
   const [newPartnerFind, setNewPartnerFind] = useState(null)
-  const [tellMoreSent, setTellMoreSent] = useState({})
   const [submitting, setSubmitting] = useState(false)
+  const [signalingReady, setSignalingReady] = useState(false)
+  const [iAmReady, setIAmReady] = useState(false)
+  const [partnerIsReady, setPartnerIsReady] = useState(false)
   const [timeLeft, setTimeLeft] = useState(null)
+  const [timerExpired, setTimerExpired] = useState(false)
+  const [tellMoreSent, setTellMoreSent] = useState({})
   const [showInstructions, setShowInstructions] = useState(true)
+  const [loadingNextRound, setLoadingNextRound] = useState(false)
   const timerRef = useRef(null)
   const pollRef = useRef(null)
-  const newFindTimerRef = useRef(null)
   const prevPartnerCountRef = useRef(0)
-  const sessionIdRef = useRef(null)
-  const userIdRef = useRef(null)
-  const partnerNameRef = useRef('your partner')
+  const coupleRef = useRef(null)
 
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
       setUserId(user.id)
-      userIdRef.current = user.id
 
       const { data: couple } = await supabase
         .from('couples')
@@ -46,6 +49,7 @@ export default function RabbitHolePlayPage() {
         .maybeSingle()
       if (!couple) { router.push('/connect'); return }
       setCoupleId(couple.id)
+      coupleRef.current = couple
 
       const user1 = couple.user1_id === user.id
       setIsUser1(user1)
@@ -56,42 +60,79 @@ export default function RabbitHolePlayPage() {
         supabase.from('user_profiles').select('display_name').eq('user_id', partnerId).maybeSingle(),
       ])
       if (myProfile?.display_name) setUserName(myProfile.display_name)
-      if (partnerProfile?.display_name) {
-        setPartnerName(partnerProfile.display_name)
-        partnerNameRef.current = partnerProfile.display_name
-      }
+      if (partnerProfile?.display_name) setPartnerName(partnerProfile.display_name)
 
-      // Get active session
       const statusRes = await fetch(`/api/game-room/lobby-status?coupleId=${couple.id}&mode=rabbit-hole`)
       const statusData = await statusRes.json()
       if (!statusData.session || statusData.session.status !== 'active') {
         router.push('/game-room/rabbit-hole')
         return
       }
-      setSession(statusData.session)
-      sessionIdRef.current = statusData.session.id
-
-      // Generate or fetch the hole
-      const holeRes = await fetch('/api/game-room/generate-hole', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: statusData.session.id, coupleId: couple.id }),
-      })
-      const holeData = await holeRes.json()
-      setHole(holeData)
-      setMyThread(user1 ? holeData.thread_user1 : holeData.thread_user2)
+      const sess = statusData.session
+      setSession(sess)
 
       // Set timer
-      if (statusData.session.expires_at) {
-        const remaining = Math.max(0, new Date(statusData.session.expires_at) - new Date())
-        setTimeLeft(Math.floor(remaining / 1000))
+      if (sess.expires_at) {
+        const remaining = Math.max(0, new Date(sess.expires_at) - new Date())
+        if (remaining <= 0) setTimerExpired(true)
+        else setTimeLeft(Math.floor(remaining / 1000))
       }
 
-      // Load any existing finds
+      // Get current active round or start round 1
+      const { data: rounds } = await supabase
+        .from('game_rounds')
+        .select('*')
+        .eq('session_id', sess.id)
+        .order('round_number', { ascending: false })
+
+      let activeRound = rounds?.find(r => r.status === 'active')
+      const latestRoundNum = rounds?.length > 0 ? rounds[0].round_number : 0
+
+      if (!activeRound) {
+        // Generate round 1
+        const holeRes = await fetch('/api/game-room/generate-hole', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: sess.id, coupleId: couple.id, roundNumber: 1 }),
+        })
+        const holeData = await holeRes.json()
+        setHole(holeData)
+        setMyThread(user1 ? holeData.thread_user1 : holeData.thread_user2)
+        setRoundNumber(1)
+
+        // Fetch the newly created round
+        const { data: newRound } = await supabase
+          .from('game_rounds')
+          .select('*')
+          .eq('session_id', sess.id)
+          .eq('round_number', 1)
+          .maybeSingle()
+        activeRound = newRound
+      } else {
+        // Load existing round
+        const rNum = activeRound.round_number
+        setRoundNumber(rNum)
+        setIAmReady(user1 ? activeRound.user1_ready : activeRound.user2_ready)
+        setPartnerIsReady(user1 ? activeRound.user2_ready : activeRound.user1_ready)
+        setMyThread(user1 ? activeRound.user1_thread : activeRound.user2_thread)
+
+        // Load session hole data
+        const holeRes = await fetch('/api/game-room/generate-hole', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: sess.id, coupleId: couple.id, roundNumber: rNum }),
+        })
+        const holeData = await holeRes.json()
+        setHole(holeData)
+      }
+
+      setCurrentRound(activeRound)
+
+      // Load finds for current round
       const { data: finds } = await supabase
         .from('game_finds')
         .select('*')
-        .eq('session_id', statusData.session.id)
+        .eq('session_id', sess.id)
         .order('created_at', { ascending: true })
 
       if (finds?.length > 0) {
@@ -113,46 +154,99 @@ export default function RabbitHolePlayPage() {
     if (timeLeft === null) return
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
-        if (prev <= 1) { clearInterval(timerRef.current); return 0 }
+        if (prev <= 1) {
+          clearInterval(timerRef.current)
+          setTimerExpired(true)
+          return 0
+        }
         return prev - 1
       })
     }, 1000)
     return () => clearInterval(timerRef.current)
   }, [timeLeft !== null]) // eslint-disable-line
 
-  // Poll for partner finds
+  // Poll for partner finds + round ready state
   useEffect(() => {
     if (!session?.id || !userId) return
     pollRef.current = setInterval(async () => {
-      const sid = sessionIdRef.current
-      const uid = userIdRef.current
-      if (!sid || !uid) return
-
+      // Poll finds
       const { data: finds } = await supabase
         .from('game_finds')
         .select('*')
-        .eq('session_id', sid)
+        .eq('session_id', session.id)
         .order('created_at', { ascending: true })
 
-      if (!finds) return
-      const theirs = finds.filter(f => f.user_id !== uid)
-
-      if (theirs.length > prevPartnerCountRef.current) {
-        const newest = theirs[theirs.length - 1]
-        setNewPartnerFind(newest)
-        clearTimeout(newFindTimerRef.current)
-        newFindTimerRef.current = setTimeout(() => setNewPartnerFind(null), 8000)
+      if (finds?.length > 0) {
+        const theirs = finds.filter(f => f.user_id !== userId)
+        if (theirs.length > prevPartnerCountRef.current) {
+          const newest = theirs[theirs.length - 1]
+          setNewPartnerFind(newest)
+          setTimeout(() => setNewPartnerFind(null), 8000)
+          prevPartnerCountRef.current = theirs.length
+        }
+        setPartnerFinds(theirs)
       }
 
-      prevPartnerCountRef.current = theirs.length
-      setPartnerFinds(theirs)
+      // Poll round ready state
+      const { data: round } = await supabase
+        .from('game_rounds')
+        .select('*')
+        .eq('session_id', session.id)
+        .eq('round_number', roundNumber)
+        .maybeSingle()
+
+      if (round) {
+        const couple = coupleRef.current
+        if (couple) {
+          const user1 = couple.user1_id === userId
+          setPartnerIsReady(user1 ? round.user2_ready : round.user1_ready)
+
+          // Both ready — load next round
+          if (round.user1_ready && round.user2_ready && round.status === 'completed') {
+            clearInterval(pollRef.current)
+            await loadNextRound(roundNumber + 1)
+          }
+        }
+      }
     }, 4000)
     return () => clearInterval(pollRef.current)
-  }, [session, userId])
+  }, [session, userId, roundNumber]) // eslint-disable-line
+
+  const loadNextRound = async (nextRoundNum) => {
+    if (!session || !coupleId) return
+    setLoadingNextRound(true)
+    try {
+      const holeRes = await fetch('/api/game-room/generate-hole', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id, coupleId, roundNumber: nextRoundNum }),
+      })
+      const holeData = await holeRes.json()
+      const couple = coupleRef.current
+      const user1 = couple?.user1_id === userId
+
+      setRoundNumber(nextRoundNum)
+      setMyThread(user1 ? holeData.thread_user1 : holeData.thread_user2)
+      setHole(prev => ({ ...prev, nora_nudge: holeData.nora_nudge }))
+      setIAmReady(false)
+      setPartnerIsReady(false)
+      setShowInstructions(false)
+
+      // Fetch new round
+      const { data: newRound } = await supabase
+        .from('game_rounds')
+        .select('*')
+        .eq('session_id', session.id)
+        .eq('round_number', nextRoundNum)
+        .maybeSingle()
+      setCurrentRound(newRound)
+    } catch {} finally { setLoadingNextRound(false) }
+  }
 
   const handleDropFind = async () => {
     if (!findText.trim() || submitting) return
     setSubmitting(true)
+    setShowInstructions(false)
     try {
       const { data } = await supabase
         .from('game_finds')
@@ -161,33 +255,53 @@ export default function RabbitHolePlayPage() {
           couple_id: coupleId,
           user_id: userId,
           find_text: findText.trim(),
-          round: myFinds.length + 1,
+          round_number: roundNumber,
+          round: roundNumber,
         })
         .select('*')
         .maybeSingle()
       if (data) {
         setMyFinds(prev => [...prev, data])
         setFindText('')
-        setShowInstructions(false)
       }
     } catch {} finally { setSubmitting(false) }
   }
 
-  const handleTellMore = async (findId) => {
+  const handleSignalReady = async () => {
+    if (signalingReady || iAmReady) return
+    setSignalingReady(true)
+    try {
+      const res = await fetch('/api/game-room/round-ready', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id, coupleId, userId, roundNumber }),
+      })
+      const data = await res.json()
+      setIAmReady(true)
+      if (data.bothReady) {
+        await loadNextRound(roundNumber + 1)
+      }
+    } catch {} finally { setSignalingReady(false) }
+  }
+
+  const handleTellMeMore = async (findId) => {
     if (tellMoreSent[findId]) return
     setTellMoreSent(prev => ({ ...prev, [findId]: true }))
     try {
-      await fetch('/api/push/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          coupleId,
-          senderId: userId,
-          title: 'Tell me more',
-          body: 'Tell me more',
-          excludeSender: false,
-        }),
-      }).catch(() => {})
+      const couple = coupleRef.current
+      if (couple) {
+        const partnerUserId = couple.user1_id === userId ? couple.user2_id : couple.user1_id
+        await fetch('/api/push/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: partnerUserId,
+            title: userName || 'Your partner',
+            body: 'Tell me more',
+            url: '/game-room/rabbit-hole/play',
+          }),
+        })
+      }
     } catch {}
   }
 
@@ -197,29 +311,18 @@ export default function RabbitHolePlayPage() {
     return `${m}:${s.toString().padStart(2, '0')}`
   }
 
-  const myFindCount = myFinds.length
-  const partnerFindCount = partnerFinds.length
-  const bothHaveMinFinds = myFindCount >= MIN_FINDS_BEFORE_DEBRIEF && partnerFindCount >= MIN_FINDS_BEFORE_DEBRIEF
+  const timerMinutes = session?.timer_minutes || 60
+  const minRounds = MIN_ROUNDS[timerMinutes] || 3
+  const canDebrief = roundNumber >= minRounds && iAmReady && partnerIsReady
 
-  const getProgressMessage = () => {
-    if (bothHaveMinFinds) return null
-    if (myFindCount < MIN_FINDS_BEFORE_DEBRIEF && partnerFindCount < MIN_FINDS_BEFORE_DEBRIEF) {
-      const need = MIN_FINDS_BEFORE_DEBRIEF - Math.max(myFindCount, partnerFindCount)
-      return `Both partners need ${MIN_FINDS_BEFORE_DEBRIEF} finds before convergence. Go deeper.`
-    }
-    if (myFindCount < MIN_FINDS_BEFORE_DEBRIEF) {
-      const need = MIN_FINDS_BEFORE_DEBRIEF - myFindCount
-      return `Drop ${need} more find${need === 1 ? '' : 's'} before convergence unlocks.`
-    }
-    return `Waiting for ${partnerNameRef.current} to find ${MIN_FINDS_BEFORE_DEBRIEF - partnerFindCount} more thing${MIN_FINDS_BEFORE_DEBRIEF - partnerFindCount === 1 ? '' : 's'}...`
-  }
-
-  if (loading) {
+  if (loading || loadingNextRound) {
     return (
       <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid #4338CA', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
-          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#7A8C6E', fontStyle: 'italic' }}>Nora is picking your hole...</p>
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#7A8C6E', fontStyle: 'italic' }}>
+            {loadingNextRound ? 'Nora is sending you deeper...' : 'Nora is picking your hole...'}
+          </p>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -231,204 +334,182 @@ export default function RabbitHolePlayPage() {
       <div style={{ padding: '48px 24px 120px' }}>
 
         {/* Timer bar */}
-        {timeLeft !== null && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <button onClick={() => router.push('/game-room/rabbit-hole')} style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '13px', cursor: 'pointer', padding: 0 }}>
-              ← Back
-            </button>
-            <div style={{
-              background: timeLeft < 300 ? '#FEF2F2' : '#EEF2FF',
-              borderRadius: '20px', padding: '6px 14px',
-              fontSize: '14px', fontWeight: 600,
-              color: timeLeft < 300 ? '#DC2626' : '#4338CA',
-            }}>
-              ⏱ {formatTime(timeLeft)}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <button onClick={() => router.push('/game-room/rabbit-hole')} style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '13px', cursor: 'pointer', padding: 0 }}>← Back</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '11px', letterSpacing: '0.1em', color: '#9CA3AF', textTransform: 'uppercase' }}>Round {roundNumber}</span>
+            {timerExpired ? (
+              <div style={{ background: '#EEF2FF', borderRadius: '20px', padding: '6px 14px', fontSize: '13px', fontWeight: 600, color: '#4338CA' }}>
+                Don't let me stop you ✦
+              </div>
+            ) : timeLeft !== null ? (
+              <div style={{ background: timeLeft < 300 ? '#FEF2F2' : '#EEF2FF', borderRadius: '20px', padding: '6px 14px', fontSize: '14px', fontWeight: 600, color: timeLeft < 300 ? '#DC2626' : '#4338CA' }}>
+                ⏱ {formatTime(timeLeft)}
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {/* NORA HOST intro — only on round 1 */}
+        {roundNumber === 1 && showInstructions && (
+          <div style={{ background: '#F5F3FF', border: '0.5px solid #C4B5FD', borderRadius: '20px', padding: '20px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#7C3AED' }} />
+              <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#7C3AED', textTransform: 'uppercase', margin: 0 }}>Nora · Your host</p>
             </div>
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#1E1B4B', lineHeight: 1.6, margin: '0 0 10px', fontStyle: 'italic' }}>
+              I picked this topic. I know how it ends — I just don't know how you'll get there. Go follow your thread, drop what you find, and I'll bring it all together when you're ready.
+            </p>
+            <p style={{ fontSize: '13px', color: '#7C3AED', margin: 0 }}>Drop finds as you go. When you're done with this round, tap <strong>Ready for next →</strong></p>
+          </div>
+        )}
+
+        {/* Nora nudge — subsequent rounds */}
+        {roundNumber > 1 && hole?.nora_nudge && (
+          <div style={{ background: '#F5F3FF', border: '0.5px solid #C4B5FD', borderRadius: '16px', padding: '16px 20px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#7C3AED' }} />
+              <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#7C3AED', textTransform: 'uppercase', margin: 0 }}>Nora · Round {roundNumber}</p>
+            </div>
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#1E1B4B', lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>{hole.nora_nudge}</p>
           </div>
         )}
 
         {/* THE DROP — entry point */}
-        <div style={{
-          background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 60%, #4338CA 100%)',
-          borderRadius: '20px', padding: '28px 24px', marginBottom: '24px',
-          position: 'relative', overflow: 'hidden',
-        }}>
+        <div style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 60%, #4338CA 100%)', borderRadius: '20px', padding: '24px', marginBottom: '20px', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
           <div style={{ position: 'relative' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
               <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#A5B4FC' }} />
               <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', margin: 0 }}>Nora · The Drop</p>
             </div>
-            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '17px', color: '#FFFFFF', lineHeight: 1.6, margin: '0 0 16px', fontStyle: 'italic' }}>
-              {hole?.entry}
-            </p>
-            {hole?.nora_send_off && (
-              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', margin: 0, fontStyle: 'italic' }}>
-                {hole.nora_send_off}
-              </p>
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#FFFFFF', lineHeight: 1.6, margin: '0 0 10px', fontStyle: 'italic' }}>{hole?.entry}</p>
+            {hole?.nora_send_off && roundNumber === 1 && (
+              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', margin: 0, fontStyle: 'italic' }}>{hole.nora_send_off}</p>
             )}
           </div>
         </div>
 
         {/* YOUR THREAD */}
-        <div style={{ background: '#FFFFFF', border: '1.5px solid #C7D2FE', borderRadius: '20px', padding: '20px', marginBottom: '16px' }}>
-          <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#4338CA', textTransform: 'uppercase', margin: '0 0 8px', fontWeight: 700 }}>Your thread</p>
-          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#1A1A1A', lineHeight: 1.55, margin: 0 }}>
-            {myThread}
-          </p>
+        <div style={{ background: '#FFFFFF', border: '2px solid #4338CA', borderRadius: '20px', padding: '20px', marginBottom: '20px' }}>
+          <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#4338CA', textTransform: 'uppercase', margin: '0 0 8px', fontWeight: 700 }}>Your thread — Round {roundNumber} 🕳️</p>
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#1A1A1A', lineHeight: 1.55, margin: 0 }}>{myThread}</p>
         </div>
-
-        {/* HOW TO PLAY — yellow instructions panel */}
-        {showInstructions && (
-          <div style={{
-            background: '#FFFBEB', border: '1px solid #FDE68A',
-            borderRadius: '16px', padding: '16px 20px', marginBottom: '16px',
-          }}>
-            <p style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#92400E', textTransform: 'uppercase', margin: '0 0 8px', fontWeight: 700 }}>How to play</p>
-            <p style={{ fontSize: '14px', color: '#78350F', lineHeight: 1.6, margin: 0 }}>
-              Follow your thread anywhere — Wikipedia, YouTube, your memory, your neighborhood. When you find something interesting, paste or type it below and tap <strong>Drop it</strong>. You need at least {MIN_FINDS_BEFORE_DEBRIEF} finds each before convergence unlocks.
-            </p>
-          </div>
-        )}
 
         {/* NEW PARTNER FIND — theatre */}
         {newPartnerFind && (
-          <div style={{
-            background: '#F5F3FF', border: '1.5px solid #8B5CF6',
-            borderRadius: '20px', padding: '20px', marginBottom: '16px',
-            animation: 'slideIn 0.35s ease-out',
-          }}>
-            <p style={{ fontSize: '11px', letterSpacing: '0.14em', color: '#7C3AED', textTransform: 'uppercase', margin: '0 0 6px', fontWeight: 700 }}>
-              {partnerName} dropped a find 🕳️
-            </p>
-            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '17px', color: '#1A1A1A', lineHeight: 1.55, margin: '0 0 14px' }}>
-              {newPartnerFind.find_text}
-            </p>
+          <div style={{ background: '#F5F3FF', border: '2px solid #7C3AED', borderRadius: '20px', padding: '20px', marginBottom: '20px', animation: 'slideIn 400ms cubic-bezier(0.22, 1, 0.36, 1)' }}>
+            <p style={{ fontSize: '13px', fontWeight: 700, color: '#7C3AED', margin: '0 0 10px' }}>🕳️ {partnerName} dropped a find!</p>
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#1A1A1A', lineHeight: 1.55, margin: '0 0 14px' }}>{newPartnerFind.find_text}</p>
             <button
-              onClick={() => handleTellMore(newPartnerFind.id)}
-              disabled={!!tellMoreSent[newPartnerFind.id]}
-              style={{
-                background: 'transparent',
-                border: `1.5px solid ${tellMoreSent[newPartnerFind.id] ? '#C4B5FD' : '#7C3AED'}`,
-                borderRadius: '20px', padding: '8px 18px',
-                fontSize: '13px', fontWeight: 600,
-                color: tellMoreSent[newPartnerFind.id] ? '#C4B5FD' : '#7C3AED',
-                cursor: tellMoreSent[newPartnerFind.id] ? 'default' : 'pointer',
-              }}
+              onClick={() => handleTellMeMore(newPartnerFind.id)}
+              disabled={tellMoreSent[newPartnerFind.id]}
+              style={{ background: tellMoreSent[newPartnerFind.id] ? '#EDE9FE' : '#7C3AED', color: tellMoreSent[newPartnerFind.id] ? '#7C3AED' : '#FFFFFF', border: 'none', borderRadius: '20px', padding: '8px 20px', fontSize: '13px', fontWeight: 600, cursor: tellMoreSent[newPartnerFind.id] ? 'default' : 'pointer' }}
             >
               {tellMoreSent[newPartnerFind.id] ? 'Sent ✓' : 'Tell me more'}
             </button>
           </div>
         )}
 
+        {/* FIND HISTORY */}
+        {(myFinds.length > 0 || partnerFinds.length > 0) && (
+          <div style={{ marginBottom: '20px' }}>
+            <p style={{ fontSize: '10px', letterSpacing: '0.12em', color: '#9CA3AF', textTransform: 'uppercase', margin: '0 0 10px', fontWeight: 700 }}>Finds so far</p>
+            {[...myFinds.map(f => ({ ...f, mine: true })), ...partnerFinds.map(f => ({ ...f, mine: false }))]
+              .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+              .map((f) => (
+                <div key={f.id} style={{ background: f.mine ? '#EEF2FF' : '#F5F3FF', border: `0.5px solid ${f.mine ? '#C7D2FE' : '#C4B5FD'}`, borderRadius: '16px', padding: '14px 18px', marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                    <p style={{ fontSize: '10px', letterSpacing: '0.1em', color: f.mine ? '#4338CA' : '#7C3AED', textTransform: 'uppercase', margin: 0, fontWeight: 700 }}>{f.mine ? 'You' : partnerName} · R{f.round_number || 1}</p>
+                    {!f.mine && !tellMoreSent[f.id] && (
+                      <button onClick={() => handleTellMeMore(f.id)} style={{ background: 'none', border: '0.5px solid #7C3AED', borderRadius: '12px', padding: '3px 10px', fontSize: '11px', color: '#7C3AED', cursor: 'pointer' }}>Tell me more</button>
+                    )}
+                    {!f.mine && tellMoreSent[f.id] && <span style={{ fontSize: '11px', color: '#7C3AED' }}>Sent ✓</span>}
+                  </div>
+                  <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#1A1A1A', lineHeight: 1.5, margin: 0 }}>{f.find_text}</p>
+                </div>
+              ))}
+          </div>
+        )}
+
         {/* DROP A FIND */}
         <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '20px', padding: '20px', marginBottom: '16px' }}>
-          <p style={{ fontSize: '13px', fontWeight: 600, color: '#1A1A1A', margin: '0 0 12px' }}>
-            Drop a find {myFindCount > 0 && <span style={{ fontWeight: 400, color: '#9CA3AF' }}>({myFindCount} dropped)</span>}
+          <p style={{ fontSize: '13px', fontWeight: 700, color: '#1A1A1A', margin: '0 0 12px' }}>
+            Drop a find {myFinds.length > 0 ? `(${myFinds.length} dropped)` : ''}
           </p>
           <textarea
             value={findText}
             onChange={e => setFindText(e.target.value)}
-            placeholder="Paste a link, type a fact, share something wild..."
-            style={{
-              width: '100%', background: '#FAF6F0', border: '0.5px solid #E8DDD0',
-              borderRadius: '12px', padding: '14px', fontSize: '14px',
-              fontFamily: "'Fraunces', Georgia, serif", color: '#1A1A1A',
-              resize: 'none', height: '100px', outline: 'none', boxSizing: 'border-box',
-              lineHeight: 1.5,
-            }}
+            placeholder="Found something? Paste or type it here..."
+            style={{ width: '100%', background: '#FAF6F0', border: '0.5px solid #E8DDD0', borderRadius: '12px', padding: '14px', fontSize: '14px', fontFamily: "'Fraunces', Georgia, serif", color: '#1A1A1A', resize: 'none', height: '90px', outline: 'none', boxSizing: 'border-box', lineHeight: 1.5 }}
           />
           <button
             onClick={handleDropFind}
             disabled={!findText.trim() || submitting}
-            style={{
-              width: '100%', marginTop: '12px', padding: '14px',
-              background: findText.trim() ? 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)' : '#E8DDD0',
-              color: findText.trim() ? '#FFFFFF' : '#B8A898',
-              border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600,
-              cursor: findText.trim() && !submitting ? 'pointer' : 'not-allowed',
-              transition: 'all 150ms',
-            }}
+            style={{ width: '100%', marginTop: '10px', padding: '14px', background: findText.trim() ? 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)' : '#E8DDD0', color: findText.trim() ? '#FFFFFF' : '#B8A898', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: findText.trim() && !submitting ? 'pointer' : 'not-allowed', transition: 'all 150ms' }}
           >
             {submitting ? 'Dropping...' : 'Drop it 🕳️'}
           </button>
         </div>
 
-        {/* FIND HISTORY */}
-        {(myFinds.length > 0 || partnerFinds.length > 0) && (
+        {/* READY FOR NEXT ROUND */}
+        {!canDebrief && (
           <div style={{ marginBottom: '16px' }}>
-            <p style={{ fontSize: '11px', letterSpacing: '0.14em', color: '#9CA3AF', textTransform: 'uppercase', marginBottom: '12px', fontWeight: 700 }}>
-              Finds so far
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {/* Interleave by created_at */}
-              {[...myFinds.map(f => ({ ...f, mine: true })), ...partnerFinds.map(f => ({ ...f, mine: false }))]
-                .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-                .map((f) => (
-                  <div
-                    key={f.id}
-                    style={{
-                      background: f.mine ? '#EEF2FF' : '#F5F3FF',
-                      border: `0.5px solid ${f.mine ? '#C7D2FE' : '#C4B5FD'}`,
-                      borderRadius: '16px', padding: '16px 18px',
-                    }}
-                  >
-                    <p style={{ fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 6px', color: f.mine ? '#4338CA' : '#7C3AED' }}>
-                      {f.mine ? 'You' : partnerName}
-                    </p>
-                    <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#1A1A1A', lineHeight: 1.5, margin: 0 }}>
-                      {f.find_text}
-                    </p>
-                    {!f.mine && (
-                      <button
-                        onClick={() => handleTellMore(f.id)}
-                        disabled={!!tellMoreSent[f.id]}
-                        style={{
-                          marginTop: '10px', background: 'transparent',
-                          border: `1px solid ${tellMoreSent[f.id] ? '#C4B5FD' : '#7C3AED'}`,
-                          borderRadius: '16px', padding: '5px 14px',
-                          fontSize: '12px', fontWeight: 600,
-                          color: tellMoreSent[f.id] ? '#C4B5FD' : '#7C3AED',
-                          cursor: tellMoreSent[f.id] ? 'default' : 'pointer',
-                        }}
-                      >
-                        {tellMoreSent[f.id] ? 'Sent ✓' : 'Tell me more'}
-                      </button>
-                    )}
-                  </div>
-                ))}
-            </div>
+            {/* Both ready status */}
+            {(iAmReady || partnerIsReady) && (
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ flex: 1, background: iAmReady ? '#EEF2FF' : '#F9FAFB', border: `1.5px solid ${iAmReady ? '#4338CA' : '#E8DDD0'}`, borderRadius: '12px', padding: '10px', textAlign: 'center' }}>
+                  <p style={{ fontSize: '12px', color: iAmReady ? '#4338CA' : '#9CA3AF', margin: 0, fontWeight: 600 }}>{iAmReady ? '✓ Ready' : 'Still going'}</p>
+                  <p style={{ fontSize: '11px', color: '#9CA3AF', margin: '2px 0 0' }}>You</p>
+                </div>
+                <div style={{ flex: 1, background: partnerIsReady ? '#EEF2FF' : '#F9FAFB', border: `1.5px solid ${partnerIsReady ? '#4338CA' : '#E8DDD0'}`, borderRadius: '12px', padding: '10px', textAlign: 'center' }}>
+                  <p style={{ fontSize: '12px', color: partnerIsReady ? '#4338CA' : '#9CA3AF', margin: 0, fontWeight: 600 }}>{partnerIsReady ? '✓ Ready' : 'Still going'}</p>
+                  <p style={{ fontSize: '11px', color: '#9CA3AF', margin: '2px 0 0' }}>{partnerName}</p>
+                </div>
+              </div>
+            )}
+
+            {!iAmReady ? (
+              <button
+                onClick={handleSignalReady}
+                disabled={signalingReady}
+                style={{ width: '100%', padding: '14px', background: '#FFFFFF', border: '2px solid #4338CA', borderRadius: '30px', fontSize: '15px', fontWeight: 600, color: '#4338CA', cursor: signalingReady ? 'not-allowed' : 'pointer', opacity: signalingReady ? 0.7 : 1 }}
+              >
+                {signalingReady ? 'Signaling...' : 'Ready for next →'}
+              </button>
+            ) : !partnerIsReady ? (
+              <div style={{ textAlign: 'center', padding: '12px 0', color: '#9CA3AF', fontSize: '13px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                  Waiting for {partnerName}...
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
 
-        {/* PROGRESS / DEBRIEF */}
-        {!bothHaveMinFinds ? (
-          getProgressMessage() && (
-            <div style={{ textAlign: 'center', padding: '12px 0' }}>
-              <p style={{ fontSize: '13px', color: '#9CA3AF', fontStyle: 'italic', margin: 0 }}>
-                {getProgressMessage()}
-              </p>
-            </div>
-          )
-        ) : (
+        {/* DEBRIEF CTA */}
+        {canDebrief && (
           <button
             onClick={() => router.push('/game-room/rabbit-hole/debrief')}
-            style={{
-              width: '100%', padding: '16px', marginTop: '8px',
-              background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)',
-              color: '#FFFFFF', border: 'none', borderRadius: '30px',
-              fontSize: '15px', fontWeight: 600, cursor: 'pointer',
-            }}
+            style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}
           >
-            We're back — talk to Nora 🕳️
+            Bring it home — talk to Nora 🕳️
           </button>
+        )}
+
+        {/* Timer expired nudge */}
+        {timerExpired && !canDebrief && (
+          <p style={{ textAlign: 'center', fontSize: '13px', color: '#9CA3AF', fontStyle: 'italic', marginTop: '12px' }}>
+            Time's up — but don't let me stop you. Keep going or wrap up when you're ready.
+          </p>
         )}
 
       </div>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </div>
   )
