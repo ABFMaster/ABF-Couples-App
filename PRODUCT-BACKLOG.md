@@ -53,6 +53,10 @@ Couples who don't see each other daily will always "fail" daily rituals like The
 *Parked: March 21, 2026*
 All timed notifications (3am content creation, noon nudge) must fire at 3am in the USER's timezone, not a fixed UTC time. Timezone is already stored in `user_profiles.timezone`. Eventually geolocation should update this automatically. For now, a single Vercel cron at 3am Pacific covers Matt and Cass (both Pacific). When scaling, implement per-timezone cron scheduling or a worker that reads each couple's timezone and fires at the right UTC offset. Noon nudge (did you interact yet?) also fires in user's local timezone.
 
+### Notification Architecture — Cron Refactor
+*Parked: March 21, 2026*
+Current behavior is wrong: spark/today and bet/today CREATE content when a user opens the app, then fire notifications to both users including the person who just opened the app. Correct architecture: Vercel cron jobs create content at 3am in user's timezone, notify both users. spark/today and bet/today become read-only fetch routes. Routes needed: app/api/cron/spark, app/api/cron/bet, app/api/cron/reflection. Noon nudge cron checks if either partner hasn't interacted and fires a gentle reminder. vercel.json cron schedule definitions needed.
+
 ### Rabbit Hole — Play UX, Pacing & Mechanics (Full Design)
 *Parked: March 20, 2026*
 

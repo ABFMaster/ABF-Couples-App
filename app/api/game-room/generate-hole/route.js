@@ -6,7 +6,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(request) {
   try {
-    const { sessionId, coupleId } = await request.json()
+    const { sessionId, coupleId, roundNumber = 1 } = await request.json()
     if (!sessionId || !coupleId) {
       return NextResponse.json({ error: 'sessionId and coupleId required' }, { status: 400 })
     }
@@ -24,14 +24,24 @@ export async function POST(request) {
       .maybeSingle()
     if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
 
-    // Already has a hole generated
-    if (session.hole_entry) {
+    // Check if this round already exists — idempotent
+    const { data: existingRound } = await supabase
+      .from('game_rounds')
+      .select('*')
+      .eq('session_id', sessionId)
+      .eq('round_number', roundNumber)
+      .maybeSingle()
+
+    if (existingRound) {
+      // Return existing round data — don't generate twice
       return NextResponse.json({
         topic: session.hole_topic,
         entry: session.hole_entry,
-        thread1: session.user1_thread,
-        thread2: session.user2_thread,
-        convergence: session.convergence,
+        nora_send_off: session.nora_send_off,
+        thread_user1: existingRound.user1_thread,
+        thread_user2: existingRound.user2_thread,
+        round: roundNumber,
+        alreadyExists: true,
       })
     }
 
@@ -51,45 +61,97 @@ export async function POST(request) {
 
     const user1Name = user1Profile?.display_name || 'Partner 1'
     const user2Name = user2Profile?.display_name || 'Partner 2'
-    const user1Interests = user1Profile?.game_interests
-    const user2Interests = user2Profile?.game_interests
+
+    // Get previous rounds for context
+    const { data: previousRounds } = await supabase
+      .from('game_rounds')
+      .select('*')
+      .eq('session_id', sessionId)
+      .order('round_number', { ascending: true })
+
+    // Get all finds so far for context
+    const { data: allFinds } = await supabase
+      .from('game_finds')
+      .select('*')
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: true })
+
+    const user1Finds = allFinds?.filter(f => f.user_id === couple.user1_id) || []
+    const user2Finds = allFinds?.filter(f => f.user_id === couple.user2_id) || []
+
+    const isFirstRound = roundNumber === 1
+    const timerMinutes = session.timer_minutes || 60
+
+    // Build context for subsequent rounds
+    const previousContext = previousRounds?.length > 0 ? `
+Previous rounds context:
+${previousRounds.map(r => `Round ${r.round_number}: ${user1Name} had thread: "${r.user1_thread}" / ${user2Name} had thread: "${r.user2_thread}"`).join('\n')}
+
+What they found so far:
+${user1Name}: ${user1Finds.map(f => f.find_text).join(' | ') || 'Nothing yet'}
+${user2Name}: ${user2Finds.map(f => f.find_text).join(' | ') || 'Nothing yet'}
+`.trim() : ''
 
     const interestsContext = `
-${user1Name}'s interests:
-${user1Interests ? JSON.stringify(user1Interests, null, 2) : 'No interests on file yet — use general curiosity topics.'}
-
-${user2Name}'s interests:
-${user2Interests ? JSON.stringify(user2Interests, null, 2) : 'No interests on file yet — use general curiosity topics.'}
+${user1Name}'s interests: ${user1Profile?.game_interests ? JSON.stringify(user1Profile.game_interests) : 'General curiosity'}
+${user2Name}'s interests: ${user2Profile?.game_interests ? JSON.stringify(user2Profile.game_interests) : 'General curiosity'}
 `.trim()
 
-    const prompt = `You are Nora — a warm, witty, mischievous relationship coach who is also an invisible game master. You are generating a personalized Rabbit Hole experience for a couple.
+    let prompt
 
-Here are what you know about them:
+    if (isFirstRound) {
+      prompt = `You are Nora — warm, witty, mischievous game master. You are generating Round 1 of a Rabbit Hole game for a couple.
+
+Here is what you know about them:
 ${interestsContext}
 
-Your job is to create a rabbit hole that:
-1. Starts with a single irresistible entry point — one specific sentence that makes both people go "wait, tell me more"
-2. Gives ${user1Name} a specific thread to follow (Thread A)
-3. Gives ${user2Name} a different thread to follow (Thread B) — same topic, different angle
-4. Has a convergence — a surprising human truth that connects both threads and neither person saw coming
+Their game timer is ${timerMinutes} minutes.
 
-Rules:
-- The entry point must be SPECIFIC — not "explore music history" but "In 1971, a 26-year-old nobody submitted a song to a tiny radio station in Ohio. It became the most-played song in American radio history. Go find out why it works."
-- Each thread must be a specific TASK — "Find out X" or "Discover what happened when Y" — not open-ended exploration
-- The convergence must be a HUMAN TRUTH — something true about people, not just a fact connection
-- Draw from their actual interests when possible — history, true crime, sports, tech, humor
-- The hole should work for their ${session.timer_minutes || 60}-minute timer
-- Be specific, be irresistible, be Nora
+Your job is to pick ONE specific topic — a real case, event, person, or mystery — and give both players different angles into the SAME story. They will share what they find throughout the game and you will bring it all together at the end.
 
-Respond ONLY with a JSON object in this exact format, no markdown, no explanation:
+CRITICAL RULES:
+- Both players must be investigating the SAME topic/case/person/event — not different stories
+- Round 1 threads must be SPECIFIC and LOW HANGING FRUIT — easy to find information about, a direct unambiguous starting task
+- Name the specific person, case, place, or event explicitly in each thread
+- ${user1Name}'s thread and ${user2Name}'s thread must approach the SAME topic from different angles
+- The entry point must be ONE irresistible sentence that makes both of them go "wait, tell me more"
+- Draw from their actual interests when possible
+- You already know how this story ends — you are the host who picked it
+
+Respond ONLY with JSON, no markdown:
 {
   "topic": "2-4 word topic name",
-  "entry": "The single irresistible entry point sentence Nora delivers to both of them",
-  "thread_user1": "The specific task for ${user1Name} — 'Find out...' or 'Discover...'",
-  "thread_user2": "The specific task for ${user2Name} — 'Find out...' or 'Discover...'",
-  "convergence": "The surprising human truth that connects both threads — 1-2 sentences",
-  "nora_send_off": "A short punchy Nora line (1 sentence, her voice) to send them off — witty, warm, a little mischievous"
+  "entry": "One irresistible sentence that drops both players into the same story — specific, names a real person/case/event",
+  "nora_send_off": "One punchy Nora line — witty, warm, slightly mischievous — that sends them off",
+  "thread_user1": "Specific task for ${user1Name} — names the exact person/case, asks them to find one specific thing. Start with 'Find out...' or 'Discover...'",
+  "thread_user2": "Specific task for ${user2Name} — same topic, different angle. Names the exact person/case, asks them to find a different specific thing. Start with 'Find out...' or 'Discover...'",
+  "factual_close": "What actually happened — the real ending to this story. 2-3 sentences. Facts only.",
+  "human_truth": "The deeper human truth this story reveals. 2-3 sentences. This is Nora's philosophical layer on top of the facts.",
+  "topic_media": "A book, podcast, documentary, or film directly about this topic if one exists — or null"
 }`
+    } else {
+      prompt = `You are Nora — warm, witty, mischievous game master. A couple is playing the Rabbit Hole game. They are now on Round ${roundNumber}.
+
+Topic: ${session.hole_topic}
+Original entry: ${session.hole_entry}
+
+${previousContext}
+
+Your job is to send them DEEPER into the same topic with new angles. Round ${roundNumber} threads should go deeper than the previous rounds — more specific, more surprising, digging into something they haven't found yet.
+
+CRITICAL RULES:
+- Still the SAME topic — go deeper, not sideways into a different story
+- Reference what they already found if possible — build on their actual discoveries
+- Each new thread should reveal a new surprising angle of the same story
+- Push them toward the convergence — they're getting closer to the full picture
+
+Respond ONLY with JSON, no markdown:
+{
+  "thread_user1": "New deeper task for ${user1Name} — builds on what they found, goes further into the same story",
+  "thread_user2": "New deeper task for ${user2Name} — builds on what they found, goes further from a different angle",
+  "nora_nudge": "One short Nora line (1 sentence) to send them back in — references something they found, builds excitement"
+}`
+    }
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
@@ -99,36 +161,53 @@ Respond ONLY with a JSON object in this exact format, no markdown, no explanatio
 
     const raw = response.content[0].text.trim()
     const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
-    let hole
+    let generated
     try {
-      hole = JSON.parse(cleaned)
+      generated = JSON.parse(cleaned)
     } catch (err) {
       console.error('[generate-hole] Parse error:', err, raw)
-      return NextResponse.json({ error: 'Failed to parse hole' }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to parse response' }, { status: 500 })
     }
 
-    // Save to session
+    // For round 1 — save topic/entry/close/truth to session
+    if (isFirstRound) {
+      await supabase
+        .from('game_sessions')
+        .update({
+          hole_topic: generated.topic,
+          hole_entry: generated.entry,
+          nora_send_off: generated.nora_send_off,
+          convergence: generated.human_truth,
+          factual_close: generated.factual_close,
+          topic_media: generated.topic_media || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', sessionId)
+    }
+
+    // Save round to game_rounds
     await supabase
-      .from('game_sessions')
-      .update({
-        hole_topic: hole.topic,
-        hole_entry: hole.entry,
-        user1_thread: hole.thread_user1,
-        user2_thread: hole.thread_user2,
-        convergence: hole.convergence,
-        updated_at: new Date().toISOString(),
+      .from('game_rounds')
+      .insert({
+        session_id: sessionId,
+        couple_id: coupleId,
+        round_number: roundNumber,
+        user1_thread: generated.thread_user1,
+        user2_thread: generated.thread_user2,
+        status: 'active',
       })
-      .eq('id', sessionId)
 
     return NextResponse.json({
-      topic: hole.topic,
-      entry: hole.entry,
-      thread_user1: hole.thread_user1,
-      thread_user2: hole.thread_user2,
-      convergence: hole.convergence,
-      nora_send_off: hole.nora_send_off,
-      user1Name,
-      user2Name,
+      topic: isFirstRound ? generated.topic : session.hole_topic,
+      entry: isFirstRound ? generated.entry : session.hole_entry,
+      nora_send_off: isFirstRound ? generated.nora_send_off : null,
+      nora_nudge: !isFirstRound ? generated.nora_nudge : null,
+      thread_user1: generated.thread_user1,
+      thread_user2: generated.thread_user2,
+      factual_close: isFirstRound ? generated.factual_close : null,
+      human_truth: isFirstRound ? generated.human_truth : null,
+      topic_media: isFirstRound ? generated.topic_media : null,
+      round: roundNumber,
     })
 
   } catch (err) {
