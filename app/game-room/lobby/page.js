@@ -92,21 +92,23 @@ function GameRoomLobbyContent() {
         .select('*')
         .eq('couple_id', coupleId)
         .eq('mode', mode)
-        .eq('status', 'lobby')
+        .in('status', ['lobby', 'active'])
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle()
 
       if (sess) {
+        if (sess.status === 'active') {
+          clearInterval(pollRef.current)
+          router.push(config.playPath)
+          return
+        }
+
         const couple = coupleRef.current
         const { data: { user } } = await supabase.auth.getUser()
         const isUser1 = couple?.user1_id === user?.id
         setPartnerIsIn(isUser1 ? sess.user2_in_lobby : sess.user1_in_lobby)
-
-        if (sess.status === 'active') {
-          clearInterval(pollRef.current)
-          router.push(config.playPath)
-        }
+        setIAmIn(prev => prev ? prev : (isUser1 ? sess.user1_in_lobby : sess.user2_in_lobby))
       }
     }, 3000)
     return () => clearInterval(pollRef.current)
