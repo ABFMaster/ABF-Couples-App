@@ -31,6 +31,8 @@ export async function POST(request) {
       .eq('couple_id', coupleId)
       .eq('mode', mode)
       .eq('status', 'lobby')
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle()
 
     let session
