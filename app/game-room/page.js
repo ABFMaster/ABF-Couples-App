@@ -27,7 +27,7 @@ const MODES = [
   {
     id: 'challenge',
     name: 'The Challenge',
-    tagline: 'A constraint, a timer, a real result.',
+    tagline: 'Nora picks a challenge. You two deliver.',
     description: 'Nora picks a challenge. You two deliver.',
     accent: '#D97706',
     accentLight: '#FFFBEB',

@@ -151,19 +151,25 @@ function GameRoomLobbyContent() {
           body: JSON.stringify({ userId, coupleId, sessionId, totalRounds }),
         })
         const data = await res.json()
-        if (data.challengeSession) {
-          setChallengeSessionId(data.challengeSession.id)
-          setChallengeRecommendedType(data.recommendedType)
-          setChallengeRecommendedReason(data.reason)
-          setChallengeAvailableTypes(data.availableTypes || [])
-          setChallengeSelectedType(data.recommendedType)
-          setShowChallengeTypeSelect(true)
+        if (!data.challengeSession) {
+          console.error('challenge/start returned no session:', data)
+          setStarting(false)
           return
         }
+        setChallengeSessionId(data.challengeSession.id)
+        setChallengeRecommendedType(data.recommendedType)
+        setChallengeRecommendedReason(data.reason)
+        setChallengeAvailableTypes(data.availableTypes || [])
+        setChallengeSelectedType(data.recommendedType)
+        setShowChallengeTypeSelect(true)
+        return
       }
 
       router.push(config.playPath)
-    } catch {} finally { setStarting(false) }
+    } catch (err) {
+      console.error('handleStart error:', err)
+      setStarting(false)
+    } finally { setStarting(false) }
   }
 
   if (loading) {
@@ -374,7 +380,7 @@ function GameRoomLobbyContent() {
         )}
 
         {/* CTA */}
-        {!iAmIn ? (
+        {!iAmIn && (
           <button
             onClick={handleEnterLobby}
             disabled={entering}
@@ -382,7 +388,8 @@ function GameRoomLobbyContent() {
           >
             {entering ? 'Entering...' : 'Enter the lobby'}
           </button>
-        ) : !partnerIsIn ? (
+        )}
+        {iAmIn && !partnerIsIn && (
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#9CA3AF', fontSize: '14px' }}>
               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
@@ -390,7 +397,8 @@ function GameRoomLobbyContent() {
             </div>
             <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }`}</style>
           </div>
-        ) : (
+        )}
+        {bothInLobby && (
           <button
             onClick={handleStart}
             disabled={!canStart || starting}
