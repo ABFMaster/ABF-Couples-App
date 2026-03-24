@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 export async function POST(request) {
   try {
-    const { sessionId, coupleId, timerMinutes } = await request.json()
+    const { sessionId, coupleId, timerMinutes, together } = await request.json()
     if (!sessionId || !coupleId) {
       return NextResponse.json({ error: 'sessionId and coupleId required' }, { status: 400 })
     }
@@ -20,9 +20,10 @@ export async function POST(request) {
       .from('game_sessions')
       .update({
         status: 'active',
-        timer_minutes: timerMinutes || 60,
+        timer_minutes: timerMinutes || null,
+        together: together === true,
         started_at: now.toISOString(),
-        expires_at: expiresAt.toISOString(),
+        expires_at: timerMinutes ? expiresAt.toISOString() : null,
         updated_at: now.toISOString(),
       })
       .eq('id', sessionId)
