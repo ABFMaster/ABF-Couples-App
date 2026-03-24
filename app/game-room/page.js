@@ -28,11 +28,11 @@ const MODES = [
     id: 'challenge',
     name: 'The Challenge',
     tagline: 'A constraint, a timer, a real result.',
-    description: 'Nora gives you a creative limitation and a clock. You make something together under pressure.',
+    description: 'Nora picks a challenge. You two deliver.',
     accent: '#D97706',
     accentLight: '#FFFBEB',
     icon: '⚡',
-    available: false,
+    available: true,
   },
   {
     id: 'remake',
