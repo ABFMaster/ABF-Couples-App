@@ -1,5 +1,5 @@
 # ABF — Developer Handoff Briefing
-# Last Updated: 2026-03-23
+# Last Updated: 2026-03-24
 
 ---
 
@@ -26,18 +26,10 @@ ABF (Always Be Flirting) is a couples relationship app. Partners connect via a 6
 
 ## 3. WORKING RULES
 
-⚠️ These rules are non-negotiable and must be followed in every response, every session, without exception.
-
-### Code Block Formatting (CRITICAL — violations have caused repeated bugs)
-- Claude Code prompts, terminal/bash commands, and SQL queries must ALWAYS be in **completely separate code blocks** — never combined in the same block, ever
-- A Claude Code prompt and a bash command must never appear in the same code block
-- A Claude Code prompt and a SQL query must never appear in the same code block
-- Every single Claude Code prompt must end with **"do not change anything else."** — no exceptions
-
-### Development Discipline
-- Read a file before editing it — always, no exceptions
-- One change at a time — never bundle unrelated changes into one prompt
-- Test before moving to the next change
+- Claude Code prompts, terminal commands, and SQL always in **separate code blocks** — never combined
+- Every Claude Code prompt ends with "do not change anything else"
+- Read a file before editing it
+- One change at a time, test before moving to next
 - `git add -A` for new files, `git add -u` for existing files
 - `git push` to deploy — never `npx vercel --prod`
 - `git commit` required before `git push` — staged files don't auto-commit
@@ -45,6 +37,7 @@ ABF (Always Be Flirting) is a couples relationship app. Partners connect via a 6
 - Remove all debug logs before closing a feature
 - Delete dead code immediately — no accumulation
 - `await` all async calls on Vercel
+- Session handoff lives at `Sessions/session_handoff.md` — written via Claude Code at end of each session, committed with one git command. No downloads, no manual copying.
 
 ---
 
@@ -57,39 +50,35 @@ ABF (Always Be Flirting) is a couples relationship app. Partners connect via a 6
 - Generous whitespace, minimal formatting
 
 ### Feature Visual Identities
-Each feature has its own accent layered on the cream platform base. The Bet is the only exception — it earns a full dark takeover because it's a game.
 
 | Feature | Base | Accent | Energy |
 |---------|------|--------|--------|
-| The Bet | Dark `#1C1510` | Gold `#D4A853` | Game night, competitive |
+| The Bet | Dark `#1C1510` card on cream | Gold `#D4A853` | Game night, competitive |
 | The Spark | Cream `#FAF6F0` | Terracotta `#C1440E` | Intimate, morning coffee |
 | The Ritual | Cream `#FAF6F0` | Deep green `#3D6B22` | Intentional, repeatable |
 | Weekly Reflection | Cream `#FAF6F0` | Lavender `#6B4E8A` | Reflective, gentle |
-| The Rabbit Hole | Dark `#0D0D0D` | Coral `#FF6B6B` + Indigo `#6366F1` | Mysterious, exploratory |
+| The Game Room | Cream `#FAF6F0` | Indigo gradient `#1E1B4B→#4338CA` | Saturday night, play |
+
+**Note:** The Bet was updated to a dark card ON cream background (not full-page takeover) after Cass feedback. Full design sweep still needed.
 
 ### Nora's Voice
-Not a therapist footnote — the most fun person at the dinner table who has a PhD. Warm, witty, mischievous. Finds what neither person said out loud. Never speaks in third person. Never restates the question. Never starts with an affirmation formula. For The Bet: game show host energy. For The Spark: quieter, leans across the table. For The Ritual: coach witnessing progress. For Reflection: perceptive friend synthesizing the week. For the hero card: alarm clock energy — personal, schedule-aware, pulls you forward. For the Rabbit Hole: museum curator crossed with a mischievous detective.
+Not a therapist footnote — the most fun person at the dinner table who has a PhD. Warm, witty, mischievous. Finds what neither person said out loud. Never speaks in third person. Never restates the question. Never starts with an affirmation formula.
 
-### Animation Rules
-- Fade + upward rise: opacity 0→1, translateY 20px→0, 500ms ease-out
-- Stagger: 200ms between elements
-- Reaction pill tap: scale pulse 0.97→1.02→1.0, 150ms
-- Card flip (The Bet): 0.6s cubic-bezier(0.22, 1, 0.36, 1)
-- Slide-up reveal (The Spark): translateY 40px→0, 700ms cubic-bezier(0.22, 1, 0.36, 1)
-- No bouncing, no confetti, no celebration animations
-- Dramatic pauses: pulsing text only, never spinners
+**In The Game Room:** Game master who picked the topic and knows how it ends — "I know how it ends. I just don't know how you'll get there." Present throughout, drives rounds, delivers the payoff.
+
+### Product Philosophy — Presence Over Engagement
+The goal is never to maximize time in the app — it's to maximize quality of time together outside the app. Every feature should ask: "does this pull them back to their phones, or does it enrich what's happening between them?" Capture mechanisms must be one tap maximum during shared experiences. Debriefs happen after, never during. The app is the ignition, not the destination.
 
 ---
 
 ## 5. PRODUCT GUARDRAILS
 
-- **Lean ship philosophy:** dead code, dead schema, unsupported APIs get deleted immediately — "we are a ship on the sea and if we take on too much weight we will sink"
+- **Lean ship philosophy:** dead code, dead schema, unsupported APIs get deleted immediately
 - Love language, attachment style, conflict style = discovered via assessment, never self-selected
 - Features visible day 1, depth unlocks with engagement
 - Nora is not a salesperson — she never mentions pricing, tiers, or upgrades
 - The "holy f***" moment: Nora finds what neither person said explicitly by synthesizing both answers
-- Weather informs Nora's message occasionally (P6 quiet days, notable conditions only) — not a standard, a tool she uses
-- Integrations (OpenTable, Spotify, Expedia) are Phase 2 — pre-cut the holes, don't tear walls
+- Presence over engagement: app is ignition, not destination. One-tap capture during shared experiences.
 
 ---
 
@@ -107,11 +96,11 @@ Five tabs: Home → `/dashboard`, Nora → `/ai-coach`, Us → `/us`, Today → 
 
 File: `components/BottomNav.js`
 
+The Game Room lives at `/game-room` — accessible via Us page (DO TOGETHER section) and Today on Saturdays. NOT in the bottom nav.
+
 ---
 
 ## 8. WEEKLY SCHEDULE
-
-The Today page gates features by day of week (Pacific time). One feature per day.
 
 | Day | Feature | Bypass param |
 |-----|---------|-------------|
@@ -120,10 +109,8 @@ The Today page gates features by day of week (Pacific time). One feature per day
 | Wednesday | The Bet | `?bet=true` |
 | Thursday | The Spark | `?spark=true` |
 | Friday | The Ritual | `?ritual=true` |
-| Saturday | The Rabbit Hole (Game Room) | `?game=true` |
+| Saturday | The Game Room | `?game=true` |
 | Sunday | Weekly Reflection | `?reflection=true` |
-
-No feature scheduled → shows "Nothing scheduled today. Enjoy the day." in Fraunces italic.
 
 ---
 
@@ -133,332 +120,294 @@ No feature scheduled → shows "Nothing scheduled today. Enjoy the day." in Frau
 Email/password signup via Supabase Auth. `OnboardingGuard` redirects incomplete users to `/onboarding/welcome`. 28-question compatibility assessment on first run. Partner connection via 6-character code.
 
 ### Dashboard (`app/dashboard/page.js`)
-Five sections: Dynamic Nora hero / Streak card / Timeline memory card / Coming Up date / Today's Read.
-
-**Dead features removed this session:** Check in together, View the plan banner, Do Something Together section, generateNoraTrigger, noraTrigger state.
-
-### Dynamic Nora Hero Card ✅ FULLY SHIPPED
-- Schedule-aware alarm clock powered by `app/api/dashboard/hero/route.js`
-- Fetches: today's feature status (Bet/Spark/Ritual by day), upcoming dates (both `date_plans` AND `custom_dates`), optional weather from Open-Meteo
-- Priority logic: P1 feature available → P2 partner answered you haven't → P3 both answered → P4 date within 3 days → P5 quiet day
-- Haiku model, max_tokens 80, must name the feature by name, never quote names, make dates feel anticipated
-- Returns: `{ message, cta_label, cta_href, pills }`
-- Pills: feature schedule pills show only 3 days ahead, date/event pills show 7 days ahead
-- TV Guide pill format: "FRI · Ritual", "SAT · Dan Savage Date Night"
-- Geolocation: browser `navigator.geolocation` → lat/lon passed to route → Open-Meteo weather context
-- **Known issue:** Date pill day label computing one day off — cosmetic bug, fix next session
-
-### Timeline Memory Card ✅ FULLY SHIPPED
-- `app/api/dashboard/memory/route.js` — fetches random `timeline_events` row for couple
-- Prefers events with photos over events without
-- Three states: loading skeleton / empty (Nora tip + "Add a memory →") / event with photo
-- Event type mapping: `custom → "Memory"`, `trip → "Trip"`, `milestone → "Milestone"`, `anniversary → "Anniversary"`, `date_night → "Date Night"`, `first → "First"`, `other → "Moment"`
-- Taps through to `/timeline`
+4-section structure: Nora hero / upcoming date / suggested actions / today's read. Weather widget via Open-Meteo (no API key). Memory card uses deterministic daily seed.
 
 ### Today Tab (`app/today/page.js`)
-Day-gated feature delivery. Three sections: daily feature card, Flirt card, Worth Reading.
-
-**Dead features removed:** "For Cass" coaching nudge, Nora commentary above Worth Reading, Try This Together spotlight section.
-
-**Flirt card:** FLIRTS label (coral), "Send [partnerName] a Flirt" title (Fraunces), "Let Nora do the work" subtitle, chevron → opens FlirtSheet.
-
-**Game Room access:** `showGameRoom = todayName === 'Saturday' || params.includes('game=true')` — no debug `|| true` flag.
+Day-gated feature delivery. Pacific-time day detection. Each feature rendered in its section. Bypass params for testing.
 
 ### The Spark ✅ FULLY SHIPPED
 - **Component:** `components/SparkCard.js`
-- **Visual identity:** Cream base, terracotta `#C1440E` accent, left border on your answer card
 - **Days:** Monday, Tuesday, Thursday
 - **API routes:** `app/api/spark/today/route.js`, `app/api/spark/respond/route.js`
-- **DB tables:** `sparks`, `spark_responses`
+- **Known issue:** Push notification fires to BOTH users when Spark is created on app open (not cron) — backlogged
 
 ### The Bet ✅ FULLY SHIPPED
 - **Component:** `components/BetCard.js`
-- **Visual identity:** Full dark takeover `#1C1510`, gold `#D4A853`, diamond motif card backs
-- **Mechanic:** Two simultaneous textareas — YOUR ANSWER + YOUR BET ON [PARTNER]
-- **Reveal:** Nora pre-reveal one-liner → "Reveal the cards" → 2x2 CSS 3D card flip → Nora reaction → pills
+- **Visual:** Dark `#1C1510` card with border/shadow on cream (not full takeover)
 - **Days:** Wednesday
 - **API routes:** `app/api/bet/today/route.js`, `app/api/bet/lock/route.js`, `app/api/bet/respond/route.js`, `app/api/bet/react/route.js`
-- **Question library:** `lib/bet-questions.js` (120 questions)
-- **DB tables:** `bets`, `bet_responses`
-- **Badge:** NavBadges fires when: neither answered, partner answered you haven't, both answered but reveal not seen
+- **Known issue:** Same push notification issue as Spark
 
-### The Ritual ✅ FULLY SHIPPED (Phase 1)
+### The Ritual ✅ FULLY SHIPPED
 - **Component:** `components/RitualCard.js`
-- **Visual identity:** Cream base, deep green `#3D6B22` accent
-- **Suggestion library:** `lib/ritual-suggestions.js` — 26 curated rituals, 3 tiers
-- **Days:** Friday
-- **API routes:** `app/api/ritual/status/route.js`, `app/api/ritual/start/route.js`, `app/api/ritual/checkin/route.js`, `app/api/ritual/adopt/route.js`, `app/api/ritual/confirm/route.js`
-- **DB tables:** `rituals`, `ritual_completions`
-- **`partner_confirmed_at` logic:** In Normal discovering view, if the ritual was confirmed this current week (via `partner_confirmed_at >= getWeekStart('America/Los_Angeles')`), check-in buttons are hidden and "Check back next Friday to see how this week went." is shown instead.
+- **Page:** `app/ritual/page.js` — persistent home, accessible from Us page any day
+- **Days:** Friday (check-in) + persistent `/ritual` page
+- **Key logic:**
+  - `source: 'existing'` → straight to `adopted`, no trial
+  - `source: 'custom'` or `'suggested'` → `pending` → partner confirms → `discovering` → 3-week trial
+  - Check-in buttons hidden if ritual confirmed THIS week
+  - "Ongoing" streak pill for existing rituals with no streak
+- **API routes:** `app/api/ritual/` — status, start, checkin, adopt, confirm, retire, update
 
-### Weekly Reflection ✅ FULLY SHIPPED (Phase 1)
+### Weekly Reflection ✅ FULLY SHIPPED
 - **Component:** `components/ReflectionCard.js`
-- **Visual identity:** Cream base, lavender `#6B4E8A` accent
-- **Moment reaction pills:** "That lands" / "Not quite" — persisted to `moment_reactions` jsonb, loaded on render, filled lavender selected state
-- **Reaction API:** `app/api/reflection/react/route.js` — updates by most recent row for couple (not computed week_start)
 - **Days:** Sunday
-- **API routes:** `app/api/reflection/generate/route.js`, `app/api/reflection/status/route.js`, `app/api/reflection/viewed/route.js`, `app/api/reflection/react/route.js`
-- **DB table:** `weekly_reflections`
+- **API routes:** `app/api/reflection/` — generate, status, viewed
 
 ### Flirts ✅ FULLY SHIPPED
-- `components/FlirtSheet.js` — bottom sheet, dual-mode (send + receive)
-- `/flirts/onboarding` — Nora conversation to build flirt profile, redirects to `/today` on completion
-- `app/flirts/page.js` — **DELETED** (was broken and unreachable)
-- Full API suite: generate, mark-sent, mark-viewed, unread, check-profile, save-flirt
-
-### NavBadges (`components/NavBadges.js`)
-Today tab red dot. Aware of Spark and Bet activity. Rechecks every 60s and on tab visibility change.
+- `components/FlirtSheet.js` — 4 modes (GIF, Song, Movie/Show, Prompt)
+- `/flirts/onboarding` — Nora conversation, saves to `user_profiles`
 
 ### Nora (`app/ai-coach/page.js`)
-Full chat with rich context builder. Cross-session memory via `nora_memory` table. 20 message/week limit on free tier.
+Full chat, rich context, cross-session memory via `nora_memory` table.
 
-### The Rabbit Hole (Game Room) ✅ SHIPPED — Multi-Round
-Saturday feature. A co-op investigation game where Nora picks a real topic (case, event, person, mystery) and gives both players different angles into the same story. They research separately, share finds, and converge in a Nora-guided debrief.
+---
 
-**Flow:** Today tab → `/game-room` → `/game-room/rabbit-hole/lobby` → `/game-room/rabbit-hole/play` → `/game-room/rabbit-hole/debrief`
+## 10. THE GAME ROOM 🆕 CURRENT SPRINT
 
-**Multi-round mechanic:**
-- Timer options: 30 / 60 / 90 minutes
-- `MIN_ROUNDS = { 30: 2, 60: 3, 90: 4 }` — minimum rounds before debrief unlocks
-- Both players must signal ready (`round-ready` API) to advance to next round
-- `game_rounds` table tracks per-round threads and ready states
-- Round generation is idempotent — checks for existing round before generating
+### Architecture
+- **Landing:** `app/game-room/page.js` — mode cards, gates to onboarding if interests not completed
+- **Universal Lobby:** `app/game-room/lobby/page.js` — ALL modes route through `?mode=X`
+  - Both enter lobby → together/remote selection → materials panel → timer (if mode needs it) → "Let's play"
+  - `lib/game-room-config.js` drives all mode-specific config (timer, materials, playPath)
+- **Onboarding:** `app/game-room/onboarding/page.js` — Nora captures game interests, saves to `user_profiles.game_interests`
+- **Visual identity:** Indigo gradient `#1E1B4B→#4338CA` on cream
 
-**Both-ready signaling:**
-- Player taps "Ready for next →" → POST `/api/game-room/round-ready`
-- API sets `user1_ready` or `user2_ready`, checks if both true
-- If both ready: marks round `status = 'completed'`, notifies both via push, returns `nextRound`
-- Play page polls every 4s — detects `status === 'completed'` on partner side, loads next round
-- `canDebrief = roundNumber >= minRounds && iAmReady && partnerIsReady`
+### Mode Status
+| Mode | Status | Play Path |
+|------|--------|-----------|
+| The Rabbit Hole | ✅ Built | `/game-room/rabbit-hole/play` |
+| Hot Take | ✅ Built | `/game-room/hot-take` |
+| The Challenge | 🔜 Designed | `/game-room/challenge/play` |
+| The Remake | 🔜 Designed | `/game-room/remake/play` |
+| The Hunt | 🔜 Designed | `/game-room/the-hunt/play` |
 
-**Debrief — three phases:**
-1. `'factual'` — `session.factual_close` (what actually happened, facts only)
-2. `'truth'` — `session.convergence` (Nora's philosophical layer) + debrief questions
-3. `'chat'` — inline Nora chat seeded with full game context via `buildNoraContext()`
+### The Rabbit Hole — ✅ BUILT, SECOND PLAYTEST PENDING TONIGHT
+**Flow:** Universal Lobby → play (multi-round) → both signal ready → next round → "Bring it home" → debrief
+
+**Key design decisions (from March 20 first playtest):**
+- Same topic, DIFFERENT ANGLES — both on same case/event, different investigation threads
+- Nora is HOST — "I know how it ends. I just don't know how you'll get there."
+- BOTH must signal "Ready for next" before Nora sends Thread 2, 3, etc.
+- Min rounds by timer: 30min=2, 60min=3, 90min=4 before "Bring it home" appears
+- Timer expiry → "Don't let me stop you — keep going" (never 0:00)
+- 24hr → Nora fires convergence automatically (cron not yet built)
+- Two-part convergence: factual close (what happened) THEN human truth (Nora's layer)
+- Debrief = inline Nora chat pre-seeded with full game context — NOT main Nora page
+- "Tell me more" button on partner finds → push notification only, NOT a Nora data point
 
 **Pages:**
-- `app/game-room/page.js` — game selection hub
-- `app/game-room/rabbit-hole/lobby/page.js` — waiting room, both-in-lobby detection
-- `app/game-room/rabbit-hole/play/page.js` — multi-round play, finds input, both-ready flow
-- `app/game-room/rabbit-hole/debrief/page.js` — three-phase debrief with inline Nora chat
+- `app/game-room/rabbit-hole/play/page.js` — multi-round, find theatre, both-ready mechanic
+- `app/game-room/rabbit-hole/debrief/page.js` — two-part convergence + inline Nora chat
 
 **API routes:**
-- `app/api/game-room/lobby-status/route.js` — GET: checks session status, `bothInLobby` flag. Status filter: `['lobby', 'active']` only.
-- `app/api/game-room/generate-hole/route.js` — POST: generates round threads. Idempotent. Round 1 saves topic/entry/nora_send_off/convergence/factual_close/topic_media to `game_sessions`. All rounds insert into `game_rounds`.
-- `app/api/game-room/round-ready/route.js` — POST: marks user ready, checks bothReady, notifies partner or both.
-- `app/api/game-room/generate-debrief/route.js` — POST: generates debrief questions
+- `app/api/game-room/enter-lobby/route.js`
+- `app/api/game-room/lobby-status/route.js` — returns lobby+active only
+- `app/api/game-room/start-session/route.js` — saves together flag, mode-aware push notifications
+- `app/api/game-room/generate-hole/route.js` — same topic/different angles, multi-round, idempotent
+- `app/api/game-room/round-ready/route.js` — both-ready mechanic
+- `app/api/game-room/generate-debrief/route.js` — factual close + human truth + 3 questions
+- `app/api/game-room/save-interests/route.js`
+
+### Hot Take — ✅ BUILT
+**Flow:** Universal Lobby → tier selection → rapid fire agree/disagree → Nora one-liner after each → summary
+
+**Key design decisions:**
+- 300 question library in `lib/hot-take-questions.js` — 3 tiers, 6 categories
+- Together mode: tap → answer highlights → "Show your partner" → physical phone reveal
+- Remote mode: both tap blind → simultaneous screen reveal
+- Nora Haiku one-liner after EVERY take (5-8 words, pure wit)
+- Agreement → Nora provokes anyway ("Of course. But WHY?")
+- Skip always available
+- 15 questions per session, summary after all answered
+- "Play another round" restarts with fresh questions
+
+**Pages/API:**
+- `app/game-room/hot-take/page.js`
+- `app/api/game-room/hot-take/start/route.js`
+- `app/api/game-room/hot-take/answer/route.js`
+
+**DB tables:** `hot_take_sessions`, `hot_take_answers`
+
+### Remaining 3 Modes — DESIGNED, NOT BUILT
+
+**The Challenge:**
+- Nora recommends a type, couple can browse all 5: Story, Pitch, Rank, Memory, Plan
+- Scribe designated before challenge (rotates per round)
+- Prominent in-app countdown timer starts on challenge reveal
+- Story: Nora gives specific title/prompt
+- Plan → Dream Trip integration at end ("Want to actually do this?")
+- Result: scribe types shared result, Nora gives verdict/winner
+
+**The Remake:**
+- Nora picks moment from relationship history (timeline, trips, dates, Spark/Bet answers)
+- Tonight vs Plan It selection — messaged clearly, degrees of difficulty
+- Photo/note capture when done, Nora compares to original
+- Requires relationship data threshold
+
+**The Hunt:**
+- Knowledge hunt (not physical) — trivia only you two would know
+- Multimedia clues: Google Maps pins, timeline photo fragments, movie/show quotes
+- Hints available but "cost" something
+- Nora-prepared "treasure" at end
+- Requires significant relationship data — greyed out early, unlocks as milestone achievement
+- Data gathering philosophy: low friction, obvious value, tied to achievements
 
 ---
 
-## 10. KEY FILES
-
-| File | Purpose |
-|------|---------|
-| `app/today/page.js` | Today tab — day-gated feature delivery |
-| `app/dashboard/page.js` | Dashboard — hero, streak, timeline memory, coming up, today's read |
-| `app/ai-coach/page.js` | Nora chat |
-| `app/api/dashboard/hero/route.js` | Dynamic Nora hero — schedule-aware, weather-aware, Haiku |
-| `app/api/dashboard/memory/route.js` | Random timeline memory card |
-| `components/SparkCard.js` | The Spark component |
-| `components/BetCard.js` | The Bet component |
-| `components/RitualCard.js` | The Ritual component |
-| `components/ReflectionCard.js` | Weekly Reflection component |
-| `components/FlirtSheet.js` | Flirt bottom sheet |
-| `components/NavBadges.js` | Today/Home tab badge logic |
-| `components/NoraConversation.js` | Reusable Nora chat |
-| `components/BottomNav.js` | Nav bar |
-| `app/game-room/page.js` | Game Room hub |
-| `app/game-room/rabbit-hole/lobby/page.js` | Rabbit Hole lobby / waiting room |
-| `app/game-room/rabbit-hole/play/page.js` | Rabbit Hole multi-round play |
-| `app/game-room/rabbit-hole/debrief/page.js` | Rabbit Hole three-phase debrief |
-| `app/api/game-room/lobby-status/route.js` | Session lobby status check |
-| `app/api/game-room/generate-hole/route.js` | Round thread generation (idempotent, multi-round) |
-| `app/api/game-room/round-ready/route.js` | Both-ready signaling |
-| `app/api/game-room/generate-debrief/route.js` | Debrief question generation |
-| `lib/dates.js` | `getTodayString(timezone)`, `getWeekStart(timezone)` — Pacific time utilities |
-| `lib/nora-knowledge.js` | Nora frameworks, pairing matrix, mismatch detection |
-| `lib/bet-questions.js` | 120 Bet questions, weighted selection |
-| `lib/ritual-suggestions.js` | 26 curated rituals, 3 tiers, Gottman-grounded |
-| `Sessions/session_handoff.md` | This file |
-| `PRODUCT-BACKLOG.md` | Tabled ideas and parking lot |
-
----
-
-## 11. DATABASE
+## 11. GAME ROOM DB TABLES
 
 | Table | Key Columns |
 |-------|-------------|
-| `user_profiles` | display_name, timezone, love_language_primary, attachment_style, conflict_style, humor_style, flirt_style, flirt_profile_completed, subscription_tier |
-| `couples` | user1_id, user2_id, connect_code, flirts_sent, created_at |
-| `sparks` | couple_id, question, question_id, spark_date |
-| `spark_responses` | spark_id, user_id, couple_id, response_text, nora_reaction, reaction_icon, responded_at |
-| `bets` | couple_id, question, question_id, question_level, question_category (nullable), bet_date, locked_by |
-| `bet_responses` | bet_id, user_id, couple_id, prediction, actual_answer, nora_reaction, nora_intro, reaction_icon, question_rating |
-| `rituals` | couple_id, suggestion_id, title, description, frequency, tier, status, seasonal, season_start, season_end, source, streak, longest_streak, adopted_at, proposed_by, partner_confirmed, partner_confirmed_at, needs_discussion |
-| `ritual_completions` | ritual_id, couple_id, week_start, completed, notes |
-| `weekly_reflections` | couple_id, week_start, opening, moments (jsonb), pattern, week_ahead, generated_at, viewed_by_user1, viewed_by_user2, moment_reactions (jsonb) |
-| `nora_memory` | couple_id, memory_summary |
-| `flirts` | sender_id, receiver_id, couple_id, mode, suggestion, nora_note, gif_url, spotify_track_id, media_title |
-| `timeline_events` | couple_id, event_type, title, description, event_date, photo_urls, created_by |
-| `date_plans` | couple_id, title, date_time, stops, status |
-| `custom_dates` | couple_id, title, date_time, stops, status, hype_line |
-| `push_subscriptions` | user_id, subscription (jsonb) |
-| `ai_usage` | user_id, week_start, message_count |
-| `relationship_assessments` | user_id, couple_id, answers, results (jsonb), completed_at |
-| `shared_items` | couple_id, type, title, poster_path |
-| `invite_previews` | id (token), sender_id, couple_id, sender_name |
-| `game_sessions` | couple_id, mode, status, timer_minutes, hole_topic, hole_entry, nora_send_off, convergence, factual_close, topic_media, user1_in_lobby, user2_in_lobby |
+| `game_sessions` | couple_id, mode, status, timer_minutes, together, user1_in_lobby, user2_in_lobby, started_at, expires_at, hole_topic, hole_entry, nora_send_off, convergence, factual_close, topic_media, debrief_generated, mode_config |
 | `game_rounds` | session_id, couple_id, round_number, user1_thread, user2_thread, user1_ready, user2_ready, status |
-| `game_finds` | session_id, couple_id, user_id, round_number, find_text, created_at |
+| `game_finds` | session_id, couple_id, user_id, find_text, round, round_number |
+| `hot_take_sessions` | session_id, couple_id, questions (jsonb), current_index |
+| `hot_take_answers` | session_id, couple_id, question_id, user1_answer, user2_answer, agreed, nora_comment |
 
 ---
 
-## 12. TECHNICAL PATTERNS
+## 12. PUSH NOTIFICATIONS — KNOWN ARCHITECTURE ISSUE
+
+**Current behavior is WRONG:**
+- `spark/today` and `bet/today` CREATE content when user opens the app, then notify BOTH users (including the opener)
+- **Correct:** Vercel cron at 3am (user's timezone) creates content, notifies both users
+- `spark/today` and `bet/today` should become READ-ONLY fetch routes
+
+**Notifications correctly firing:**
+- Ritual proposed → partner ✅
+- Ritual confirmed/discussed → proposer ✅
+- Bet/Spark partner responds → user ✅
+- Reflection generated → both ✅
+- Game Room: lobby join, round ready, both ready, mode-aware start ✅
+- Rabbit Hole: "Tell me more" → partner ✅
+
+**Cron refactor:** See PRODUCT-BACKLOG.md
+
+---
+
+## 13. KEY FILES
+
+| File | Purpose |
+|------|---------|
+| `app/today/page.js` | Today tab |
+| `app/dashboard/page.js` | Dashboard |
+| `app/ritual/page.js` | Ritual persistent home |
+| `app/game-room/page.js` | Game Room landing |
+| `app/game-room/lobby/page.js` | Universal lobby (all modes) |
+| `app/game-room/onboarding/page.js` | Game interests onboarding |
+| `app/game-room/rabbit-hole/play/page.js` | Rabbit Hole play |
+| `app/game-room/rabbit-hole/debrief/page.js` | Rabbit Hole debrief |
+| `app/game-room/hot-take/page.js` | Hot Take game |
+| `lib/game-room-config.js` | Mode config (timer, materials, playPath) |
+| `lib/hot-take-questions.js` | 300 Hot Take questions, getHotTakeQuestions() |
+| `lib/dates.js` | All timezone-safe date utilities |
+| `lib/ritual-suggestions.js` | 26 curated rituals |
+| `lib/bet-questions.js` | 120 Bet questions |
+| `lib/nora-knowledge.js` | Nora frameworks |
+| `components/NoraConversation.js` | Reusable Nora chat — prop is `completionTrigger` not `completionToken` |
+| `PRODUCT-BACKLOG.md` | Full backlog + parking lot |
+| `Sessions/session_handoff.md` | This file |
+
+---
+
+## 14. DATABASE
+
+| Table | Key Columns |
+|-------|-------------|
+| `user_profiles` | display_name, timezone, game_interests (jsonb), game_interests_completed |
+| `couples` | user1_id, user2_id, connect_code |
+| `rituals` | couple_id, title, status, source, streak, proposed_by, partner_confirmed, partner_confirmed_at, retire_requested_by |
+| `nora_memory` | couple_id, memory_summary, user1_notes (jsonb), user2_notes (jsonb), couple_notes (jsonb) |
+| `sparks` | couple_id, question, question_id, spark_date |
+| `spark_responses` | spark_id, user_id, response_text, nora_reaction |
+| `bets` | couple_id, question, bet_date |
+| `bet_responses` | bet_id, user_id, prediction, actual_answer, nora_reaction, nora_intro |
+| `weekly_reflections` | couple_id, week_start, opening, moments, pattern, week_ahead |
+| `timeline_events` | couple_id, event_type, title, event_date |
+
+---
+
+## 15. TECHNICAL PATTERNS
 
 ### Timezone (CRITICAL)
-All date strings use Pacific time. Never use `toISOString().split('T')[0]` — it's UTC and will cause off-by-one errors.
-
+All date strings use Pacific time. Never use `toISOString().split('T')[0]`.
 ```javascript
-import { getTodayString, getWeekStart } from '@/lib/dates'
+import { getTodayString } from '@/lib/dates'
 const todayStr = getTodayString(userProfile.timezone)
-const weekStart = getWeekStart('America/Los_Angeles')
 ```
 
 ### Auth (Service Role Pattern)
 ```javascript
-import { createClient } from '@supabase/supabase-js'
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
-// userId comes explicitly from request body or query params
+// userId comes explicitly from request body — not from session
 ```
 
-### Supabase Queries
-- Always use `.maybeSingle()` not `.single()`
-- Always verify column names against DB before writing queries — schema drift is a recurring bug source
+### NoraConversation component
+Prop is `completionTrigger` NOT `completionToken` — learned the hard way.
 
-### Claude Model Usage
-- **Sonnet** (`claude-sonnet-4-6`): Nora reactions, memory updates, Reflection generation, Rabbit Hole thread generation
-- **Haiku** (`claude-haiku-4-5-20251001`): Short one-liners (Bet nora_intro, Dashboard hero message)
-
-### Weather (Open-Meteo)
-Free, no API key required.
-```
-https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,weathercode&temperature_unit=fahrenheit
-```
-Only passed to Nora when condition is notable (rain/snow/storm/≥95°F/≤25°F).
-
-### Upcoming Dates
-Always query BOTH `date_plans` AND `custom_dates` tables — dates can live in either. Merge, sort by `date_time` ASC, take first.
-
-### Push Notifications (Non-blocking pattern)
+### useSearchParams in Next.js App Router
+Must be wrapped in a Suspense boundary or build will fail:
 ```javascript
-const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
-fetch(`${appBase}/api/push/send`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ userId, title, body, url }),
-}).catch(() => {}) // fire and forget — never await, never throw
+export default function Page() {
+  return <Suspense fallback={<Spinner />}><PageContent /></Suspense>
+}
+function PageContent() {
+  const searchParams = useSearchParams()
+  // ...
+}
 ```
 
-### Stale Closure in Polling Intervals (Rabbit Hole pattern)
-When you need data inside a `setInterval` that would otherwise be stale, use a ref:
-```javascript
-const coupleRef = useRef(null)
-// set it when couple data loads:
-coupleRef.current = couple
-// read it inside the interval:
-setInterval(() => {
-  const c = coupleRef.current
-  if (!c) return
-  // use c safely
-}, 4000)
-```
-
-### Idempotent Round Generation
-Both players call `generate-hole` independently. The API checks `game_rounds` for an existing row first — if found, returns cached data without re-calling Claude. This prevents double generation when both partners mount the same round simultaneously.
-
-### MIN_ROUNDS Gate
-```javascript
-const MIN_ROUNDS = { 30: 2, 60: 3, 90: 4 }
-const minRounds = MIN_ROUNDS[timerMinutes] || 2
-const canDebrief = roundNumber >= minRounds && iAmReady && partnerIsReady
-```
+### New Files
+Always `git add -A` not `git add -u` for new files.
 
 ---
 
-## 13. MONETIZATION (Pre-cut holes only)
+## 16. CURRENT SPRINT — GAME ROOM WEEK
 
-- `subscription_tier` on `user_profiles` — values: `free`, `tier1`, `tier2`. Default: `free`
-- No gates built yet — column exists for future use
-- Nora never mentions pricing
+**Tonight:** Matt + Cass testing Rabbit Hole (second attempt with rebuilt mechanics) and Hot Take
 
----
-
-## 14. BACKLOG (Priority Order)
-
-1. **Weather widget on Today + Dashboard headers** — subtle temp + condition icon. Open-Meteo, browser geolocation. Hero route already has weather support built in.
-2. **Date pill day label bug** — hero pills showing wrong day for upcoming dates. Cosmetic, low priority.
-3. **Nora voice refinement pass** — all surfaces.
-4. **Nora onboarding tour** — first-time feature view flags.
-5. **Worth Reading rethink** — dedicated session. RSS excerpt bug. Nora as curator concept.
-6. **Ritual `needs_discussion` surface on Home page** — persistent, does not expire.
-7. **Weekly Reflection history view** — cap 4 weeks, older into Nora memory.
-8. **Bet question categories** — add `category` field to `lib/bet-questions.js`.
-9. **Ritual seasonal logic** and **Week 9+ cadence**.
-10. **Native app (Expo)** — long-term target.
-11. **Sound design**.
-12. **Tabled:** CAH licensing, photo bucket, biometric, physical Bet card game, After Dark, community ritual suggestions.
+**Next session priorities:**
+1. Rabbit Hole playtest debrief — fix whatever broke
+2. 24hr auto-convergence cron for abandoned Rabbit Hole sessions
+3. Nora mid-round nudge at timer expiry
+4. The Challenge build
+5. Nora three-layer memory (DB columns added to `nora_memory`, logic not built)
+6. Notification cron architecture (if time allows)
 
 ---
 
-## 15. KNOWN ISSUES
+## 17. BACKLOG (See PRODUCT-BACKLOG.md for full detail)
 
-- **Date pill day label** — hero pills showing wrong day for upcoming dates. Cosmetic.
-- **Bet push notification** — partner gets push banner but red dot relies on 60s poll, not instant.
-- **Google Places API** returning 503 for date suggestions
-- **Google Maps race condition** in `/dates/custom`
-- **Ritual `needs_discussion`** — not yet surfaced on Home page
+- Notification cron architecture (3am per timezone, read-only fetch routes)
+- Nora three-layer memory (DB columns added, logic not built)
+- Date Night debrief + capture flow
+- Rabbit Hole: 24hr auto-convergence, "ask for more rounds", affiliate links
+- Ritual proximity edge case (4th check-in: "we didn't see each other")
+- Per-user timezone for notifications
+- Bet card design sweep
+- Us page audit
+- Weekly Reflection history view
+- Hot Take library expansion (300 → 500+, community submissions)
 
 ---
 
-## 16. DEPLOY WORKFLOW
+## 18. KNOWN ISSUES
 
+- Push notifications fire on app open (content created by first opener, not cron)
+- Bet card design slightly jarring — shadow/border added, full sweep needed
+- Google Places API returning 503 for date suggestions
+- Google Maps race condition in `/dates/custom`
+
+---
+
+## 19. DEPLOY WORKFLOW
 ```bash
-git add -A
+git add -A          # new files
+git add -u          # existing files only
 git commit -m "descriptive message"
-git push
+git push            # Vercel auto-deploys on push to main
 ```
-
-Never use `npx vercel --prod`. Never push without committing first.
-
----
-
-## 17. GAME ROOM — RABBIT HOLE SCHEMA NOTES
-
-The following columns were added to `game_sessions` for multi-round Rabbit Hole support. Verify they exist before running the game:
-
-- `nora_send_off` (text) — Nora's send-off line for round 1
-- `factual_close` (text) — what actually happened (facts only), shown in debrief phase 1
-- `topic_media` (text, nullable) — book/podcast/documentary/film about the topic
-- `convergence` (text) — Nora's philosophical layer, shown in debrief phase 2
-
-The `game_rounds` table must exist with columns:
-- `session_id` (uuid, FK → game_sessions)
-- `couple_id` (uuid, FK → couples)
-- `round_number` (integer)
-- `user1_thread` (text)
-- `user2_thread` (text)
-- `user1_ready` (boolean, default false)
-- `user2_ready` (boolean, default false)
-- `status` (text — `'active'` | `'completed'`)
-- `created_at`, `updated_at` (timestamptz)
-
-The `game_finds` table must exist with columns:
-- `session_id` (uuid)
-- `couple_id` (uuid)
-- `user_id` (uuid)
-- `round_number` (integer)
-- `find_text` (text)
-- `created_at` (timestamptz)
