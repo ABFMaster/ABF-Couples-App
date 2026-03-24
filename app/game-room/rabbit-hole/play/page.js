@@ -65,7 +65,7 @@ export default function RabbitHolePlayPage() {
       const statusRes = await fetch(`/api/game-room/lobby-status?coupleId=${couple.id}&mode=rabbit-hole`)
       const statusData = await statusRes.json()
       if (!statusData.session || statusData.session.status !== 'active') {
-        router.push('/game-room/rabbit-hole')
+        router.push('/game-room/lobby?mode=rabbit-hole')
         return
       }
       const sess = statusData.session
@@ -335,7 +335,7 @@ export default function RabbitHolePlayPage() {
 
         {/* Timer bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <button onClick={() => router.push('/game-room/rabbit-hole')} style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '13px', cursor: 'pointer', padding: 0 }}>← Back</button>
+          <button onClick={() => router.push('/game-room/lobby?mode=rabbit-hole')} style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '13px', cursor: 'pointer', padding: 0 }}>← Back</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontSize: '11px', letterSpacing: '0.1em', color: '#9CA3AF', textTransform: 'uppercase' }}>Round {roundNumber}</span>
             {timerExpired ? (
