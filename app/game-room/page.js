@@ -15,6 +15,16 @@ const MODES = [
     available: true,
   },
   {
+    id: 'hot-take',
+    name: 'Hot Take',
+    tagline: 'Rapid fire. Agree or disagree.',
+    description: 'Nora reads the room and fires opinions at both of you. See where you land.',
+    accent: '#0D9488',
+    accentLight: '#F0FDFA',
+    icon: '🔥',
+    available: true,
+  },
+  {
     id: 'challenge',
     name: 'The Challenge',
     tagline: 'A constraint, a timer, a real result.',
@@ -32,16 +42,6 @@ const MODES = [
     accent: '#E11D48',
     accentLight: '#FFF1F2',
     icon: '🎬',
-    available: false,
-  },
-  {
-    id: 'hot-take',
-    name: 'Hot Take',
-    tagline: 'Rapid fire. Agree or disagree.',
-    description: 'Nora reads the room and fires opinions at both of you. See where you land.',
-    accent: '#0D9488',
-    accentLight: '#F0FDFA',
-    icon: '🔥',
     available: false,
   },
   {
