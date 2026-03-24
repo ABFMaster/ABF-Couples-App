@@ -22,6 +22,7 @@ export default function RabbitHoleLobbyPage() {
   const [sessionId, setSessionId] = useState(null)
   const [entering, setEntering] = useState(false)
   const [starting, setStarting] = useState(false)
+  const [together, setTogether] = useState(null)
   const pollRef = useRef(null)
 
   useEffect(() => {
@@ -111,7 +112,7 @@ export default function RabbitHoleLobbyPage() {
       await fetch('/api/game-room/start-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, coupleId, timerMinutes: selectedTimer }),
+        body: JSON.stringify({ sessionId, coupleId, timerMinutes: selectedTimer, together: together === true }),
       })
       router.push('/game-room/rabbit-hole/play')
     } catch {} finally { setStarting(false) }
@@ -215,7 +216,27 @@ export default function RabbitHoleLobbyPage() {
         {/* Timer selection — only show once both are in */}
         {bothInLobby && (
           <div style={{ marginBottom: '24px' }}>
-            <p style={{ fontSize: '13px', fontWeight: 600, color: '#1A1A1A', marginBottom: '12px' }}>How long do you have?</p>
+            {/* Together or remote */}
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#1A1A1A', marginBottom: '12px' }}>Are you together right now?</p>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+            {[{ value: true, label: '👫 Together' }, { value: false, label: '📱 Remote' }].map(opt => (
+              <button
+                key={String(opt.value)}
+                onClick={() => setTogether(opt.value)}
+                style={{
+                  flex: 1, padding: '14px 8px', borderRadius: '14px',
+                  border: `2px solid ${together === opt.value ? '#4338CA' : '#E8DDD0'}`,
+                  background: together === opt.value ? '#EEF2FF' : '#FFFFFF',
+                  cursor: 'pointer', transition: 'all 150ms',
+                  fontSize: '14px', fontWeight: 600,
+                  color: together === opt.value ? '#4338CA' : '#1A1A1A',
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: '#1A1A1A', marginBottom: '12px' }}>How long do you have?</p>
             <div style={{ display: 'flex', gap: '10px' }}>
               {TIMER_OPTIONS.map(option => (
                 <button
@@ -265,7 +286,7 @@ export default function RabbitHoleLobbyPage() {
         ) : (
           <button
             onClick={handleStart}
-            disabled={starting}
+            disabled={starting || together === null}
             style={{
               width: '100%', padding: '16px',
               background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)',
@@ -274,7 +295,7 @@ export default function RabbitHoleLobbyPage() {
               opacity: starting ? 0.7 : 1,
             }}
           >
-            {starting ? 'Dropping you in...' : "We're both here — drop us in 🕳️"}
+            {starting ? 'Dropping you in...' : together === null ? 'First — are you together?' : "We're both here — drop us in 🕳️"}
           </button>
         )}
 
