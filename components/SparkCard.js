@@ -124,7 +124,7 @@ export default function SparkCard({
           </p>
         )}
         <div style={{ marginBottom: '24px' }}>{questionLarge}</div>
-        <p style={{ fontSize: '13px', color: '#A09080', fontStyle: 'italic', textAlign: 'center', marginBottom: '12px' }}>Answer for yourself — you'll see {partnerName}'s answer after you both respond.</p>
+        <p style={{ fontSize: '13px', color: '#A09080', fontStyle: 'italic', textAlign: 'center', marginBottom: '12px' }}>Answer about {partnerName} — you'll see their answer after you both respond.</p>
         <textarea
           value={answerText}
           onChange={e => setAnswerText(e.target.value)}

@@ -26,18 +26,37 @@ ABF (Always Be Flirting) is a couples relationship app. Partners connect via a 6
 
 ## 3. WORKING RULES
 
-- Claude Code prompts, terminal commands, and SQL always in **separate code blocks** — never combined
-- Every Claude Code prompt ends with "do not change anything else"
-- Read a file before editing it
+### Code Block Rules (CRITICAL)
+- Claude Code prompts, Terminal commands, and SQL must always be in **completely separate labeled code blocks** — never combined in one block
+- Every Claude Code prompt ends with **"do not change anything else."**
+- Label each block clearly above it: **Claude Code**, **Terminal**, or **Supabase**
+- When Matt says "done" after a Claude Code prompt, that means Claude Code executed it successfully — proceed to the next step
+- When Matt says "done" after a Terminal command, that means it ran successfully — check output if needed
+- When Matt says "success" after a Supabase SQL block, that means the query ran successfully
+
+### Development Rules
+- Read a file before editing it — always
 - One change at a time, test before moving to next
-- `git add -A` for new files, `git add -u` for existing files
+- `git add -A` for new files, `git add -u` for existing files only
 - `git push` to deploy — never `npx vercel --prod`
 - `git commit` required before `git push` — staged files don't auto-commit
 - Commit after every working change with a descriptive message
 - Remove all debug logs before closing a feature
 - Delete dead code immediately — no accumulation
 - `await` all async calls on Vercel
-- Session handoff lives at `Sessions/session_handoff.md` — written via Claude Code at end of each session, committed with one git command. No downloads, no manual copying.
+- New files require `git add -A` not `git add -u` — `git add -u` only stages already-tracked files
+
+### Checking Work
+- After every deploy, use Claude in Chrome to visually verify the change looks correct
+- After git push, wait for "done" from Matt before checking — Vercel takes ~30s to deploy
+- When checking a page, scroll to see the full state — don't assume from a partial screenshot
+- If a build fails, read the Vercel error output carefully before attempting a fix
+
+### Session Handoff
+- Lives at `Sessions/session_handoff.md`
+- Written via Claude Code at end of each session — no downloads, no manual copying
+- Matt runs one git command to commit and push
+- Always confirm the file updated with: `head -5 ~/Desktop/abf-app/Sessions/session_handoff.md`
 
 ---
 
@@ -79,6 +98,7 @@ The goal is never to maximize time in the app — it's to maximize quality of ti
 - Nora is not a salesperson — she never mentions pricing, tiers, or upgrades
 - The "holy f***" moment: Nora finds what neither person said explicitly by synthesizing both answers
 - Presence over engagement: app is ignition, not destination. One-tap capture during shared experiences.
+- **Always use real names:** Wherever the app addresses a user about their partner, use the partner's real name — never "your partner" when the name is available. Applies to instructional text, waiting states, reveal states, push notifications, and all UI copy. `partnerName` is available in all feature components.
 
 ---
 
