@@ -698,12 +698,12 @@ export default function TodayPage() {
               }}
             >
               <div style={{ position: 'absolute', top: '-15px', right: '-15px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
-              <p style={{ fontSize: '11px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', margin: '0 0 6px' }}>Saturday</p>
+              <p style={{ fontSize: '11px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', margin: '0 0 6px' }}>The Game Room</p>
               <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '24px', fontWeight: 400, color: '#FFFFFF', margin: '0 0 6px', lineHeight: 1.2 }}>
-                The Game Room
+                What are we playing?
               </p>
               <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', margin: 0 }}>
-                What kind of Saturday is it?
+                Two games ready. Nora picks the topic.
               </p>
             </button>
           </section>

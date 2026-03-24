@@ -45,26 +45,42 @@ export async function POST(request) {
       .maybeSingle()
 
     if (couple) {
+      const mode = session?.mode || 'rabbit-hole'
+      const modeNames = {
+        'rabbit-hole': 'The Rabbit Hole',
+        'hot-take': 'Hot Take',
+        'challenge': 'The Challenge',
+        'remake': 'The Remake',
+        'the-hunt': 'The Hunt',
+      }
+      const modeBodies = {
+        'rabbit-hole': "Nora is dropping you in. Get ready.",
+        'hot-take': "Time to take some positions. Game is starting.",
+        'challenge': "Your challenge is ready. Clock starts now.",
+        'remake': "Nora picked your moment. Time to recreate it.",
+        'the-hunt': "The hunt is on. Follow the clues.",
+      }
+      const modeUrls = {
+        'rabbit-hole': '/game-room/rabbit-hole/play',
+        'hot-take': '/game-room/hot-take',
+        'challenge': '/game-room/challenge/play',
+        'remake': '/game-room/remake/play',
+        'the-hunt': '/game-room/the-hunt/play',
+      }
+      const title = modeNames[mode] || 'The Game Room'
+      const body = modeBodies[mode] || "Your game is starting."
+      const url = modeUrls[mode] || '/game-room'
+
       await Promise.all([
         fetch(`${appBase}/api/push/send`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: couple.user1_id,
-            title: 'The Rabbit Hole',
-            body: "Nora is dropping you in. Get ready.",
-            url: '/game-room/rabbit-hole/play',
-          }),
+          body: JSON.stringify({ userId: couple.user1_id, title, body, url }),
         }).catch(() => {}),
         fetch(`${appBase}/api/push/send`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: couple.user2_id,
-            title: 'The Rabbit Hole',
-            body: "Nora is dropping you in. Get ready.",
-            url: '/game-room/rabbit-hole/play',
-          }),
+          body: JSON.stringify({ userId: couple.user2_id, title, body, url }),
         }).catch(() => {}),
       ])
     }
