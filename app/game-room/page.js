@@ -123,7 +123,7 @@ export default function GameRoomPage() {
           {MODES.map(mode => (
             <button
               key={mode.id}
-              onClick={() => mode.available && router.push(`/game-room/${mode.id}`)}
+              onClick={() => mode.available && router.push(`/game-room/lobby?mode=${mode.id}`)}
               style={{
                 background: '#FFFFFF',
                 border: `0.5px solid #E8DDD0`,
