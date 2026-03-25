@@ -24,6 +24,15 @@ export async function POST(request) {
     const isUser1 = couple.user1_id === userId
     const lobbyField = isUser1 ? 'user1_in_lobby' : 'user2_in_lobby'
 
+    // Expire stale lobby sessions older than 30 minutes
+    await supabase
+      .from('game_sessions')
+      .update({ status: 'expired' })
+      .eq('couple_id', coupleId)
+      .eq('mode', mode)
+      .eq('status', 'lobby')
+      .lt('updated_at', new Date(Date.now() - 30 * 60 * 1000).toISOString())
+
     // Check for existing lobby session
     const { data: existing } = await supabase
       .from('game_sessions')
