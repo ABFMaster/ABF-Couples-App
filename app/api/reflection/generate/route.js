@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getWeekStart } from '@/lib/dates'
+import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 
 export async function POST(request) {
   try {
@@ -206,6 +207,17 @@ Return only the JSON object. No markdown, no explanation, no wrapper text.`
       console.error('[reflection/generate] Insert error:', insertError)
       return NextResponse.json({ error: 'Failed to save reflection' }, { status: 500 })
     }
+
+    updateNoraMemory({
+      coupleId,
+      signalType: SIGNAL_TYPES.WEEKLY_REFLECTION,
+      inputData: {
+        opening,
+        moments,
+        pattern,
+        week_ahead,
+      },
+    }).catch(() => {})
 
     // STEP 8 — Fire-and-forget nora_memory update
     const memoryUpdate = `Week of ${weekStart}: ${pattern}`

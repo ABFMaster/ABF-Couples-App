@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 
 export async function POST(request) {
   try {
@@ -58,6 +59,16 @@ export async function POST(request) {
       .select('*')
       .eq('id', ritualId)
       .maybeSingle()
+
+    updateNoraMemory({
+      coupleId,
+      signalType: SIGNAL_TYPES.RITUAL_CHECKIN,
+      inputData: {
+        ritualTitle: ritual.title,
+        checkedIn: true,
+        streak: ritual.streak,
+      },
+    }).catch(() => {})
 
     return NextResponse.json({ ritual, completion })
   } catch (err) {

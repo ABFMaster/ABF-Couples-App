@@ -152,3 +152,38 @@ Design session complete (see above). Build The Rabbit Hole first — it's the mo
 
 ### Nora Architecture (Three-Layer Memory)
 Design complete (see above). Highest leverage build in the entire product. Makes Nora genuinely smarter over time. Required before voice refinement pass or any other Nora work.
+
+---
+
+## TECHNICAL DEBT — DATA INTEGRITY
+
+### user_profiles ID mismatch
+*Catalogued: 2026-03-25*
+
+**The issue:**
+`user_profiles` table uses its own generated UUIDs as the primary key (`id`), completely disconnected from `auth.users.id`. Every API route correctly uses the `user_id` column (which stores the auth UUID) for lookups — so the app works. But the `id` column is meaningless and creates confusion for any join that assumes `user_profiles.id = auth.users.id`.
+
+**Current workaround:**
+All API routes query by `.eq('user_id', ...)` — not by `.id`. The cron had a bug where it joined by `id` instead of `user_id` — fixed 2026-03-25.
+
+**The correct architecture:**
+`user_profiles.id` should equal `auth.users.id`. This is the Supabase standard pattern — user_profiles is created with `id uuid references auth.users(id)` so the primary key IS the auth ID. No separate `user_id` column needed.
+
+**What a proper migration looks like:**
+1. Create new `user_profiles` rows keyed by auth UUID
+2. Migrate all data from old rows to new rows
+3. Update all foreign key references across every table that references `user_profiles.id`
+4. Drop the old `user_id` column
+5. Update every API route to use `.eq('id', ...)` instead of `.eq('user_id', ...)`
+
+**Risk level:** Medium. Safe to defer until pre-launch cleanup sprint. Must be done before public launch.
+
+**Why it matters for scale:**
+Any new developer, any new feature, any ORM or query tool will assume `user_profiles.id = auth.users.id`. Every exception to this pattern is a trap waiting to cause a bug.
+
+---
+
+### sanda@gmail.com orphan account
+*Catalogued: 2026-03-25*
+
+An unknown user created an account (`id: 019ac609-7b08-49b2-9d84-fb1d9ab84ff8`, email: `sanda@gmail.com`) but never connected to a partner. They have a `user_profiles` row with `display_name: sai` and no `couple_id`. Origin unknown — possibly a test signup or someone who discovered the URL. No data risk currently. Delete before public launch or investigate how they found the signup flow.

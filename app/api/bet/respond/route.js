@@ -3,6 +3,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 
 export async function POST(request) {
   try {
@@ -169,6 +170,18 @@ You are speaking directly to ${myName}. React to what the predictions and actual
             .eq('bet_id', betId)
             .eq('user_id', partnerId),
         ])
+
+        updateNoraMemory({
+          coupleId: resolvedCoupleId,
+          signalType: SIGNAL_TYPES.BET_REVEAL,
+          inputData: {
+            question: betRow.question,
+            responses: [
+              { name: myName, prediction: mine.prediction, actual: mine.actual_answer },
+              { name: partnerName, prediction: theirs.prediction, actual: theirs.actual_answer },
+            ],
+          },
+        }).catch(() => {})
       } catch (noraErr) {
         console.error('[bet/respond] Nora reaction error:', noraErr)
       }

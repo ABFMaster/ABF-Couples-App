@@ -2,8 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildCoachContext, formatContextForPrompt, getRecentActivity, getConversationHistory } from '@/lib/ai-coach-context';
-import { getNoraBriefing } from '@/lib/nora-knowledge';
-import { maybeUpdateNoraMemory, getNoraMemory } from '@/lib/nora-memory';
+import { getNoraMemory, updateNoraMemory, maybeUpdateNoraMemory, shouldUpdateMemory, getNoraBriefing, SIGNAL_TYPES } from '@/lib/nora-memory'
 
 // ── NORA PERSONA ──────────────────────────────────────────────────────────────
 
@@ -237,7 +236,6 @@ export async function POST(request) {
     const recentActivity = getRecentActivity(context);
 
     // ── NORA BRIEFING ──────────────────────────────────────────────
-    let noraBriefing = '';
     let userProfile = null;
     let partnerProfile = null;
     try {
@@ -265,12 +263,14 @@ export async function POST(request) {
           : Promise.resolve({ data: null }),
       ]);
 
-      noraBriefing = getNoraBriefing(userProfile, partnerProfile);
     } catch (err) {
       console.error('Nora briefing error:', err);
     }
 
-    const noraMemory = await getNoraMemory(coupleId, supabase);
+    const noraMemory = await getNoraMemory(coupleId)
+    const uName = userProfile?.display_name || context.user?.name || 'them'
+    const pName = partnerProfile?.display_name || context.partner?.name || 'their partner'
+    const noraBriefing = getNoraBriefing(noraMemory, uName, pName)
 
     // ── OPENER PRIORITY ────────────────────────────────────────────
     // When both partners have completed the assessment, lead with couple dynamic.
@@ -308,7 +308,7 @@ export async function POST(request) {
     const sessionFocusNote = sessionType === 'couples_debrief'
       ? '\n\nSESSION FOCUS: This is a couples debrief session. The user has just completed their profile assessment and so has their partner. Your entire focus for this conversation is walking them through what their combination means — what works naturally between them, and what to watch for. Do not mention check-ins, streaks, or other features. Stay completely focused on their profiles and what you know about how they work together. This is a significant moment — treat it as such.'
       : '';
-    const fullSystemPrompt = NORA_SYSTEM_PROMPT + '\n\n' + contextString + (noraBriefing ? '\n\n' + noraBriefing : '') + activityNote + dynamicOpenerNote + sessionFocusNote + (noraMemory ? `\n\nWHAT NORA REMEMBERS ABOUT THIS COUPLE:\nThese are your private notes from previous conversations. They are your most important context — more important than check-in streaks or activity data. Use them to open with something specific and grounded, not generic warmth. You are not meeting this person for the first time. You know something real about what they are navigating. Let that show — not by announcing it, but by the specificity of how you engage. Never say "I remember" or "last time we talked." Just know it and speak from it.\n\n${noraMemory}` : '');
+    const fullSystemPrompt = NORA_SYSTEM_PROMPT + '\n\n' + contextString + (noraBriefing ? '\n\n' + noraBriefing : '') + activityNote + dynamicOpenerNote + sessionFocusNote;
 
     // ── CALL CLAUDE ────────────────────────────────────────────────
     if (!process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY) {
@@ -331,6 +331,12 @@ export async function POST(request) {
 
     const aiResponse = response.content[0].text;
 
+    const updatedMessages = [
+      ...history.map(msg => ({ role: msg.role, content: msg.content })),
+      { role: 'user', content: message.trim() },
+      { role: 'assistant', content: aiResponse },
+    ]
+
     // ── SAVE AI RESPONSE ───────────────────────────────────────────
     const { data: savedResponse, error: aiMsgError } = await supabase
       .from('ai_messages')
@@ -343,10 +349,23 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Failed to save AI response' }, { status: 500 });
     }
 
-    try {
-      await maybeUpdateNoraMemory(activeConversationId, coupleId, supabase);
-    } catch (err) {
-      console.error('[NoraMemory] Memory update failed:', err);
+    updateNoraMemory({
+      coupleId,
+      signalType: SIGNAL_TYPES.NORA_CONVERSATION,
+      inputData: { messages: updatedMessages },
+    }).catch(() => {})
+
+    const lastTwoMessages = updatedMessages.slice(-2)
+    if (lastTwoMessages.length >= 2) {
+      shouldUpdateMemory(lastTwoMessages).then(meaningful => {
+        if (meaningful) {
+          updateNoraMemory({
+            coupleId,
+            signalType: SIGNAL_TYPES.NORA_CONVERSATION,
+            inputData: { messages: lastTwoMessages, midSession: true },
+          }).catch(() => {})
+        }
+      }).catch(() => {})
     }
 
     // ── INCREMENT USAGE (after successful AI call) ─────────────────

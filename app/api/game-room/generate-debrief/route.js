@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -121,6 +122,16 @@ Respond ONLY with JSON, no markdown:
       .from('game_sessions')
       .update({ status: 'completed', debrief_generated: true, updated_at: new Date().toISOString() })
       .eq('id', sessionId)
+
+    updateNoraMemory({
+      coupleId,
+      signalType: SIGNAL_TYPES.GAME_ROOM_DEBRIEF,
+      inputData: {
+        topic: session.hole_topic,
+        convergence_reveal: debrief.convergence_reveal,
+        questions: debrief.questions,
+      },
+    }).catch(() => {})
 
     return NextResponse.json({
       convergence_reveal: debrief.convergence_reveal,

@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 
 export async function POST(request) {
   try {
@@ -141,6 +142,18 @@ You are speaking directly to ${currentUserName}. React to both answers but speak
           .eq('spark_id', sparkId)
           .eq('user_id', partnerId),
       ])
+
+      updateNoraMemory({
+        coupleId,
+        signalType: SIGNAL_TYPES.SPARK_REVEAL,
+        inputData: {
+          question: sparkRow.question,
+          responses: [
+            { name: currentUserName, answer: responseText },
+            { name: partnerName, answer: partnerResponse?.response_text || null },
+          ],
+        },
+      }).catch(() => {})
 
       // Update Nora memory with what was learned from this Spark
       const newMemoryEntry = `Spark question: "${sparkRow.question}". ${currentUserName} answered: "${responseText}". ${partnerName} answered: "${partnerResponse.response_text}". Nora's observation: "${noraReaction}".`
