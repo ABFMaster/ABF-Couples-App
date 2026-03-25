@@ -99,8 +99,10 @@ function GameRoomLobbyContent() {
 
       if (sess) {
         if (sess.status === 'active') {
-          clearInterval(pollRef.current)
-          router.push(config.playPath)
+          if (mode !== 'challenge') {
+            clearInterval(pollRef.current)
+            router.push(config.playPath)
+          }
           return
         }
 
