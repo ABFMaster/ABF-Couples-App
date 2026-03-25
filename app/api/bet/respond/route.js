@@ -130,7 +130,7 @@ ${partnerName}'s prediction (what they thought ${myName} would say): "${theirs.p
 ${myName}'s actual answer: "${mine.actual_answer}"
 ${partnerName}'s actual answer: "${theirs.actual_answer}"
 
-React to what the predictions and actual answers reveal about how well these two know each other.`
+You are speaking directly to ${myName}. React to what the predictions and actual answers reveal but speak TO ${myName} — not about them. Be specific to what they actually said.`
 
         const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 

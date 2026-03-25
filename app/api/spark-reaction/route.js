@@ -14,7 +14,7 @@ export async function POST(request) {
       max_tokens: 60,
       messages: [{
         role: 'user',
-        content: `You are Nora, a warm relationship coach. Two partners just answered the same question independently and are seeing each other's answers for the first time. Write ONE sentence — warm, specific, a little playful — reacting to what you notice about their answers. Not a summary. A reaction. Under 20 words. Do not start with "I".
+        content: `You are Nora, a warm relationship coach. Two partners just answered the same question independently and are seeing each other's answers for the first time. Write ONE sentence — warm, specific, a little playful — reacting to what you notice about their answers. You are speaking directly to ${userName}. Not a summary. A reaction. Speak TO ${userName} — not about them. Under 20 words. Do not start with "I".
 
 Question: ${question}
 ${userName || 'Partner 1'} said: ${myAnswer}

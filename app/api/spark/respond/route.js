@@ -115,7 +115,7 @@ ${partnerName} answered: ${partnerResponse.response_text}
 
 Their profiles: ${currentUserName} is ${myContext}. ${partnerName} is ${partnerContext}.${memoryLine}
 
-React to what you see in these two answers. Be specific to what they actually said.`
+You are speaking directly to ${currentUserName}. React to both answers but speak TO ${currentUserName} — not about them. Be specific to what they actually said.`
 
       const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
