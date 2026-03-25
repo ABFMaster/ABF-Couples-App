@@ -60,7 +60,46 @@ ABF (Always Be Flirting) is a couples relationship app. Partners connect via a 6
 
 ---
 
-## 4. DESIGN SYSTEM
+## 4. AI SELF-REVIEW (REQUIRED BEFORE EVERY HANDOFF)
+
+Before writing the session handoff, Claude must answer these four questions honestly:
+
+1. Where did I struggle this session?
+2. What caused that struggle?
+3. What should we change in prompts, structure, or tools?
+4. What should be standardized going forward?
+
+Answers go into the handoff doc under a dated "AI Self-Review" entry. This is non-negotiable SOP.
+
+---
+
+## 5. TESTING PROTOCOL (PERMANENT SOP)
+
+### Two-account testing
+- Regular Chrome window = Matt (always)
+- Incognito window = Cass (always)
+- Never test two accounts in the same browser context — sessions will cross and create false failures
+
+### Before every lobby/multiplayer test
+Run this SQL to clear stale sessions:
+```sql
+UPDATE game_sessions
+SET status = 'expired'
+WHERE status = 'lobby'
+AND couple_id = '8230e60f-44ca-4668-be28-06cb32b1b831'
+```
+
+### API verify before UI test
+If an API returns the correct data, the code is correct. Browser testing verifies UX, not logic. Never treat a browser test failure as a code failure without verifying the API directly first.
+
+### Vercel deployment
+- Always use `npx vercel --prod --yes` to deploy directly — do not rely on GitHub webhook
+- Check `vercel.json` cron schedules against the current Vercel plan before deploying
+- Hobby plan: once per day max per cron job, 10-second function timeout
+
+---
+
+## 6. DESIGN SYSTEM
 
 ### Platform Base
 - Background: `#FAF6F0` warm cream
@@ -90,7 +129,7 @@ The goal is never to maximize time in the app — it's to maximize quality of ti
 
 ---
 
-## 5. PRODUCT GUARDRAILS
+## 7. PRODUCT GUARDRAILS
 
 - **Lean ship philosophy:** dead code, dead schema, unsupported APIs get deleted immediately
 - Love language, attachment style, conflict style = discovered via assessment, never self-selected
@@ -102,7 +141,7 @@ The goal is never to maximize time in the app — it's to maximize quality of ti
 
 ---
 
-## 6. TEST USERS
+## 8. TEST USERS
 
 - **Matt:** `fe1e0be6-4574-4bc1-8c89-9cb1b6bbe870`
 - **Cass:** `7d1ef6c1-5fac-4ae0-9c04-e73158a1eff0`
@@ -110,7 +149,7 @@ The goal is never to maximize time in the app — it's to maximize quality of ti
 
 ---
 
-## 7. NAVIGATION
+## 9. NAVIGATION
 
 Five tabs: Home → `/dashboard`, Nora → `/ai-coach`, Us → `/us`, Today → `/today`, Profile → `/profile`
 
@@ -120,7 +159,7 @@ The Game Room lives at `/game-room` — accessible via Us page (DO TOGETHER sect
 
 ---
 
-## 8. WEEKLY SCHEDULE
+## 10. WEEKLY SCHEDULE
 
 | Day | Feature | Bypass param |
 |-----|---------|-------------|
@@ -134,7 +173,7 @@ The Game Room lives at `/game-room` — accessible via Us page (DO TOGETHER sect
 
 ---
 
-## 9. FEATURES BUILT
+## 11. FEATURES BUILT
 
 ### Auth & Onboarding
 Email/password signup via Supabase Auth. `OnboardingGuard` redirects incomplete users to `/onboarding/welcome`. 28-question compatibility assessment on first run. Partner connection via 6-character code.
@@ -183,7 +222,7 @@ Full chat, rich context, cross-session memory via `nora_memory` table.
 
 ---
 
-## 10. THE GAME ROOM 🆕 CURRENT SPRINT
+## 12. THE GAME ROOM 🆕 CURRENT SPRINT
 
 ### Architecture
 - **Landing:** `app/game-room/page.js` — mode cards, gates to onboarding if interests not completed
@@ -275,7 +314,7 @@ Full chat, rich context, cross-session memory via `nora_memory` table.
 
 ---
 
-## 11. GAME ROOM DB TABLES
+## 13. GAME ROOM DB TABLES
 
 | Table | Key Columns |
 |-------|-------------|
@@ -287,7 +326,7 @@ Full chat, rich context, cross-session memory via `nora_memory` table.
 
 ---
 
-## 12. PUSH NOTIFICATIONS — KNOWN ARCHITECTURE ISSUE
+## 14. PUSH NOTIFICATIONS — KNOWN ARCHITECTURE ISSUE
 
 **Current behavior is WRONG:**
 - `spark/today` and `bet/today` CREATE content when user opens the app, then notify BOTH users (including the opener)
@@ -306,7 +345,7 @@ Full chat, rich context, cross-session memory via `nora_memory` table.
 
 ---
 
-## 13. KEY FILES
+## 15. KEY FILES
 
 | File | Purpose |
 |------|---------|
@@ -331,7 +370,7 @@ Full chat, rich context, cross-session memory via `nora_memory` table.
 
 ---
 
-## 14. DATABASE
+## 16. DATABASE
 
 | Table | Key Columns |
 |-------|-------------|
@@ -348,7 +387,7 @@ Full chat, rich context, cross-session memory via `nora_memory` table.
 
 ---
 
-## 15. TECHNICAL PATTERNS
+## 17. TECHNICAL PATTERNS
 
 ### Timezone (CRITICAL)
 All date strings use Pacific time. Never use `toISOString().split('T')[0]`.
@@ -386,7 +425,7 @@ Always `git add -A` not `git add -u` for new files.
 
 ---
 
-## 16. CURRENT SPRINT — GAME ROOM WEEK
+## 18. CURRENT SPRINT — GAME ROOM WEEK
 
 **Tonight:** Matt + Cass testing Rabbit Hole (second attempt with rebuilt mechanics) and Hot Take
 
@@ -400,7 +439,7 @@ Always `git add -A` not `git add -u` for new files.
 
 ---
 
-## 17. BACKLOG (See PRODUCT-BACKLOG.md for full detail)
+## 19. BACKLOG (See PRODUCT-BACKLOG.md for full detail)
 
 - Notification cron architecture (3am per timezone, read-only fetch routes)
 - Nora three-layer memory (DB columns added, logic not built)
@@ -415,7 +454,7 @@ Always `git add -A` not `git add -u` for new files.
 
 ---
 
-## 18. KNOWN ISSUES
+## 20. KNOWN ISSUES
 
 - Push notifications fire on app open (content created by first opener, not cron)
 - Bet card design slightly jarring — shadow/border added, full sweep needed
@@ -424,7 +463,7 @@ Always `git add -A` not `git add -u` for new files.
 
 ---
 
-## 19. DEPLOY WORKFLOW
+## 21. DEPLOY WORKFLOW
 ```bash
 git add -A          # new files
 git add -u          # existing files only
