@@ -262,10 +262,10 @@ export async function GET(request) {
     const userIds = couples.flatMap(c => [c.user1_id, c.user2_id])
     const { data: profiles } = await supabase
       .from('user_profiles')
-      .select('id, timezone')
-      .in('id', userIds)
+      .select('user_id, timezone')
+      .in('user_id', userIds)
 
-    const profileMap = Object.fromEntries((profiles || []).map(p => [p.id, p]))
+    const profileMap = Object.fromEntries((profiles || []).map(p => [p.user_id, p]))
 
     let processed = 0
     for (const couple of couples) {
