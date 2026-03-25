@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { getSparkQuestion } from '@/lib/spark-questions'
 import { getTodayString, getDayOfWeek } from '@/lib/dates'
 
 const SPARK_DAYS = new Set([1, 2, 4]) // Mon, Tue, Thu
@@ -63,74 +62,8 @@ export async function GET(request) {
       .eq('spark_date', todayStr)
       .maybeSingle()
 
-    // Step 6: Generate if none exists
     if (!spark) {
-      const { data: usedRows } = await supabase
-        .from('sparks')
-        .select('question_id')
-        .eq('couple_id', coupleId)
-
-      const usedIds = (usedRows || []).map(r => r.question_id).filter(Boolean)
-
-      const coupleAgeDays = Math.floor(
-        (Date.now() - new Date(couple.created_at).getTime()) / 86400000
-      )
-
-      const q = getSparkQuestion({ coupleAgeDays, skipCount: 0, usedIds })
-
-      const { data: inserted } = await supabase
-        .from('sparks')
-        .insert({
-          couple_id: coupleId,
-          question: q.question,
-          question_id: q.id,
-          question_level: q.level,
-          question_tone: q.tone,
-          spark_date: todayStr,
-        })
-        .select('id, question, question_id, question_level, question_tone, spark_date')
-        .maybeSingle()
-
-      spark = inserted
-
-      // Notify both users that a new Spark is ready
-      try {
-        const { data: myProfile } = await supabase
-          .from('user_profiles')
-          .select('name')
-          .eq('user_id', user.id)
-          .maybeSingle()
-
-        const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
-        await Promise.all([
-          fetch(`${appBase}/api/push/send`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: couple.user1_id,
-              title: 'The Spark',
-              body: 'A new Spark is waiting for you.',
-              url: '/today',
-            }),
-          }),
-          fetch(`${appBase}/api/push/send`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: couple.user2_id,
-              title: 'The Spark',
-              body: 'A new Spark is waiting for you.',
-              url: '/today',
-            }),
-          }),
-        ])
-      } catch (notifyErr) {
-        console.error('[spark/today] Notification error:', notifyErr)
-      }
-    }
-
-    if (!spark) {
-      return NextResponse.json({ error: 'Failed to generate spark' }, { status: 500 })
+      return Response.json({ error: 'No spark for today' }, { status: 404 })
     }
 
     // Step 7: Fetch spark responses for both users

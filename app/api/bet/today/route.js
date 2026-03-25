@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { getBetQuestion } from '@/lib/bet-questions'
 import { getTodayString, getDayOfWeek } from '@/lib/dates'
 
 const BET_DAYS = new Set([3]) // Wednesday
@@ -57,69 +56,8 @@ export async function GET(request) {
       .eq('bet_date', todayStr)
       .maybeSingle()
 
-    // Step 4: Generate if none exists
     if (!bet) {
-      const { data: usedRows } = await supabase
-        .from('bets')
-        .select('question_id')
-        .eq('couple_id', coupleId)
-
-      const usedIds = (usedRows || []).map(r => r.question_id).filter(Boolean)
-
-      const coupleAgeDays = Math.floor(
-        (Date.now() - new Date(couple.created_at).getTime()) / 86400000
-      )
-
-      let q
-      try { q = getBetQuestion({ coupleAgeDays, usedIds }) } catch (qErr) { console.error('[bet/today] getBetQuestion error:', qErr); return NextResponse.json({ error: qErr.message }, { status: 500 }) }
-
-      const { data: inserted, error: insertError } = await supabase
-        .from('bets')
-        .insert({
-          couple_id: coupleId,
-          question: q.question,
-          question_id: q.id,
-          question_level: q.level,
-          question_category: q.category || null,
-          bet_date: todayStr,
-        })
-        .select('id, question, question_id, question_level, question_category, bet_date')
-        .maybeSingle()
-
-      if (insertError) { console.error('[bet/today] insert error:', insertError); }
-
-      bet = inserted
-
-      // Notify both users that today's Bet is ready
-      if (bet) {
-        const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
-        await Promise.all([
-          fetch(`${appBase}/api/push/send`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: couple.user1_id,
-              title: 'The Bet',
-              body: "Today's Bet is ready. Make your prediction.",
-              url: '/today',
-            }),
-          }).catch(() => {}),
-          fetch(`${appBase}/api/push/send`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: couple.user2_id,
-              title: 'The Bet',
-              body: "Today's Bet is ready. Make your prediction.",
-              url: '/today',
-            }),
-          }).catch(() => {}),
-        ])
-      }
-    }
-
-    if (!bet) {
-      return NextResponse.json({ error: 'Failed to generate bet' }, { status: 500 })
+      return Response.json({ error: 'No bet for today' }, { status: 404 })
     }
 
     // Step 5: Fetch bet_responses for both users
