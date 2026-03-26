@@ -73,6 +73,7 @@ export async function POST(request) {
     // Notify partner
     const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
     const partnerId = isUser1 ? couple.user2_id : couple.user1_id
+    const notificationUrl = `/game-room/lobby?mode=${mode}`
     await fetch(`${appBase}/api/push/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -80,7 +81,7 @@ export async function POST(request) {
         userId: partnerId,
         title: 'The Game Room',
         body: 'Your partner is in the lobby. Ready to play?',
-        url: '/game-room/rabbit-hole',
+        url: notificationUrl,
       }),
     }).catch(() => {})
 

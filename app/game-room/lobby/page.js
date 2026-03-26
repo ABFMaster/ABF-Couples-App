@@ -23,6 +23,7 @@ function GameRoomLobbyContent() {
   const [sessionId, setSessionId] = useState(null)
   const [entering, setEntering] = useState(false)
   const [starting, setStarting] = useState(false)
+  const [isHost, setIsHost] = useState(false)
   const pollRef = useRef(null)
   const coupleRef = useRef(null)
 
@@ -111,6 +112,7 @@ function GameRoomLobbyContent() {
         const isUser1 = couple?.user1_id === user?.id
         setPartnerIsIn(isUser1 ? sess.user2_in_lobby : sess.user1_in_lobby)
         setIAmIn(prev => prev ? prev : (isUser1 ? sess.user1_in_lobby : sess.user2_in_lobby))
+        if (sess?.id) setSessionId(sess.id)
       }
     }, 3000)
     return () => clearInterval(pollRef.current)
@@ -129,6 +131,7 @@ function GameRoomLobbyContent() {
       if (data.session) {
         setSessionId(data.session.id)
         setIAmIn(true)
+        if (!data.session.user2_in_lobby) setIsHost(true)
       }
     } catch {} finally { setEntering(false) }
   }
@@ -364,21 +367,27 @@ function GameRoomLobbyContent() {
 
             {/* Timer — only for modes that need it */}
             {config.hasTimer && (
-              <>
-                <p style={{ fontSize: '13px', fontWeight: 600, color: '#1A1A1A', marginBottom: '12px' }}>How long do you have?</p>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  {config.timerOptions.map(option => (
-                    <button
-                      key={option.minutes}
-                      onClick={() => setSelectedTimer(option.minutes)}
-                      style={{ flex: 1, padding: '14px 8px', borderRadius: '14px', border: `2px solid ${selectedTimer === option.minutes ? '#4338CA' : '#E8DDD0'}`, background: selectedTimer === option.minutes ? '#EEF2FF' : '#FFFFFF', cursor: 'pointer', transition: 'all 150ms' }}
-                    >
-                      <p style={{ fontSize: '15px', fontWeight: 700, color: selectedTimer === option.minutes ? '#4338CA' : '#1A1A1A', margin: 0 }}>{option.label}</p>
-                      <p style={{ fontSize: '11px', color: '#9CA3AF', margin: '2px 0 0' }}>{option.description}</p>
-                    </button>
-                  ))}
-                </div>
-              </>
+              isHost ? (
+                <>
+                  <p style={{ fontSize: '13px', fontWeight: 600, color: '#1A1A1A', marginBottom: '12px' }}>How long do you have?</p>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    {config.timerOptions.map(option => (
+                      <button
+                        key={option.minutes}
+                        onClick={() => setSelectedTimer(option.minutes)}
+                        style={{ flex: 1, padding: '14px 8px', borderRadius: '14px', border: `2px solid ${selectedTimer === option.minutes ? '#4338CA' : '#E8DDD0'}`, background: selectedTimer === option.minutes ? '#EEF2FF' : '#FFFFFF', cursor: 'pointer', transition: 'all 150ms' }}
+                      >
+                        <p style={{ fontSize: '15px', fontWeight: 700, color: selectedTimer === option.minutes ? '#4338CA' : '#1A1A1A', margin: 0 }}>{option.label}</p>
+                        <p style={{ fontSize: '11px', color: '#9CA3AF', margin: '2px 0 0' }}>{option.description}</p>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p style={{ fontSize: '14px', color: 'rgba(245,236,215,0.5)', textAlign: 'center', padding: '12px 0', fontFamily: "'Fraunces', Georgia, serif", fontStyle: 'italic' }}>
+                  Waiting for {partnerName} to set the timer...
+                </p>
+              )
             )}
           </div>
         )}

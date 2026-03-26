@@ -345,7 +345,7 @@ export default function RabbitHolePlayPage() {
         <div style={{ textAlign: 'center' }}>
           <div style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid #4338CA', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
           <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#7A8C6E', fontStyle: 'italic' }}>
-            {loadingNextRound ? 'Nora is sending you deeper...' : 'Nora is picking your hole...'}
+            {loadingNextRound ? 'Nora is sending you deeper...' : 'Nora is opening the rabbit hole...'}
           </p>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
