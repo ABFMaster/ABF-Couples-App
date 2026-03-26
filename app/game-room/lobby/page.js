@@ -369,7 +369,7 @@ function GameRoomLobbyContent() {
               </>
             ) : (
               <p style={{ fontSize: '14px', color: 'rgba(0,0,0,0.4)', textAlign: 'center', padding: '12px 0 20px', fontFamily: "'Fraunces', Georgia, serif", fontStyle: 'italic' }}>
-                Waiting for {partnerName} to set up...
+                {together === null ? `Waiting for ${partnerName} to set up...` : together ? `${partnerName} says you're together 👫` : `${partnerName} says you're remote 📱`}
               </p>
             )}
 
@@ -393,7 +393,7 @@ function GameRoomLobbyContent() {
                 </>
               ) : (
                 <p style={{ fontSize: '14px', color: 'rgba(245,236,215,0.5)', textAlign: 'center', padding: '12px 0', fontFamily: "'Fraunces', Georgia, serif", fontStyle: 'italic' }}>
-                  Waiting for {partnerName} to set the timer...
+                  {selectedTimer ? `${partnerName} set ${selectedTimer} minutes ⏱` : `Waiting for ${partnerName} to set the timer...`}
                 </p>
               )
             )}
