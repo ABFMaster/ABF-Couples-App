@@ -360,7 +360,7 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
       {/* 2x2 flip card grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
         {cards.map((card, i) => (
-          <div key={i} style={{ height: '150px', perspective: '800px', WebkitPerspective: '800px' }}>
+          <div key={i} style={{ minHeight: '150px', perspective: '800px', WebkitPerspective: '800px' }}>
             <div
               onClick={() => !flipped[i] && flipCard(i)}
               style={{
@@ -394,7 +394,6 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
                 border: '1.5px solid #3D2E1E',
                 borderRadius: '14px',
                 padding: '12px',
-                overflow: 'hidden',
               }}>
                 <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#D4A853', textTransform: 'uppercase', marginBottom: '6px', lineHeight: 1.2 }}>
                   {card.label}
