@@ -220,10 +220,14 @@ export default function RabbitHolePlayPage() {
           const user1 = couple.user1_id === userId
           setPartnerIsReady(user1 ? round.user2_ready : round.user1_ready)
 
-          // Both ready — load next round
+          // Both ready — load next round or show choice
           if (round.user1_ready && round.user2_ready && round.status === 'completed') {
             clearInterval(pollRef.current)
-            await loadNextRound(roundNumber + 1)
+            if (roundNumber >= minRounds) {
+              setShowRoundChoice(true)
+            } else {
+              await loadNextRound(roundNumber + 1)
+            }
           }
         }
       }
