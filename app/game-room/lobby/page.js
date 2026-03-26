@@ -102,7 +102,7 @@ function GameRoomLobbyContent() {
         if (sess.status === 'active') {
           if (mode !== 'challenge') {
             clearInterval(pollRef.current)
-            router.push(config.playPath)
+            router.push(`${config.playPath}?sessionId=${sess.id}`)
           }
           return
         }
