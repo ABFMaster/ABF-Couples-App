@@ -311,9 +311,11 @@ export default function TodayPage() {
   const fetchBet = useCallback(async () => {
     try {
       setBetLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const res = await fetch(`/api/bet/today?userId=${user.id}&bet=true`)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const res = await fetch('/api/bet/today?bet=true', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
       const data = await res.json()
       setBetData(data)
     } catch {} finally {
