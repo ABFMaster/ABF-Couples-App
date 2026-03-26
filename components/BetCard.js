@@ -360,12 +360,13 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
       {/* 2x2 flip card grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
         {cards.map((card, i) => (
-          <div key={i} style={{ minHeight: '150px', perspective: '800px', WebkitPerspective: '800px' }}>
+          <div key={i} style={{ minHeight: flipped[i] ? 'auto' : '150px', perspective: '800px', WebkitPerspective: '800px' }}>
             <div
               onClick={() => !flipped[i] && flipCard(i)}
               style={{
                 width: '100%',
-                height: '100%',
+                height: flipped[i] ? 'auto' : '100%',
+                minHeight: '150px',
                 position: 'relative',
                 transformStyle: 'preserve-3d',
                 WebkitTransformStyle: 'preserve-3d',
@@ -378,6 +379,7 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
               <div style={{
                 position: 'absolute',
                 inset: 0,
+                height: '100%',
                 backfaceVisibility: 'hidden',
                 WebkitBackfaceVisibility: 'hidden',
               }}>
@@ -385,8 +387,10 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
               </div>
               {/* Back: answer content */}
               <div style={{
-                position: 'absolute',
-                inset: 0,
+                position: flipped[i] ? 'relative' : 'absolute',
+                inset: flipped[i] ? 'unset' : 0,
+                width: '100%',
+                boxSizing: 'border-box',
                 backfaceVisibility: 'hidden',
                 WebkitBackfaceVisibility: 'hidden',
                 transform: 'rotateY(180deg)',
