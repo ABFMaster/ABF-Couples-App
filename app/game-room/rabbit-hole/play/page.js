@@ -31,6 +31,7 @@ export default function RabbitHolePlayPage() {
   const [tellMoreSent, setTellMoreSent] = useState({})
   const [showInstructions, setShowInstructions] = useState(true)
   const [loadingNextRound, setLoadingNextRound] = useState(false)
+  const [bringingItHome, setBringingItHome] = useState(false)
   const [showRoundChoice, setShowRoundChoice] = useState(false)
   const [noraNudge, setNoraNudge] = useState(null)
   const [loadingNudge, setLoadingNudge] = useState(false)
@@ -241,7 +242,13 @@ export default function RabbitHolePlayPage() {
           // Both ready — load next round or show choice
           if (round.user1_ready && round.user2_ready && round.status === 'completed') {
             clearInterval(pollRef.current)
-            if (roundNumber >= minRounds) {
+            if (roundNumber >= minRounds && showRoundChoice) {
+              await supabase
+                .from('game_sessions')
+                .update({ status: 'completed' })
+                .eq('id', session?.id)
+              router.push(`/game-room/rabbit-hole/debrief?sessionId=${session?.id}`)
+            } else if (roundNumber >= minRounds) {
               setShowRoundChoice(true)
             } else {
               await loadNextRound(roundNumber + 1)
@@ -362,13 +369,28 @@ export default function RabbitHolePlayPage() {
   const canDebrief = roundNumber >= minRounds && iAmReady && partnerIsReady
 
   const handleBringItHome = async () => {
+    if (signalingReady || iAmReady) return
+    setBringingItHome(true)
+    setSignalingReady(true)
     try {
-      await supabase
-        .from('game_sessions')
-        .update({ status: 'completed' })
-        .eq('id', session?.id)
-    } catch {}
-    router.push(`/game-room/rabbit-hole/debrief?sessionId=${session?.id}`)
+      const res = await fetch('/api/game-room/round-ready', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session?.id, coupleId, userId, roundNumber }),
+      })
+      const data = await res.json()
+      setIAmReady(true)
+      if (data.bothReady) {
+        await supabase
+          .from('game_sessions')
+          .update({ status: 'completed' })
+          .eq('id', session?.id)
+        router.push(`/game-room/rabbit-hole/debrief?sessionId=${session?.id}`)
+      }
+    } catch {} finally {
+      setSignalingReady(false)
+      setBringingItHome(false)
+    }
   }
 
   if (loading || loadingNextRound) {
@@ -377,7 +399,7 @@ export default function RabbitHolePlayPage() {
         <div style={{ textAlign: 'center' }}>
           <div style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid #4338CA', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
           <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#7A8C6E', fontStyle: 'italic' }}>
-            {loadingNextRound ? 'Nora is sending you deeper...' : 'Nora is opening the rabbit hole...'}
+            {bringingItHome ? 'Nora is closing the loop...' : loadingNextRound ? 'Nora is sending you deeper...' : 'Nora is opening the rabbit hole...'}
           </p>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

@@ -31,16 +31,30 @@ export default function RabbitHoleDebriefPage() {
       if (!couple) { router.push('/connect'); return }
       setCoupleId(couple.id)
 
-      // Get most recent completed or active session
-      const { data: sess } = await supabase
-        .from('game_sessions')
-        .select('*')
-        .eq('couple_id', couple.id)
-        .eq('mode', 'rabbit-hole')
-        .in('status', ['active', 'completed'])
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+      // Prefer sessionId URL param, fall back to most recent active/completed session
+      const sessionIdParam = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('sessionId') : null
+
+      let sess = null
+      if (sessionIdParam) {
+        const { data } = await supabase
+          .from('game_sessions')
+          .select('*')
+          .eq('id', sessionIdParam)
+          .single()
+        sess = data
+      }
+      if (!sess) {
+        const { data } = await supabase
+          .from('game_sessions')
+          .select('*')
+          .eq('couple_id', couple.id)
+          .eq('mode', 'rabbit-hole')
+          .in('status', ['active', 'completed'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        sess = data
+      }
 
       if (!sess) { router.push('/game-room'); return }
       setSession(sess)
