@@ -352,18 +352,26 @@ function GameRoomLobbyContent() {
         {bothInLobby && (
           <div style={{ marginBottom: '24px' }}>
             {/* Together or remote */}
-            <p style={{ fontSize: '13px', fontWeight: 600, color: '#1A1A1A', marginBottom: '12px' }}>Are you together right now?</p>
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-              {[{ value: true, label: '👫 Together' }, { value: false, label: '📱 Remote' }].map(opt => (
-                <button
-                  key={String(opt.value)}
-                  onClick={() => setTogether(opt.value)}
-                  style={{ flex: 1, padding: '14px 8px', borderRadius: '14px', border: `2px solid ${together === opt.value ? '#4338CA' : '#E8DDD0'}`, background: together === opt.value ? '#EEF2FF' : '#FFFFFF', cursor: 'pointer', transition: 'all 150ms', fontSize: '14px', fontWeight: 600, color: together === opt.value ? '#4338CA' : '#1A1A1A' }}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+            {isHost ? (
+              <>
+                <p style={{ fontSize: '13px', fontWeight: 600, color: '#1A1A1A', marginBottom: '12px' }}>Are you together right now?</p>
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                  {[{ value: true, label: '👫 Together' }, { value: false, label: '📱 Remote' }].map(opt => (
+                    <button
+                      key={String(opt.value)}
+                      onClick={() => setTogether(opt.value)}
+                      style={{ flex: 1, padding: '14px 8px', borderRadius: '14px', border: `2px solid ${together === opt.value ? '#4338CA' : '#E8DDD0'}`, background: together === opt.value ? '#EEF2FF' : '#FFFFFF', cursor: 'pointer', transition: 'all 150ms', fontSize: '14px', fontWeight: 600, color: together === opt.value ? '#4338CA' : '#1A1A1A' }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p style={{ fontSize: '14px', color: 'rgba(0,0,0,0.4)', textAlign: 'center', padding: '12px 0 20px', fontFamily: "'Fraunces', Georgia, serif", fontStyle: 'italic' }}>
+                Waiting for {partnerName} to set up...
+              </p>
+            )}
 
             {/* Timer — only for modes that need it */}
             {config.hasTimer && (
