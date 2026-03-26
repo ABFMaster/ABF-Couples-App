@@ -7,17 +7,23 @@ const BET_DAYS = new Set([3]) // Wednesday
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
     const forceOverride = searchParams.get('bet') === 'true'
-
-    if (!userId) {
-      return NextResponse.json({ error: 'userId required' }, { status: 400 })
-    }
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     )
+
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const userId = user.id
 
     // Step 1: Fetch couple for this user
     const { data: couple } = await supabase

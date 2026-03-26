@@ -31,6 +31,9 @@ export default function RabbitHolePlayPage() {
   const [tellMoreSent, setTellMoreSent] = useState({})
   const [showInstructions, setShowInstructions] = useState(true)
   const [loadingNextRound, setLoadingNextRound] = useState(false)
+  const [showRoundChoice, setShowRoundChoice] = useState(false)
+  const [noraNudge, setNoraNudge] = useState(null)
+  const [loadingNudge, setLoadingNudge] = useState(false)
   const timerRef = useRef(null)
   const pollRef = useRef(null)
   const prevPartnerCountRef = useRef(0)
@@ -157,6 +160,22 @@ export default function RabbitHolePlayPage() {
         if (prev <= 1) {
           clearInterval(timerRef.current)
           setTimerExpired(true)
+          setLoadingNudge(true)
+          fetch('/api/game-room/nora-nudge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sessionId: session?.id,
+              coupleId,
+              roundNumber,
+              currentThread: myThread,
+              finds: myFinds,
+            }),
+          })
+            .then(r => r.json())
+            .then(d => { if (d.nudge) setNoraNudge(d.nudge) })
+            .catch(() => {})
+            .finally(() => setLoadingNudge(false))
           return 0
         }
         return prev - 1
@@ -215,6 +234,7 @@ export default function RabbitHolePlayPage() {
   const loadNextRound = async (nextRoundNum) => {
     if (!session || !coupleId) return
     setLoadingNextRound(true)
+    setShowRoundChoice(false)
     try {
       const holeRes = await fetch('/api/game-room/generate-hole', {
         method: 'POST',
@@ -279,7 +299,11 @@ export default function RabbitHolePlayPage() {
       const data = await res.json()
       setIAmReady(true)
       if (data.bothReady) {
-        await loadNextRound(roundNumber + 1)
+        if (roundNumber >= minRounds) {
+          setShowRoundChoice(true)
+        } else {
+          await loadNextRound(roundNumber + 1)
+        }
       }
     } catch {} finally { setSignalingReady(false) }
   }
@@ -452,8 +476,36 @@ export default function RabbitHolePlayPage() {
           </button>
         </div>
 
-        {/* READY FOR NEXT ROUND */}
-        {!canDebrief && (
+        {/* READY / CHOICE / DEBRIEF */}
+        {showRoundChoice ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '24px' }}>
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#F5ECD7', textAlign: 'center', marginBottom: '4px' }}>
+              Keep pulling the thread?
+            </p>
+            <button
+              onClick={() => {
+                setShowRoundChoice(false)
+                loadNextRound(roundNumber + 1)
+              }}
+              style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'transparent', border: '1.5px solid rgba(245,236,215,0.3)', color: '#F5ECD7', fontSize: '15px', cursor: 'pointer', fontFamily: "'Fraunces', Georgia, serif" }}
+            >
+              Keep going →
+            </button>
+            <button
+              onClick={() => router.push(`/game-room/rabbit-hole/debrief?sessionId=${session?.id}`)}
+              style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'linear-gradient(135deg, #4A3728 0%, #2A1E14 100%)', border: '1.5px solid #D4A853', color: '#D4A853', fontSize: '15px', cursor: 'pointer', fontFamily: "'Fraunces', Georgia, serif" }}
+            >
+              Bring it home ✦
+            </button>
+          </div>
+        ) : canDebrief ? (
+          <button
+            onClick={() => router.push('/game-room/rabbit-hole/debrief')}
+            style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}
+          >
+            Bring it home — talk to Nora 🕳️
+          </button>
+        ) : (
           <div style={{ marginBottom: '16px' }}>
             {/* Both ready status */}
             {(iAmReady || partnerIsReady) && (
@@ -488,21 +540,18 @@ export default function RabbitHolePlayPage() {
           </div>
         )}
 
-        {/* DEBRIEF CTA */}
-        {canDebrief && (
-          <button
-            onClick={() => router.push('/game-room/rabbit-hole/debrief')}
-            style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}
-          >
-            Bring it home — talk to Nora 🕳️
-          </button>
-        )}
-
         {/* Timer expired nudge */}
-        {timerExpired && !canDebrief && (
-          <p style={{ textAlign: 'center', fontSize: '13px', color: '#9CA3AF', fontStyle: 'italic', marginTop: '12px' }}>
-            Time's up — but don't let me stop you. Keep going or wrap up when you're ready.
-          </p>
+        {timerExpired && (
+          <div style={{ marginTop: '16px', padding: '14px 16px', background: 'rgba(212,168,83,0.08)', borderRadius: '12px', border: '1px solid rgba(212,168,83,0.2)' }}>
+            <p style={{ fontSize: '10px', letterSpacing: '0.12em', color: '#D4A853', textTransform: 'uppercase', marginBottom: '8px' }}>NORA</p>
+            {loadingNudge ? (
+              <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: 'rgba(245,236,215,0.5)', fontStyle: 'italic' }}>Nora is thinking...</p>
+            ) : noraNudge ? (
+              <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#F5ECD7', lineHeight: 1.5, fontStyle: 'italic' }}>{noraNudge}</p>
+            ) : (
+              <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#F5ECD7', lineHeight: 1.5 }}>Time's up — but don't let me stop you. Keep going or wrap up when you're ready.</p>
+            )}
+          </div>
         )}
 
       </div>
