@@ -264,6 +264,8 @@ export default function RabbitHolePlayPage() {
               router.push(`/game-room/rabbit-hole/debrief?sessionId=${session?.id}`)
             } else if (roundNumber >= minRounds) {
               setShowRoundChoice(true)
+              setIAmReady(false)
+              setPartnerIsReady(false)
             } else {
               await loadNextRound(roundNumber + 1)
             }
@@ -344,6 +346,8 @@ export default function RabbitHolePlayPage() {
       if (data.bothReady) {
         if (roundNumber >= minRounds) {
           setShowRoundChoice(true)
+          setIAmReady(false)
+          setPartnerIsReady(false)
         } else {
           await loadNextRound(roundNumber + 1)
         }
