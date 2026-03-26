@@ -194,6 +194,18 @@ export default function RabbitHolePlayPage() {
   useEffect(() => {
     if (!session?.id || !userId) return
     pollRef.current = setInterval(async () => {
+      // Poll session status — detect when partner navigates to debrief
+      const { data: sess } = await supabase
+        .from('game_sessions')
+        .select('status, id')
+        .eq('id', session.id)
+        .maybeSingle()
+      if (sess?.status === 'completed') {
+        clearInterval(pollRef.current)
+        router.push(`/game-room/rabbit-hole/debrief?sessionId=${sess.id}`)
+        return
+      }
+
       // Poll finds
       const { data: finds } = await supabase
         .from('game_finds')
@@ -353,7 +365,7 @@ export default function RabbitHolePlayPage() {
     try {
       await supabase
         .from('game_sessions')
-        .update({ status: 'complete' })
+        .update({ status: 'completed' })
         .eq('id', session?.id)
     } catch {}
     router.push(`/game-room/rabbit-hole/debrief?sessionId=${session?.id}`)
@@ -499,15 +511,12 @@ export default function RabbitHolePlayPage() {
         {/* READY / CHOICE / DEBRIEF */}
         {showRoundChoice ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '24px' }}>
-            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#F5ECD7', textAlign: 'center', marginBottom: '4px' }}>
-              Keep pulling the thread?
-            </p>
             <button
               onClick={() => {
                 setShowRoundChoice(false)
                 loadNextRound(roundNumber + 1)
               }}
-              style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'transparent', border: '1.5px solid rgba(245,236,215,0.3)', color: '#F5ECD7', fontSize: '15px', cursor: 'pointer', fontFamily: "'Fraunces', Georgia, serif" }}
+              style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'transparent', border: '1.5px solid rgba(245,236,215,0.5)', color: '#F5ECD7', fontSize: '15px', cursor: 'pointer', fontFamily: "'Fraunces', Georgia, serif" }}
             >
               Keep going →
             </button>
