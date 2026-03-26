@@ -33,6 +33,15 @@ export async function POST(request) {
       .eq('status', 'lobby')
       .lt('updated_at', new Date(Date.now() - 30 * 60 * 1000).toISOString())
 
+    // Expire stale active sessions older than 24 hours
+    await supabase
+      .from('game_sessions')
+      .update({ status: 'expired' })
+      .eq('couple_id', coupleId)
+      .eq('mode', mode)
+      .eq('status', 'active')
+      .lt('updated_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+
     // Check for existing lobby session
     const { data: existing } = await supabase
       .from('game_sessions')

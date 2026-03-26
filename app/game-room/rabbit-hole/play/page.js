@@ -66,20 +66,34 @@ export default function RabbitHolePlayPage() {
       if (myProfile?.display_name) setUserName(myProfile.display_name)
       if (partnerProfile?.display_name) setPartnerName(partnerProfile.display_name)
 
-      const statusRes = await fetch(`/api/game-room/lobby-status?coupleId=${couple.id}&mode=rabbit-hole`)
-      const statusData = await statusRes.json()
-      if (!statusData.session || statusData.session.status !== 'active') {
+      const sessionIdParam = new URLSearchParams(window.location.search).get('sessionId')
+      if (!sessionIdParam) { router.push('/game-room/lobby?mode=rabbit-hole'); return }
+
+      const { data: sess } = await supabase
+        .from('game_sessions')
+        .select('*')
+        .eq('id', sessionIdParam)
+        .single()
+
+      if (!sess || !['active', 'completed'].includes(sess.status)) {
         router.push('/game-room/lobby?mode=rabbit-hole')
         return
       }
 
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-      if (statusData.session.started_at && statusData.session.started_at < twentyFourHoursAgo) {
+      if (sess.started_at && sess.started_at < twentyFourHoursAgo) {
         router.push('/game-room/lobby?mode=rabbit-hole')
         return
       }
-      const sess = statusData.session
+
       setSession(sess)
+      setRoundNumber(1)
+      setMyThread(null)
+      setMyFinds([])
+      setIAmReady(false)
+      setPartnerIsReady(false)
+      setShowRoundChoice(false)
+      setNoraNudge(null)
 
       // Set timer
       if (sess.expires_at) {
