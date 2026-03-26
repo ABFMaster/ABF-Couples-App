@@ -71,6 +71,12 @@ export default function RabbitHolePlayPage() {
         router.push('/game-room/lobby?mode=rabbit-hole')
         return
       }
+
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      if (statusData.session.started_at && statusData.session.started_at < twentyFourHoursAgo) {
+        router.push('/game-room/lobby?mode=rabbit-hole')
+        return
+      }
       const sess = statusData.session
       setSession(sess)
 
@@ -343,6 +349,16 @@ export default function RabbitHolePlayPage() {
   const minRounds = MIN_ROUNDS[timerMinutes] || 3
   const canDebrief = roundNumber >= minRounds && iAmReady && partnerIsReady
 
+  const handleBringItHome = async () => {
+    try {
+      await supabase
+        .from('game_sessions')
+        .update({ status: 'complete' })
+        .eq('id', session?.id)
+    } catch {}
+    router.push(`/game-room/rabbit-hole/debrief?sessionId=${session?.id}`)
+  }
+
   if (loading || loadingNextRound) {
     return (
       <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -496,7 +512,7 @@ export default function RabbitHolePlayPage() {
               Keep going →
             </button>
             <button
-              onClick={() => router.push(`/game-room/rabbit-hole/debrief?sessionId=${session?.id}`)}
+              onClick={handleBringItHome}
               style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'linear-gradient(135deg, #4A3728 0%, #2A1E14 100%)', border: '1.5px solid #D4A853', color: '#D4A853', fontSize: '15px', cursor: 'pointer', fontFamily: "'Fraunces', Georgia, serif" }}
             >
               Bring it home ✦
@@ -504,7 +520,7 @@ export default function RabbitHolePlayPage() {
           </div>
         ) : canDebrief ? (
           <button
-            onClick={() => router.push('/game-room/rabbit-hole/debrief')}
+            onClick={handleBringItHome}
             style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}
           >
             Bring it home — talk to Nora 🕳️
