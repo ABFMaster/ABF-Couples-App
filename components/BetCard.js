@@ -358,14 +358,14 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
       </p>
 
       {/* 2x2 flip card grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', alignItems: 'stretch' }}>
         {cards.map((card, i) => (
-          <div key={i} style={{ minHeight: flipped[i] ? 'auto' : '150px', perspective: '800px', WebkitPerspective: '800px' }}>
+          <div key={i} style={{ minHeight: '150px', perspective: '800px', WebkitPerspective: '800px', height: '100%' }}>
             <div
               onClick={() => !flipped[i] && flipCard(i)}
               style={{
                 width: '100%',
-                height: flipped[i] ? 'auto' : '100%',
+                height: '100%',
                 minHeight: '150px',
                 position: 'relative',
                 transformStyle: 'preserve-3d',
@@ -379,18 +379,16 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
               <div style={{
                 position: 'absolute',
                 inset: 0,
-                height: '100%',
                 backfaceVisibility: 'hidden',
                 WebkitBackfaceVisibility: 'hidden',
+                height: '100%',
               }}>
                 <CardBack label={card.label} />
               </div>
               {/* Back: answer content */}
               <div style={{
-                position: flipped[i] ? 'relative' : 'absolute',
-                inset: flipped[i] ? 'unset' : 0,
-                width: '100%',
-                boxSizing: 'border-box',
+                position: 'absolute',
+                inset: 0,
                 backfaceVisibility: 'hidden',
                 WebkitBackfaceVisibility: 'hidden',
                 transform: 'rotateY(180deg)',
@@ -398,6 +396,7 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
                 border: '1.5px solid #3D2E1E',
                 borderRadius: '14px',
                 padding: '12px',
+                overflowY: 'auto',
               }}>
                 <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#D4A853', textTransform: 'uppercase', marginBottom: '6px', lineHeight: 1.2 }}>
                   {card.label}
