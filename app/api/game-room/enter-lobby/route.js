@@ -39,7 +39,7 @@ export async function POST(request) {
       .select('*')
       .eq('couple_id', coupleId)
       .eq('mode', mode)
-      .eq('status', 'lobby')
+      .in('status', ['lobby', 'active'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
