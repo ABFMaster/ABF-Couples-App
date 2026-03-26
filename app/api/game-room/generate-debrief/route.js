@@ -27,7 +27,10 @@ export async function POST(request) {
 
     // Return existing debrief if already generated
     if (session.debrief_generated) {
-      return NextResponse.json({ alreadyGenerated: true })
+      return NextResponse.json({
+        convergence_reveal: session.convergence,
+        questions: session.debrief_questions || [],
+      })
     }
 
     // Get both finds
@@ -117,10 +120,16 @@ Respond ONLY with JSON, no markdown:
         created_by: couple.user1_id,
       })
 
-    // Mark session as debriefed
+    // Mark session as debriefed and save debrief content
     await supabase
       .from('game_sessions')
-      .update({ status: 'completed', debrief_generated: true, updated_at: new Date().toISOString() })
+      .update({
+        convergence: debrief.convergence_reveal,
+        debrief_questions: debrief.questions,
+        debrief_generated: true,
+        status: 'completed',
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', sessionId)
 
     updateNoraMemory({
