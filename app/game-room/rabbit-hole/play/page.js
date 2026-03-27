@@ -36,6 +36,7 @@ export default function RabbitHolePlayPage() {
   const pollRef = useRef(null)
   const prevPartnerCountRef = useRef(0)
   const coupleRef = useRef(null)
+  const gamePhaseRef = useRef('loading_initial')
 
   useEffect(() => {
     const init = async () => {
@@ -165,6 +166,7 @@ export default function RabbitHolePlayPage() {
       }
 
       setGamePhase('playing')
+      gamePhaseRef.current = 'playing'
     }
     init()
   }, [router])
@@ -252,7 +254,7 @@ export default function RabbitHolePlayPage() {
           // Both ready — load next round or show choice
           if (round.user1_ready && round.user2_ready && round.status === 'completed') {
             clearInterval(pollRef.current)
-            if (roundNumber >= minRounds && gamePhase === 'choice') {
+            if (roundNumber >= minRounds && gamePhaseRef.current === 'choice') {
               await supabase
                 .from('game_sessions')
                 .update({ status: 'completed' })
@@ -260,6 +262,7 @@ export default function RabbitHolePlayPage() {
               router.push(`/game-room/rabbit-hole/debrief?sessionId=${session?.id}`)
             } else if (roundNumber >= minRounds) {
               setGamePhase('choice')
+              gamePhaseRef.current = 'choice'
               setIAmReady(false)
               setPartnerIsReady(false)
             } else {
@@ -275,6 +278,7 @@ export default function RabbitHolePlayPage() {
   const loadNextRound = async (nextRoundNum) => {
     if (!session || !coupleId) return
     setGamePhase('loading_round')
+    gamePhaseRef.current = 'loading_round'
     try {
       const holeRes = await fetch('/api/game-room/generate-hole', {
         method: 'POST',
@@ -300,7 +304,10 @@ export default function RabbitHolePlayPage() {
         .eq('round_number', nextRoundNum)
         .maybeSingle()
       setCurrentRound(newRound)
-    } catch {} finally { setGamePhase('playing') }
+    } catch {} finally {
+      setGamePhase('playing')
+      gamePhaseRef.current = 'playing'
+    }
   }
 
   const handleDropFind = async () => {
@@ -341,6 +348,7 @@ export default function RabbitHolePlayPage() {
       if (data.bothReady) {
         if (roundNumber >= minRounds) {
           setGamePhase('choice')
+          gamePhaseRef.current = 'choice'
           setIAmReady(false)
           setPartnerIsReady(false)
         } else {
@@ -383,6 +391,7 @@ export default function RabbitHolePlayPage() {
   const handleBringItHome = async () => {
     if (signalingReady || iAmReady) return
     setGamePhase('waiting_partner')
+    gamePhaseRef.current = 'waiting_partner'
     setSignalingReady(true)
     try {
       const res = await fetch('/api/game-room/round-ready', {
@@ -394,6 +403,7 @@ export default function RabbitHolePlayPage() {
       setIAmReady(true)
       if (data.bothReady) {
         setGamePhase('loading_debrief')
+        gamePhaseRef.current = 'loading_debrief'
         await supabase
           .from('game_sessions')
           .update({ status: 'completed' })
@@ -401,9 +411,11 @@ export default function RabbitHolePlayPage() {
         router.push(`/game-room/rabbit-hole/debrief?sessionId=${session?.id}`)
       } else {
         setGamePhase('choice')
+        gamePhaseRef.current = 'choice'
       }
     } catch {
       setGamePhase('choice')
+      gamePhaseRef.current = 'choice'
     } finally {
       setSignalingReady(false)
     }
