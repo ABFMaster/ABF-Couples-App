@@ -110,6 +110,7 @@ export default function RabbitHolePlayPage() {
 
       let activeRound = rounds?.find(r => r.status === 'active')
       const latestRoundNum = rounds?.length > 0 ? rounds[0].round_number : 0
+      let loadedRoundNum = 1
 
       if (!activeRound) {
         // Generate round 1
@@ -134,6 +135,7 @@ export default function RabbitHolePlayPage() {
       } else {
         // Load existing round
         const rNum = activeRound.round_number
+        loadedRoundNum = rNum
         setRoundNumber(rNum)
         setIAmReady(user1 ? activeRound.user1_ready : activeRound.user2_ready)
         setPartnerIsReady(user1 ? activeRound.user2_ready : activeRound.user1_ready)
@@ -169,6 +171,11 @@ export default function RabbitHolePlayPage() {
 
       setGamePhase('playing')
       gamePhaseRef.current = 'playing'
+      const initMinRounds = MIN_ROUNDS[sess.timer_minutes] || 3
+      if (loadedRoundNum >= initMinRounds) {
+        setGamePhase('choice')
+        gamePhaseRef.current = 'choice'
+      }
     }
     init()
   }, [router])
@@ -239,40 +246,6 @@ export default function RabbitHolePlayPage() {
         setPartnerFinds(theirs)
       }
 
-      // Poll round ready state
-      const { data: round } = await supabase
-        .from('game_rounds')
-        .select('*')
-        .eq('session_id', session.id)
-        .eq('round_number', roundNumber)
-        .maybeSingle()
-
-      if (round) {
-        const couple = coupleRef.current
-        if (couple) {
-          const user1 = couple.user1_id === userId
-          setPartnerIsReady(user1 ? round.user2_ready : round.user1_ready)
-
-          // Both ready — load next round or show choice
-          if (round.user1_ready && round.user2_ready && round.status === 'completed') {
-            clearInterval(pollRef.current)
-            if (roundNumber >= minRounds && gamePhaseRef.current === 'choice') {
-              await supabase
-                .from('game_sessions')
-                .update({ status: 'completed' })
-                .eq('id', session?.id)
-              router.push(`/game-room/rabbit-hole/debrief?sessionId=${session?.id}`)
-            } else if (roundNumber >= minRounds) {
-              setGamePhase('choice')
-              gamePhaseRef.current = 'choice'
-              setIAmReady(false)
-              setPartnerIsReady(false)
-            } else {
-              await loadNextRound(roundNumber + 1)
-            }
-          }
-        }
-      }
     }, 4000)
     return () => clearInterval(pollRef.current)
   }, [session, userId, roundNumber]) // eslint-disable-line
@@ -307,8 +280,14 @@ export default function RabbitHolePlayPage() {
         .maybeSingle()
       setCurrentRound(newRound)
     } catch {} finally {
-      setGamePhase('playing')
-      gamePhaseRef.current = 'playing'
+      const nextMinRounds = MIN_ROUNDS[session?.timer_minutes] || 3
+      if (nextRoundNum >= nextMinRounds) {
+        setGamePhase('choice')
+        gamePhaseRef.current = 'choice'
+      } else {
+        setGamePhase('playing')
+        gamePhaseRef.current = 'playing'
+      }
     }
   }
 
@@ -390,31 +369,27 @@ export default function RabbitHolePlayPage() {
   const timerMinutes = session?.timer_minutes || 60
   const minRounds = MIN_ROUNDS[timerMinutes] || 3
 
-  const handleBringItHome = async () => {
-    if (signalingReady || iAmReady) return
-    setGamePhase('waiting_partner')
-    gamePhaseRef.current = 'waiting_partner'
+  const handleKeepGoing = async () => {
+    if (signalingReady) return
     setSignalingReady(true)
     try {
-      const res = await fetch('/api/game-room/round-ready', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: session?.id, coupleId, userId, roundNumber }),
-      })
-      const data = await res.json()
-      setIAmReady(true)
-      if (data.bothReady) {
-        setGamePhase('loading_debrief')
-        gamePhaseRef.current = 'loading_debrief'
-        await supabase
-          .from('game_sessions')
-          .update({ status: 'completed' })
-          .eq('id', session?.id)
-        router.push(`/game-room/rabbit-hole/debrief?sessionId=${session?.id}`)
-      } else {
-        setGamePhase('choice')
-        gamePhaseRef.current = 'choice'
-      }
+      await loadNextRound(roundNumber + 1)
+    } finally {
+      setSignalingReady(false)
+    }
+  }
+
+  const handleBringItHome = async () => {
+    if (signalingReady) return
+    setSignalingReady(true)
+    setGamePhase('loading_debrief')
+    gamePhaseRef.current = 'loading_debrief'
+    try {
+      await supabase
+        .from('game_sessions')
+        .update({ status: 'completed' })
+        .eq('id', session?.id)
+      router.push(`/game-room/rabbit-hole/debrief?sessionId=${session?.id}`)
     } catch {
       setGamePhase('choice')
       gamePhaseRef.current = 'choice'
@@ -561,29 +536,25 @@ export default function RabbitHolePlayPage() {
         </div>
 
         {/* READY / CHOICE / DEBRIEF */}
-        {gamePhase === 'choice' ? (
+        {gamePhase === 'choice' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '24px' }}>
             <button
-              onClick={() => loadNextRound(roundNumber + 1)}
-              style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'transparent', border: '1.5px solid rgba(245,236,215,0.5)', color: '#F5ECD7', fontSize: '15px', cursor: 'pointer', fontFamily: "'Fraunces', Georgia, serif" }}
+              onClick={handleKeepGoing}
+              disabled={signalingReady}
+              style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'transparent', border: '1.5px solid rgba(245,236,215,0.5)', color: '#F5ECD7', fontSize: '15px', cursor: 'pointer', fontFamily: "'Fraunces', Georgia, serif", opacity: signalingReady ? 0.5 : 1 }}
             >
               Keep going →
             </button>
             <button
               onClick={handleBringItHome}
-              style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'linear-gradient(135deg, #4A3728 0%, #2A1E14 100%)', border: '1.5px solid #D4A853', color: '#D4A853', fontSize: '15px', cursor: 'pointer', fontFamily: "'Fraunces', Georgia, serif" }}
+              disabled={signalingReady}
+              style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'linear-gradient(135deg, #4A3728 0%, #2A1E14 100%)', border: '1.5px solid #D4A853', color: '#D4A853', fontSize: '15px', cursor: 'pointer', fontFamily: "'Fraunces', Georgia, serif", opacity: signalingReady ? 0.5 : 1 }}
             >
               Bring it home ✦
             </button>
           </div>
-        ) : gamePhase === 'waiting_partner' ? (
-          <div style={{ textAlign: 'center', padding: '12px 0', color: '#9CA3AF', fontSize: '13px' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
-              Waiting for {partnerName}...
-            </div>
-          </div>
-        ) : (
+        )}
+        {gamePhase !== 'choice' && (
           <div style={{ marginBottom: '16px' }}>
             {/* Both ready status */}
             {(iAmReady || partnerIsReady) && (
