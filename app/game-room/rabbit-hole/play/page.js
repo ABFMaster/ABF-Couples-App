@@ -246,6 +246,30 @@ export default function RabbitHolePlayPage() {
         setPartnerFinds(theirs)
       }
 
+      // Poll round ready state — only for non-final rounds
+      const currentMinRounds = MIN_ROUNDS[session?.timer_minutes] || 3
+      if (gamePhaseRef.current !== 'choice') {
+        const { data: round } = await supabase
+          .from('game_rounds')
+          .select('user1_ready, user2_ready, status')
+          .eq('session_id', session.id)
+          .eq('round_number', roundNumber)
+          .maybeSingle()
+
+        if (round) {
+          const couple = coupleRef.current
+          if (couple) {
+            const user1 = couple.user1_id === userId
+            setPartnerIsReady(user1 ? round.user2_ready : round.user1_ready)
+
+            if (round.user1_ready && round.user2_ready && round.status === 'completed') {
+              clearInterval(pollRef.current)
+              await loadNextRound(roundNumber + 1)
+            }
+          }
+        }
+      }
+
     }, 4000)
     return () => clearInterval(pollRef.current)
   }, [session, userId, roundNumber]) // eslint-disable-line
