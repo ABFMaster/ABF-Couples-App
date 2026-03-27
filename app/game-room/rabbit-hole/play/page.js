@@ -7,7 +7,7 @@ const MIN_ROUNDS = { 30: 2, 60: 3, 90: 4 }
 
 export default function RabbitHolePlayPage() {
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
+  const [gamePhase, setGamePhase] = useState('loading_initial')
   const [userId, setUserId] = useState(null)
   const [coupleId, setCoupleId] = useState(null)
   const [session, setSession] = useState(null)
@@ -30,9 +30,6 @@ export default function RabbitHolePlayPage() {
   const [timerExpired, setTimerExpired] = useState(false)
   const [tellMoreSent, setTellMoreSent] = useState({})
   const [showInstructions, setShowInstructions] = useState(true)
-  const [loadingNextRound, setLoadingNextRound] = useState(false)
-  const [bringingItHome, setBringingItHome] = useState(false)
-  const [showRoundChoice, setShowRoundChoice] = useState(false)
   const [noraNudge, setNoraNudge] = useState(null)
   const [loadingNudge, setLoadingNudge] = useState(false)
   const timerRef = useRef(null)
@@ -92,7 +89,6 @@ export default function RabbitHolePlayPage() {
       setMyFinds([])
       setIAmReady(false)
       setPartnerIsReady(false)
-      setShowRoundChoice(false)
       setNoraNudge(null)
 
       // Set timer
@@ -168,7 +164,7 @@ export default function RabbitHolePlayPage() {
         if (mine.length > 0) setShowInstructions(false)
       }
 
-      setLoading(false)
+      setGamePhase('playing')
     }
     init()
   }, [router])
@@ -256,14 +252,14 @@ export default function RabbitHolePlayPage() {
           // Both ready — load next round or show choice
           if (round.user1_ready && round.user2_ready && round.status === 'completed') {
             clearInterval(pollRef.current)
-            if (roundNumber >= minRounds && showRoundChoice) {
+            if (roundNumber >= minRounds && gamePhase === 'choice') {
               await supabase
                 .from('game_sessions')
                 .update({ status: 'completed' })
                 .eq('id', session?.id)
               router.push(`/game-room/rabbit-hole/debrief?sessionId=${session?.id}`)
             } else if (roundNumber >= minRounds) {
-              setShowRoundChoice(true)
+              setGamePhase('choice')
               setIAmReady(false)
               setPartnerIsReady(false)
             } else {
@@ -278,8 +274,7 @@ export default function RabbitHolePlayPage() {
 
   const loadNextRound = async (nextRoundNum) => {
     if (!session || !coupleId) return
-    setLoadingNextRound(true)
-    setShowRoundChoice(false)
+    setGamePhase('loading_round')
     try {
       const holeRes = await fetch('/api/game-room/generate-hole', {
         method: 'POST',
@@ -305,7 +300,7 @@ export default function RabbitHolePlayPage() {
         .eq('round_number', nextRoundNum)
         .maybeSingle()
       setCurrentRound(newRound)
-    } catch {} finally { setLoadingNextRound(false) }
+    } catch {} finally { setGamePhase('playing') }
   }
 
   const handleDropFind = async () => {
@@ -345,7 +340,7 @@ export default function RabbitHolePlayPage() {
       setIAmReady(true)
       if (data.bothReady) {
         if (roundNumber >= minRounds) {
-          setShowRoundChoice(true)
+          setGamePhase('choice')
           setIAmReady(false)
           setPartnerIsReady(false)
         } else {
@@ -384,11 +379,10 @@ export default function RabbitHolePlayPage() {
 
   const timerMinutes = session?.timer_minutes || 60
   const minRounds = MIN_ROUNDS[timerMinutes] || 3
-  const canDebrief = roundNumber >= minRounds && iAmReady && partnerIsReady
 
   const handleBringItHome = async () => {
     if (signalingReady || iAmReady) return
-    setBringingItHome(true)
+    setGamePhase('waiting_partner')
     setSignalingReady(true)
     try {
       const res = await fetch('/api/game-room/round-ready', {
@@ -399,25 +393,29 @@ export default function RabbitHolePlayPage() {
       const data = await res.json()
       setIAmReady(true)
       if (data.bothReady) {
+        setGamePhase('loading_debrief')
         await supabase
           .from('game_sessions')
           .update({ status: 'completed' })
           .eq('id', session?.id)
         router.push(`/game-room/rabbit-hole/debrief?sessionId=${session?.id}`)
+      } else {
+        setGamePhase('choice')
       }
-    } catch {} finally {
+    } catch {
+      setGamePhase('choice')
+    } finally {
       setSignalingReady(false)
-      setBringingItHome(false)
     }
   }
 
-  if (loading || loadingNextRound) {
+  if (gamePhase === 'loading_initial' || gamePhase === 'loading_round' || gamePhase === 'loading_debrief') {
     return (
       <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid #4338CA', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
           <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#7A8C6E', fontStyle: 'italic' }}>
-            {bringingItHome ? 'Nora is closing the loop...' : loadingNextRound ? 'Nora is sending you deeper...' : 'Nora is opening the rabbit hole...'}
+            {gamePhase === 'loading_debrief' ? 'Nora is closing the loop...' : gamePhase === 'loading_round' ? 'Nora is sending you deeper...' : 'Nora is opening the rabbit hole...'}
           </p>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -549,13 +547,10 @@ export default function RabbitHolePlayPage() {
         </div>
 
         {/* READY / CHOICE / DEBRIEF */}
-        {showRoundChoice ? (
+        {gamePhase === 'choice' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '24px' }}>
             <button
-              onClick={() => {
-                setShowRoundChoice(false)
-                loadNextRound(roundNumber + 1)
-              }}
+              onClick={() => loadNextRound(roundNumber + 1)}
               style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'transparent', border: '1.5px solid rgba(245,236,215,0.5)', color: '#F5ECD7', fontSize: '15px', cursor: 'pointer', fontFamily: "'Fraunces', Georgia, serif" }}
             >
               Keep going →
@@ -567,13 +562,13 @@ export default function RabbitHolePlayPage() {
               Bring it home ✦
             </button>
           </div>
-        ) : canDebrief ? (
-          <button
-            onClick={handleBringItHome}
-            style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}
-          >
-            Bring it home — talk to Nora 🕳️
-          </button>
+        ) : gamePhase === 'waiting_partner' ? (
+          <div style={{ textAlign: 'center', padding: '12px 0', color: '#9CA3AF', fontSize: '13px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+              Waiting for {partnerName}...
+            </div>
+          </div>
         ) : (
           <div style={{ marginBottom: '16px' }}>
             {/* Both ready status */}
