@@ -40,6 +40,8 @@ export default function RabbitHolePlayPage() {
 
   useEffect(() => {
     const init = async () => {
+      setGamePhase('loading_initial')
+      gamePhaseRef.current = 'loading_initial'
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
       setUserId(user.id)
