@@ -15,6 +15,7 @@ export default function RabbitHoleDebriefPage() {
   const [messages, setMessages] = useState([])
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
+  const [savedToTimeline, setSavedToTimeline] = useState(false)
   const messagesEndRef = useRef(null)
 
   useEffect(() => {
@@ -91,6 +92,9 @@ export default function RabbitHoleDebriefPage() {
       }
 
       setLoading(false)
+      setTimeout(() => {
+        setPhase('truth')
+      }, 10000)
     }
     init()
   }, [router])
@@ -122,6 +126,22 @@ You are now in the debrief phase. They've already seen the factual close and the
 - Just react and talk
 
 Be Nora — present, curious, warm. Reference what they actually found. This is the best part of the night.`
+  }
+
+  const handleSaveToTimeline = async () => {
+    try {
+      await supabase
+        .from('timeline_events')
+        .insert({
+          couple_id: coupleId,
+          event_type: 'custom',
+          title: `Rabbit Hole: ${session?.hole_topic}`,
+          description: session?.convergence,
+          event_date: new Date().toISOString().split('T')[0],
+          created_by: userId,
+        })
+      setSavedToTimeline(true)
+    } catch {}
   }
 
   const handleSendChat = async () => {
@@ -210,12 +230,6 @@ Be Nora — present, curious, warm. Reference what they actually found. This is 
                 {session?.factual_close || debrief?.convergence_reveal}
               </p>
             </div>
-            <button
-              onClick={() => setPhase('truth')}
-              style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}
-            >
-              But here's what it really means →
-            </button>
           </div>
         )}
 
@@ -253,7 +267,16 @@ Be Nora — present, curious, warm. Reference what they actually found. This is 
             >
               Back to Game Room
             </button>
-            <p style={{ textAlign: 'center', fontSize: '12px', color: '#B8A898', marginTop: '20px', fontStyle: 'italic' }}>Saved to your timeline ✓</p>
+            {savedToTimeline ? (
+              <p style={{ fontSize: '13px', color: 'rgba(0,0,0,0.4)', textAlign: 'center' }}>Saved to your timeline ✓</p>
+            ) : (
+              <button
+                onClick={handleSaveToTimeline}
+                style={{ background: 'none', border: 'none', fontSize: '13px', color: 'rgba(0,0,0,0.4)', cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                Save to our timeline
+              </button>
+            )}
           </div>
         )}
 

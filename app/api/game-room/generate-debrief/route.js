@@ -108,18 +108,6 @@ Respond ONLY with JSON, no markdown:
       return NextResponse.json({ error: 'Failed to parse debrief' }, { status: 500 })
     }
 
-    // Save timeline event
-    await supabase
-      .from('timeline_events')
-      .insert({
-        couple_id: coupleId,
-        event_type: 'custom',
-        title: debrief.timeline_title || `The Rabbit Hole: ${session.hole_topic}`,
-        description: `${session.hole_entry}\n\n${user1Name} found: ${find1?.find_text || ''}\n${user2Name} found: ${find2?.find_text || ''}`,
-        event_date: new Date().toISOString().split('T')[0],
-        created_by: couple.user1_id,
-      })
-
     // Mark session as debriefed and save debrief content
     await supabase
       .from('game_sessions')
