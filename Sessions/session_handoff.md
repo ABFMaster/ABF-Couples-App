@@ -1,5 +1,5 @@
 # ABF — Developer Handoff Briefing
-# Last Updated: 2026-03-24
+# Last Updated: 2026-03-27
 
 ---
 
@@ -58,6 +58,15 @@ ABF (Always Be Flirting) is a couples relationship app. Partners connect via a 6
 - Matt runs one git command to commit and push
 - Always confirm the file updated with: `head -5 ~/Desktop/abf-app/Sessions/session_handoff.md`
 
+### STATE MACHINE GATE
+Before writing any code for a feature involving two users, async state, or session management — write the complete state machine first. Every state, every transition, every actor. Get explicit agreement before coding. No exceptions.
+
+### ROOT CAUSE RULE
+Before fixing any bug, answer: (1) What is the actual root cause — not the symptom? (2) Is this fix addressing the root cause or the symptom? (3) Does the fix introduce new fragility? If the answer to #2 is "symptom" — stop and find the root cause fix.
+
+### ONE FEATURE AT A TIME
+Do not context switch mid-session. Complete the current feature to Definition of Done before starting anything new. If a blocker is found, catalog it and finish the current feature first.
+
 ---
 
 ## 4. AI SELF-REVIEW (REQUIRED BEFORE EVERY HANDOFF)
@@ -70,6 +79,16 @@ Before writing the session handoff, Claude must answer these four questions hone
 4. What should be standardized going forward?
 
 Answers go into the handoff doc under a dated "AI Self-Review" entry. This is non-negotiable SOP.
+
+### Self-Review: 2026-03-27
+
+1. **Where did I struggle?** The round-ready poll block was removed as part of the unilateral architecture, then had to be added back. Got the "bring it home is unilateral" correct but over-applied unilateralism to the pre-debrief round advancement flow, which still requires both users to signal before Nora sends Thread N+1.
+
+2. **What caused that?** Incomplete flow tracing before removing mechanisms. Focused on the terminal case (bring it home) without verifying all intermediate paths (non-final round advancement) still worked.
+
+3. **What should we change?** When making architectural changes that remove existing mechanisms, enumerate every user flow and confirm each path is still covered before deleting anything.
+
+4. **What should be standardized?** For state machine refactors: write out all transitions (state → event → new state) before touching code. Verify every path has a handler. Then build.
 
 ---
 
@@ -99,7 +118,18 @@ If an API returns the correct data, the code is correct. Browser testing verifie
 
 ---
 
-## 6. DESIGN SYSTEM
+## 6. DEFINITION OF DONE
+
+A feature is only complete if:
+- Functionality works end-to-end for both users
+- Edge cases are handled (not catalogued — handled)
+- Code addresses root cause, not symptoms
+- No console.log statements remain
+- Committed with a descriptive message
+
+---
+
+## 7. DESIGN SYSTEM
 
 ### Platform Base
 - Background: `#FAF6F0` warm cream
@@ -129,7 +159,7 @@ The goal is never to maximize time in the app — it's to maximize quality of ti
 
 ---
 
-## 7. PRODUCT GUARDRAILS
+## 8. PRODUCT GUARDRAILS
 
 - **Lean ship philosophy:** dead code, dead schema, unsupported APIs get deleted immediately
 - Love language, attachment style, conflict style = discovered via assessment, never self-selected
@@ -141,7 +171,7 @@ The goal is never to maximize time in the app — it's to maximize quality of ti
 
 ---
 
-## 8. TEST USERS
+## 9. TEST USERS
 
 - **Matt:** `fe1e0be6-4574-4bc1-8c89-9cb1b6bbe870`
 - **Cass:** `7d1ef6c1-5fac-4ae0-9c04-e73158a1eff0`
@@ -149,7 +179,7 @@ The goal is never to maximize time in the app — it's to maximize quality of ti
 
 ---
 
-## 9. NAVIGATION
+## 10. NAVIGATION
 
 Five tabs: Home → `/dashboard`, Nora → `/ai-coach`, Us → `/us`, Today → `/today`, Profile → `/profile`
 
@@ -159,7 +189,7 @@ The Game Room lives at `/game-room` — accessible via Us page (DO TOGETHER sect
 
 ---
 
-## 10. WEEKLY SCHEDULE
+## 11. WEEKLY SCHEDULE
 
 | Day | Feature | Bypass param |
 |-----|---------|-------------|
@@ -173,7 +203,7 @@ The Game Room lives at `/game-room` — accessible via Us page (DO TOGETHER sect
 
 ---
 
-## 11. FEATURES BUILT
+## 12. FEATURES BUILT
 
 ### Auth & Onboarding
 Email/password signup via Supabase Auth. `OnboardingGuard` redirects incomplete users to `/onboarding/welcome`. 28-question compatibility assessment on first run. Partner connection via 6-character code.
@@ -222,7 +252,7 @@ Full chat, rich context, cross-session memory via `nora_memory` table.
 
 ---
 
-## 12. THE GAME ROOM 🆕 CURRENT SPRINT
+## 13. THE GAME ROOM 🆕 CURRENT SPRINT
 
 ### Architecture
 - **Landing:** `app/game-room/page.js` — mode cards, gates to onboarding if interests not completed
@@ -241,22 +271,36 @@ Full chat, rich context, cross-session memory via `nora_memory` table.
 | The Remake | 🔜 Designed | `/game-room/remake/play` |
 | The Hunt | 🔜 Designed | `/game-room/the-hunt/play` |
 
-### The Rabbit Hole — ✅ BUILT, SECOND PLAYTEST PENDING TONIGHT
-**Flow:** Universal Lobby → play (multi-round) → both signal ready → next round → "Bring it home" → debrief
+### The Rabbit Hole — ✅ BUILT, ARCHITECTURE REFACTORED 2026-03-27
+**Flow:** Universal Lobby → play (multi-round) → both signal ready → next round OR "Bring it home" at min rounds → debrief
 
-**Key design decisions (from March 20 first playtest):**
+**Key design decisions (confirmed after playtests):**
 - Same topic, DIFFERENT ANGLES — both on same case/event, different investigation threads
 - Nora is HOST — "I know how it ends. I just don't know how you'll get there."
-- BOTH must signal "Ready for next" before Nora sends Thread 2, 3, etc.
-- Min rounds by timer: 30min=2, 60min=3, 90min=4 before "Bring it home" appears
+- BOTH must signal "Ready for next" before Nora sends Thread 2, 3, etc. (poll detects both-ready → `loadNextRound`)
+- Min rounds by timer: 30min=2, 60min=3, 90min=4 (`MIN_ROUNDS` constant) — at minRounds, choice UI appears
+- **"Bring it home" is UNILATERAL** — first player to tap marks `session.status = 'completed'`; partner navigates via poll
 - Timer expiry → "Don't let me stop you — keep going" (never 0:00)
 - 24hr → Nora fires convergence automatically (cron not yet built)
 - Two-part convergence: factual close (what happened) THEN human truth (Nora's layer)
 - Debrief = inline Nora chat pre-seeded with full game context — NOT main Nora page
 - "Tell me more" button on partner finds → push notification only, NOT a Nora data point
 
+**State machine in play/page.js (`gamePhase`):**
+- `loading_initial` → set immediately on init start, prevents stale content flash
+- `playing` → normal game flow, both-ready round advancement via poll
+- `choice` → min rounds reached, "Keep going →" or "Bring it home ✦" visible
+- `loading_round` → between rounds
+- `loading_debrief` → after "Bring it home" tapped, session marked completed
+- `gamePhaseRef` mirrors every `setGamePhase(...)` call — fixes closure staleness in `setInterval` poll
+
+**Poll behavior:**
+1. Session status check → if `completed`, navigate to debrief (handles partner carry)
+2. Finds polling → new partner finds trigger theatre animation
+3. Round-ready check (gated: `gamePhaseRef.current !== 'choice'`) → both-ready → `loadNextRound(roundNumber + 1)`
+
 **Pages:**
-- `app/game-room/rabbit-hole/play/page.js` — multi-round, find theatre, both-ready mechanic
+- `app/game-room/rabbit-hole/play/page.js` — multi-round, find theatre, gamePhase state machine
 - `app/game-room/rabbit-hole/debrief/page.js` — two-part convergence + inline Nora chat
 
 **API routes:**
@@ -314,7 +358,7 @@ Full chat, rich context, cross-session memory via `nora_memory` table.
 
 ---
 
-## 13. GAME ROOM DB TABLES
+## 14. GAME ROOM DB TABLES
 
 | Table | Key Columns |
 |-------|-------------|
@@ -326,7 +370,7 @@ Full chat, rich context, cross-session memory via `nora_memory` table.
 
 ---
 
-## 14. PUSH NOTIFICATIONS — KNOWN ARCHITECTURE ISSUE
+## 15. PUSH NOTIFICATIONS — KNOWN ARCHITECTURE ISSUE
 
 **Current behavior is WRONG:**
 - `spark/today` and `bet/today` CREATE content when user opens the app, then notify BOTH users (including the opener)
@@ -345,7 +389,7 @@ Full chat, rich context, cross-session memory via `nora_memory` table.
 
 ---
 
-## 15. KEY FILES
+## 16. KEY FILES
 
 | File | Purpose |
 |------|---------|
@@ -370,7 +414,7 @@ Full chat, rich context, cross-session memory via `nora_memory` table.
 
 ---
 
-## 16. DATABASE
+## 17. DATABASE
 
 | Table | Key Columns |
 |-------|-------------|
@@ -387,7 +431,7 @@ Full chat, rich context, cross-session memory via `nora_memory` table.
 
 ---
 
-## 17. TECHNICAL PATTERNS
+## 18. TECHNICAL PATTERNS
 
 ### Timezone (CRITICAL)
 All date strings use Pacific time. Never use `toISOString().split('T')[0]`.
@@ -425,21 +469,33 @@ Always `git add -A` not `git add -u` for new files.
 
 ---
 
-## 18. CURRENT SPRINT — GAME ROOM WEEK
+## 19. CURRENT SPRINT — GAME ROOM WEEK
 
-**Tonight:** Matt + Cass testing Rabbit Hole (second attempt with rebuilt mechanics) and Hot Take
+**COMPLETED THIS SESSION (2026-03-26/27):**
+- Rabbit Hole end-to-end playable: same topic both users, debrief works for both, gamePhase state machine, unilateral Bring it Home
+- `generate-debrief` stores full content for both users via `debrief_questions` column
+- Lobby: session ID in URL, host-only timer/Together-Remote, poll passes sessionId to partner
+- `enter-lobby` finds active sessions, 24hr active session cleanup
+- `game_rounds` unique constraint prevents race condition
+- Nora three-layer platinum memory architecture deployed
+- Nora signal routes wired: Spark, Bet, Reflection, Game Room, Ritual
+- `bet/today` bearer token auth
+- Cron fix: queries `user_profiles` by `user_id`
+- `play/page.js` gamePhase state machine refactor (replaced `showRoundChoice` / `loadingNextRound` / `bringingItHome` / `loading`)
+- `PRODUCT-BACKLOG.md` updated with LOBBY & GAME ROOM BUGS section and UX polish list
 
-**Next session priorities:**
-1. Rabbit Hole playtest debrief — fix whatever broke
-2. 24hr auto-convergence cron for abandoned Rabbit Hole sessions
-3. Nora mid-round nudge at timer expiry
-4. The Challenge build
-5. Nora three-layer memory (DB columns added to `nora_memory`, logic not built)
-6. Notification cron architecture (if time allows)
+**NEXT SESSION PRIORITY ORDER:**
+1. Hot Take — test end-to-end, apply session ID in URL pattern same as Rabbit Hole
+2. The Challenge — test end-to-end, apply same pattern
+3. Rabbit Hole UX polish (see PRODUCT-BACKLOG.md)
+4. `generate-debrief`: fix Convergence and Bigger Picture showing same text
+5. Nora topic variety — `generate-hole` uses couple interests more aggressively
+6. Vercel Pro upgrade before 20 test users
+7. Code quality audit (see backlog)
 
 ---
 
-## 19. BACKLOG (See PRODUCT-BACKLOG.md for full detail)
+## 20. BACKLOG (See PRODUCT-BACKLOG.md for full detail)
 
 - Notification cron architecture (3am per timezone, read-only fetch routes)
 - Nora three-layer memory (DB columns added, logic not built)
@@ -454,7 +510,7 @@ Always `git add -A` not `git add -u` for new files.
 
 ---
 
-## 20. KNOWN ISSUES
+## 21. KNOWN ISSUES
 
 - Push notifications fire on app open (content created by first opener, not cron)
 - Bet card design slightly jarring — shadow/border added, full sweep needed
@@ -463,10 +519,55 @@ Always `git add -A` not `git add -u` for new files.
 
 ---
 
-## 21. DEPLOY WORKFLOW
+## 22. DEPLOY WORKFLOW
 ```bash
 git add -A          # new files
 git add -u          # existing files only
 git commit -m "descriptive message"
 git push            # Vercel auto-deploys on push to main
 ```
+
+---
+
+## SESSION PROMPT — ENGINEERING STANDARD
+*Adopted: 2026-03-27*
+
+At the start of every session, Claude operates under these principles:
+
+### PROJECT MEMORY
+- Always read Sessions/session_handoff.md at session start
+- Always read PRODUCT-BACKLOG.md before suggesting new work
+- Do not create features.md or progress.md — use existing files
+
+### FEATURE-DRIVEN WORK
+- Work on ONE feature at a time
+- Select from the priority order in the Current Sprint section
+- Do not start new features until current one meets Definition of Done
+
+### DEFINITION OF DONE
+A feature is only complete when:
+- Works end-to-end for both users on real devices
+- Edge cases handled — not catalogued, handled
+- Code addresses root cause not symptoms
+- No console.log statements remain
+- Committed with descriptive message
+
+### DESIGN BEFORE CODE
+- For any feature involving two users, async state, or session management: write the complete state machine first — every state, every transition, every actor — and get explicit agreement before writing any code
+- For any intelligence/AI feature: research the established pattern first (therapy models, AI memory architecture, etc.) before designing
+- For any bug fix: answer the three-question root cause checklist before touching code
+
+### ROOT CAUSE CHECKLIST
+Before any fix:
+1. What is the actual root cause — not the symptom?
+2. Is this fix addressing the root cause or the symptom?
+3. Does this fix introduce new fragility?
+If #2 is "symptom" — stop and find the root cause.
+
+### STANDARD
+The code quality standard is: would a senior engineer at a top-tier company be proud of this? Not perfect — but clean, intentional, and built to last. Prefer correctness over speed. Never leave broken functionality.
+
+### SESSION FLOW
+Start: Read handoff → identify next feature → confirm with user
+During: One feature, step by step, design before code
+End: AI self-review → update handoff → commit

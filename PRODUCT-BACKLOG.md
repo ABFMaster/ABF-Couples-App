@@ -187,3 +187,19 @@ Any new developer, any new feature, any ORM or query tool will assume `user_prof
 *Catalogued: 2026-03-25*
 
 An unknown user created an account (`id: 019ac609-7b08-49b2-9d84-fb1d9ab84ff8`, email: `sanda@gmail.com`) but never connected to a partner. They have a `user_profiles` row with `display_name: sai` and no `couple_id`. Origin unknown — possibly a test signup or someone who discovered the URL. No data risk currently. Delete before public launch or investigate how they found the signup flow.
+
+---
+
+## LOBBY & GAME ROOM BUGS
+
+- Rabbit Hole: "Bring it home" is unilateral — first tap wins, partner gets no notification that the other user triggered it. Consider adding a push notification or in-app prompt to partner when session is marked completed. Low priority — game is playable, this is a UX refinement.
+
+### RABBIT HOLE — UX POLISH (post-launch):
+- Drop presentation design — each find needs better visual treatment
+- New round load should scroll to top and center on new thread/topic info
+- Nora nudge not firing on timer expiry (stale closure)
+- Keep Going button needs stronger visual contrast
+- Bring it Home is unilateral with no partner notification (first tap wins — logged, acceptable for now)
+- Debrief: Convergence and Bigger Picture show same text — generate-debrief needs separate prompts for factual_close vs convergence fields
+- Save to Timeline needs stronger CTA visual treatment
+- Tell me more (remote play) — only fires a message, doesn't share find content with partner
