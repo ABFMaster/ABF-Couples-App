@@ -1,11 +1,13 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { getTierLabel } from '@/lib/hot-take-questions'
 
-export default function HotTakePage() {
+function HotTakeContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const sessionIdFromUrl = searchParams.get('sessionId')
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState(null)
   const [coupleId, setCoupleId] = useState(null)
@@ -55,16 +57,27 @@ export default function HotTakePage() {
       if (myProfile?.display_name) setUserName(myProfile.display_name)
       if (partnerProfile?.display_name) setPartnerName(partnerProfile.display_name)
 
-      // Get active session
-      const { data: sess } = await supabase
-        .from('game_sessions')
-        .select('*')
-        .eq('couple_id', couple.id)
-        .eq('mode', 'hot-take')
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+      // Get active session — prefer sessionId from URL
+      let sess = null
+      if (sessionIdFromUrl) {
+        const { data } = await supabase
+          .from('game_sessions')
+          .select('*')
+          .eq('id', sessionIdFromUrl)
+          .maybeSingle()
+        sess = data
+      } else {
+        const { data } = await supabase
+          .from('game_sessions')
+          .select('*')
+          .eq('couple_id', couple.id)
+          .eq('mode', 'hot-take')
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        sess = data
+      }
 
       if (!sess) { router.push('/game-room'); return }
       setSession(sess)
@@ -397,5 +410,18 @@ export default function HotTakePage() {
         @keyframes slideIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </div>
+  )
+}
+
+export default function HotTakePage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid #4338CA', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    }>
+      <HotTakeContent />
+    </Suspense>
   )
 }

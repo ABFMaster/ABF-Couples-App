@@ -29,34 +29,23 @@ export async function POST(request) {
     const partnerId = isUser1 ? couple.user2_id : couple.user1_id
 
     // Upsert answer
-    const { data: existing } = await supabase
+    const { data: answerRow, error: upsertError } = await supabase
       .from('hot_take_answers')
-      .select('*')
-      .eq('session_id', sessionId)
-      .eq('question_id', questionId)
-      .maybeSingle()
-
-    let answerRow
-    if (existing) {
-      const { data: updated } = await supabase
-        .from('hot_take_answers')
-        .update({ [answerField]: answer, updated_at: new Date().toISOString() })
-        .eq('id', existing.id)
-        .select('*')
-        .maybeSingle()
-      answerRow = updated
-    } else {
-      const { data: created } = await supabase
-        .from('hot_take_answers')
-        .insert({
+      .upsert(
+        {
           session_id: sessionId,
           couple_id: coupleId,
           question_id: questionId,
           [answerField]: answer,
-        })
-        .select('*')
-        .maybeSingle()
-      answerRow = created
+        },
+        { onConflict: 'session_id,question_id', ignoreDuplicates: false }
+      )
+      .select('*')
+      .maybeSingle()
+
+    if (upsertError || !answerRow) {
+      console.error('[hot-take/answer] Upsert error:', upsertError)
+      return NextResponse.json({ error: 'Failed to save answer' }, { status: 500 })
     }
 
     const bothAnswered = answerRow?.user1_answer !== null && answerRow?.user1_answer !== undefined &&
