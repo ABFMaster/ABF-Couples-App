@@ -158,6 +158,7 @@ function HotTakeContent() {
           setNoraComment(answerRow.nora_comment)
           setAgreed(answerRow.agreed)
           setAnswers(prev => [...prev, { question: questions[currentIndex], myAnswer, partnerAnswer: partnerAns, agreed: answerRow.agreed, noraComment: answerRow.nora_comment }])
+          setCountdown(null)
         }
       }
     }, 3000)
@@ -203,6 +204,7 @@ function HotTakeContent() {
     setBothAnswered(false)
     setNoraComment(null)
     setAgreed(null)
+    setCountdown(null)
   }
 
   const handleSkip = () => {
@@ -216,6 +218,7 @@ function HotTakeContent() {
     setBothAnswered(false)
     setNoraComment(null)
     setAgreed(null)
+    setCountdown(null)
   }
 
   const agreedCount = answers.filter(a => a.agreed).length
@@ -304,7 +307,28 @@ function HotTakeContent() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <button
-              onClick={() => { setShowSummary(false); setCurrentIndex(0); setAnswers([]); setTierPreference(null); setMyAnswer(null); setPartnerAnswer(null); setBothAnswered(false); setNoraComment(null); setAgreed(null); setQuestions([]) }}
+              onClick={async () => {
+                // Create a new game session for fresh questions
+                const res = await fetch('/api/game-room/enter-lobby', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ userId, coupleId, mode: 'hot-take' }),
+                })
+                const data = await res.json()
+                if (data.session) {
+                  setSession(data.session)
+                }
+                setShowSummary(false)
+                setCurrentIndex(0)
+                setAnswers([])
+                setTierPreference(null)
+                setMyAnswer(null)
+                setPartnerAnswer(null)
+                setBothAnswered(false)
+                setNoraComment(null)
+                setCountdown(null)
+                setQuestions([])
+              }}
               style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}
             >
               Play another round 🔥
