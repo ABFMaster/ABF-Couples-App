@@ -135,7 +135,7 @@ function HotTakeContent() {
 
   // Poll for partner answer (remote mode)
   useEffect(() => {
-    if (!session?.id || !userId || myAnswer === null || bothAnswered || together) return
+    if (!session?.id || !userId || myAnswer === null || bothAnswered) return
     pollRef.current = setInterval(async () => {
       const currentQ = questions[currentIndex]
       if (!currentQ) return
