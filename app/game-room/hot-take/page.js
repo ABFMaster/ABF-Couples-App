@@ -18,6 +18,7 @@ function HotTakeContent() {
   const [myAnswer, setMyAnswer] = useState(null)
   const [partnerAnswer, setPartnerAnswer] = useState(null)
   const [bothAnswered, setBothAnswered] = useState(false)
+  const [countdown, setCountdown] = useState(null)
   const [noraComment, setNoraComment] = useState(null)
   const [agreed, setAgreed] = useState(null)
   const [submitting, setSubmitting] = useState(false)
@@ -162,6 +163,16 @@ function HotTakeContent() {
     }, 3000)
     return () => clearInterval(pollRef.current)
   }, [session, userId, myAnswer, bothAnswered, together, currentIndex, questions])
+
+  useEffect(() => {
+    if (!bothAnswered || countdown === 0) return
+    if (countdown === null) {
+      setCountdown(3)
+      return
+    }
+    const t = setTimeout(() => setCountdown(prev => prev - 1), 900)
+    return () => clearTimeout(t)
+  }, [bothAnswered, countdown])
 
   // Poll for tier selection by partner — advances both users when questions are locked
   useEffect(() => {
@@ -363,6 +374,29 @@ function HotTakeContent() {
           </div>
         )}
 
+        {/* Countdown overlay */}
+        {bothAnswered && countdown !== null && countdown > 0 && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 60%, #4338CA 100%)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            zIndex: 100,
+            animation: 'fadeIn 200ms ease-out',
+          }}>
+            <p style={{
+              fontFamily: "'Fraunces', Georgia, serif",
+              fontSize: '160px',
+              fontWeight: 700,
+              color: '#FFFFFF',
+              margin: 0,
+              lineHeight: 1,
+              animation: 'popIn 300ms cubic-bezier(0.22, 1, 0.36, 1)',
+              key: countdown,
+            }}>{countdown}</p>
+            <p style={{ fontSize: '13px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', margin: '24px 0 0' }}>Get ready</p>
+          </div>
+        )}
+
         {/* My answer locked — waiting for partner */}
         {myAnswer !== null && !bothAnswered && (
           <div style={{ marginBottom: '16px' }}>
@@ -383,7 +417,7 @@ function HotTakeContent() {
         )}
 
         {/* Reveal — both answered */}
-        {bothAnswered && (
+        {bothAnswered && countdown === 0 && (
           <div style={{ animation: 'slideIn 400ms cubic-bezier(0.22, 1, 0.36, 1)' }}>
             {/* Answers side by side */}
             <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
@@ -428,6 +462,8 @@ function HotTakeContent() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         @keyframes slideIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes popIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
       `}</style>
     </div>
   )
