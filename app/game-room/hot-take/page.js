@@ -29,6 +29,7 @@ function HotTakeContent() {
   const [showSummary, setShowSummary] = useState(false)
   const [tierPreference, setTierPreference] = useState(null) // null = not yet set
   const pollRef = useRef(null)
+  const tierPollRef = useRef(null)
   const coupleRef = useRef(null)
 
   useEffect(() => {
@@ -91,6 +92,7 @@ function HotTakeContent() {
   const handleStartGame = async (tiers) => {
     if (!session || !coupleId) return
     setTierPreference(tiers)
+    clearInterval(tierPollRef.current)
     const res = await fetch('/api/game-room/hot-take/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -160,6 +162,24 @@ function HotTakeContent() {
     }, 3000)
     return () => clearInterval(pollRef.current)
   }, [session, userId, myAnswer, bothAnswered, together, currentIndex, questions])
+
+  // Poll for tier selection by partner — advances both users when questions are locked
+  useEffect(() => {
+    if (!session?.id || tierPreference !== null || questions.length > 0) return
+    tierPollRef.current = setInterval(async () => {
+      const { data: htSession } = await supabase
+        .from('hot_take_sessions')
+        .select('questions')
+        .eq('session_id', session.id)
+        .maybeSingle()
+      if (htSession?.questions?.length > 0) {
+        clearInterval(tierPollRef.current)
+        setQuestions(htSession.questions)
+        setTierPreference('locked')
+      }
+    }, 2000)
+    return () => clearInterval(tierPollRef.current)
+  }, [session, tierPreference, questions.length])
 
   const handleNext = () => {
     if (currentIndex >= questions.length - 1) {
