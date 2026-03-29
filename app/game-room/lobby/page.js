@@ -102,7 +102,8 @@ function GameRoomLobbyContent() {
       if (sess) {
         if (sess.status === 'active') {
           if (mode === 'challenge') {
-            // Partner polls for challenge session created by host via confirm-type
+            // Only partner polls for challenge session — host navigates directly from Let's go
+            if (isHost) return
             const { data: challengeSess } = await supabase
               .from('challenge_sessions')
               .select('id, challenge_type')
