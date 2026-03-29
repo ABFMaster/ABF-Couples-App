@@ -95,6 +95,10 @@ function HotTakeContent() {
     if (!session || !coupleId) return
     setTierPreference(tiers)
     clearInterval(tierPollRef.current)
+    await supabase
+      .from('hot_take_sessions')
+      .delete()
+      .eq('session_id', session.id)
     const res = await fetch('/api/game-room/hot-take/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -203,48 +207,54 @@ function HotTakeContent() {
     return () => clearInterval(tierPollRef.current)
   }, [session, tierPreference, questions.length])
 
-  // Poll to detect when partner has moved to next question
+  // Poll for partner advancing to next question or summary
   useEffect(() => {
-    if (!session?.id || !userId || !bothAnswered || countdown !== 0) return
+    if (!session?.id || !bothAnswered || countdown !== 0) return
     nextPollRef.current = setInterval(async () => {
-      const currentQ = questions[currentIndex]
-      if (!currentQ) return
-      // Check if partner has answered the NEXT question yet — signals they advanced
-      const nextQ = questions[currentIndex + 1]
-      if (!nextQ) {
-        // Last question — check if session is marked completed
-        const { data: sess } = await supabase
-          .from('game_sessions')
-          .select('status')
-          .eq('id', session.id)
-          .maybeSingle()
-        if (sess?.status === 'completed') {
-          clearInterval(nextPollRef.current)
-          setShowSummary(true)
-        }
+      const { data: htSession } = await supabase
+        .from('hot_take_sessions')
+        .select('current_index, show_summary')
+        .eq('session_id', session.id)
+        .maybeSingle()
+      if (!htSession) return
+      if (htSession.show_summary) {
+        clearInterval(nextPollRef.current)
+        setShowSummary(true)
         return
       }
-      const { data: nextAnswer } = await supabase
-        .from('hot_take_answers')
-        .select('id')
-        .eq('session_id', session.id)
-        .eq('question_id', nextQ.id)
-        .maybeSingle()
-      if (nextAnswer) {
+      if (htSession.current_index > currentIndex) {
         clearInterval(nextPollRef.current)
-        handleNext()
+        setCurrentIndex(htSession.current_index)
+        setMyAnswer(null)
+        setPartnerAnswer(null)
+        setBothAnswered(false)
+        setNoraComment(null)
+        setAgreed(null)
+        setCountdown(null)
       }
     }, 2000)
     return () => clearInterval(nextPollRef.current)
-  }, [session, userId, bothAnswered, countdown, currentIndex, questions])
+  }, [session, bothAnswered, countdown, currentIndex])
 
-  const handleNext = () => {
+  const handleNext = async () => {
     clearInterval(nextPollRef.current)
-    if (currentIndex >= questions.length - 1) {
+    const isLast = currentIndex >= questions.length - 1
+    if (isLast) {
+      // Write show_summary to DB so partner navigates too
+      await supabase
+        .from('hot_take_sessions')
+        .update({ show_summary: true })
+        .eq('session_id', session.id)
       setShowSummary(true)
       return
     }
-    setCurrentIndex(prev => prev + 1)
+    const nextIndex = currentIndex + 1
+    // Write new index to DB so partner advances
+    await supabase
+      .from('hot_take_sessions')
+      .update({ current_index: nextIndex })
+      .eq('session_id', session.id)
+    setCurrentIndex(nextIndex)
     setMyAnswer(null)
     setPartnerAnswer(null)
     setBothAnswered(false)
@@ -353,35 +363,7 @@ function HotTakeContent() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <button
-              onClick={async () => {
-                // Expire current session so enter-lobby creates a fresh one
-                if (session?.id) {
-                  await supabase
-                    .from('game_sessions')
-                    .update({ status: 'expired' })
-                    .eq('id', session.id)
-                }
-                // Create fresh session
-                const res = await fetch('/api/game-room/enter-lobby', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ userId, coupleId, mode: 'hot-take' }),
-                })
-                const data = await res.json()
-                if (data.session) {
-                  setSession(data.session)
-                }
-                setShowSummary(false)
-                setCurrentIndex(0)
-                setAnswers([])
-                setTierPreference(null)
-                setMyAnswer(null)
-                setPartnerAnswer(null)
-                setBothAnswered(false)
-                setNoraComment(null)
-                setCountdown(null)
-                setQuestions([])
-              }}
+              onClick={() => router.push('/game-room/lobby?mode=hot-take')}
               style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}
             >
               Play another round 🔥
