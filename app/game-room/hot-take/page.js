@@ -31,6 +31,7 @@ function HotTakeContent() {
   const [tierPreference, setTierPreference] = useState(null) // null = not yet set
   const pollRef = useRef(null)
   const tierPollRef = useRef(null)
+  const nextPollRef = useRef(null)
   const coupleRef = useRef(null)
 
   useEffect(() => {
@@ -140,6 +141,7 @@ function HotTakeContent() {
     pollRef.current = setInterval(async () => {
       const currentQ = questions[currentIndex]
       if (!currentQ) return
+
       const { data: answerRow } = await supabase
         .from('hot_take_answers')
         .select('*')
@@ -151,13 +153,21 @@ function HotTakeContent() {
         const couple = coupleRef.current
         const user1 = couple?.user1_id === userId
         const partnerAns = user1 ? answerRow.user2_answer : answerRow.user1_answer
-        if (partnerAns !== null && partnerAns !== undefined) {
+
+        // Wait for nora_comment to be written before triggering reveal
+        if (partnerAns !== null && partnerAns !== undefined && answerRow.nora_comment !== null) {
           clearInterval(pollRef.current)
           setBothAnswered(true)
           setPartnerAnswer(partnerAns)
           setNoraComment(answerRow.nora_comment)
           setAgreed(answerRow.agreed)
-          setAnswers(prev => [...prev, { question: questions[currentIndex], myAnswer, partnerAnswer: partnerAns, agreed: answerRow.agreed, noraComment: answerRow.nora_comment }])
+          setAnswers(prev => [...prev, {
+            question: questions[currentIndex],
+            myAnswer,
+            partnerAnswer: partnerAns,
+            agreed: answerRow.agreed,
+            noraComment: answerRow.nora_comment,
+          }])
           setCountdown(null)
         }
       }
@@ -193,7 +203,43 @@ function HotTakeContent() {
     return () => clearInterval(tierPollRef.current)
   }, [session, tierPreference, questions.length])
 
+  // Poll to detect when partner has moved to next question
+  useEffect(() => {
+    if (!session?.id || !userId || !bothAnswered || countdown !== 0) return
+    nextPollRef.current = setInterval(async () => {
+      const currentQ = questions[currentIndex]
+      if (!currentQ) return
+      // Check if partner has answered the NEXT question yet — signals they advanced
+      const nextQ = questions[currentIndex + 1]
+      if (!nextQ) {
+        // Last question — check if session is marked completed
+        const { data: sess } = await supabase
+          .from('game_sessions')
+          .select('status')
+          .eq('id', session.id)
+          .maybeSingle()
+        if (sess?.status === 'completed') {
+          clearInterval(nextPollRef.current)
+          setShowSummary(true)
+        }
+        return
+      }
+      const { data: nextAnswer } = await supabase
+        .from('hot_take_answers')
+        .select('id')
+        .eq('session_id', session.id)
+        .eq('question_id', nextQ.id)
+        .maybeSingle()
+      if (nextAnswer) {
+        clearInterval(nextPollRef.current)
+        handleNext()
+      }
+    }, 2000)
+    return () => clearInterval(nextPollRef.current)
+  }, [session, userId, bothAnswered, countdown, currentIndex, questions])
+
   const handleNext = () => {
+    clearInterval(nextPollRef.current)
     if (currentIndex >= questions.length - 1) {
       setShowSummary(true)
       return
@@ -308,7 +354,14 @@ function HotTakeContent() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <button
               onClick={async () => {
-                // Create a new game session for fresh questions
+                // Expire current session so enter-lobby creates a fresh one
+                if (session?.id) {
+                  await supabase
+                    .from('game_sessions')
+                    .update({ status: 'expired' })
+                    .eq('id', session.id)
+                }
+                // Create fresh session
                 const res = await fetch('/api/game-room/enter-lobby', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -427,7 +480,6 @@ function HotTakeContent() {
             <div style={{ background: myAnswer ? '#ECFDF5' : '#FEF2F2', border: `2px solid ${myAnswer ? '#6EE7B7' : '#FECACA'}`, borderRadius: '20px', padding: '20px', marginBottom: '12px', textAlign: 'center' }}>
               <p style={{ fontSize: '24px', margin: '0 0 4px' }}>{myAnswer ? '👍' : '👎'}</p>
               <p style={{ fontSize: '14px', fontWeight: 600, color: '#1A1A1A', margin: 0 }}>You {myAnswer ? 'agree' : 'disagree'}</p>
-              {together && <p style={{ fontSize: '13px', color: '#9CA3AF', margin: '8px 0 0', fontStyle: 'italic' }}>Show your partner 👀</p>}
             </div>
             {!together && (
               <div style={{ textAlign: 'center', padding: '12px 0', color: '#9CA3AF', fontSize: '13px' }}>
