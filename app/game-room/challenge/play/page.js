@@ -97,6 +97,7 @@ function ChallengePlayContent() {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [isScribe, setIsScribe] = useState(false)
+  const [scriberDetermined, setScriberDetermined] = useState(false)
   const [error, setError] = useState(null)
   const pollRef = useRef(null)
 
@@ -129,6 +130,44 @@ function ChallengePlayContent() {
   useEffect(() => {
     if (userId && coupleId) generateRound(1)
   }, [userId, coupleId])
+
+  // Claim scribe role — first user to load the page becomes scribe
+  useEffect(() => {
+    if (!userId || !challengeSessionId || scriberDetermined) return
+    async function claimScribe() {
+      // Check if scribe already claimed
+      const { data: sess } = await supabase
+        .from('challenge_sessions')
+        .select('scribe_user_id')
+        .eq('id', challengeSessionId)
+        .maybeSingle()
+
+      if (sess?.scribe_user_id) {
+        // Scribe already claimed — am I the scribe?
+        setIsScribe(sess.scribe_user_id === userId)
+        setScriberDetermined(true)
+        return
+      }
+
+      // Claim scribe role
+      const { data: updated } = await supabase
+        .from('challenge_sessions')
+        .update({ scribe_user_id: userId })
+        .eq('id', challengeSessionId)
+        .is('scribe_user_id', null)
+        .select('scribe_user_id')
+        .maybeSingle()
+
+      if (updated?.scribe_user_id === userId) {
+        setIsScribe(true)
+      } else {
+        // Lost the race — partner claimed it first
+        setIsScribe(false)
+      }
+      setScriberDetermined(true)
+    }
+    claimScribe()
+  }, [userId, challengeSessionId, scriberDetermined])
 
   // Poll for partner state changes
   useEffect(() => {
@@ -349,7 +388,7 @@ function ChallengePlayContent() {
         {/* Input area — challenge phase */}
         {phase === 'challenge' && (
           <>
-            {!submitted ? (
+            {!submitted && isScribe ? (
               <>
                 {challengeType === 'rank' ? (
                   <div style={{ marginBottom: '24px' }}>
@@ -396,12 +435,21 @@ function ChallengePlayContent() {
               </div>
             )}
 
-            {/* Watcher view */}
-            {submitted && !isScribe && (
-              <div style={{ marginTop: '16px', padding: '16px 20px', background: '#F5F0EA', borderRadius: '16px', textAlign: 'center' }}>
-                <p style={{ fontSize: '13px', color: '#9CA3AF', fontStyle: 'italic', margin: 0 }}>
-                  {partnerName} is submitting your answer…
-                </p>
+            {/* Watcher view — not the scribe */}
+            {!isScribe && (
+              <div style={{ marginTop: '8px' }}>
+                <div style={{ background: '#F5F0EA', border: '0.5px solid #E8DDD0', borderRadius: '16px', padding: '20px', textAlign: 'center', marginBottom: '12px' }}>
+                  <p style={{ fontSize: '14px', fontWeight: 600, color: '#1A1A1A', margin: '0 0 4px' }}>
+                    {partnerName} is the scribe
+                  </p>
+                  <p style={{ fontSize: '13px', color: '#9CA3AF', fontStyle: 'italic', margin: 0 }}>
+                    Talk it through together — they'll type what you decide
+                  </p>
+                </div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', width: '100%', justifyContent: 'center', padding: '8px 0', color: '#9CA3AF', fontSize: '13px' }}>
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                  Waiting for {partnerName} to submit…
+                </div>
               </div>
             )}
           </>

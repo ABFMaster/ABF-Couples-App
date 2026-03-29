@@ -179,7 +179,7 @@ function GameRoomLobbyContent() {
         setChallengeRecommendedType(data.recommendedType)
         setChallengeRecommendedReason(data.reason)
         setChallengeAvailableTypes(data.availableTypes || [])
-        setChallengeSelectedType(data.recommendedType)
+        setChallengeSelectedType(null)
         setShowChallengeTypeSelect(true)
         setStarting(false)
         return
