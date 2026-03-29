@@ -96,6 +96,7 @@ function ChallengePlayContent() {
   const [noraVerdict, setNoraVerdict] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [isScribe, setIsScribe] = useState(false)
   const [error, setError] = useState(null)
   const pollRef = useRef(null)
 
@@ -211,6 +212,7 @@ function ChallengePlayContent() {
     if (!response.trim() || submitting || submitted) return
     setSubmitting(true)
     setSubmitted(true)
+    setIsScribe(true)
 
     try {
       const res = await fetch('/api/game-room/challenge/submit', {
@@ -347,43 +349,46 @@ function ChallengePlayContent() {
         {/* Input area — challenge phase */}
         {phase === 'challenge' && (
           <>
-            {challengeType === 'rank' ? (
-              <div style={{ marginBottom: '24px' }}>
-                <RankInput items={rankItems} onChange={setResponse} />
-              </div>
-            ) : (
-              <textarea
-                value={response}
-                onChange={e => setResponse(e.target.value)}
-                disabled={submitted}
-                placeholder="Write your answer here…"
-                style={{
-                  width: '100%', minHeight: '160px', padding: '16px',
-                  fontSize: '16px', lineHeight: '1.6', color: '#1C1510',
-                  background: submitted ? '#F5F0EA' : '#FFFFFF',
-                  border: '0.5px solid #E8DDD0', borderRadius: '16px',
-                  resize: 'vertical', outline: 'none', fontFamily: 'inherit',
-                  boxSizing: 'border-box', marginBottom: '16px',
-                }}
-              />
-            )}
-
             {!submitted ? (
-              <button
-                onClick={handleSubmit}
-                disabled={!response.trim() || submitting}
-                style={{
-                  width: '100%', padding: '16px',
-                  background: response.trim() ? 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)' : '#E8DDD0',
-                  color: response.trim() ? '#FFFFFF' : '#B8A898',
-                  border: 'none', borderRadius: '30px', fontSize: '15px',
-                  fontWeight: 600, cursor: response.trim() ? 'pointer' : 'not-allowed',
-                }}
-              >
-                {submitting ? 'Submitting…' : 'Submit our answer'}
-              </button>
+              <>
+                {challengeType === 'rank' ? (
+                  <div style={{ marginBottom: '24px' }}>
+                    <RankInput items={rankItems} onChange={setResponse} />
+                  </div>
+                ) : (
+                  <textarea
+                    value={response}
+                    onChange={e => setResponse(e.target.value)}
+                    placeholder="Write your answer here…"
+                    style={{
+                      width: '100%', minHeight: '160px', padding: '16px',
+                      fontSize: '16px', lineHeight: '1.6', color: '#1C1510',
+                      background: '#FFFFFF',
+                      border: '0.5px solid #E8DDD0', borderRadius: '16px',
+                      resize: 'vertical', outline: 'none', fontFamily: 'inherit',
+                      boxSizing: 'border-box', marginBottom: '16px',
+                    }}
+                  />
+                )}
+                <button
+                  onClick={handleSubmit}
+                  disabled={!response.trim() || submitting}
+                  style={{
+                    width: '100%', padding: '16px',
+                    background: response.trim() ? 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)' : '#E8DDD0',
+                    color: response.trim() ? '#FFFFFF' : '#B8A898',
+                    border: 'none', borderRadius: '30px', fontSize: '15px',
+                    fontWeight: 600, cursor: response.trim() ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  {submitting ? 'Submitting…' : 'Submit our answer'}
+                </button>
+                <p style={{ textAlign: 'center', fontSize: '13px', color: '#9CA3AF', marginTop: '12px', fontStyle: 'italic' }}>
+                  {partnerName} is watching — talk it through together
+                </p>
+              </>
             ) : (
-              <div style={{ textAlign: 'center', padding: '16px 0', color: '#9CA3AF', fontSize: '14px' }}>
+              <div style={{ textAlign: 'center', padding: '24px 0', color: '#9CA3AF', fontSize: '14px' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
                   Waiting for Nora…
@@ -391,11 +396,13 @@ function ChallengePlayContent() {
               </div>
             )}
 
-            {/* Partner waiting state */}
-            {!submitted && (
-              <p style={{ textAlign: 'center', fontSize: '13px', color: '#9CA3AF', marginTop: '12px', fontStyle: 'italic' }}>
-                {partnerName} is watching — talk it through together
-              </p>
+            {/* Watcher view */}
+            {submitted && !isScribe && (
+              <div style={{ marginTop: '16px', padding: '16px 20px', background: '#F5F0EA', borderRadius: '16px', textAlign: 'center' }}>
+                <p style={{ fontSize: '13px', color: '#9CA3AF', fontStyle: 'italic', margin: 0 }}>
+                  {partnerName} is submitting your answer…
+                </p>
+              </div>
             )}
           </>
         )}

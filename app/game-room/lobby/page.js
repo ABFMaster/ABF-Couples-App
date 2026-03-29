@@ -101,10 +101,21 @@ function GameRoomLobbyContent() {
 
       if (sess) {
         if (sess.status === 'active') {
-          if (mode !== 'challenge') {
-            clearInterval(pollRef.current)
-            router.push(`${config.playPath}?sessionId=${sess.id}`)
+          if (mode === 'challenge') {
+            // Partner polls for challenge session created by host
+            const { data: challengeSess } = await supabase
+              .from('challenge_sessions')
+              .select('id, challenge_type')
+              .eq('session_id', sess.id)
+              .maybeSingle()
+            if (challengeSess) {
+              clearInterval(pollRef.current)
+              router.push(`/game-room/challenge/play?sessionId=${sess.id}&challengeSessionId=${challengeSess.id}&type=${challengeSess.challenge_type}&rounds=1`)
+            }
+            return
           }
+          clearInterval(pollRef.current)
+          router.push(`${config.playPath}?sessionId=${sess.id}`)
           return
         }
 
@@ -170,6 +181,7 @@ function GameRoomLobbyContent() {
         setChallengeAvailableTypes(data.availableTypes || [])
         setChallengeSelectedType(data.recommendedType)
         setShowChallengeTypeSelect(true)
+        setStarting(false)
         return
       }
 
@@ -294,7 +306,7 @@ function GameRoomLobbyContent() {
   }
 
   const bothInLobby = iAmIn && partnerIsIn
-  const canStart = bothInLobby && together !== null && (!config.hasTimer || selectedTimer)
+  const canStart = bothInLobby && (mode === 'challenge' || together !== null) && (!config.hasTimer || selectedTimer)
 
   return (
     <div style={{ minHeight: '100vh', background: '#FAF6F0' }}>
