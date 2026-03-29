@@ -150,7 +150,8 @@ function GameRoomLobbyContent() {
   }
 
   const handleStart = async () => {
-    if (starting || !sessionId || together === null) return
+    if (starting || !sessionId) return
+    if (mode !== 'challenge' && together === null) return
     setStarting(true)
     try {
       await fetch('/api/game-room/start-session', {
