@@ -9,6 +9,7 @@ function GameRoomLobbyContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const mode = searchParams.get('mode') || 'rabbit-hole'
+  const forceNew = searchParams.get('forceNew') === 'true'
   const config = getModeConfig(mode)
 
   const [loading, setLoading] = useState(true)
@@ -125,7 +126,7 @@ function GameRoomLobbyContent() {
       const res = await fetch('/api/game-room/enter-lobby', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, coupleId, mode }),
+        body: JSON.stringify({ userId, coupleId, mode, forceNew }),
       })
       const data = await res.json()
       if (data.session) {

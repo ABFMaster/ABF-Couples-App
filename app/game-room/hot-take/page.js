@@ -363,7 +363,7 @@ function HotTakeContent() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <button
-              onClick={() => router.push('/game-room/lobby?mode=hot-take')}
+              onClick={() => router.push('/game-room/lobby?mode=hot-take&forceNew=true')}
               style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}
             >
               Play another round 🔥

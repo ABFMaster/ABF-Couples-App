@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 export async function POST(request) {
   try {
-    const { userId, coupleId, mode = 'rabbit-hole' } = await request.json()
+    const { userId, coupleId, mode = 'rabbit-hole', forceNew = false } = await request.json()
     if (!userId || !coupleId) {
       return NextResponse.json({ error: 'userId and coupleId required' }, { status: 400 })
     }
@@ -41,6 +41,16 @@ export async function POST(request) {
       .eq('mode', mode)
       .eq('status', 'active')
       .lt('updated_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+
+    // If forceNew, expire all existing sessions for this mode first
+    if (forceNew) {
+      await supabase
+        .from('game_sessions')
+        .update({ status: 'expired' })
+        .eq('couple_id', coupleId)
+        .eq('mode', mode)
+        .in('status', ['lobby', 'active'])
+    }
 
     // Check for existing lobby session
     const { data: existing } = await supabase
