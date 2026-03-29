@@ -307,9 +307,9 @@ function ChallengePlayContent() {
             {totalRounds === 1 ? 'One round. Well played.' : `${totalRounds} rounds. Nora's impressed.`}
           </p>
         </div>
-        <button onClick={() => router.push('/game-room')}
+        <button onClick={() => router.push('/game-room/lobby?mode=challenge&forceNew=true')}
           style={{ width: '100%', maxWidth: '400px', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}>
-          Back to Game Room
+          Play another challenge →
         </button>
       </div>
     )

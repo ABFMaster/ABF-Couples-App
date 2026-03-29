@@ -136,7 +136,7 @@ Respond in this exact JSON format with no other text:
       : parsed.prompt
 
     // Save round — upsert prevents race condition when both users call generate simultaneously
-    const { data: round, error } = await supabase
+    const { data: upserted, error } = await supabase
       .from('challenge_rounds')
       .upsert(
         {
@@ -151,7 +151,16 @@ Respond in this exact JSON format with no other text:
       .select()
       .single()
 
-    if (error) {
+    // If upsert no-oped (second user hit simultaneously), fetch existing row
+    const round = upserted || await supabase
+      .from('challenge_rounds')
+      .select('*')
+      .eq('session_id', challengeSessionId)
+      .eq('round_number', roundNumber)
+      .single()
+      .then(r => r.data)
+
+    if (!round) {
       return Response.json({ error: 'Failed to save round' }, { status: 500 })
     }
 
