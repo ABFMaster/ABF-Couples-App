@@ -74,10 +74,14 @@ function GameRoomLobbyContent() {
       if (existing) {
         setSessionId(existing.id)
         const isUser1 = couple.user1_id === user.id
-        setIAmIn(isUser1 ? existing.user1_in_lobby : existing.user2_in_lobby)
-        setPartnerIsIn(isUser1 ? existing.user2_in_lobby : existing.user1_in_lobby)
+        const myInLobby = isUser1 ? existing.user1_in_lobby : existing.user2_in_lobby
+        const partnerInLobby = isUser1 ? existing.user2_in_lobby : existing.user1_in_lobby
+        setIAmIn(myInLobby)
+        setPartnerIsIn(partnerInLobby)
         if (existing.timer_minutes) setSelectedTimer(existing.timer_minutes)
         if (existing.together !== null) setTogether(existing.together)
+        // Set host: I am host if I am in lobby but partner is not
+        if (myInLobby && !partnerInLobby) setIsHost(true)
       }
 
       setLoading(false)
