@@ -84,6 +84,7 @@ function ChallengePlayContent() {
   const challengeSessionId = searchParams.get('challengeSessionId')
   const challengeType = searchParams.get('type')
   const totalRounds = parseInt(searchParams.get('rounds') || '1')
+  const isScribeFromUrl = searchParams.get('scribe') === 'true'
 
   const [userId, setUserId] = useState(null)
   const [coupleId, setCoupleId] = useState(null)
@@ -131,43 +132,12 @@ function ChallengePlayContent() {
     if (userId && coupleId) generateRound(1)
   }, [userId, coupleId])
 
-  // Claim scribe role — first user to load the page becomes scribe
+  // Set scribe role from URL param — host always navigates with scribe=true
   useEffect(() => {
-    if (!userId || !challengeSessionId || scriberDetermined) return
-    async function claimScribe() {
-      // Check if scribe already claimed
-      const { data: sess } = await supabase
-        .from('challenge_sessions')
-        .select('scribe_user_id')
-        .eq('id', challengeSessionId)
-        .maybeSingle()
-
-      if (sess?.scribe_user_id) {
-        // Scribe already claimed — am I the scribe?
-        setIsScribe(sess.scribe_user_id === userId)
-        setScriberDetermined(true)
-        return
-      }
-
-      // Claim scribe role
-      const { data: updated } = await supabase
-        .from('challenge_sessions')
-        .update({ scribe_user_id: userId })
-        .eq('id', challengeSessionId)
-        .is('scribe_user_id', null)
-        .select('scribe_user_id')
-        .maybeSingle()
-
-      if (updated?.scribe_user_id === userId) {
-        setIsScribe(true)
-      } else {
-        // Lost the race — partner claimed it first
-        setIsScribe(false)
-      }
-      setScriberDetermined(true)
-    }
-    claimScribe()
-  }, [userId, challengeSessionId, scriberDetermined])
+    if (!userId) return
+    setIsScribe(isScribeFromUrl)
+    setScriberDetermined(true)
+  }, [userId, isScribeFromUrl])
 
   // Poll for partner state changes
   useEffect(() => {
@@ -251,7 +221,6 @@ function ChallengePlayContent() {
     if (!response.trim() || submitting || submitted) return
     setSubmitting(true)
     setSubmitted(true)
-    setIsScribe(true)
 
     try {
       const res = await fetch('/api/game-room/challenge/submit', {

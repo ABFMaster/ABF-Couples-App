@@ -116,26 +116,7 @@ Respond in this exact JSON format with no other text:
       recommendation.recommendedType = 'story'
     }
 
-    // Create challenge session
-    const { data: challengeSession, error } = await supabase
-      .from('challenge_sessions')
-      .insert({
-        session_id: sessionId,
-        couple_id: coupleId,
-        challenge_type: recommendation.recommendedType,
-        total_rounds: totalRounds,
-        current_round: 1,
-        status: 'active',
-      })
-      .select()
-      .single()
-
-    if (error) {
-      return Response.json({ error: 'Failed to create challenge session' }, { status: 500 })
-    }
-
     return Response.json({
-      challengeSession,
       recommendedType: recommendation.recommendedType,
       reason: recommendation.reason,
       availableTypes,

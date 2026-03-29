@@ -102,11 +102,12 @@ function GameRoomLobbyContent() {
       if (sess) {
         if (sess.status === 'active') {
           if (mode === 'challenge') {
-            // Partner polls for challenge session created by host
+            // Partner polls for challenge session created by host via confirm-type
             const { data: challengeSess } = await supabase
               .from('challenge_sessions')
               .select('id, challenge_type')
               .eq('session_id', sess.id)
+              .eq('status', 'active')
               .maybeSingle()
             if (challengeSess) {
               clearInterval(pollRef.current)
@@ -289,9 +290,21 @@ function GameRoomLobbyContent() {
           </div>
 
           <button
-            onClick={() => {
-              if (!challengeSelectedType || !challengeSessionId) return
-              router.push(`/game-room/challenge/play?sessionId=${sessionId}&challengeSessionId=${challengeSessionId}&type=${challengeSelectedType}&rounds=${totalRounds}`)
+            onClick={async () => {
+              if (!challengeSelectedType || !sessionId) return
+              const res = await fetch('/api/game-room/challenge/confirm-type', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  sessionId,
+                  coupleId,
+                  challengeType: challengeSelectedType,
+                  totalRounds,
+                }),
+              })
+              const data = await res.json()
+              if (!data.challengeSession) return
+              router.push(`/game-room/challenge/play?sessionId=${sessionId}&challengeSessionId=${data.challengeSession.id}&type=${challengeSelectedType}&rounds=${totalRounds}&scribe=true`)
             }}
             disabled={!challengeSelectedType}
             style={{ width: '100%', padding: '16px', background: challengeSelectedType ? 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)' : '#E8DDD0', color: challengeSelectedType ? '#FFFFFF' : '#B8A898', border: 'none', borderRadius: '30px', fontSize: '16px', fontWeight: 600, cursor: challengeSelectedType ? 'pointer' : 'not-allowed' }}
