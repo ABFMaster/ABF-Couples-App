@@ -1,9 +1,16 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { CHALLENGE_PROMPTS, MEMORY_LOCKED_COPY } from '@/lib/challenge-prompts'
+
+const CHALLENGE_INSTRUCTIONS = {
+  story: 'One of you take the lead — write together out loud.',
+  pitch: 'One of you take the lead — make your case together.',
+  rank: 'One of you drag to reorder. Discuss as you go.',
+  memory: 'One of you take the lead — answer together.',
+  plan: 'One of you take the lead — make it real together.',
+}
 
 const CHALLENGE_LABELS = {
   story: 'Story',
@@ -13,40 +20,12 @@ const CHALLENGE_LABELS = {
   plan: 'Plan',
 }
 
-const CHALLENGE_INSTRUCTIONS = {
-  story: 'One of you take the keyboard. Write together.',
-  pitch: 'One of you take the keyboard. Make your case.',
-  rank: 'Drag to reorder. Most at the top, least at the bottom.',
-  memory: 'One of you take the keyboard. Answer together.',
-  plan: 'One of you take the keyboard. Make it real.',
-}
-
 function RankInput({ items, onChange }) {
   const [ranked, setRanked] = useState(items)
-  const [dragging, setDragging] = useState(null)
 
   useEffect(() => {
     onChange(ranked.map((item, i) => `${i + 1}. ${item}`).join('\n'))
   }, [ranked])
-
-  function onDragStart(e, index) {
-    setDragging(index)
-    e.dataTransfer.effectAllowed = 'move'
-  }
-
-  function onDragOver(e, index) {
-    e.preventDefault()
-    if (dragging === null || dragging === index) return
-    const reordered = [...ranked]
-    const [moved] = reordered.splice(dragging, 1)
-    reordered.splice(index, 0, moved)
-    setDragging(index)
-    setRanked(reordered)
-  }
-
-  function onDragEnd() {
-    setDragging(null)
-  }
 
   function moveUp(index) {
     if (index === 0) return
@@ -67,65 +46,30 @@ function RankInput({ items, onChange }) {
       {ranked.map((item, index) => (
         <div
           key={item}
-          draggable
-          onDragStart={e => onDragStart(e, index)}
-          onDragOver={e => onDragOver(e, index)}
-          onDragEnd={onDragEnd}
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
-            background: dragging === index ? '#F0EBE3' : '#FFFFFF',
+            background: '#FFFFFF',
             border: '0.5px solid #E8DDD0',
             borderRadius: '12px',
             padding: '12px 16px',
-            cursor: 'grab',
-            transition: 'background 0.15s',
           }}
         >
           <span style={{
-            width: '24px',
-            height: '24px',
-            borderRadius: '50%',
-            background: '#1C1510',
-            color: '#FAF6F0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '12px',
-            fontWeight: '600',
-            flexShrink: 0,
+            width: '24px', height: '24px', borderRadius: '50%',
+            background: '#1E1B4B', color: '#FFFFFF',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '12px', fontWeight: '600', flexShrink: 0,
           }}>
             {index + 1}
           </span>
           <span style={{ flex: 1, fontSize: '15px', color: '#1C1510' }}>{item}</span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <button
-              onClick={() => moveUp(index)}
-              disabled={index === 0}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: index === 0 ? 'default' : 'pointer',
-                opacity: index === 0 ? 0.2 : 0.6,
-                fontSize: '12px',
-                padding: '2px 4px',
-                lineHeight: 1,
-              }}
-            >▲</button>
-            <button
-              onClick={() => moveDown(index)}
-              disabled={index === ranked.length - 1}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: index === ranked.length - 1 ? 'default' : 'pointer',
-                opacity: index === ranked.length - 1 ? 0.2 : 0.6,
-                fontSize: '12px',
-                padding: '2px 4px',
-                lineHeight: 1,
-              }}
-            >▼</button>
+            <button onClick={() => moveUp(index)} disabled={index === 0}
+              style={{ background: 'none', border: 'none', cursor: index === 0 ? 'default' : 'pointer', opacity: index === 0 ? 0.2 : 0.6, fontSize: '12px', padding: '2px 4px', lineHeight: 1 }}>▲</button>
+            <button onClick={() => moveDown(index)} disabled={index === ranked.length - 1}
+              style={{ background: 'none', border: 'none', cursor: index === ranked.length - 1 ? 'default' : 'pointer', opacity: index === ranked.length - 1 ? 0.2 : 0.6, fontSize: '12px', padding: '2px 4px', lineHeight: 1 }}>▼</button>
           </div>
         </div>
       ))}
@@ -143,6 +87,7 @@ function ChallengePlayContent() {
 
   const [userId, setUserId] = useState(null)
   const [coupleId, setCoupleId] = useState(null)
+  const [partnerName, setPartnerName] = useState('your partner')
   const [currentRound, setCurrentRound] = useState(1)
   const [round, setRound] = useState(null)
   const [response, setResponse] = useState('')
@@ -150,50 +95,98 @@ function ChallengePlayContent() {
   const [phase, setPhase] = useState('loading')
   const [noraVerdict, setNoraVerdict] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState(null)
-  const [complete, setComplete] = useState(false)
+  const pollRef = useRef(null)
 
   useEffect(() => {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/'); return }
+      if (!user) { router.push('/login'); return }
       setUserId(user.id)
 
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('couple_id')
-        .eq('id', user.id)
-        .single()
+      const { data: couple } = await supabase
+        .from('couples')
+        .select('id, user1_id, user2_id')
+        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+        .maybeSingle()
+      if (!couple) { router.push('/connect'); return }
+      setCoupleId(couple.id)
 
-      if (!profile?.couple_id) { router.push('/dashboard'); return }
-      setCoupleId(profile.couple_id)
+      const partnerId = couple.user1_id === user.id ? couple.user2_id : couple.user1_id
+      const { data: partnerProfile } = await supabase
+        .from('user_profiles')
+        .select('display_name')
+        .eq('user_id', partnerId)
+        .maybeSingle()
+      if (partnerProfile?.display_name) setPartnerName(partnerProfile.display_name)
     }
     init()
-  }, [])
+  }, [router])
 
+  // Generate round once we have userId and coupleId
   useEffect(() => {
     if (userId && coupleId) generateRound(1)
   }, [userId, coupleId])
 
+  // Poll for partner state changes
+  useEffect(() => {
+    if (!challengeSessionId || !currentRound) return
+    pollRef.current = setInterval(async () => {
+      // Check current round for verdict
+      const { data: roundRow } = await supabase
+        .from('challenge_rounds')
+        .select('*')
+        .eq('session_id', challengeSessionId)
+        .eq('round_number', currentRound)
+        .maybeSingle()
+
+      if (roundRow?.nora_verdict && phase !== 'verdict' && phase !== 'complete') {
+        setRound(roundRow)
+        setNoraVerdict(roundRow.nora_verdict)
+        setResponse(roundRow.couple_response || '')
+        setPhase('verdict')
+        return
+      }
+
+      // Check if session has advanced round or completed
+      const { data: challengeSession } = await supabase
+        .from('challenge_sessions')
+        .select('current_round, status')
+        .eq('id', challengeSessionId)
+        .maybeSingle()
+
+      if (!challengeSession) return
+
+      if (challengeSession.status === 'complete' && phase !== 'complete') {
+        clearInterval(pollRef.current)
+        setPhase('complete')
+        return
+      }
+
+      if (challengeSession.current_round > currentRound && phase === 'verdict') {
+        clearInterval(pollRef.current)
+        setCurrentRound(challengeSession.current_round)
+        generateRound(challengeSession.current_round)
+      }
+    }, 3000)
+    return () => clearInterval(pollRef.current)
+  }, [challengeSessionId, currentRound, phase])
+
   async function generateRound(roundNumber) {
+    clearInterval(pollRef.current)
     setPhase('loading')
     setResponse('')
     setNoraVerdict(null)
     setError(null)
+    setSubmitted(false)
 
     try {
       const res = await fetch('/api/game-room/challenge/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          coupleId,
-          challengeSessionId,
-          challengeType,
-          roundNumber,
-        }),
+        body: JSON.stringify({ userId, coupleId, challengeSessionId, challengeType, roundNumber }),
       })
-
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
 
@@ -204,96 +197,90 @@ function ChallengePlayContent() {
         try {
           const parsed = JSON.parse(r.prompt)
           setRankItems(parsed.items || [])
-        } catch {
-          setRankItems([])
-        }
+        } catch { setRankItems([]) }
       }
 
       setPhase('challenge')
-    } catch (err) {
+    } catch {
       setError('Something went wrong loading the challenge.')
       setPhase('error')
     }
   }
 
   async function handleSubmit() {
-    if (!response.trim() || submitting) return
+    if (!response.trim() || submitting || submitted) return
     setSubmitting(true)
+    setSubmitted(true)
 
     try {
       const res = await fetch('/api/game-room/challenge/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId,
-          coupleId,
-          challengeSessionId,
-          roundId: round.id,
-          challengeType,
-          prompt: round.prompt,
-          coupleResponse: response,
+          userId, coupleId, challengeSessionId,
+          roundId: round.id, challengeType,
+          prompt: round.prompt, coupleResponse: response,
         }),
       })
-
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
 
       setNoraVerdict(data.noraVerdict)
       setPhase('verdict')
-    } catch (err) {
-      setError('Something went wrong submitting your response.')
+    } catch {
+      setError('Something went wrong submitting.')
+      setSubmitted(false)
     } finally {
       setSubmitting(false)
     }
   }
 
   async function handleNext() {
+    clearInterval(pollRef.current)
     try {
       const res = await fetch('/api/game-room/challenge/next', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, coupleId, challengeSessionId }),
       })
-
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
 
       if (data.complete) {
-        setComplete(true)
         setPhase('complete')
       } else {
         setCurrentRound(data.nextRound)
         generateRound(data.nextRound)
       }
-    } catch (err) {
+    } catch {
       setError('Something went wrong advancing to the next round.')
     }
   }
 
   function getRankPromptData() {
     if (!round) return { intro: '', prompt: '', items: [] }
-    try {
-      return JSON.parse(round.prompt)
-    } catch {
-      return { intro: '', prompt: round.prompt, items: [] }
-    }
+    try { return JSON.parse(round.prompt) }
+    catch { return { intro: '', prompt: round.prompt, items: [] } }
   }
 
   if (phase === 'loading') {
     return (
-      <div style={{ minHeight: '100dvh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontFamily: 'var(--font-fraunces)', fontSize: '20px', color: '#1C1510', opacity: 0.5 }}>
-          Nora is preparing your challenge…
-        </p>
+      <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid #4338CA', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '18px', color: '#1C1510', opacity: 0.6 }}>Nora is preparing your challenge…</p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     )
   }
 
   if (phase === 'error') {
     return (
-      <div style={{ minHeight: '100dvh', background: '#FAF6F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+      <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
         <p style={{ fontSize: '16px', color: '#C1440E', marginBottom: '16px' }}>{error}</p>
-        <button onClick={() => generateRound(currentRound)} style={{ padding: '12px 24px', background: '#1C1510', color: '#FAF6F0', border: 'none', borderRadius: '12px', fontSize: '15px', cursor: 'pointer' }}>
+        <button onClick={() => generateRound(currentRound)}
+          style={{ padding: '12px 24px', background: '#1E1B4B', color: '#FFFFFF', border: 'none', borderRadius: '12px', fontSize: '15px', cursor: 'pointer' }}>
           Try again
         </button>
       </div>
@@ -302,17 +289,16 @@ function ChallengePlayContent() {
 
   if (phase === 'complete') {
     return (
-      <div style={{ minHeight: '100dvh', background: '#FAF6F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', textAlign: 'center' }}>
-        <p style={{ fontFamily: 'var(--font-fraunces)', fontSize: '28px', color: '#1C1510', marginBottom: '12px' }}>
-          Challenge complete.
-        </p>
-        <p style={{ fontSize: '16px', color: '#6B6560', marginBottom: '40px', maxWidth: '320px' }}>
-          {totalRounds === 1 ? 'One round. Well played.' : `${totalRounds} rounds. Nora's impressed.`}
-        </p>
-        <button
-          onClick={() => router.push('/game-room')}
-          style={{ padding: '14px 32px', background: '#1C1510', color: '#FAF6F0', border: 'none', borderRadius: '14px', fontSize: '16px', cursor: 'pointer' }}
-        >
+      <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', textAlign: 'center' }}>
+        <div style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 60%, #4338CA 100%)', borderRadius: '20px', padding: '32px 24px', marginBottom: '24px', width: '100%', maxWidth: '400px' }}>
+          <p style={{ fontSize: '11px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', margin: '0 0 12px' }}>The Challenge</p>
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '28px', color: '#FFFFFF', margin: '0 0 8px' }}>Challenge complete.</p>
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: 'rgba(255,255,255,0.7)', fontStyle: 'italic', margin: 0 }}>
+            {totalRounds === 1 ? 'One round. Well played.' : `${totalRounds} rounds. Nora's impressed.`}
+          </p>
+        </div>
+        <button onClick={() => router.push('/game-room')}
+          style={{ width: '100%', maxWidth: '400px', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}>
           Back to Game Room
         </button>
       </div>
@@ -322,178 +308,118 @@ function ChallengePlayContent() {
   const rankData = challengeType === 'rank' ? getRankPromptData() : null
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#FAF6F0', paddingBottom: '40px' }}>
+    <div style={{ minHeight: '100vh', background: '#FAF6F0', paddingBottom: '60px' }}>
 
       {/* Header */}
-      <div style={{ padding: '20px 24px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <button
-          onClick={() => router.push('/game-room')}
-          style={{ background: 'none', border: 'none', fontSize: '15px', color: '#6B6560', cursor: 'pointer', padding: 0 }}
-        >
+      <div style={{ padding: '48px 24px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+        <button onClick={() => router.push('/game-room')}
+          style={{ background: 'none', border: 'none', fontSize: '13px', color: '#9CA3AF', cursor: 'pointer', padding: 0 }}>
           ← Exit
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '13px', color: '#6B6560' }}>
-            {CHALLENGE_LABELS[challengeType]}
-          </span>
+          <span style={{ fontSize: '12px', color: '#9CA3AF' }}>{CHALLENGE_LABELS[challengeType]}</span>
           {totalRounds > 1 && (
-            <span style={{
-              fontSize: '12px',
-              background: '#1C1510',
-              color: '#FAF6F0',
-              padding: '3px 10px',
-              borderRadius: '20px',
-            }}>
+            <span style={{ fontSize: '11px', background: '#1E1B4B', color: '#FFFFFF', padding: '3px 10px', borderRadius: '20px' }}>
               {currentRound} / {totalRounds}
             </span>
           )}
         </div>
       </div>
 
-      <div style={{ padding: '32px 24px 0', maxWidth: '480px', margin: '0 auto' }}>
+      <div style={{ padding: '0 24px', maxWidth: '480px', margin: '0 auto' }}>
 
-        {/* Challenge prompt */}
+        {/* Prompt card */}
         {phase !== 'verdict' && (
-          <div style={{ marginBottom: '28px' }}>
+          <div style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 60%, #4338CA 100%)', borderRadius: '20px', padding: '28px 24px', marginBottom: '24px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
             {challengeType === 'rank' && rankData?.intro && (
-              <p style={{ fontSize: '14px', color: '#6B6560', marginBottom: '12px', fontStyle: 'italic' }}>
-                {rankData.intro}
-              </p>
+              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginBottom: '10px', fontStyle: 'italic' }}>{rankData.intro}</p>
             )}
-            <p style={{
-              fontFamily: 'var(--font-fraunces)',
-              fontSize: '22px',
-              lineHeight: '1.4',
-              color: '#1C1510',
-              marginBottom: '8px',
-            }}>
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '20px', lineHeight: 1.5, color: '#FFFFFF', margin: '0 0 12px', position: 'relative' }}>
               {challengeType === 'rank' ? rankData?.prompt : round?.prompt}
             </p>
-            <p style={{ fontSize: '13px', color: '#9B9590' }}>
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', margin: 0 }}>
               {CHALLENGE_INSTRUCTIONS[challengeType]}
             </p>
           </div>
         )}
 
-        {/* Input area */}
+        {/* Input area — challenge phase */}
         {phase === 'challenge' && (
           <>
             {challengeType === 'rank' ? (
               <div style={{ marginBottom: '24px' }}>
-                <RankInput
-                  items={rankItems}
-                  onChange={setResponse}
-                />
+                <RankInput items={rankItems} onChange={setResponse} />
               </div>
             ) : (
               <textarea
                 value={response}
                 onChange={e => setResponse(e.target.value)}
+                disabled={submitted}
                 placeholder="Write your answer here…"
                 style={{
-                  width: '100%',
-                  minHeight: '160px',
-                  padding: '16px',
-                  fontSize: '16px',
-                  lineHeight: '1.6',
-                  color: '#1C1510',
-                  background: '#FFFFFF',
-                  border: '0.5px solid #E8DDD0',
-                  borderRadius: '16px',
-                  resize: 'vertical',
-                  outline: 'none',
-                  fontFamily: 'inherit',
-                  boxSizing: 'border-box',
-                  marginBottom: '16px',
+                  width: '100%', minHeight: '160px', padding: '16px',
+                  fontSize: '16px', lineHeight: '1.6', color: '#1C1510',
+                  background: submitted ? '#F5F0EA' : '#FFFFFF',
+                  border: '0.5px solid #E8DDD0', borderRadius: '16px',
+                  resize: 'vertical', outline: 'none', fontFamily: 'inherit',
+                  boxSizing: 'border-box', marginBottom: '16px',
                 }}
               />
             )}
 
-            <button
-              onClick={handleSubmit}
-              disabled={!response.trim() || submitting}
-              style={{
-                width: '100%',
-                padding: '16px',
-                background: response.trim() ? '#1C1510' : '#E8DDD0',
-                color: response.trim() ? '#FAF6F0' : '#9B9590',
-                border: 'none',
-                borderRadius: '14px',
-                fontSize: '16px',
-                fontWeight: '500',
-                cursor: response.trim() ? 'pointer' : 'default',
-                transition: 'background 0.2s, color 0.2s',
-              }}
-            >
-              {submitting ? 'Submitting…' : 'Submit our answer'}
-            </button>
+            {!submitted ? (
+              <button
+                onClick={handleSubmit}
+                disabled={!response.trim() || submitting}
+                style={{
+                  width: '100%', padding: '16px',
+                  background: response.trim() ? 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)' : '#E8DDD0',
+                  color: response.trim() ? '#FFFFFF' : '#B8A898',
+                  border: 'none', borderRadius: '30px', fontSize: '15px',
+                  fontWeight: 600, cursor: response.trim() ? 'pointer' : 'not-allowed',
+                }}
+              >
+                {submitting ? 'Submitting…' : 'Submit our answer'}
+              </button>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '16px 0', color: '#9CA3AF', fontSize: '14px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                  Waiting for Nora…
+                </div>
+              </div>
+            )}
+
+            {/* Partner waiting state */}
+            {!submitted && (
+              <p style={{ textAlign: 'center', fontSize: '13px', color: '#9CA3AF', marginTop: '12px', fontStyle: 'italic' }}>
+                {partnerName} is watching — talk it through together
+              </p>
+            )}
           </>
         )}
 
-        {/* Nora verdict */}
+        {/* Verdict phase */}
         {phase === 'verdict' && (
-          <div>
-            <div style={{
-              background: '#1C1510',
-              borderRadius: '20px',
-              padding: '28px 24px',
-              marginBottom: '24px',
-            }}>
-              <p style={{ fontSize: '12px', color: '#9B8B7A', marginBottom: '12px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                Nora's verdict
-              </p>
-              <p style={{
-                fontFamily: 'var(--font-fraunces)',
-                fontSize: '18px',
-                lineHeight: '1.6',
-                color: '#FAF6F0',
-              }}>
+          <div style={{ animation: 'slideIn 400ms cubic-bezier(0.22, 1, 0.36, 1)' }}>
+            <div style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 60%, #4338CA 100%)', borderRadius: '20px', padding: '28px 24px', marginBottom: '16px' }}>
+              <p style={{ fontSize: '11px', letterSpacing: '0.14em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', margin: '0 0 12px' }}>Nora's verdict</p>
+              <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '18px', lineHeight: 1.6, color: '#FFFFFF', margin: 0 }}>
                 {noraVerdict}
               </p>
             </div>
 
-            {/* Their response recap */}
-            <div style={{
-              background: '#FFFFFF',
-              border: '0.5px solid #E8DDD0',
-              borderRadius: '16px',
-              padding: '16px 20px',
-              marginBottom: '24px',
-            }}>
-              <p style={{ fontSize: '12px', color: '#9B9590', marginBottom: '8px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                Your answer
-              </p>
-              <p style={{ fontSize: '15px', color: '#1C1510', lineHeight: '1.6', whiteSpace: 'pre-line' }}>
-                {response}
-              </p>
+            <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '16px', padding: '16px 20px', marginBottom: '16px' }}>
+              <p style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#9CA3AF', textTransform: 'uppercase', margin: '0 0 8px' }}>Your answer</p>
+              <p style={{ fontSize: '15px', color: '#1C1510', lineHeight: 1.6, whiteSpace: 'pre-line', margin: 0 }}>{response}</p>
             </div>
 
-            {/* Plan CTA */}
             {challengeType === 'plan' && (
-              <div style={{
-                background: '#F0EBE3',
-                border: '0.5px solid #E8DDD0',
-                borderRadius: '16px',
-                padding: '16px 20px',
-                marginBottom: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}>
-                <p style={{ fontSize: '14px', color: '#1C1510', margin: 0 }}>Want to actually do this?</p>
-                <button
-                  onClick={() => router.push('/dates')}
-                  style={{
-                    padding: '8px 16px',
-                    background: '#1C1510',
-                    color: '#FAF6F0',
-                    border: 'none',
-                    borderRadius: '10px',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
+              <div style={{ background: '#EEF2FF', border: '0.5px solid #C4B5FD', borderRadius: '16px', padding: '16px 20px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <p style={{ fontSize: '14px', color: '#1E1B4B', margin: 0 }}>Want to actually do this?</p>
+                <button onClick={() => router.push('/dates')}
+                  style={{ padding: '8px 16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '10px', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                   Plan it →
                 </button>
               </div>
@@ -501,29 +427,23 @@ function ChallengePlayContent() {
 
             <button
               onClick={handleNext}
-              style={{
-                width: '100%',
-                padding: '16px',
-                background: '#1C1510',
-                color: '#FAF6F0',
-                border: 'none',
-                borderRadius: '14px',
-                fontSize: '16px',
-                fontWeight: '500',
-                cursor: 'pointer',
-              }}
+              style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}
             >
-              {currentRound >= totalRounds ? 'Finish' : 'Next round →'}
+              {currentRound >= totalRounds ? 'Finish ✦' : 'Next round →'}
             </button>
           </div>
         )}
 
         {error && (
-          <p style={{ fontSize: '14px', color: '#C1440E', marginTop: '16px', textAlign: 'center' }}>
-            {error}
-          </p>
+          <p style={{ fontSize: '14px', color: '#C1440E', marginTop: '16px', textAlign: 'center' }}>{error}</p>
         )}
       </div>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
     </div>
   )
 }
@@ -531,8 +451,9 @@ function ChallengePlayContent() {
 export default function ChallengePage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100dvh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontFamily: 'var(--font-fraunces)', fontSize: '20px', color: '#1C1510', opacity: 0.5 }}>Loading…</p>
+      <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid #4338CA', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     }>
       <ChallengePlayContent />

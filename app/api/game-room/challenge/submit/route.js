@@ -25,7 +25,7 @@ export async function POST(request) {
     const { data: profiles } = await supabase
       .from('user_profiles')
       .select('id, display_name')
-      .in('id', [coupleData.user1_id, coupleData.user2_id])
+      .in('user_id', [coupleData.user1_id, coupleData.user2_id])
 
     const names = profiles ? profiles.map(p => p.display_name).join(' and ') : 'this couple'
 
