@@ -354,10 +354,9 @@ function ChallengePlayContent() {
           </div>
         )}
 
-        {/* Input area — challenge phase */}
         {phase === 'challenge' && (
           <>
-            {!submitted && isScribe ? (
+            {isScribe && !submitted && (
               <>
                 {challengeType === 'rank' ? (
                   <div style={{ marginBottom: '24px' }}>
@@ -395,7 +394,9 @@ function ChallengePlayContent() {
                   {partnerName} is watching — talk it through together
                 </p>
               </>
-            ) : (
+            )}
+
+            {isScribe && submitted && (
               <div style={{ textAlign: 'center', padding: '24px 0', color: '#9CA3AF', fontSize: '14px' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
@@ -404,9 +405,20 @@ function ChallengePlayContent() {
               </div>
             )}
 
-            {/* Watcher view — not the scribe */}
             {!isScribe && (
               <div style={{ marginTop: '8px' }}>
+                {challengeType === 'rank' && rankItems.length > 0 && (
+                  <div style={{ marginBottom: '16px' }}>
+                    {rankItems.map((item, index) => (
+                      <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '12px', padding: '12px 16px', marginBottom: '8px' }}>
+                        <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#1E1B4B', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600', flexShrink: 0 }}>
+                          {index + 1}
+                        </span>
+                        <span style={{ flex: 1, fontSize: '15px', color: '#1C1510' }}>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div style={{ background: '#F5F0EA', border: '0.5px solid #E8DDD0', borderRadius: '16px', padding: '20px', textAlign: 'center', marginBottom: '12px' }}>
                   <p style={{ fontSize: '14px', fontWeight: 600, color: '#1A1A1A', margin: '0 0 4px' }}>
                     {partnerName} is the scribe
@@ -415,9 +427,11 @@ function ChallengePlayContent() {
                     Talk it through together — they'll type what you decide
                   </p>
                 </div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', width: '100%', justifyContent: 'center', padding: '8px 0', color: '#9CA3AF', fontSize: '13px' }}>
-                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
-                  Waiting for {partnerName} to submit…
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#9CA3AF', fontSize: '13px' }}>
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                    Waiting for {partnerName} to submit…
+                  </div>
                 </div>
               </div>
             )}
