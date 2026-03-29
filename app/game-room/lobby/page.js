@@ -440,14 +440,22 @@ function GameRoomLobbyContent() {
             <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }`}</style>
           </div>
         )}
-        {bothInLobby && (
+        {bothInLobby && isHost && (
           <button
             onClick={handleStart}
             disabled={!canStart || starting}
             style={{ width: '100%', padding: '16px', background: canStart ? 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)' : '#E8DDD0', color: canStart ? '#FFFFFF' : '#B8A898', border: 'none', borderRadius: '30px', fontSize: '16px', fontWeight: 600, cursor: canStart && !starting ? 'pointer' : 'not-allowed', opacity: starting ? 0.7 : 1 }}
           >
-            {starting ? 'Starting...' : together === null ? 'Are you together?' : `Let's play — ${config.name}`}
+            {starting ? 'Starting...' : together === null && mode !== 'challenge' ? 'Are you together?' : `Let's play — ${config.name}`}
           </button>
+        )}
+        {bothInLobby && !isHost && (
+          <div style={{ textAlign: 'center', padding: '16px 0' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#9CA3AF', fontSize: '14px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+              Waiting for {partnerName} to start…
+            </div>
+          </div>
         )}
 
       </div>
