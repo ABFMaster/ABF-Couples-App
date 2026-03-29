@@ -1,5 +1,5 @@
 # ABF — Developer Handoff Briefing
-# Last Updated: 2026-03-27
+# Last Updated: 2026-03-28
 
 ---
 
@@ -79,6 +79,18 @@ Before writing the session handoff, Claude must answer these four questions hone
 4. What should be standardized going forward?
 
 Answers go into the handoff doc under a dated "AI Self-Review" entry. This is non-negotiable SOP.
+
+### Self-Review: 2026-03-28
+
+1. **Where did I struggle?** Chased several Hot Take bugs sequentially that were all symptoms of the same root cause — no shared session state between rounds. Fixed poll guard, upsert, countdown, and next-question advancement each separately before identifying that Play Another Round bypassing the lobby was the architectural root cause.
+
+2. **What caused that?** Didn't map the full state machine before fixing individual symptoms. Each fix exposed the next symptom.
+
+3. **What should we change?** For any multiplayer feature bug session, draw the full state machine first — every state both users can be in — before touching code. Don't fix symptoms in isolation.
+
+4. **What should be standardized?** Before fixing a multiplayer bug, list every state both users can be in and confirm each transition has a handler. If any transition is missing, that's the root cause.
+
+---
 
 ### Self-Review: 2026-03-27
 
@@ -484,14 +496,16 @@ Always `git add -A` not `git add -u` for new files.
 - `play/page.js` gamePhase state machine refactor (replaced `showRoundChoice` / `loadingNextRound` / `bringingItHome` / `loading`)
 - `PRODUCT-BACKLOG.md` updated with LOBBY & GAME ROOM BUGS section and UX polish list
 
+**COMPLETED THIS SESSION (2026-03-28):**
+- Hot Take end-to-end fixed and playable: upsert race condition fixed with unique constraint on (session_id, question_id), session ID in URL pattern applied, tier selection locked via host-picks mechanic, 3-2-1 countdown reveal on every question for both users, first-tap Next Take advances partner via current_index poll on hot_take_sessions, See Summary advances partner via show_summary flag, Play Another Round routes to lobby with forceNew flag to expire old session and guarantee fresh questions, scores consistent for both users
+
 **NEXT SESSION PRIORITY ORDER:**
-1. Hot Take — test end-to-end, apply session ID in URL pattern same as Rabbit Hole
-2. The Challenge — test end-to-end, apply same pattern
-3. Rabbit Hole UX polish (see PRODUCT-BACKLOG.md)
-4. `generate-debrief`: fix Convergence and Bigger Picture showing same text
-5. Nora topic variety — `generate-hole` uses couple interests more aggressively
-6. Vercel Pro upgrade before 20 test users
-7. Code quality audit (see backlog)
+1. The Challenge — test end-to-end, apply session ID in URL pattern
+2. Rabbit Hole UX polish (see PRODUCT-BACKLOG.md)
+3. `generate-debrief`: fix Convergence and Bigger Picture showing same text
+4. Nora topic variety — `generate-hole` uses couple interests more aggressively
+5. Vercel Pro upgrade before 20 test users
+6. Code quality audit
 
 ---
 
