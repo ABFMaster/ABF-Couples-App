@@ -135,16 +135,19 @@ Respond in this exact JSON format with no other text:
       ? JSON.stringify({ intro: parsed.intro, prompt: parsed.prompt, items: parsed.items || basePrompt.items })
       : parsed.prompt
 
-    // Save round
+    // Save round — upsert prevents race condition when both users call generate simultaneously
     const { data: round, error } = await supabase
       .from('challenge_rounds')
-      .insert({
-        session_id: challengeSessionId,
-        couple_id: coupleId,
-        round_number: roundNumber,
-        prompt: finalPrompt,
-        prompt_key: basePrompt.key,
-      })
+      .upsert(
+        {
+          session_id: challengeSessionId,
+          couple_id: coupleId,
+          round_number: roundNumber,
+          prompt: finalPrompt,
+          prompt_key: basePrompt.key,
+        },
+        { onConflict: 'session_id,round_number', ignoreDuplicates: true }
+      )
       .select()
       .single()
 
