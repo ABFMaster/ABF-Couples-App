@@ -172,12 +172,6 @@ function GameRoomLobbyContent() {
           body: JSON.stringify({ userId, coupleId, sessionId, totalRounds }),
         })
         const data = await res.json()
-        if (!data.challengeSession) {
-          console.error('challenge/start returned no session:', data)
-          setStarting(false)
-          return
-        }
-        setChallengeSessionId(data.challengeSession.id)
         setChallengeRecommendedType(data.recommendedType)
         setChallengeRecommendedReason(data.reason)
         setChallengeAvailableTypes(data.availableTypes || [])
