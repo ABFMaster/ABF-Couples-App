@@ -129,8 +129,8 @@ function ChallengePlayContent() {
 
   // Generate round once we have userId and coupleId
   useEffect(() => {
-    if (userId && coupleId) generateRound(1)
-  }, [userId, coupleId])
+    if (userId && coupleId && isScribe) generateRound(1)
+  }, [userId, coupleId, isScribe, scriberDetermined])
 
   // Set scribe role from URL param — host always navigates with scribe=true
   useEffect(() => {
