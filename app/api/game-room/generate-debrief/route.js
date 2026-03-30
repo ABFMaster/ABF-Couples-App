@@ -69,21 +69,24 @@ ${user1Name} found: ${find1?.find_text || 'Nothing dropped yet'}
 ${user2Name}'s thread: ${session.user2_thread}
 ${user2Name} found: ${find2?.find_text || 'Nothing dropped yet'}
 
-THE CONVERGENCE (what you planned): ${session.convergence}
+Your job is to write two distinct things:
 
-Your job:
-1. Write a brief convergence reveal (2-3 sentences) — the surprising human truth that connects what they both found. Reference what they actually found, not just the planned convergence. Be specific and genuinely illuminating.
-2. Write 3 real debrief questions — not survey questions, real Nora questions that open something new. Base them on what they actually found and how it might connect to who they are.
+1. FACTUAL CLOSE — What actually happened with this topic. Concrete, satisfying, specific. 2-3 sentences that answer "so what actually happened?" Reference the topic and entry point directly. This is about the subject matter, not about them.
+
+2. HUMAN TRUTH — The surprising insight that connects what they both found to who they are as a couple. This is the holy moment. Reference their actual finds specifically. Warm, mischievous, illuminating. 2-3 sentences. This is about them, not the topic.
+
+3. THREE DEBRIEF QUESTIONS — Real Nora questions that open something new based on what they found. Not survey questions — the best part of the dinner party conversation.
 
 Rules:
-- Be Nora — warm, witty, occasionally mischievous
-- Reference their actual finds specifically
-- Questions should feel like the best part of the dinner party conversation
-- Don't be clinical or therapist-y
+- Factual close and human truth must be clearly different — one is about the topic, one is about them as a couple
+- Never restate the question or entry point verbatim
+- Be specific to what they actually found
+- Never be clinical or therapist-y
 
-Respond ONLY with JSON, no markdown:
+Respond ONLY with valid JSON, no markdown fences:
 {
-  "convergence_reveal": "The surprising connection Nora reveals — 2-3 sentences",
+  "factual_close": "What actually happened — concrete and specific to the topic",
+  "convergence_reveal": "The human truth — what this reveals about them as a couple",
   "questions": [
     "First real question",
     "Second real question",
@@ -112,6 +115,7 @@ Respond ONLY with JSON, no markdown:
     await supabase
       .from('game_sessions')
       .update({
+        factual_close: debrief.factual_close,
         convergence: debrief.convergence_reveal,
         debrief_questions: debrief.questions,
         debrief_generated: true,
