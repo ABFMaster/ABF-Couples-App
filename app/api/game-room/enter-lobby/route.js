@@ -49,7 +49,7 @@ export async function POST(request) {
         .update({ status: 'expired' })
         .eq('couple_id', coupleId)
         .eq('mode', mode)
-        .in('status', ['lobby', 'active'])
+        .in('status', ['active', 'completed'])
     }
 
     // Check for existing lobby session
