@@ -1,10 +1,12 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function RabbitHoleDebriefPage() {
+function RabbitHoleDebriefContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const sessionIdParam = searchParams.get('sessionId')
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState(null)
   const [coupleId, setCoupleId] = useState(null)
@@ -34,8 +36,6 @@ export default function RabbitHoleDebriefPage() {
       setCoupleId(couple.id)
 
       // Prefer sessionId URL param, fall back to most recent active/completed session
-      const sessionIdParam = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('sessionId') : null
-
       let sess = null
       if (sessionIdParam) {
         const { data } = await supabase
@@ -409,5 +409,18 @@ Be Nora — present, curious, warm. Reference what they actually found. This is 
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
       `}</style>
     </div>
+  )
+}
+
+export default function RabbitHoleDebriefPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid #4338CA', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    }>
+      <RabbitHoleDebriefContent />
+    </Suspense>
   )
 }
