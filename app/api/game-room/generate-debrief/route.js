@@ -149,7 +149,7 @@ Respond ONLY with valid JSON, no markdown fences:
         convergence: debrief.convergence_reveal,
         debrief_questions: debrief.questions,
         debrief_generated: true,
-        status: 'completed',
+        status: 'expired',
         updated_at: new Date().toISOString(),
       })
       .eq('id', sessionId)

@@ -34,28 +34,13 @@ function RabbitHoleDebriefContent() {
       if (!couple) { router.push('/connect'); return }
       setCoupleId(couple.id)
 
-      // Prefer sessionId URL param, fall back to most recent active/completed session
-      let sess = null
-      if (sessionIdParam) {
-        const { data } = await supabase
-          .from('game_sessions')
-          .select('*')
-          .eq('id', sessionIdParam)
-          .single()
-        sess = data
-      }
-      if (!sess) {
-        const { data } = await supabase
-          .from('game_sessions')
-          .select('*')
-          .eq('couple_id', couple.id)
-          .eq('mode', 'rabbit-hole')
-          .in('status', ['active', 'completed'])
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
-        sess = data
-      }
+      if (!sessionIdParam) { router.push('/game-room'); return }
+
+      const { data: sess } = await supabase
+        .from('game_sessions')
+        .select('*')
+        .eq('id', sessionIdParam)
+        .maybeSingle()
 
       if (!sess) { router.push('/game-room'); return }
       setSession(sess)
