@@ -200,7 +200,7 @@ function ChallengePlayContent() {
 
   // Poll for partner starting a new lobby session — complete screen only
   useEffect(() => {
-    if (phase !== 'complete' || !coupleId || !userId) return
+    if ((phase !== 'complete' && phase !== 'verdict') || !coupleId || !userId) return
     completePollRef.current = setInterval(async () => {
       const { data: lobbySess } = await supabase
         .from('game_sessions')
