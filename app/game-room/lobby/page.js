@@ -26,6 +26,7 @@ function GameRoomLobbyContent() {
   const [starting, setStarting] = useState(false)
   const [isHost, setIsHost] = useState(false)
   const pollRef = useRef(null)
+  const isHostRef = useRef(false)
   const coupleRef = useRef(null)
 
   // Challenge-specific state
@@ -81,7 +82,10 @@ function GameRoomLobbyContent() {
         if (existing.timer_minutes) setSelectedTimer(existing.timer_minutes)
         if (existing.together !== null) setTogether(existing.together)
         // Set host: I am host if I am in lobby but partner is not
-        if (myInLobby && !partnerInLobby) setIsHost(true)
+        if (myInLobby && !partnerInLobby) {
+          setIsHost(true)
+          isHostRef.current = true
+        }
       }
 
       setLoading(false)
@@ -107,7 +111,7 @@ function GameRoomLobbyContent() {
         if (sess.status === 'active') {
           if (mode === 'challenge') {
             // Only partner polls for challenge session — host navigates directly from Let's go
-            if (isHost) return
+            if (isHostRef.current) return
             const { data: challengeSess } = await supabase
               .from('challenge_sessions')
               .select('id, challenge_type')
@@ -149,7 +153,10 @@ function GameRoomLobbyContent() {
       if (data.session) {
         setSessionId(data.session.id)
         setIAmIn(true)
-        if (!data.session.user2_in_lobby) setIsHost(true)
+        if (!data.session.user2_in_lobby) {
+          setIsHost(true)
+          isHostRef.current = true
+        }
       }
     } catch {} finally { setEntering(false) }
   }
