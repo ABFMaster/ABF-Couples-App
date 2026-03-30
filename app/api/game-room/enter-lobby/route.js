@@ -24,33 +24,56 @@ export async function POST(request) {
     const isUser1 = couple.user1_id === userId
     const lobbyField = isUser1 ? 'user1_in_lobby' : 'user2_in_lobby'
 
-    // Expire stale lobby sessions older than 30 minutes
-    await supabase
-      .from('game_sessions')
-      .update({ status: 'expired' })
-      .eq('couple_id', coupleId)
-      .eq('mode', mode)
-      .eq('status', 'lobby')
-      .lt('updated_at', new Date(Date.now() - 30 * 60 * 1000).toISOString())
+    // Helper: expire sessions and clean their child records (plates cleared after Nora has eaten)
+    const expireAndClean = async (query) => {
+      const { data: toExpire } = await supabase
+        .from('game_sessions')
+        .select('id')
+        .match(query.match)
+        .in('status', query.statuses)
+        .lt('updated_at', query.olderThan || new Date().toISOString())
 
-    // Expire stale active sessions older than 24 hours
-    await supabase
-      .from('game_sessions')
-      .update({ status: 'expired' })
-      .eq('couple_id', coupleId)
-      .eq('mode', mode)
-      .eq('status', 'active')
-      .lt('updated_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      if (!toExpire?.length) return
+      const ids = toExpire.map(s => s.id)
 
-    // If forceNew, expire all existing sessions for this mode first
-    if (forceNew) {
+      // Clean child records first
+      await Promise.all([
+        supabase.from('game_rounds').delete().in('session_id', ids),
+        supabase.from('game_finds').delete().in('session_id', ids),
+        supabase.from('hot_take_sessions').delete().in('session_id', ids),
+        supabase.from('hot_take_answers').delete().in('session_id', ids),
+        supabase.from('challenge_sessions').delete().in('session_id', ids),
+        supabase.from('challenge_rounds').delete().in('session_id', ids),
+      ])
+
+      // Then expire the sessions
       await supabase
         .from('game_sessions')
         .update({ status: 'expired' })
-        .eq('couple_id', coupleId)
-        .eq('mode', mode)
-        .in('status', ['active', 'completed'])
+        .in('id', ids)
     }
+
+    if (forceNew) {
+      await expireAndClean({
+        match: { couple_id: coupleId, mode },
+        statuses: ['active', 'completed'],
+        olderThan: new Date().toISOString(),
+      })
+    }
+
+    // Expire stale lobby sessions older than 30 minutes
+    await expireAndClean({
+      match: { couple_id: coupleId, mode },
+      statuses: ['lobby'],
+      olderThan: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+    })
+
+    // Expire stale active sessions older than 24 hours
+    await expireAndClean({
+      match: { couple_id: coupleId, mode },
+      statuses: ['active'],
+      olderThan: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    })
 
     // Check for existing lobby session
     const { data: existing } = await supabase
