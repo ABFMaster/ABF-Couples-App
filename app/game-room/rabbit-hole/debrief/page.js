@@ -19,7 +19,6 @@ function RabbitHoleDebriefContent() {
   const [chatLoading, setChatLoading] = useState(false)
   const [savedToTimeline, setSavedToTimeline] = useState(false)
   const messagesEndRef = useRef(null)
-  const debriefPollRef = useRef(null)
 
   useEffect(() => {
     const init = async () => {
@@ -75,73 +74,26 @@ function RabbitHoleDebriefContent() {
         .eq('session_id', sess.id)
         .order('round_number', { ascending: true })
 
-      // First user to arrive generates — second user polls for result
-      if (sess.debrief_generated) {
-        // Already generated — use cached version
-        setDebrief({
-          convergence_reveal: sess.convergence,
-          factual_close: sess.factual_close,
-          questions: sess.debrief_questions || [],
-        })
-        const contextMsg = buildNoraContext(sess, finds, rounds, couple, user.id)
-        setMessages([{ role: 'system_context', content: contextMsg }])
+      // Call generate-debrief — route handles race condition internally
+      const debriefRes = await fetch('/api/game-room/generate-debrief', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: sess.id, coupleId: couple.id }),
+      })
+      const debriefData = await debriefRes.json()
+
+      if (debriefData.error) {
+        setError(debriefData.error)
         setLoading(false)
-        setTimeout(() => setPhase('truth'), 10000)
         return
       }
-
-      // Try to claim generation — atomic update only succeeds for one client
-      const { data: claimed } = await supabase
-        .from('game_sessions')
-        .update({ debrief_generated: true, updated_at: new Date().toISOString() })
-        .eq('id', sess.id)
-        .eq('debrief_generated', false)
-        .select('id')
-        .maybeSingle()
-
-      if (claimed) {
-        // Won the race — generate debrief
-        const debriefRes = await fetch('/api/game-room/generate-debrief', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId: sess.id, coupleId: couple.id }),
-        })
-        const debriefData = await debriefRes.json()
-        if (debriefData.error) {
-          setError(debriefData.error)
-          setLoading(false)
-          return
-        }
-        setDebrief(debriefData)
-        const contextMsg = buildNoraContext(sess, finds, rounds, couple, user.id)
-        setMessages([{ role: 'system_context', content: contextMsg }])
-        setLoading(false)
-        setTimeout(() => setPhase('truth'), 10000)
-      } else {
-        // Lost the race — poll for debrief to be ready
-        debriefPollRef.current = setInterval(async () => {
-          const { data: pollSess } = await supabase
-            .from('game_sessions')
-            .select('debrief_generated, convergence, factual_close, debrief_questions')
-            .eq('id', sess.id)
-            .maybeSingle()
-          if (pollSess?.debrief_generated && pollSess.convergence) {
-            clearInterval(debriefPollRef.current)
-            setDebrief({
-              convergence_reveal: pollSess.convergence,
-              factual_close: pollSess.factual_close,
-              questions: pollSess.debrief_questions || [],
-            })
-            const contextMsg = buildNoraContext(sess, finds, rounds, couple, user.id)
-            setMessages([{ role: 'system_context', content: contextMsg }])
-            setLoading(false)
-            setTimeout(() => setPhase('truth'), 10000)
-          }
-        }, 2000)
-      }
+      setDebrief(debriefData)
+      const contextMsg = buildNoraContext(sess, finds, rounds, couple, user.id)
+      setMessages([{ role: 'system_context', content: contextMsg }])
+      setLoading(false)
+      setTimeout(() => setPhase('truth'), 10000)
     }
     init()
-    return () => clearInterval(debriefPollRef.current)
   }, [router])
 
   useEffect(() => {
