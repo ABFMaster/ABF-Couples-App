@@ -100,7 +100,9 @@ function ChallengePlayContent() {
   const [isScribe, setIsScribe] = useState(false)
   const [scriberDetermined, setScriberDetermined] = useState(false)
   const [error, setError] = useState(null)
+  const [newLobbySession, setNewLobbySession] = useState(null)
   const pollRef = useRef(null)
+  const completePollRef = useRef(null)
 
   useEffect(() => {
     async function init() {
@@ -195,6 +197,25 @@ function ChallengePlayContent() {
     }, 3000)
     return () => clearInterval(pollRef.current)
   }, [challengeSessionId, currentRound, phase])
+
+  // Poll for partner starting a new lobby session — complete screen only
+  useEffect(() => {
+    if (phase !== 'complete' || !coupleId || !userId) return
+    completePollRef.current = setInterval(async () => {
+      const { data: lobbySess } = await supabase
+        .from('game_sessions')
+        .select('id, host_user_id')
+        .eq('couple_id', coupleId)
+        .eq('mode', 'challenge')
+        .eq('status', 'lobby')
+        .maybeSingle()
+      if (lobbySess && lobbySess.host_user_id !== userId) {
+        clearInterval(completePollRef.current)
+        setNewLobbySession(lobbySess)
+      }
+    }, 3000)
+    return () => clearInterval(completePollRef.current)
+  }, [phase, coupleId, userId])
 
   async function generateRound(roundNumber) {
     clearInterval(pollRef.current)
@@ -320,10 +341,42 @@ function ChallengePlayContent() {
             {totalRounds === 1 ? 'One round. Well played.' : `${totalRounds} rounds. Nora's impressed.`}
           </p>
         </div>
-        <button onClick={() => router.push('/game-room/lobby?mode=challenge&forceNew=true')}
-          style={{ width: '100%', maxWidth: '400px', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}>
-          Play another challenge →
-        </button>
+        {newLobbySession ? (
+            <div style={{ width: '100%', maxWidth: '400px' }}>
+              <div style={{ background: '#EEF2FF', border: '0.5px solid #C4B5FD', borderRadius: '16px', padding: '16px 20px', marginBottom: '12px', textAlign: 'center' }}>
+                <p style={{ fontSize: '14px', color: '#1E1B4B', margin: 0, fontFamily: "'Fraunces', Georgia, serif", fontStyle: 'italic' }}>
+                  {partnerName} wants to play again
+                </p>
+              </div>
+              <button
+                onClick={() => router.push(`/game-room/lobby?mode=challenge`)}
+                style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '16px', fontWeight: 600, cursor: 'pointer', marginBottom: '10px' }}
+              >
+                Join {partnerName} →
+              </button>
+              <button
+                onClick={() => router.push('/game-room')}
+                style={{ width: '100%', padding: '14px', background: 'transparent', border: '0.5px solid #E8DDD0', borderRadius: '30px', fontSize: '14px', color: '#9CA3AF', cursor: 'pointer' }}
+              >
+                Back to Game Room
+              </button>
+            </div>
+          ) : (
+            <div style={{ width: '100%', maxWidth: '400px' }}>
+              <button
+                onClick={() => router.push('/game-room/lobby?mode=challenge&forceNew=true')}
+                style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '16px', fontWeight: 600, cursor: 'pointer', marginBottom: '10px' }}
+              >
+                Play another challenge →
+              </button>
+              <button
+                onClick={() => router.push('/game-room')}
+                style={{ width: '100%', padding: '14px', background: 'transparent', border: '0.5px solid #E8DDD0', borderRadius: '30px', fontSize: '14px', color: '#9CA3AF', cursor: 'pointer' }}
+              >
+                Back to Game Room
+              </button>
+            </div>
+          )}
       </div>
     )
   }
