@@ -151,6 +151,19 @@ function ChallengePlayContent() {
         .eq('round_number', currentRound)
         .maybeSingle()
 
+      // Watcher: advance from loading to challenge when round appears
+      if (roundRow && !isScribe && phase === 'loading') {
+        setRound(roundRow)
+        if (challengeType === 'rank') {
+          try {
+            const parsed = JSON.parse(roundRow.prompt)
+            setRankItems(parsed.items || [])
+          } catch { setRankItems([]) }
+        }
+        setPhase('challenge')
+        return
+      }
+
       if (roundRow?.nora_verdict && phase !== 'verdict' && phase !== 'complete') {
         setRound(roundRow)
         setNoraVerdict(roundRow.nora_verdict)
