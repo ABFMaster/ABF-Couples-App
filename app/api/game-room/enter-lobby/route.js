@@ -83,6 +83,7 @@ export async function POST(request) {
           mode,
           status: 'lobby',
           [lobbyField]: true,
+          host_user_id: userId,
         })
         .select('*')
         .maybeSingle()

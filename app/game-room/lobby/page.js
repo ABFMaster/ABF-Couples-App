@@ -22,11 +22,10 @@ function GameRoomLobbyContent() {
   const [together, setTogether] = useState(null)
   const [selectedTimer, setSelectedTimer] = useState(config.defaultTimer || 60)
   const [sessionId, setSessionId] = useState(null)
+  const [isHost, setIsHost] = useState(false)
   const [entering, setEntering] = useState(false)
   const [starting, setStarting] = useState(false)
-  const [isHost, setIsHost] = useState(false)
   const pollRef = useRef(null)
-  const isHostRef = useRef(false)
   const coupleRef = useRef(null)
 
   // Challenge-specific state
@@ -82,10 +81,7 @@ function GameRoomLobbyContent() {
         if (existing.timer_minutes) setSelectedTimer(existing.timer_minutes)
         if (existing.together !== null) setTogether(existing.together)
         // Set host: I am host if I am in lobby but partner is not
-        if (myInLobby && !partnerInLobby) {
-          setIsHost(true)
-          isHostRef.current = true
-        }
+        setIsHost(existing.host_user_id === user.id)
       }
 
       setLoading(false)
@@ -108,10 +104,14 @@ function GameRoomLobbyContent() {
         .maybeSingle()
 
       if (sess) {
+        const { data: { user } } = await supabase.auth.getUser()
+        const freshIsHost = sess.host_user_id === user.id
+        setIsHost(freshIsHost)
+
         if (sess.status === 'active') {
           if (mode === 'challenge') {
             // Only partner polls for challenge session — host navigates directly from Let's go
-            if (isHostRef.current) return
+            if (freshIsHost) return
             const { data: challengeSess } = await supabase
               .from('challenge_sessions')
               .select('id, challenge_type')
@@ -130,7 +130,6 @@ function GameRoomLobbyContent() {
         }
 
         const couple = coupleRef.current
-        const { data: { user } } = await supabase.auth.getUser()
         const isUser1 = couple?.user1_id === user?.id
         setPartnerIsIn(isUser1 ? sess.user2_in_lobby : sess.user1_in_lobby)
         setIAmIn(prev => prev ? prev : (isUser1 ? sess.user1_in_lobby : sess.user2_in_lobby))
@@ -153,10 +152,7 @@ function GameRoomLobbyContent() {
       if (data.session) {
         setSessionId(data.session.id)
         setIAmIn(true)
-        if (!data.session.user2_in_lobby) {
-          setIsHost(true)
-          isHostRef.current = true
-        }
+        setIsHost(data.session.host_user_id === userId)
       }
     } catch {} finally { setEntering(false) }
   }
