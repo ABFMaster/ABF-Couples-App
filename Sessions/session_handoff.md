@@ -1,5 +1,5 @@
 # ABF — Developer Handoff Briefing
-# Last Updated: 2026-03-28
+# Last Updated: 2026-03-29
 
 ---
 
@@ -79,6 +79,18 @@ Before writing the session handoff, Claude must answer these four questions hone
 4. What should be standardized going forward?
 
 Answers go into the handoff doc under a dated "AI Self-Review" entry. This is non-negotiable SOP.
+
+### Self-Review: 2026-03-29
+
+1. **Where did I struggle?** Challenge took many iterations — dual sessions, stale closure on isHost, wrong scribe detection, watcher stuck in loading, Nora verdict listing both rankings. Each fix exposed the next gap.
+
+2. **What caused that?** Did not enforce STATE MACHINE GATE before building. Built client-side isHost state when host identity belongs in the DB. Fixed symptoms repeatedly instead of root causes.
+
+3. **What should we change?** STATE MACHINE GATE is non-negotiable before any multiplayer feature. DB is source of truth for any state shared between two clients — no exceptions. Design before code means writing the data model AND state machine AND getting explicit agreement before opening any file.
+
+4. **What should be standardized?** Before any multiplayer feature: (1) write data model — every shared piece of state lives in DB, (2) write full state machine — every state, every transition, every actor, (3) get explicit sign-off, (4) then build. If I start writing code without this, stop me.
+
+---
 
 ### Self-Review: 2026-03-28
 
@@ -499,13 +511,40 @@ Always `git add -A` not `git add -u` for new files.
 **COMPLETED THIS SESSION (2026-03-28):**
 - Hot Take end-to-end fixed and playable: upsert race condition fixed with unique constraint on (session_id, question_id), session ID in URL pattern applied, tier selection locked via host-picks mechanic, 3-2-1 countdown reveal on every question for both users, first-tap Next Take advances partner via current_index poll on hot_take_sessions, See Summary advances partner via show_summary flag, Play Another Round routes to lobby with forceNew flag to expire old session and guarantee fresh questions, scores consistent for both users
 
+**COMPLETED THIS SESSION (2026-03-29):**
+
+Hot Take (2026-03-29):
+- Upsert race condition fixed with unique constraint on (session_id, question_id)
+- Session ID in URL pattern applied
+- Tier selection locked via host-picks mechanic with tier poll
+- 3-2-1 countdown reveal on every question for both users
+- Poll runs in both together and remote modes
+- First-tap Next Take advances partner via current_index on hot_take_sessions
+- See Summary advances partner via show_summary flag
+- Play Another Round routes to lobby with forceNew flag
+- Scores consistent for both users
+
+The Challenge (2026-03-29):
+- Full two-user architecture built: single shared session, host-only Let's play button
+- host_user_id stored in game_sessions DB — single source of truth, no client-side state
+- Host picks type via confirm-type route, partner auto-navigates via lobby poll
+- Scribe identity from URL param (&scribe=true for host)
+- Only scribe calls generate — watcher polls for round to appear
+- Race condition fixed: unique constraint on challenge_rounds(session_id, round_number) + upsert with fallback fetch
+- Watcher sees read-only rank list + scribe messaging
+- Verdict pulls both users via poll
+- Complete screen polls for partner lobby session — shows "X wants to play again — Join X" invitation
+- forceNew only expires active/completed sessions not lobby — prevents dual session on replay
+- isHostRef stale closure fixed by moving host identity to DB
+
 **NEXT SESSION PRIORITY ORDER:**
-1. The Challenge — test end-to-end, apply session ID in URL pattern
-2. Rabbit Hole UX polish (see PRODUCT-BACKLOG.md)
-3. `generate-debrief`: fix Convergence and Bigger Picture showing same text
-4. Nora topic variety — `generate-hole` uses couple interests more aggressively
-5. Vercel Pro upgrade before 20 test users
-6. Code quality audit
+1. Rabbit Hole UX polish (see PRODUCT-BACKLOG.md)
+2. `generate-debrief`: fix Convergence and Bigger Picture showing same text
+3. Nora topic variety — `generate-hole` uses couple interests more aggressively
+4. Hot Take remaining polish: re-entry after exit, summary depth
+5. Challenge: Nora verdict prompt for rank type (listing both rankings incorrectly), Write a Story prompt quality
+6. Vercel Pro upgrade before 20 test users
+7. Code quality audit
 
 ---
 
@@ -530,6 +569,9 @@ Always `git add -A` not `git add -u` for new files.
 - Bet card design slightly jarring — shadow/border added, full sweep needed
 - Google Places API returning 503 for date suggestions
 - Google Maps race condition in `/dates/custom`
+- Challenge Rank verdict: Nora lists both rankings separately as if users ranked independently — prompt needs fixing
+- Challenge Write a Story: prompts are abstract and difficult, verdict hard to follow — content review needed
+- Too many push notifications firing at game end — audit needed before scaling
 
 ---
 
