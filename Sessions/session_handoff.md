@@ -545,6 +545,7 @@ The Challenge (2026-03-29):
 5. Challenge: Nora verdict prompt for rank type (listing both rankings incorrectly), Write a Story prompt quality
 6. Vercel Pro upgrade before 20 test users
 7. Code quality audit
+8. Game Room gameplay polish sweep (Hot Take + Challenge) — after all Game Room modes are functionally complete
 
 ---
 

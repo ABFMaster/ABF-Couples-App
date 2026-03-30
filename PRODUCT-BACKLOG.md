@@ -29,6 +29,10 @@ Ritual Builder is the primary bridge to third-party integrations. When a couple 
 
 ## PARKING LOT (needs more thought before backlog)
 
+### Game Room Gameplay Polish Sweep
+*Parked: 2026-03-30*
+After all Game Room modes are functionally complete and signed off, do a full gameplay sweep of Hot Take and The Challenge covering: Nora comment quality and diversity, summary depth and insight, "The One That Surprised Me Most" mechanic, Challenge prompt quality (Write a Story too abstract, Rank verdict incorrectly lists both rankings), overall game pacing and UX feel.
+
 ### Solo User Value Arc
 *Parked: March 11, 2026*
 Experience for users whose partner has not joined yet. Days 1-3 solo assessment and Nora intro. Days 4-7 partner pull mechanic. Week 2 onwards Nora coaches solo user on their own patterns while waiting. Build after core coupled experience is validated with test couples.
