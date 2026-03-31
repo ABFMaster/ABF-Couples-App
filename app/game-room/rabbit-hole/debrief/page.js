@@ -57,24 +57,51 @@ function RabbitHoleDebriefContent() {
         .eq('session_id', sess.id)
         .order('round_number', { ascending: true })
 
-      const debriefRes = await fetch('/api/game-room/generate-debrief', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: sess.id, coupleId: couple.id }),
-      })
-      const debriefData = await debriefRes.json()
+      const isHostUser = sess.host_user_id === user.id
 
-      if (debriefData.error) {
-        setError(debriefData.error)
+      if (isHostUser) {
+        // Host generates the debrief — single generation, clean data
+        const debriefRes = await fetch('/api/game-room/generate-debrief', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: sess.id, coupleId: couple.id }),
+        })
+        const debriefData = await debriefRes.json()
+
+        if (debriefData.error) {
+          setError(debriefData.error)
+          setLoading(false)
+          return
+        }
+
+        setDebrief(debriefData)
+        const contextMsg = buildNoraContext(sess, finds, rounds, couple, user.id)
+        setMessages([{ role: 'system_context', content: contextMsg }])
         setLoading(false)
-        return
-      }
+        setTimeout(() => setPhase('truth'), 10000)
+      } else {
+        // Partner polls for debrief to be ready — reads from DB once generated
+        const pollDebrief = setInterval(async () => {
+          const { data: updatedSess } = await supabase
+            .from('game_sessions')
+            .select('debrief_generated, convergence, factual_close, debrief_questions')
+            .eq('id', sess.id)
+            .maybeSingle()
 
-      setDebrief(debriefData)
-      const contextMsg = buildNoraContext(sess, finds, rounds, couple)
-      setMessages([{ role: 'system_context', content: contextMsg }])
-      setLoading(false)
-      setTimeout(() => setPhase('truth'), 10000)
+          if (updatedSess?.debrief_generated && updatedSess.convergence) {
+            clearInterval(pollDebrief)
+            setDebrief({
+              convergence_reveal: updatedSess.convergence,
+              factual_close: updatedSess.factual_close,
+              questions: updatedSess.debrief_questions || [],
+            })
+            const contextMsg = buildNoraContext(sess, finds, rounds, couple, user.id)
+            setMessages([{ role: 'system_context', content: contextMsg }])
+            setLoading(false)
+            setTimeout(() => setPhase('truth'), 10000)
+          }
+        }, 2000)
+      }
     }
     init()
   }, [router])
