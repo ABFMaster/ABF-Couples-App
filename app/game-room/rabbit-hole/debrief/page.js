@@ -18,6 +18,7 @@ function RabbitHoleDebriefContent() {
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
   const [savedToTimeline, setSavedToTimeline] = useState(false)
+  const [accessToken, setAccessToken] = useState(null)
   const messagesEndRef = useRef(null)
 
   useEffect(() => {
@@ -25,6 +26,8 @@ function RabbitHoleDebriefContent() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
       setUserId(user.id)
+      const { data: { session: authSession } } = await supabase.auth.getSession()
+      if (authSession?.access_token) setAccessToken(authSession.access_token)
 
       const { data: couple } = await supabase
         .from('couples')
@@ -167,12 +170,11 @@ Be Nora — present, curious, warm. Reference what they actually found. This is 
         .filter(m => m.role !== 'system_context')
         .map(m => ({ role: m.role, content: m.content }))
 
-      const { data: { session: authSession } } = await supabase.auth.getSession()
       const res = await fetch('/api/ai-coach', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authSession?.access_token}`,
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           messages: chatMessages,
