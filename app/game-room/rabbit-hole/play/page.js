@@ -1,12 +1,14 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 const MIN_ROUNDS = { 30: 2, 60: 3, 90: 4 }
 
-export default function RabbitHolePlayPage() {
+function RabbitHolePlayContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const sessionIdParam = searchParams.get('sessionId')
   const [gamePhase, setGamePhase] = useState('loading_initial')
   const [userId, setUserId] = useState(null)
   const [coupleId, setCoupleId] = useState(null)
@@ -66,14 +68,13 @@ export default function RabbitHolePlayPage() {
       if (myProfile?.display_name) setUserName(myProfile.display_name)
       if (partnerProfile?.display_name) setPartnerName(partnerProfile.display_name)
 
-      const sessionIdParam = new URLSearchParams(window.location.search).get('sessionId')
       if (!sessionIdParam) { router.push('/game-room/lobby?mode=rabbit-hole'); return }
 
       const { data: sess } = await supabase
         .from('game_sessions')
         .select('*')
         .eq('id', sessionIdParam)
-        .single()
+        .maybeSingle()
 
       if (!sess || !['active', 'completed'].includes(sess.status)) {
         router.push('/game-room/lobby?mode=rabbit-hole')
@@ -222,7 +223,7 @@ export default function RabbitHolePlayPage() {
         .select('status, id')
         .eq('id', session.id)
         .maybeSingle()
-      if (sess?.status === 'completed') {
+      if (sess?.status === 'completed' || sess?.status === 'expired') {
         clearInterval(pollRef.current)
         router.push(`/game-room/rabbit-hole/debrief?sessionId=${sess.id}`)
         return
@@ -634,5 +635,18 @@ export default function RabbitHolePlayPage() {
         @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </div>
+  )
+}
+
+export default function RabbitHolePlayPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '36px', height: '36px', borderRadius: '50%', border: '2px solid #4338CA', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    }>
+      <RabbitHolePlayContent />
+    </Suspense>
   )
 }
