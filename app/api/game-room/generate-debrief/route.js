@@ -26,41 +26,12 @@ export async function POST(request) {
     if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
 
     // Return existing debrief if already generated
-    if (session.debrief_generated) {
+    if (session.debrief_generated && session.convergence) {
       return NextResponse.json({
         convergence_reveal: session.convergence,
         factual_close: session.factual_close,
         questions: session.debrief_questions || [],
       })
-    }
-
-    // Atomic claim — only one request proceeds to generation
-    const { data: claimed } = await supabase
-      .from('game_sessions')
-      .update({ debrief_generated: true, updated_at: new Date().toISOString() })
-      .eq('id', sessionId)
-      .eq('debrief_generated', false)
-      .select('id')
-      .maybeSingle()
-
-    if (!claimed) {
-      // Lost the race — poll for the other request to finish and return cached result
-      for (let i = 0; i < 10; i++) {
-        await new Promise(r => setTimeout(r, 1500))
-        const { data: cached } = await supabase
-          .from('game_sessions')
-          .select('convergence, factual_close, debrief_questions')
-          .eq('id', sessionId)
-          .maybeSingle()
-        if (cached?.convergence) {
-          return NextResponse.json({
-            convergence_reveal: cached.convergence,
-            factual_close: cached.factual_close,
-            questions: cached.debrief_questions || [],
-          })
-        }
-      }
-      return NextResponse.json({ error: 'Debrief generation timed out' }, { status: 500 })
     }
 
     // Get both finds
