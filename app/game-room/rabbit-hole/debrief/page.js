@@ -71,7 +71,7 @@ function RabbitHoleDebriefContent() {
       }
 
       setDebrief(debriefData)
-      const contextMsg = buildNoraContext(sess, finds, rounds, couple, user.id)
+      const contextMsg = buildNoraContext(sess, finds, rounds, couple)
       setMessages([{ role: 'system_context', content: contextMsg }])
       setLoading(false)
       setTimeout(() => setPhase('truth'), 10000)
@@ -83,7 +83,7 @@ function RabbitHoleDebriefContent() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const buildNoraContext = (sess, finds, rounds, couple, myUserId) => {
+  const buildNoraContext = (sess, finds, rounds, couple) => {
     const user1Finds = finds?.filter(f => f.user_id === couple.user1_id).map(f => f.find_text).join(' | ') || 'Nothing'
     const user2Finds = finds?.filter(f => f.user_id === couple.user2_id).map(f => f.find_text).join(' | ') || 'Nothing'
     return `You are Nora — warm, witty, mischievous. You just ran a Rabbit Hole game session for a couple. Here is everything you know:
@@ -219,7 +219,7 @@ Be Nora — present, curious, warm. Reference what they actually found. This is 
             <div style={{ background: '#F5F3FF', border: '0.5px solid #C4B5FD', borderRadius: '20px', padding: '24px', marginBottom: '16px' }}>
               <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#7C3AED', textTransform: 'uppercase', margin: '0 0 12px', fontWeight: 700 }}>The bigger picture</p>
               <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '17px', color: '#1E1B4B', lineHeight: 1.65, margin: 0 }}>
-                {debrief?.convergence_reveal}
+                {debrief?.factual_close || debrief?.convergence_reveal}
               </p>
             </div>
 
