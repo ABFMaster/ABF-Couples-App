@@ -166,6 +166,7 @@ Respond ONLY with valid JSON, no markdown fences:
 
     return NextResponse.json({
       convergence_reveal: debrief.convergence_reveal,
+      factual_close: debrief.factual_close,
       questions: debrief.questions,
       timeline_title: debrief.timeline_title,
       topic: session.hole_topic,
