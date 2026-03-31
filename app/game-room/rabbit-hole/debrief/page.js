@@ -45,21 +45,18 @@ function RabbitHoleDebriefContent() {
       if (!sess) { router.push('/game-room'); return }
       setSession(sess)
 
-      // Get all finds
       const { data: finds } = await supabase
         .from('game_finds')
         .select('*')
         .eq('session_id', sess.id)
         .order('created_at', { ascending: true })
 
-      // Get all rounds
       const { data: rounds } = await supabase
         .from('game_rounds')
         .select('*')
         .eq('session_id', sess.id)
         .order('round_number', { ascending: true })
 
-      // Call generate-debrief — route handles race condition internally
       const debriefRes = await fetch('/api/game-room/generate-debrief', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -72,6 +69,7 @@ function RabbitHoleDebriefContent() {
         setLoading(false)
         return
       }
+
       setDebrief(debriefData)
       const contextMsg = buildNoraContext(sess, finds, rounds, couple, user.id)
       setMessages([{ role: 'system_context', content: contextMsg }])
