@@ -114,25 +114,64 @@ function RabbitHolePlayContent() {
       let loadedRoundNum = 1
 
       if (!activeRound) {
-        // Generate round 1
-        const holeRes = await fetch('/api/game-room/generate-hole', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId: sess.id, coupleId: couple.id, roundNumber: 1 }),
-        })
-        const holeData = await holeRes.json()
-        setHole(holeData)
-        setMyThread(user1 ? holeData.thread_user1 : holeData.thread_user2)
-        setRoundNumber(1)
-
-        // Fetch the newly created round
-        const { data: newRound } = await supabase
-          .from('game_rounds')
-          .select('*')
-          .eq('session_id', sess.id)
-          .eq('round_number', 1)
-          .maybeSingle()
-        activeRound = newRound
+        const isHostUser = sess.host_user_id === user.id
+        if (isHostUser) {
+          // Host generates round 1
+          const holeRes = await fetch('/api/game-room/generate-hole', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: sess.id, coupleId: couple.id, roundNumber: 1 }),
+          })
+          const holeData = await holeRes.json()
+          setHole(holeData)
+          setMyThread(user1 ? holeData.thread_user1 : holeData.thread_user2)
+          setRoundNumber(1)
+          const { data: newRound } = await supabase
+            .from('game_rounds')
+            .select('*')
+            .eq('session_id', sess.id)
+            .eq('round_number', 1)
+            .maybeSingle()
+          activeRound = newRound
+        } else {
+          // Partner polls for round 1 to appear
+          setGamePhase('loading_initial')
+          gamePhaseRef.current = 'loading_initial'
+          const pollForRound = setInterval(async () => {
+            const { data: round1 } = await supabase
+              .from('game_rounds')
+              .select('*')
+              .eq('session_id', sess.id)
+              .eq('round_number', 1)
+              .maybeSingle()
+            if (round1) {
+              clearInterval(pollForRound)
+              const { data: updatedSess } = await supabase
+                .from('game_sessions')
+                .select('*')
+                .eq('id', sess.id)
+                .maybeSingle()
+              setHole({
+                topic: updatedSess?.hole_topic,
+                entry: updatedSess?.hole_entry,
+                nora_send_off: updatedSess?.nora_send_off,
+                thread_user1: round1.user1_thread,
+                thread_user2: round1.user2_thread,
+              })
+              setMyThread(user1 ? round1.user1_thread : round1.user2_thread)
+              setRoundNumber(1)
+              setCurrentRound(round1)
+              setGamePhase('playing')
+              gamePhaseRef.current = 'playing'
+              const initMinRounds = MIN_ROUNDS[sess.timer_minutes] || 3
+              if (1 >= initMinRounds) {
+                setGamePhase('choice')
+                gamePhaseRef.current = 'choice'
+              }
+            }
+          }, 2000)
+          return
+        }
       } else {
         // Load existing round
         const rNum = activeRound.round_number

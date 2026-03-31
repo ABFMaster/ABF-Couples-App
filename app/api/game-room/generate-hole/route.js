@@ -220,16 +220,31 @@ Respond ONLY with JSON, no markdown:
         status: 'active',
       })
 
+    // Always return from DB — never return locally generated content
+    // This ensures both users get identical content even if they raced to generate
+    const { data: savedRound } = await supabase
+      .from('game_rounds')
+      .select('*')
+      .eq('session_id', sessionId)
+      .eq('round_number', roundNumber)
+      .maybeSingle()
+
+    const { data: updatedSession } = await supabase
+      .from('game_sessions')
+      .select('hole_topic, hole_entry, nora_send_off, factual_close, convergence, topic_media')
+      .eq('id', sessionId)
+      .maybeSingle()
+
     return NextResponse.json({
-      topic: isFirstRound ? generated.topic : session.hole_topic,
-      entry: isFirstRound ? generated.entry : session.hole_entry,
-      nora_send_off: isFirstRound ? generated.nora_send_off : null,
+      topic: updatedSession?.hole_topic,
+      entry: updatedSession?.hole_entry,
+      nora_send_off: isFirstRound ? updatedSession?.nora_send_off : null,
       nora_nudge: !isFirstRound ? generated.nora_nudge : null,
-      thread_user1: generated.thread_user1,
-      thread_user2: generated.thread_user2,
-      factual_close: isFirstRound ? generated.factual_close : null,
-      human_truth: isFirstRound ? generated.human_truth : null,
-      topic_media: isFirstRound ? generated.topic_media : null,
+      thread_user1: savedRound?.user1_thread,
+      thread_user2: savedRound?.user2_thread,
+      factual_close: isFirstRound ? updatedSession?.factual_close : null,
+      human_truth: isFirstRound ? updatedSession?.convergence : null,
+      topic_media: isFirstRound ? updatedSession?.topic_media : null,
       round: roundNumber,
     })
 
