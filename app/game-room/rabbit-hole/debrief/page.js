@@ -167,9 +167,13 @@ Be Nora — present, curious, warm. Reference what they actually found. This is 
         .filter(m => m.role !== 'system_context')
         .map(m => ({ role: m.role, content: m.content }))
 
+      const { data: { session: authSession } } = await supabase.auth.getSession()
       const res = await fetch('/api/ai-coach', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authSession?.access_token}`,
+        },
         body: JSON.stringify({
           messages: chatMessages,
           systemPrompt: systemContext,
