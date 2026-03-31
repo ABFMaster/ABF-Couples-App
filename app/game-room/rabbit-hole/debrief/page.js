@@ -209,7 +209,7 @@ Be Nora — present, curious, warm. Reference what they actually found. This is 
             <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '20px', padding: '24px', marginBottom: '16px' }}>
               <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#4338CA', textTransform: 'uppercase', margin: '0 0 12px', fontWeight: 700 }}>What actually happened</p>
               <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '17px', color: '#1A1A1A', lineHeight: 1.65, margin: 0 }}>
-                {session?.factual_close || debrief?.convergence_reveal}
+                {debrief?.factual_close || debrief?.convergence_reveal}
               </p>
             </div>
           </div>
@@ -221,7 +221,7 @@ Be Nora — present, curious, warm. Reference what they actually found. This is 
             <div style={{ background: '#F5F3FF', border: '0.5px solid #C4B5FD', borderRadius: '20px', padding: '24px', marginBottom: '16px' }}>
               <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#7C3AED', textTransform: 'uppercase', margin: '0 0 12px', fontWeight: 700 }}>The bigger picture</p>
               <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '17px', color: '#1E1B4B', lineHeight: 1.65, margin: 0 }}>
-                {session?.convergence || debrief?.convergence_reveal}
+                {debrief?.convergence_reveal}
               </p>
             </div>
 
