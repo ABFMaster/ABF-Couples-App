@@ -319,30 +319,66 @@ function RabbitHolePlayContent() {
     setGamePhase('loading_round')
     gamePhaseRef.current = 'loading_round'
     try {
-      const holeRes = await fetch('/api/game-room/generate-hole', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: session.id, coupleId, roundNumber: nextRoundNum }),
-      })
-      const holeData = await holeRes.json()
       const couple = coupleRef.current
       const user1 = couple?.user1_id === userId
+      const isHostUser = session.host_user_id === userId
 
-      setRoundNumber(nextRoundNum)
-      setMyThread(user1 ? holeData.thread_user1 : holeData.thread_user2)
-      setHole(prev => ({ ...prev, nora_nudge: holeData.nora_nudge }))
-      setIAmReady(false)
-      setPartnerIsReady(false)
-      setShowInstructions(false)
-
-      // Fetch new round
-      const { data: newRound } = await supabase
-        .from('game_rounds')
-        .select('*')
-        .eq('session_id', session.id)
-        .eq('round_number', nextRoundNum)
-        .maybeSingle()
-      setCurrentRound(newRound)
+      if (isHostUser) {
+        // Host generates the next round
+        const holeRes = await fetch('/api/game-room/generate-hole', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: session.id, coupleId, roundNumber: nextRoundNum }),
+        })
+        const holeData = await holeRes.json()
+        setRoundNumber(nextRoundNum)
+        setMyThread(user1 ? holeData.thread_user1 : holeData.thread_user2)
+        setHole(prev => ({ ...prev, nora_nudge: holeData.nora_nudge }))
+        setIAmReady(false)
+        setPartnerIsReady(false)
+        setShowInstructions(false)
+        const { data: newRound } = await supabase
+          .from('game_rounds')
+          .select('*')
+          .eq('session_id', session.id)
+          .eq('round_number', nextRoundNum)
+          .maybeSingle()
+        setCurrentRound(newRound)
+      } else {
+        // Partner polls for the new round to appear in DB
+        const pollNextRound = setInterval(async () => {
+          const { data: newRound } = await supabase
+            .from('game_rounds')
+            .select('*')
+            .eq('session_id', session.id)
+            .eq('round_number', nextRoundNum)
+            .maybeSingle()
+          if (newRound) {
+            clearInterval(pollNextRound)
+            const { data: updatedSess } = await supabase
+              .from('game_sessions')
+              .select('hole_topic, hole_entry, nora_send_off')
+              .eq('id', session.id)
+              .maybeSingle()
+            setRoundNumber(nextRoundNum)
+            setMyThread(user1 ? newRound.user1_thread : newRound.user2_thread)
+            setHole(prev => ({ ...prev, nora_nudge: newRound.nora_nudge }))
+            setIAmReady(false)
+            setPartnerIsReady(false)
+            setShowInstructions(false)
+            setCurrentRound(newRound)
+            const nextMinRounds = MIN_ROUNDS[session?.timer_minutes] || 3
+            if (nextRoundNum >= nextMinRounds) {
+              setGamePhase('choice')
+              gamePhaseRef.current = 'choice'
+            } else {
+              setGamePhase('playing')
+              gamePhaseRef.current = 'playing'
+            }
+          }
+        }, 2000)
+        return
+      }
     } catch {} finally {
       const nextMinRounds = MIN_ROUNDS[session?.timer_minutes] || 3
       if (nextRoundNum >= nextMinRounds) {
