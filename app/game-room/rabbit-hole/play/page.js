@@ -325,7 +325,7 @@ function RabbitHolePlayContent() {
     if (!couple) return
     const user1 = couple.user1_id === userId
     const partnerRoundPoll = setInterval(async () => {
-      if (gamePhaseRef.current !== 'playing' && gamePhaseRef.current !== 'choice') return
+      if (gamePhaseRef.current !== 'playing' && gamePhaseRef.current !== 'choice' && gamePhaseRef.current !== 'loading_round') return
       const { data: sess } = await supabase
         .from('game_sessions')
         .select('current_round')
