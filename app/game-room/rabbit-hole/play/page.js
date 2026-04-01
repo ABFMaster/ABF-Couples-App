@@ -304,6 +304,8 @@ function RabbitHolePlayContent() {
 
             if (round.user1_ready && round.user2_ready && round.status === 'completed') {
               clearInterval(pollRef.current)
+              setGamePhase('loading_round')
+              gamePhaseRef.current = 'loading_round'
               await loadNextRound(roundNumber + 1)
             }
           }
