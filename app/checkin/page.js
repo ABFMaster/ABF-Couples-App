@@ -40,7 +40,6 @@ export default function DailyCheckinPage() {
 
   useEffect(() => {
     checkAuth()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const checkAuth = async () => {
@@ -163,16 +162,6 @@ export default function DailyCheckinPage() {
         .select('results')
         .eq('user_id', userId)
         .eq('couple_id', coupleId)
-        .not('completed_at', 'is', null)
-        .order('completed_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      // Fetch user's profile from relationship_assessments (single source of truth)
-      const { data: profile } = await supabase
-        .from('relationship_assessments')
-        .select('results')
-        .eq('user_id', userId)
         .not('completed_at', 'is', null)
         .order('completed_at', { ascending: false })
         .limit(1)

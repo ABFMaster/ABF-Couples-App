@@ -21,7 +21,6 @@ function AiCoachContent() {
   const [isPremium, setIsPremium] = useState(false);
   const [limitReached, setLimitReached] = useState(false);
   const [userName, setUserName] = useState(null);
-  const [checkinContext, setCheckinContext] = useState(null);
   const [proactivePrompt, setProactivePrompt] = useState(null);
   const [dismissedProactivePrompt, setDismissedProactivePrompt] = useState(false);
   const [pendingOpener, setPendingOpener] = useState(null);
@@ -91,8 +90,6 @@ function AiCoachContent() {
     // Fetch check-in patterns for proactive prompt (non-blocking)
     try {
       const patterns = await analyzeUserPatterns(user.id, 7);
-      setCheckinContext(patterns);
-
       if (patterns?.concernFlags?.length > 0) {
         const highConcern = patterns.concernFlags.find(c => c.severity === 'high');
         if (highConcern) {

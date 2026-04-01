@@ -1,6 +1,3 @@
-// -- ALTER TABLE today_responses ADD COLUMN IF NOT EXISTS spark_question text;
-// -- ALTER TABLE today_responses ADD COLUMN IF NOT EXISTS spark_answer text;
-// -- ALTER TABLE today_responses ADD COLUMN IF NOT EXISTS spark_submitted_at timestamptz;
 'use client'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -104,11 +101,9 @@ export default function TodayPage() {
 
   // Section 2 — partner coaching
   const [partnerLoveLanguage, setPartnerLoveLanguage] = useState(null)
-  const [whyOpen, setWhyOpen] = useState(false)
 
   // Section 3 — article insight
   const [articleInsight, setArticleInsight] = useState(null)
-  const [noraCommentary, setNoraCommentary] = useState('')
 
   // User profile for article tag matching
   const [myAttachmentStyle, setMyAttachmentStyle] = useState(null)
@@ -397,18 +392,6 @@ export default function TodayPage() {
         const article = filtered[dayIndex % filtered.length]
         setArticleInsight(article)
 
-        const articleTags = article.tags || []
-        if (articleTags.includes('attachment')) {
-          setNoraCommentary('Understanding how you each attach changes everything.')
-        } else if (articleTags.includes('conflict')) {
-          setNoraCommentary('How you fight matters more than how much you fight.')
-        } else if (articleTags.includes('intimacy')) {
-          setNoraCommentary("Intimacy isn't just physical — it's feeling truly known.")
-        } else if (articleTags.includes('communication')) {
-          setNoraCommentary('The best couples are just two good listeners.')
-        } else {
-          setNoraCommentary("Nora thought you'd find this one interesting.")
-        }
       })
       .catch(() => {})
   }, [loading, myAttachmentStyle, myConflictStyle, myLoveLanguage])
@@ -683,7 +666,7 @@ export default function TodayPage() {
               </span>
             </div>
             <button
-              onClick={() => window.location.href = '/game-room'}
+              onClick={() => router.push('/game-room')}
               style={{
                 width: '100%',
                 background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 60%, #4338CA 100%)',

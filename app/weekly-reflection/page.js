@@ -574,10 +574,11 @@ export default function WeeklyReflection() {
                   Want to give {partnerName} a nudge?
                 </p>
                 <button
-                  onClick={() => alert('button works')}
-                  className="bg-[#E8614D] text-white px-6 py-2 rounded-full text-sm font-medium"
+                  onClick={sendNudge}
+                  disabled={nudgeSent}
+                  className="bg-[#E8614D] text-white px-6 py-2 rounded-full text-sm font-medium disabled:opacity-50"
                 >
-                  Test Click
+                  {nudgeSent ? 'Nudge sent ✓' : `Nudge ${partnerName}`}
                 </button>
                 {nudgeError && (
                   <p className="text-red-500 text-xs mt-2">{nudgeError}</p>
