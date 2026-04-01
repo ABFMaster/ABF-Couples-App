@@ -178,7 +178,6 @@ export default function WeeklyReflection() {
   const sendNudge = async () => {
     if (nudgeSent) return
     const partnerId = couple ? (isUser1 ? couple.user2_id : couple.user1_id) : null
-    console.log('sendNudge called', { coupleId: couple?.id, senderId: user?.id, partnerId })
     if (!couple?.id || !user?.id || !partnerId) {
       setNudgeError('Missing data: ' + JSON.stringify({ couple: !!couple, user: !!user, partnerId }))
       return
@@ -199,7 +198,6 @@ export default function WeeklyReflection() {
         console.error('Supabase error:', error)
         return
       }
-      console.log('Nudge sent:', data)
       setNudgeSent(true)
     } catch (err) {
       setNudgeError(err.message)

@@ -205,7 +205,6 @@ export default function DailyCheckinPage() {
       )
 
       const question = result?.question || result
-      console.log('[Checkin] rotatingQuestion selected:', question)
       setRotatingQuestion(question)
     } catch (err) {
       console.error('Error selecting question:', err)
