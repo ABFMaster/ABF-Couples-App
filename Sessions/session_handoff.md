@@ -1,5 +1,5 @@
 # ABF — Developer Handoff Briefing
-# Last Updated: 2026-03-29
+# Last Updated: 2026-03-31
 
 ---
 
@@ -79,6 +79,18 @@ Before writing the session handoff, Claude must answer these four questions hone
 4. What should be standardized going forward?
 
 Answers go into the handoff doc under a dated "AI Self-Review" entry. This is non-negotiable SOP.
+
+### Self-Review: 2026-03-31
+
+1. **Where did I struggle?** Multiple iterations on the same Rabbit Hole multiplayer bugs — dual debrief generation, partner stuck in `loading_round` with no exit, `nora_nudge` missing for partner on round transitions. Each fix patched the symptom rather than closing the architectural gap.
+
+2. **What caused that?** Applied the "one actor generates, DB is signal, other actor polls" pattern correctly for round 1 generation but failed to extend it consistently to debrief generation and subsequent round transitions. Kept reaching for complex solutions (atomic claim, race-loser poll) instead of applying the same pattern already proven in the codebase.
+
+3. **What should we change?** The universal multiplayer pattern is now the law for all Rabbit Hole flows: HOST generates → writes result + signal to DB → PARTNER polls DB signal. Design the data signal before writing any code. If both clients could reach the same endpoint, stop and redesign.
+
+4. **What should be standardized?** For any two-user async operation: (1) identify the one actor who generates, (2) write the result AND a boolean/counter signal to DB, (3) other actor polls that signal. Never have both clients race to the same generation endpoint. `host_user_id` in `game_sessions` is always the source of truth for host identity.
+
+---
 
 ### Self-Review: 2026-03-29
 
@@ -511,6 +523,21 @@ Always `git add -A` not `git add -u` for new files.
 **COMPLETED THIS SESSION (2026-03-28):**
 - Hot Take end-to-end fixed and playable: upsert race condition fixed with unique constraint on (session_id, question_id), session ID in URL pattern applied, tier selection locked via host-picks mechanic, 3-2-1 countdown reveal on every question for both users, first-tap Next Take advances partner via current_index poll on hot_take_sessions, See Summary advances partner via show_summary flag, Play Another Round routes to lobby with forceNew flag to expire old session and guarantee fresh questions, scores consistent for both users
 
+**COMPLETED THIS SESSION (2026-03-31):**
+
+Rabbit Hole — universal multiplayer pattern applied across all async flows:
+- `generate-hole` always returns from DB after saving — never locally generated content, eliminates race on simultaneous callers
+- `play/page.js` host-only round 1 generation — partner polls DB via `pollForRound` interval
+- `loadNextRound` host-only — host writes `current_round` to `game_sessions` as explicit partner signal
+- New `partnerRoundPoll` useEffect — watches `current_round` DB column every 2s, carries partner through `loading_round` → fetches `game_rounds` row → advances phase
+- `handleSignalReady` — partner immediately enters `loading_round` on `bothReady` (no longer waits for host to kick off)
+- `enter-lobby` `expireAndClean` helper — deletes 6 child record tables (`game_rounds`, `game_finds`, `hot_take_sessions`, `hot_take_answers`, `challenge_sessions`, `challenge_rounds`) before expiring session
+- `generate-debrief` — simple idempotency check (`debrief_generated && convergence`), status set to `'expired'` after generation, `factual_close` included in response
+- Debrief page — host generates, partner polls `debrief_generated + convergence` every 2s; both advance to factual phase then truth phase
+- Debrief chat removed — two phases only: factual (10s) → truth; "Save to our timeline ✦" is primary CTA with green confirmation card
+- Content fixed: `factual_close` in "What actually happened" (PART 1), `convergence_reveal` in header card, `factual_close || convergence_reveal` in "The bigger picture" (PART 2)
+- Suspense + useSearchParams refactor applied to `play/page.js`
+
 **COMPLETED THIS SESSION (2026-03-29):**
 
 Hot Take (2026-03-29):
@@ -539,13 +566,12 @@ The Challenge (2026-03-29):
 
 **NEXT SESSION PRIORITY ORDER:**
 1. Rabbit Hole UX polish (see PRODUCT-BACKLOG.md)
-2. `generate-debrief`: fix Convergence and Bigger Picture showing same text
-3. Nora topic variety — `generate-hole` uses couple interests more aggressively
-4. Hot Take remaining polish: re-entry after exit, summary depth
-5. Challenge: Nora verdict prompt for rank type (listing both rankings incorrectly), Write a Story prompt quality
-6. Vercel Pro upgrade before 20 test users
-7. Code quality audit
-8. Game Room gameplay polish sweep (Hot Take + Challenge) — after all Game Room modes are functionally complete
+2. Nora topic variety — `generate-hole` uses couple interests more aggressively
+3. Hot Take remaining polish: re-entry after exit, summary depth
+4. Challenge: Nora verdict prompt for rank type (listing both rankings incorrectly), Write a Story prompt quality
+5. Vercel Pro upgrade before 20 test users
+6. Code quality audit
+7. Game Room gameplay polish sweep (Hot Take + Challenge) — after all Game Room modes are functionally complete
 
 ---
 
@@ -573,6 +599,8 @@ The Challenge (2026-03-29):
 - Challenge Rank verdict: Nora lists both rankings separately as if users ranked independently — prompt needs fixing
 - Challenge Write a Story: prompts are abstract and difficult, verdict hard to follow — content review needed
 - Too many push notifications firing at game end — audit needed before scaling
+- `game_sessions.current_round` column required by `partnerRoundPoll` — confirm column exists in production schema before testing
+- `nora_nudge` not surfaced to partner on round transitions (only in API response, not DB row) — partner sees no Nora nudge when entering loading_round via poll; acceptable for now
 
 ---
 
