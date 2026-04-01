@@ -98,7 +98,6 @@ function ChallengePlayContent() {
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [isScribe, setIsScribe] = useState(false)
-  const [scriberDetermined, setScriberDetermined] = useState(false)
   const [error, setError] = useState(null)
   const [newLobbySession, setNewLobbySession] = useState(null)
   const pollRef = useRef(null)
@@ -132,13 +131,12 @@ function ChallengePlayContent() {
   // Generate round once we have userId and coupleId
   useEffect(() => {
     if (userId && coupleId && isScribe) generateRound(1)
-  }, [userId, coupleId, isScribe, scriberDetermined])
+  }, [userId, coupleId, isScribe])
 
   // Set scribe role from URL param — host always navigates with scribe=true
   useEffect(() => {
     if (!userId) return
     setIsScribe(isScribeFromUrl)
-    setScriberDetermined(true)
   }, [userId, isScribeFromUrl])
 
   // Poll for partner state changes

@@ -191,7 +191,6 @@ function GameRoomLobbyContent() {
 
       router.push(`${config.playPath}?sessionId=${sessionId}`)
     } catch (err) {
-      console.error('handleStart error:', err)
       setStarting(false)
     } finally { setStarting(false) }
   }

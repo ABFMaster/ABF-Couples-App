@@ -110,7 +110,6 @@ function RabbitHolePlayContent() {
         .order('round_number', { ascending: false })
 
       let activeRound = rounds?.find(r => r.status === 'active')
-      const latestRoundNum = rounds?.length > 0 ? rounds[0].round_number : 0
       let loadedRoundNum = 1
 
       if (!activeRound) {
@@ -256,7 +255,7 @@ function RabbitHolePlayContent() {
       })
     }, 1000)
     return () => clearInterval(timerRef.current)
-  }, [timeLeft !== null]) // eslint-disable-line
+  }, [timeLeft !== null])
 
   // Poll for partner finds + round ready state
   useEffect(() => {
@@ -322,7 +321,7 @@ function RabbitHolePlayContent() {
 
     }, 4000)
     return () => clearInterval(pollRef.current)
-  }, [session, userId, roundNumber]) // eslint-disable-line
+  }, [session, userId, roundNumber])
 
   // Partner only — watches current_round in DB, advances when host generates next round
   useEffect(() => {

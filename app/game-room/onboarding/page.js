@@ -42,7 +42,6 @@ export default function GameRoomOnboardingPage() {
         body: JSON.stringify({ messages, userId }),
       })
     } catch (err) {
-      console.error('[GameRoomOnboarding] save-interests error:', err)
     }
     router.push('/game-room')
   }
