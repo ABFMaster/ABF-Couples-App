@@ -134,7 +134,6 @@ export default function WeeklyReflection() {
 
       setLoading(false)
     } catch (err) {
-      console.error('Error fetching data:', err)
       setLoading(false)
     }
   }, [router])
@@ -170,7 +169,6 @@ export default function WeeklyReflection() {
       const data = await res.json()
       if (data.insight) setAiInsight(data.insight)
     } catch (err) {
-      console.error('Insight generation error:', err)
     }
   }
 
@@ -195,13 +193,11 @@ export default function WeeklyReflection() {
         .select()
       if (error) {
         setNudgeError(error.message)
-        console.error('Supabase error:', error)
         return
       }
       setNudgeSent(true)
     } catch (err) {
       setNudgeError(err.message)
-      console.error('Nudge catch:', err)
     }
   }
 
@@ -309,7 +305,6 @@ export default function WeeklyReflection() {
         setTimeout(() => setShowConfetti(false), 5000)
       }
     } catch (err) {
-      console.error('Error submitting reflection:', err)
     } finally {
       setSubmitting(false)
     }

@@ -113,7 +113,6 @@ export default function DailyCheckinPage() {
 
       setLoading(false)
     } catch (err) {
-      console.error('Auth error:', err)
       setLoading(false)
     }
   }
@@ -207,7 +206,6 @@ export default function DailyCheckinPage() {
       const question = result?.question || result
       setRotatingQuestion(question)
     } catch (err) {
-      console.error('Error selecting question:', err)
       // Use fallback gratitude question
       setRotatingQuestion({
         id: 'grat_1',
@@ -276,7 +274,6 @@ export default function DailyCheckinPage() {
 
       router.push('/checkin/complete')
     } catch (err) {
-      console.error('Error submitting check-in:', err)
       setSubmitting(false)
     }
   }

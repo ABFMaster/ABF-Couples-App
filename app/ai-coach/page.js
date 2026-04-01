@@ -110,7 +110,6 @@ function AiCoachContent() {
         }
       }
     } catch (err) {
-      console.error('Error fetching check-in patterns:', err);
     }
 
     // Fetch the most recent conversation (include updated_at for stale check)
@@ -224,7 +223,6 @@ function AiCoachContent() {
         }]);
       }
     } catch (e) {
-      console.error('Error loading opener:', e);
     }
   };
 
@@ -292,7 +290,6 @@ function AiCoachContent() {
         }
       }
     } catch (error) {
-      console.error('Error sending message:', error);
       // Remove optimistic message on error
       setMessages(prev => prev.filter(m => m.id !== tempUserMsg.id));
     } finally {

@@ -286,7 +286,6 @@ export default function TodayPage() {
 
       setLoading(false)
     } catch (err) {
-      console.error('Today error:', err)
       setLoading(false)
     }
   }, [router])
@@ -480,7 +479,6 @@ export default function TodayPage() {
         notifyPartnerTodayResponse(supabase, partnerId, userName, reaction).catch(() => {})
       }
     } catch (err) {
-      console.error('Save reaction error:', err)
     }
   }
 
@@ -546,7 +544,6 @@ export default function TodayPage() {
         setTimeout(() => setInviteCopied(false), 2000)
       }
     } catch (err) {
-      console.error('copyInviteLink error:', err)
     } finally {
       setInviteLoading(false)
     }
