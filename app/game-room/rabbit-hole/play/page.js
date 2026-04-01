@@ -346,31 +346,43 @@ function RabbitHolePlayContent() {
           .eq('round_number', nextRoundNum)
           .maybeSingle()
         setCurrentRound(newRound)
+        // Write current_round to DB so partner knows to advance
+        await supabase
+          .from('game_sessions')
+          .update({ current_round: nextRoundNum })
+          .eq('id', session.id)
       } else {
-        // Partner polls for the new round to appear in DB
+        // Partner polls game_sessions.current_round — clean state machine signal
         const pollNextRound = setInterval(async () => {
-          const { data: newRound } = await supabase
-            .from('game_rounds')
-            .select('*')
-            .eq('session_id', session.id)
-            .eq('round_number', nextRoundNum)
+          const { data: sess } = await supabase
+            .from('game_sessions')
+            .select('current_round')
+            .eq('id', session.id)
             .maybeSingle()
-          if (newRound) {
+          if (sess?.current_round >= nextRoundNum) {
             clearInterval(pollNextRound)
-            setRoundNumber(nextRoundNum)
-            setMyThread(user1 ? newRound.user1_thread : newRound.user2_thread)
-            setHole(prev => ({ ...prev, nora_nudge: null }))
-            setIAmReady(false)
-            setPartnerIsReady(false)
-            setShowInstructions(false)
-            setCurrentRound(newRound)
-            const nextMinRounds = MIN_ROUNDS[session?.timer_minutes] || 3
-            if (nextRoundNum >= nextMinRounds) {
-              setGamePhase('choice')
-              gamePhaseRef.current = 'choice'
-            } else {
-              setGamePhase('playing')
-              gamePhaseRef.current = 'playing'
+            const { data: newRound } = await supabase
+              .from('game_rounds')
+              .select('*')
+              .eq('session_id', session.id)
+              .eq('round_number', nextRoundNum)
+              .maybeSingle()
+            if (newRound) {
+              setRoundNumber(nextRoundNum)
+              setMyThread(user1 ? newRound.user1_thread : newRound.user2_thread)
+              setHole(prev => ({ ...prev, nora_nudge: null }))
+              setIAmReady(false)
+              setPartnerIsReady(false)
+              setShowInstructions(false)
+              setCurrentRound(newRound)
+              const nextMinRounds = MIN_ROUNDS[session?.timer_minutes] || 3
+              if (nextRoundNum >= nextMinRounds) {
+                setGamePhase('choice')
+                gamePhaseRef.current = 'choice'
+              } else {
+                setGamePhase('playing')
+                gamePhaseRef.current = 'playing'
+              }
             }
           }
         }, 2000)
