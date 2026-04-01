@@ -182,13 +182,19 @@ function RabbitHolePlayContent() {
         setMyThread(user1 ? activeRound.user1_thread : activeRound.user2_thread)
 
         // Load session hole data
-        const holeRes = await fetch('/api/game-room/generate-hole', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId: sess.id, coupleId: couple.id, roundNumber: rNum }),
+        const { data: sessionData } = await supabase
+          .from('game_sessions')
+          .select('hole_topic, hole_entry, nora_send_off, factual_close, convergence, topic_media')
+          .eq('id', sess.id)
+          .maybeSingle()
+
+        setHole({
+          topic: sessionData?.hole_topic,
+          entry: sessionData?.hole_entry,
+          nora_send_off: sessionData?.nora_send_off,
+          thread_user1: activeRound.user1_thread,
+          thread_user2: activeRound.user2_thread,
         })
-        const holeData = await holeRes.json()
-        setHole(holeData)
       }
 
       setCurrentRound(activeRound)
