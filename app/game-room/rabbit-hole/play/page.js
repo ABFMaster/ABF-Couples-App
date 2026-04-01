@@ -457,6 +457,9 @@ function RabbitHolePlayContent() {
           setGamePhase('loading_round')
           gamePhaseRef.current = 'loading_round'
           await loadNextRound(roundNumber + 1)
+        } else {
+          setGamePhase('loading_round')
+          gamePhaseRef.current = 'loading_round'
         }
       }
     } catch {} finally { setSignalingReady(false) }
