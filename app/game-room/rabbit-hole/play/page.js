@@ -304,9 +304,11 @@ function RabbitHolePlayContent() {
 
             if (round.user1_ready && round.user2_ready && round.status === 'completed') {
               clearInterval(pollRef.current)
-              setGamePhase('loading_round')
-              gamePhaseRef.current = 'loading_round'
-              await loadNextRound(roundNumber + 1)
+              if (session?.host_user_id === userId) {
+                setGamePhase('loading_round')
+                gamePhaseRef.current = 'loading_round'
+                await loadNextRound(roundNumber + 1)
+              }
             }
           }
         }
@@ -315,6 +317,52 @@ function RabbitHolePlayContent() {
     }, 4000)
     return () => clearInterval(pollRef.current)
   }, [session, userId, roundNumber]) // eslint-disable-line
+
+  // Partner only — watches current_round in DB, advances when host generates next round
+  useEffect(() => {
+    if (!session?.id || !userId || session?.host_user_id === userId) return
+    const couple = coupleRef.current
+    if (!couple) return
+    const user1 = couple.user1_id === userId
+    const partnerRoundPoll = setInterval(async () => {
+      if (gamePhaseRef.current !== 'playing' && gamePhaseRef.current !== 'choice') return
+      const { data: sess } = await supabase
+        .from('game_sessions')
+        .select('current_round')
+        .eq('id', session.id)
+        .maybeSingle()
+      if (sess?.current_round > roundNumber) {
+        clearInterval(partnerRoundPoll)
+        setGamePhase('loading_round')
+        gamePhaseRef.current = 'loading_round'
+        const nextRoundNum = sess.current_round
+        const { data: newRound } = await supabase
+          .from('game_rounds')
+          .select('*')
+          .eq('session_id', session.id)
+          .eq('round_number', nextRoundNum)
+          .maybeSingle()
+        if (newRound) {
+          setRoundNumber(nextRoundNum)
+          setMyThread(user1 ? newRound.user1_thread : newRound.user2_thread)
+          setHole(prev => ({ ...prev, nora_nudge: null }))
+          setIAmReady(false)
+          setPartnerIsReady(false)
+          setShowInstructions(false)
+          setCurrentRound(newRound)
+          const nextMinRounds = MIN_ROUNDS[session?.timer_minutes] || 3
+          if (nextRoundNum >= nextMinRounds) {
+            setGamePhase('choice')
+            gamePhaseRef.current = 'choice'
+          } else {
+            setGamePhase('playing')
+            gamePhaseRef.current = 'playing'
+          }
+        }
+      }
+    }, 2000)
+    return () => clearInterval(partnerRoundPoll)
+  }, [session, userId, roundNumber])
 
   const loadNextRound = async (nextRoundNum) => {
     if (!session || !coupleId) return
@@ -351,42 +399,6 @@ function RabbitHolePlayContent() {
           .from('game_sessions')
           .update({ current_round: nextRoundNum })
           .eq('id', session.id)
-      } else {
-        // Partner polls game_sessions.current_round — clean state machine signal
-        const pollNextRound = setInterval(async () => {
-          const { data: sess } = await supabase
-            .from('game_sessions')
-            .select('current_round')
-            .eq('id', session.id)
-            .maybeSingle()
-          if (sess?.current_round >= nextRoundNum) {
-            clearInterval(pollNextRound)
-            const { data: newRound } = await supabase
-              .from('game_rounds')
-              .select('*')
-              .eq('session_id', session.id)
-              .eq('round_number', nextRoundNum)
-              .maybeSingle()
-            if (newRound) {
-              setRoundNumber(nextRoundNum)
-              setMyThread(user1 ? newRound.user1_thread : newRound.user2_thread)
-              setHole(prev => ({ ...prev, nora_nudge: null }))
-              setIAmReady(false)
-              setPartnerIsReady(false)
-              setShowInstructions(false)
-              setCurrentRound(newRound)
-              const nextMinRounds = MIN_ROUNDS[session?.timer_minutes] || 3
-              if (nextRoundNum >= nextMinRounds) {
-                setGamePhase('choice')
-                gamePhaseRef.current = 'choice'
-              } else {
-                setGamePhase('playing')
-                gamePhaseRef.current = 'playing'
-              }
-            }
-          }
-        }, 2000)
-        return
       }
     } catch {} finally {
       const nextMinRounds = MIN_ROUNDS[session?.timer_minutes] || 3
