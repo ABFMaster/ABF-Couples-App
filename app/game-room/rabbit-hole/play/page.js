@@ -453,7 +453,9 @@ function RabbitHolePlayContent() {
           gamePhaseRef.current = 'choice'
           setIAmReady(false)
           setPartnerIsReady(false)
-        } else {
+        } else if (session?.host_user_id === userId) {
+          setGamePhase('loading_round')
+          gamePhaseRef.current = 'loading_round'
           await loadNextRound(roundNumber + 1)
         }
       }
