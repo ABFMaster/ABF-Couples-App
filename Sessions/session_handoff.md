@@ -3,6 +3,42 @@
 
 ---
 
+## SESSION RULES — READ BEFORE EVERY SESSION
+
+These are non-negotiable. If I violate any of these, stop me immediately.
+
+### 1. ROOT CAUSE CHECKLIST — BEFORE ANY FIX
+Write this visibly in chat before touching code:
+- **Root cause:** [specific answer — not the symptom]
+- **Pattern match:** Does this same pattern exist elsewhere in the codebase?
+- **Fix scope:** Isolated fix or universal fix needed?
+If the answer to pattern match is yes — fix ALL instances at once, not just the one in front of you.
+
+### 2. DESIGN BEFORE CODE — ALL MULTIPLAYER FEATURES
+Before writing any code involving two users, async state, or session management:
+- Write the complete state machine: every state, every actor, every DB signal
+- Answer: what lives in the DB vs client? Anything two clients must agree on → DB
+- Get explicit sign-off before opening any file
+
+### 3. THE UNIVERSAL MULTIPLAYER PATTERN
+One actor generates/writes → DB signal → other actor polls and reacts.
+- Host generates content → writes result + signal to DB → partner polls DB signal
+- NEVER both users calling the same generate/write API
+- DB fields are the signals: current_round, host_user_id, debrief_generated, show_summary, current_index
+- If both clients could reach the same endpoint → stop and redesign
+
+### 4. CODE BLOCK DISCIPLINE
+- Claude Code prompt → wait for "Done" confirmation → THEN terminal
+- Every Claude Code prompt ends with "do not change anything else"
+- New files: git add -A (not git add -u)
+- Never use window.location — always useSearchParams with Suspense wrapper
+
+### 5. ONE FEATURE AT A TIME
+- Complete to Definition of Done before starting anything new
+- Definition of Done: works end-to-end for both users, no console.logs, committed
+
+---
+
 ## 1. THE APP
 
 ABF (Always Be Flirting) is a couples relationship app. Partners connect via a 6-character code. Once linked, the app surfaces a weekly rhythm of features powered by Nora (the AI relationship coach) that deepen connection over time. The product philosophy is warmth over gamification — Nora gets smarter with every session, and the couple's history becomes the moat.
