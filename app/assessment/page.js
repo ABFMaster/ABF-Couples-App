@@ -181,8 +181,6 @@ function AssessmentContent() {
     setSaveError(null)
 
     if (isOnboarding) {
-      console.log('[Assessment] onboarding=true detected')
-      console.log('[Assessment] Saving assessment for user:', user?.id, '| couple:', couple?.id ?? 'none')
     }
 
     try {
@@ -229,7 +227,6 @@ function AssessmentContent() {
           })
           .eq('id', existingAssessment.id)
 
-        if (isOnboarding) console.log('[Assessment] Save result (update):', error ?? 'OK')
         if (error) throw error
 
       } else if (user && couple) {
@@ -244,7 +241,6 @@ function AssessmentContent() {
             completed_at: completedAt,
           })
 
-        if (isOnboarding) console.log('[Assessment] Save result (insert with couple):', error ?? 'OK')
         if (error) throw error
 
       } else if (user && isOnboarding) {
@@ -259,7 +255,6 @@ function AssessmentContent() {
             completed_at: completedAt,
           })
 
-        if (isOnboarding) console.log('[Assessment] Save result (insert solo/onboarding):', error ?? 'OK')
         if (error) throw error
 
       } else {
@@ -269,7 +264,6 @@ function AssessmentContent() {
 
       // Redirect ONLY after save is confirmed complete (no throw above)
       if (isOnboarding) {
-        console.log('[Assessment] Redirecting to /onboarding?step=3')
       }
       router.push(isOnboarding ? '/onboarding?step=3' : '/assessment/results')
 

@@ -41,9 +41,7 @@ export async function POST(request) {
       const raw = response.content[0].text.trim()
       // Strip markdown code fences if present
       const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
-      console.log('[FlirtSaveProfile] raw:', raw)
       profile = JSON.parse(cleaned)
-      console.log('[FlirtSaveProfile] profile:', profile)
     } catch (err) {
       console.error('[FlirtSaveProfile] Extraction failed:', err, err.message)
       return NextResponse.json({ success: false, error: 'extraction failed' })

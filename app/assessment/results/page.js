@@ -233,7 +233,6 @@ export default function AssessmentResultsPage() {
         await navigator.share(shareData)
       } catch (err) {
         // User cancelled or error
-        console.log('Share cancelled')
       }
     } else {
       // Fallback: copy to clipboard

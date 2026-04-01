@@ -4,8 +4,6 @@ import { NextResponse } from 'next/server'
 export async function POST(request) {
   try {
     const { coupleId, momentIndex, reaction } = await request.json()
-    console.log('[reflection/react] body:', { coupleId, momentIndex, reaction })
-
     if (!coupleId || momentIndex === undefined || momentIndex === null || !reaction) {
       return NextResponse.json({ error: 'coupleId, momentIndex, and reaction required' }, { status: 400 })
     }
@@ -46,7 +44,6 @@ export async function POST(request) {
       .from('weekly_reflections')
       .update({ moment_reactions: updatedReactions })
       .eq('id', reflection.id)
-    console.log('[reflection/react] update result:', { updateError })
 
     if (updateError) {
       console.error('[reflection/react] update error:', updateError)
