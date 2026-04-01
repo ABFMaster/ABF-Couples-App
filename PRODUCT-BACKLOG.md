@@ -151,6 +151,22 @@ The Us page was deprioritized during Home and Today builds. Needs a full design 
 
 ## NEXT SPRINT (ready to build)
 
+### Game Room Code Quality Audit
+*Added: 2026-04-01*
+Four-part audit of all Game Room code (Rabbit Hole, Hot Take, The Challenge). Do this before building The Remake or The Hunt.
+- Part 1 — Dual-caller pattern scan: grep every API call in every game room page, confirm host-generates/partner-polls pattern throughout. Fix any stragglers in the same pass.
+- Part 2 — Dead code removal: read each game room page top to bottom, delete unused state variables, orphaned useEffects, functions that were patched around rather than deleted.
+- Part 3 — DB schema cleanup: confirm every column added during game room build is in use. Remove any that aren't. Verify expireAndClean covers all child tables.
+- Part 4 — Console.log sweep: grep all game room files for debug logs, remove all.
+Estimated time: one focused session, ~2-3 hours.
+
+### Pre-Nora Full Codebase Audit
+*Added: 2026-04-01*
+Full audit of all pre-protocol code before Nora architecture is built. Covers: Spark, The Bet, Date Night, Us page, Weekly Reflection, notifications, onboarding. This code was written before the state machine gate, root cause checklist, and dead code discipline were established. Nora's memory architecture will touch nearly every feature — it needs clean ground to build on.
+- Audit scope: console.logs, dead state, symptom-patch fixes, any dual-caller patterns in older async features, notification route logic
+- Do NOT build Nora architecture until this audit is complete.
+Estimated time: 2-3 sessions.
+
 ### Saturday Feature — The Game Room
 Design session complete (see above). Build The Rabbit Hole first — it's the most original concept in the library and the best proof of concept for the broader Game Room mechanic. Nora-guided, leaves the app intentionally, returns with a story.
 

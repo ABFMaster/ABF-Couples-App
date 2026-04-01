@@ -601,13 +601,13 @@ The Challenge (2026-03-29):
 - isHostRef stale closure fixed by moving host identity to DB
 
 **NEXT SESSION PRIORITY ORDER:**
-1. Rabbit Hole UX polish (see PRODUCT-BACKLOG.md)
-2. Nora topic variety — `generate-hole` uses couple interests more aggressively
-3. Hot Take remaining polish: re-entry after exit, summary depth
-4. Challenge: Nora verdict prompt for rank type (listing both rankings incorrectly), Write a Story prompt quality
-5. Vercel Pro upgrade before 20 test users
-6. Code quality audit
-7. Game Room gameplay polish sweep (Hot Take + Challenge) — after all Game Room modes are functionally complete
+1. Game Room code quality audit (4-part — see PRODUCT-BACKLOG.md)
+2. Pre-Nora full codebase audit (see PRODUCT-BACKLOG.md) — do not start Nora architecture until complete
+3. Nora topic variety — generate-hole uses couple interests more aggressively
+4. Hot Take remaining polish: re-entry after exit, summary depth
+5. Challenge: Nora verdict prompt fix, Write a Story prompt quality
+6. Vercel Pro upgrade before 20 test users
+7. The Remake and The Hunt — after audits complete and clean foundation confirmed
 
 ---
 
