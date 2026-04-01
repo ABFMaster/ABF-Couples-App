@@ -13,7 +13,6 @@ function RabbitHoleDebriefContent() {
   const [session, setSession] = useState(null)
   const [debrief, setDebrief] = useState(null)
   const [error, setError] = useState(null)
-  const [phase, setPhase] = useState('factual') // factual | truth
   const [savedToTimeline, setSavedToTimeline] = useState(false)
 
   useEffect(() => {
@@ -60,7 +59,6 @@ function RabbitHoleDebriefContent() {
 
         setDebrief(debriefData)
         setLoading(false)
-        setTimeout(() => setPhase('truth'), 10000)
       } else {
         // Partner polls for debrief to be ready — reads from DB once generated
         const pollDebrief = setInterval(async () => {
@@ -78,7 +76,6 @@ function RabbitHoleDebriefContent() {
               questions: updatedSess.debrief_questions || [],
             })
             setLoading(false)
-            setTimeout(() => setPhase('truth'), 10000)
           }
         }, 2000)
       }
@@ -145,59 +142,55 @@ function RabbitHoleDebriefContent() {
         </div>
 
         {/* PART 1 — Factual close */}
-        {phase === 'factual' && (
-          <div>
-            <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '20px', padding: '24px', marginBottom: '16px' }}>
-              <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#4338CA', textTransform: 'uppercase', margin: '0 0 12px', fontWeight: 700 }}>The bigger picture</p>
-              <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '17px', color: '#1A1A1A', lineHeight: 1.65, margin: 0 }}>
-                {debrief?.convergence_reveal}
-              </p>
-            </div>
+        <div>
+          <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '20px', padding: '24px', marginBottom: '16px' }}>
+            <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#4338CA', textTransform: 'uppercase', margin: '0 0 12px', fontWeight: 700 }}>The bigger picture</p>
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '17px', color: '#1A1A1A', lineHeight: 1.65, margin: 0 }}>
+              {debrief?.convergence_reveal}
+            </p>
           </div>
-        )}
+        </div>
 
         {/* PART 2 — Human truth */}
-        {phase === 'truth' && (
-          <div>
-            <div style={{ background: '#F5F3FF', border: '0.5px solid #C4B5FD', borderRadius: '20px', padding: '24px', marginBottom: '16px' }}>
-              <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#7C3AED', textTransform: 'uppercase', margin: '0 0 12px', fontWeight: 700 }}>What actually happened</p>
-              <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '17px', color: '#1E1B4B', lineHeight: 1.65, margin: 0 }}>
-                {debrief?.factual_close}
-              </p>
-            </div>
-
-            {/* Debrief questions */}
-            {debrief?.questions?.length > 0 && (
-              <div style={{ marginBottom: '16px' }}>
-                <p style={{ fontSize: '11px', letterSpacing: '0.14em', color: '#9CA3AF', textTransform: 'uppercase', margin: '0 0 12px', fontWeight: 700 }}>Talk about this</p>
-                {debrief.questions.map((q, i) => (
-                  <div key={i} style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '16px', padding: '18px 20px', marginBottom: '8px' }}>
-                    <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#1A1A1A', lineHeight: 1.5, margin: 0 }}>{q}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {savedToTimeline ? (
-              <div style={{ background: '#ECFDF5', border: '0.5px solid #6EE7B7', borderRadius: '16px', padding: '16px 20px', textAlign: 'center', marginBottom: '10px' }}>
-                <p style={{ fontSize: '14px', color: '#065F46', fontWeight: 600, margin: 0 }}>Saved to your timeline ✓</p>
-              </div>
-            ) : (
-              <button
-                onClick={handleSaveToTimeline}
-                style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', marginBottom: '10px' }}
-              >
-                Save to our timeline ✦
-              </button>
-            )}
-            <button
-              onClick={() => router.push('/game-room')}
-              style={{ width: '100%', padding: '14px', background: 'transparent', border: '0.5px solid #E8DDD0', borderRadius: '30px', fontSize: '14px', color: '#9CA3AF', cursor: 'pointer' }}
-            >
-              Back to Game Room
-            </button>
+        <div>
+          <div style={{ background: '#F5F3FF', border: '0.5px solid #C4B5FD', borderRadius: '20px', padding: '24px', marginBottom: '16px' }}>
+            <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#7C3AED', textTransform: 'uppercase', margin: '0 0 12px', fontWeight: 700 }}>What actually happened</p>
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '17px', color: '#1E1B4B', lineHeight: 1.65, margin: 0 }}>
+              {debrief?.factual_close}
+            </p>
           </div>
-        )}
+
+          {/* Debrief questions */}
+          {debrief?.questions?.length > 0 && (
+            <div style={{ marginBottom: '16px' }}>
+              <p style={{ fontSize: '11px', letterSpacing: '0.14em', color: '#9CA3AF', textTransform: 'uppercase', margin: '0 0 12px', fontWeight: 700 }}>Talk about this</p>
+              {debrief.questions.map((q, i) => (
+                <div key={i} style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '16px', padding: '18px 20px', marginBottom: '8px' }}>
+                  <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#1A1A1A', lineHeight: 1.5, margin: 0 }}>{q}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {savedToTimeline ? (
+            <div style={{ background: '#ECFDF5', border: '0.5px solid #6EE7B7', borderRadius: '16px', padding: '16px 20px', textAlign: 'center', marginBottom: '10px' }}>
+              <p style={{ fontSize: '14px', color: '#065F46', fontWeight: 600, margin: 0 }}>Saved to your timeline ✓</p>
+            </div>
+          ) : (
+            <button
+              onClick={handleSaveToTimeline}
+              style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', marginBottom: '10px' }}
+            >
+              Save to our timeline ✦
+            </button>
+          )}
+          <button
+            onClick={() => router.push('/game-room')}
+            style={{ width: '100%', padding: '14px', background: 'transparent', border: '0.5px solid #E8DDD0', borderRadius: '30px', fontSize: '14px', color: '#9CA3AF', cursor: 'pointer' }}
+          >
+            Back to Game Room
+          </button>
+        </div>
 
       </div>
       <style>{`
