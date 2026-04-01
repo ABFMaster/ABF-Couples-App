@@ -55,7 +55,6 @@ function buildFeatureCards({ todayCheckinDone, nextDate, lastFlirtDaysAgo, memor
       label: 'Daily Check-in',
       status: todayCheckinDone ? 'Done today ✓' : 'Not done yet',
       statusColor: todayCheckinDone ? 'text-green-500' : 'text-[#9CA3AF]',
-      href: '/checkin',
       accent: 'border-[#E8614D]',
     },
     {
@@ -569,7 +568,6 @@ export default function Dashboard() {
   const getPrimaryCTA = () => {
     if (pendingDateAction) return { label: `See what ${partnerName} planned →`, href: `/dates/${pendingDateAction.id}` }
     if (!hasPartner) return { label: `Invite ${partnerName} to ABF →`, href: '/connect' }
-    if (!checkinDone) return { label: 'Check in together →', href: '/checkin' }
     return { label: 'Talk to Nora →', href: '/ai-coach?new=true' }
   }
   const primaryCTA = getPrimaryCTA()

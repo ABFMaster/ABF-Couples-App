@@ -329,14 +329,7 @@ export default function TodayPage() {
 
     // Neglected feature fallback (used if no partner love language)
     let computed = null
-    if (!checkinDone) {
-      computed = {
-        verb: 'Check in together',
-        hint: "You haven't checked in today yet",
-        href: '/checkin',
-        urgent: true,
-      }
-    } else if (lastFlirtDaysAgo === null || lastFlirtDaysAgo >= 3) {
+    if (lastFlirtDaysAgo === null || lastFlirtDaysAgo >= 3) {
       computed = {
         verb: `Send ${partnerName} a flirt`,
         hint: lastFlirtDaysAgo >= 3 ? `${lastFlirtDaysAgo} days since your last one` : "You haven't sent one yet",
