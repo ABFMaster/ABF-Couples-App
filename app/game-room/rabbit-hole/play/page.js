@@ -355,14 +355,9 @@ function RabbitHolePlayContent() {
             .maybeSingle()
           if (newRound) {
             clearInterval(pollNextRound)
-            const { data: updatedSess } = await supabase
-              .from('game_sessions')
-              .select('hole_topic, hole_entry, nora_send_off')
-              .eq('id', session.id)
-              .maybeSingle()
             setRoundNumber(nextRoundNum)
             setMyThread(user1 ? newRound.user1_thread : newRound.user2_thread)
-            setHole(prev => ({ ...prev, nora_nudge: newRound.nora_nudge }))
+            setHole(prev => ({ ...prev, nora_nudge: null }))
             setIAmReady(false)
             setPartnerIsReady(false)
             setShowInstructions(false)
@@ -641,7 +636,7 @@ function RabbitHolePlayContent() {
             <button
               onClick={handleKeepGoing}
               disabled={signalingReady}
-              style={{ width: '100%', padding: '16px', borderRadius: '12px', background: 'transparent', border: '1.5px solid rgba(245,236,215,0.5)', color: '#F5ECD7', fontSize: '15px', cursor: 'pointer', fontFamily: "'Fraunces', Georgia, serif", opacity: signalingReady ? 0.5 : 1 }}
+              style={{ width: '100%', padding: '16px', borderRadius: '12px', background: '#FFFFFF', border: '1.5px solid #FFFFFF', color: '#1E1B4B', fontSize: '15px', cursor: 'pointer', fontFamily: "'Fraunces', Georgia, serif", opacity: signalingReady ? 0.5 : 1, fontWeight: 600 }}
             >
               Keep going →
             </button>
