@@ -327,7 +327,7 @@ function AiCoachContent() {
       <div className="bg-white shadow-sm z-10 flex-shrink-0">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push('/today')}
             className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-coral-600 transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

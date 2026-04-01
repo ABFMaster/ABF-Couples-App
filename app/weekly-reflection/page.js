@@ -354,7 +354,7 @@ export default function WeeklyReflection() {
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push('/today')}
               className="flex items-center gap-2 text-coral-600 hover:text-coral-700"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -372,7 +372,7 @@ export default function WeeklyReflection() {
               Come back Friday to reflect on your week together. The reflection window is open Friday through Sunday.
             </p>
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push('/today')}
               className="bg-gradient-to-r from-coral-400 to-coral-500 text-white px-6 py-3 rounded-full font-semibold hover:from-coral-500 hover:to-coral-600 transition-all"
             >
               Back to Dashboard
@@ -390,7 +390,7 @@ export default function WeeklyReflection() {
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push('/today')}
               className="flex items-center gap-2 text-coral-600 hover:text-coral-700"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -408,7 +408,7 @@ export default function WeeklyReflection() {
               Start your daily practice together! Complete check-ins throughout the week, then come back to reflect on your favorites.
             </p>
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push('/today')}
               className="bg-gradient-to-r from-coral-400 to-coral-500 text-white px-6 py-3 rounded-full font-semibold hover:from-coral-500 hover:to-coral-600 transition-all"
             >
               Go to Daily Check-in
@@ -445,7 +445,7 @@ export default function WeeklyReflection() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => router.push('/today')}
             className="flex items-center gap-2 text-coral-600 hover:text-coral-700"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -544,7 +544,7 @@ export default function WeeklyReflection() {
             {/* Back button */}
             <div className="text-center pt-4">
               <button
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push('/today')}
                 className="bg-gradient-to-r from-coral-400 to-indigo-400 text-white px-8 py-3 rounded-full font-semibold hover:from-coral-500 hover:to-indigo-600 transition-all transform hover:scale-105"
               >
                 Back to Dashboard
@@ -637,7 +637,7 @@ export default function WeeklyReflection() {
 
             <div className="text-center">
               <button
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push('/today')}
                 className="text-coral-600 hover:text-coral-700 font-medium"
               >
                 Back to Dashboard

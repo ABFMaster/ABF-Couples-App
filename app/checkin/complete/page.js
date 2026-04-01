@@ -494,7 +494,7 @@ export default function CheckinCompletePage() {
 
         {/* Back to Dashboard Button */}
         <button
-          onClick={() => router.push('/dashboard')}
+          onClick={() => router.push('/today')}
           className="w-full py-4 rounded-full bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white font-medium hover:shadow-lg transition-all"
         >
           Back to Dashboard

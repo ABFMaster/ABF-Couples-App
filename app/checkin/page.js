@@ -287,7 +287,7 @@ export default function DailyCheckinPage() {
           <br />Connect with your partner first to start checking in.
         </p>
         <button
-          onClick={() => router.push('/dashboard')}
+          onClick={() => router.push('/today')}
           className="px-6 py-3 rounded-full bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white font-medium"
         >
           Back to Dashboard
@@ -312,7 +312,7 @@ export default function DailyCheckinPage() {
           View Today's Check-in →
         </button>
         <button
-          onClick={() => router.push('/dashboard')}
+          onClick={() => router.push('/today')}
           className="text-[#6B7280] text-sm hover:text-[#2D3648] transition-colors"
         >
           Back to Dashboard
@@ -326,7 +326,7 @@ export default function DailyCheckinPage() {
       {/* Header */}
       <div className="bg-gradient-to-br from-[#E8614D] to-[#C44A38] text-white p-6 pb-8">
         <button
-          onClick={() => router.push('/dashboard')}
+          onClick={() => router.push('/today')}
           className="flex items-center gap-2 text-white/80 hover:text-white mb-4 transition-colors"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
