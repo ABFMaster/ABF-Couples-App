@@ -171,16 +171,23 @@ function CallPlayContent() {
           return
         }
         if (callSession?.current_round > currentRound) {
+          const { data: nextRoundData } = await supabase
+            .from('call_rounds')
+            .select('*')
+            .eq('session_id', callSessionId)
+            .eq('round_number', callSession.current_round)
+            .maybeSingle()
+          if (!nextRoundData) return
           clearInterval(pollRef.current)
+          const couple = coupleRef.current
+          const hotSeatUserId = callSession.current_round % 2 === 1 ? couple.user1_id : couple.user2_id
           setCurrentRound(callSession.current_round)
-          setRound(null)
+          setRound(nextRoundData)
           setMyAnswer(null)
           setPartnerAnswer(null)
           setNoraComment(null)
           setExplanation('')
           setExplanationSubmitted(false)
-          const couple = coupleRef.current
-          const hotSeatUserId = callSession.current_round % 2 === 1 ? couple.user1_id : couple.user2_id
           setIsHotSeat(userId === hotSeatUserId)
           setPhase('answering')
         }
@@ -407,7 +414,7 @@ function CallPlayContent() {
                       transition: 'all 150ms',
                     }}
                   >
-                    <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: myAnswer === opt.key ? '#4338CA' : '#1A1A1A', margin: 0, lineHeight: 1.5 }}>{opt.label}</p>
+                    <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: myAnswer === opt.key ? '#4338CA' : '#1A1A1A', margin: 0, lineHeight: 1.5 }}>{isHotSeat ? opt.label : `${partnerName} would: ${opt.label}`}</p>
                   </button>
                 ))}
               </div>
