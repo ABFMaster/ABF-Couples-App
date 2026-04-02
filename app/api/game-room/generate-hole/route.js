@@ -115,9 +115,22 @@ ${user1Name}: ${user1Finds.map(f => f.find_text).join(' | ') || 'Nothing yet'}
 ${user2Name}: ${user2Finds.map(f => f.find_text).join(' | ') || 'Nothing yet'}
 `.trim() : ''
 
+    const user1Interests = user1Profile?.game_interests || {}
+    const user2Interests = user2Profile?.game_interests || {}
+
+    const sharedTopics = [
+      ...(user1Interests.topics || []),
+      ...(user1Interests.obsessions || []),
+    ].filter(t =>
+      (user2Interests.topics || []).concat(user2Interests.obsessions || []).some(t2 =>
+        t2.toLowerCase().includes(t.toLowerCase()) || t.toLowerCase().includes(t2.toLowerCase())
+      )
+    )
+
     const interestsContext = `
-${user1Name}'s interests: ${user1Profile?.game_interests ? JSON.stringify(user1Profile.game_interests) : 'General curiosity'}
-${user2Name}'s interests: ${user2Profile?.game_interests ? JSON.stringify(user2Profile.game_interests) : 'General curiosity'}
+${user1Name}'s interests: ${JSON.stringify(user1Interests)}
+${user2Name}'s interests: ${JSON.stringify(user2Interests)}
+Shared or overlapping interests: ${sharedTopics.length > 0 ? sharedTopics.join(', ') : 'Not explicitly identified — use judgment'}
 `.trim()
 
     let prompt
@@ -138,7 +151,9 @@ CRITICAL RULES:
 - Name the specific person, case, place, or event explicitly in each thread
 - ${user1Name}'s thread and ${user2Name}'s thread must approach the SAME topic from different angles
 - The entry point must be ONE irresistible sentence that makes both of them go "wait, tell me more"
-- Draw from their actual interests when possible
+- TOPIC SELECTION PRIORITY: (1) Pick from shared/overlapping interests first — true crime, history, documentaries, or anything both profiles touch. (2) If no clear overlap, pick a topic where both players have a natural angle even if it's not explicitly listed. (3) Occasionally surprise them with a wild card topic Nora thinks they'd love — but this should be the exception, not the rule.
+- Never pick a topic that only one person would care about
+- The best topics have a human mystery or surprising truth at the center
 - You already know how this story ends — you are the host who picked it
 
 Respond ONLY with JSON, no markdown:
