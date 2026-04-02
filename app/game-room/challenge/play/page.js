@@ -143,6 +143,17 @@ function ChallengePlayContent() {
   useEffect(() => {
     if (!challengeSessionId || !currentRound) return
     pollRef.current = setInterval(async () => {
+      const { data: sessStatus } = await supabase
+        .from('game_sessions')
+        .select('status')
+        .eq('id', sessionId)
+        .maybeSingle()
+      if (sessStatus?.status === 'abandoned') {
+        clearInterval(pollRef.current)
+        router.push('/game-room')
+        return
+      }
+
       // Check current round for verdict
       const { data: roundRow } = await supabase
         .from('challenge_rounds')

@@ -145,6 +145,17 @@ function HotTakeContent() {
   useEffect(() => {
     if (!session?.id || !userId || myAnswer === null || bothAnswered) return
     pollRef.current = setInterval(async () => {
+      const { data: sessStatus } = await supabase
+        .from('game_sessions')
+        .select('status')
+        .eq('id', session.id)
+        .maybeSingle()
+      if (sessStatus?.status === 'abandoned') {
+        clearInterval(pollRef.current)
+        router.push('/game-room')
+        return
+      }
+
       const currentQ = questions[currentIndex]
       if (!currentQ) return
 
