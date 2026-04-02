@@ -29,6 +29,7 @@ function GameRoomLobbyContent() {
   const coupleRef = useRef(null)
 
   // Challenge-specific state
+  const [callSessionId, setCallSessionId] = useState(null)
   const [challengeSessionId, setChallengeSessionId] = useState(null)
   const [challengeRecommendedType, setChallengeRecommendedType] = useState(null)
   const [challengeRecommendedReason, setChallengeRecommendedReason] = useState(null)
@@ -109,6 +110,19 @@ function GameRoomLobbyContent() {
         setIsHost(freshIsHost)
 
         if (sess.status === 'active') {
+          if (mode === 'the-call') {
+            if (freshIsHost) return
+            const { data: callSess } = await supabase
+              .from('call_sessions')
+              .select('id')
+              .eq('session_id', sess.id)
+              .maybeSingle()
+            if (callSess) {
+              clearInterval(pollRef.current)
+              router.push(`/game-room/call/play?sessionId=${sess.id}&callSessionId=${callSess.id}`)
+            }
+            return
+          }
           if (mode === 'challenge') {
             // Only partner polls for challenge session — host navigates directly from Let's go
             if (freshIsHost) return
@@ -172,6 +186,19 @@ function GameRoomLobbyContent() {
           together,
         }),
       })
+
+      if (mode === 'the-call') {
+        const res = await fetch('/api/game-room/call/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, coupleId, userId }),
+        })
+        const data = await res.json()
+        if (!data.callSession) return
+        router.push(`/game-room/call/play?sessionId=${sessionId}&callSessionId=${data.callSession.id}`)
+        setStarting(false)
+        return
+      }
 
       if (mode === 'challenge') {
         const res = await fetch('/api/game-room/challenge/start', {

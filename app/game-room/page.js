@@ -25,6 +25,16 @@ const MODES = [
     available: true,
   },
   {
+    id: 'the-call',
+    name: 'The Call',
+    tagline: 'How well does your partner know your instincts?',
+    description: 'Nora puts one of you in the hot seat. The other predicts what you\'d do. Five rounds. The gap is the game.',
+    accent: '#0369A1',
+    accentLight: '#E0F2FE',
+    icon: '📞',
+    available: true,
+  },
+  {
     id: 'challenge',
     name: 'The Challenge',
     tagline: 'Nora picks a challenge. You two deliver.',
