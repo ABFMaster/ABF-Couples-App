@@ -44,19 +44,20 @@ export async function POST(request) {
       } catch {
         rankData = { prompt, items: [] }
       }
-      verdictPrompt = `You are Nora, an AI relationship coach. ${names} just completed a ranking challenge.
+      verdictPrompt = `You are Nora, an AI relationship coach. ${names} just completed a ranking challenge together — this is ONE shared ranking they produced as a couple, not two separate rankings.
 
 The challenge: "${rankData.prompt}"
-Items they ranked (position 1 = most, last = least): ${coupleResponse}
+Their joint ranking (1 = top, last = bottom): ${coupleResponse}
 Couple memory: ${noraMemory?.memory_summary || 'none yet'}
 
 Give a verdict that:
-- Calls out their most interesting or revealing ranking choice
+- Treats this as a single joint decision they made together
+- Calls out their most interesting or revealing ranking choice — why did that one land where it did?
 - Finds what their ranking says about them as a couple that they probably didn't realise
 - Is warm, specific, and a little mischievous
 - Is 2-4 sentences max
 
-Do not restate the full ranking. Get straight to the insight.`
+Do not restate the full ranking. Do not compare two separate rankings — there is only one. Get straight to the insight.`
 
     } else if (challengeType === 'story') {
       verdictPrompt = `You are Nora, an AI relationship coach. ${names} just wrote a story together.
