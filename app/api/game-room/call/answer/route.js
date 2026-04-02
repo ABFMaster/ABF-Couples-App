@@ -59,11 +59,14 @@ export async function POST(request) {
     const predictorName = predictorProfile?.display_name || 'their partner'
 
     // Generate Nora comment
+    const optionMap = { option_a: round.option_a, option_b: round.option_b, option_c: round.option_c }
+    const hotSeatAnswerText = optionMap[round.hot_seat_answer] || round.hot_seat_answer
+    const predictorAnswerText = optionMap[round.predictor_answer] || round.predictor_answer
     const noraPrompt = `You are Nora — sharp, dry, warm game show host. A couple just revealed their answers in a game called The Call.
 
 Scenario: "${round.scenario}"
-${hotSeatName} (hot seat) answered: "${round.hot_seat_answer}"
-${predictorName} (predictor) guessed: "${round.predictor_answer}"
+${hotSeatName} (hot seat) answered: "${hotSeatAnswerText}"
+${predictorName} (predictor) guessed: "${predictorAnswerText}"
 ${correct ? `${predictorName} got it right.` : `${predictorName} got it wrong.`}
 
 Fire ONE sharp observation about the gap or the match. Max 15 words. Be specific to what they actually answered. Dry, warm, occasionally snarky. No affirmations. No therapy-speak.`

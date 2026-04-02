@@ -15,7 +15,7 @@ export async function POST(request) {
 
     const { data: round } = await supabase
       .from('call_rounds')
-      .update({ hot_seat_explanation: explanation })
+      .update({ hot_seat_explanation: explanation, status: 'answered' })
       .eq('id', roundId)
       .select('*')
       .maybeSingle()
