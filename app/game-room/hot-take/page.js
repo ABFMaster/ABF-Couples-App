@@ -29,6 +29,8 @@ function HotTakeContent() {
   const [answers, setAnswers] = useState([]) // all answers for summary
   const [showSummary, setShowSummary] = useState(false)
   const [tierPreference, setTierPreference] = useState(null) // null = not yet set
+  const [noraInsight, setNoraInsight] = useState(null)
+  const [loadingInsight, setLoadingInsight] = useState(false)
   const pollRef = useRef(null)
   const tierPollRef = useRef(null)
   const nextPollRef = useRef(null)
@@ -277,6 +279,30 @@ function HotTakeContent() {
     setCountdown(null)
   }
 
+  useEffect(() => {
+    if (!showSummary || answers.length === 0) return
+    const disagreedAnswers = answers.filter(a => !a.agreed)
+    const surprisingOne = disagreedAnswers[0] || answers[answers.length - 1]
+    if (!surprisingOne) return
+    setLoadingInsight(true)
+    fetch('/api/game-room/hot-take/summary-insight', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        surprisingQuestion: surprisingOne.question.text,
+        myAnswer: surprisingOne.myAnswer,
+        partnerAnswer: surprisingOne.partnerAnswer,
+        userName,
+        partnerName,
+        allAnswers: answers,
+      }),
+    })
+      .then(r => r.json())
+      .then(d => { if (d.insight) setNoraInsight(d.insight) })
+      .catch(() => {})
+      .finally(() => setLoadingInsight(false))
+  }, [showSummary])
+
   const agreedCount = answers.filter(a => a.agreed).length
 
   if (loading) {
@@ -358,6 +384,20 @@ function HotTakeContent() {
                   <p style={{ fontSize: '14px', color: '#1A1A1A', margin: 0 }}>{surprisingOne.partnerAnswer ? '👍 Agree' : '👎 Disagree'}</p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {(loadingInsight || noraInsight) && (
+            <div style={{ background: '#F5F3FF', border: '0.5px solid #C4B5FD', borderRadius: '16px', padding: '18px 20px', marginTop: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#7C3AED' }} />
+                <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#7C3AED', textTransform: 'uppercase', margin: 0, fontWeight: 700 }}>Nora</p>
+              </div>
+              {loadingInsight ? (
+                <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: 'rgba(99,60,180,0.4)', fontStyle: 'italic', margin: 0 }}>Nora is reading the room...</p>
+              ) : (
+                <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#1E1B4B', lineHeight: 1.6, margin: 0, fontStyle: 'italic' }}>{noraInsight}</p>
+              )}
             </div>
           )}
 
