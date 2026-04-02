@@ -277,6 +277,17 @@ function ChallengePlayContent() {
     }
   }
 
+  async function handleEndGame() {
+    if (!sessionId) return
+    try {
+      await supabase
+        .from('game_sessions')
+        .update({ status: 'abandoned' })
+        .eq('id', sessionId)
+      router.push('/game-room')
+    } catch {}
+  }
+
   async function handleNext() {
     clearInterval(pollRef.current)
     try {
@@ -386,9 +397,9 @@ function ChallengePlayContent() {
 
       {/* Header */}
       <div style={{ padding: '48px 24px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-        <button onClick={() => router.push('/game-room')}
+        <button onClick={handleEndGame}
           style={{ background: 'none', border: 'none', fontSize: '13px', color: '#9CA3AF', cursor: 'pointer', padding: 0 }}>
-          ← Exit
+          End game
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '12px', color: '#9CA3AF' }}>{CHALLENGE_LABELS[challengeType]}</span>

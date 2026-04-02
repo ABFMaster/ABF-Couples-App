@@ -75,6 +75,13 @@ export async function POST(request) {
       olderThan: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
     })
 
+    // Always expire any active sessions for this mode on lobby entry (cleans up re-entry)
+    await expireAndClean({
+      match: { couple_id: coupleId, mode },
+      statuses: ['active', 'abandoned'],
+      olderThan: new Date().toISOString(),
+    })
+
     // Check for existing lobby session
     const { data: existing } = await supabase
       .from('game_sessions')

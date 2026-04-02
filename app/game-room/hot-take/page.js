@@ -279,6 +279,17 @@ function HotTakeContent() {
     setCountdown(null)
   }
 
+  const handleEndGame = async () => {
+    if (!session?.id) return
+    try {
+      await supabase
+        .from('game_sessions')
+        .update({ status: 'abandoned' })
+        .eq('id', session.id)
+      router.push('/game-room')
+    } catch {}
+  }
+
   useEffect(() => {
     if (!showSummary || answers.length === 0) return
     const disagreedAnswers = answers.filter(a => !a.agreed)
@@ -319,7 +330,7 @@ function HotTakeContent() {
     return (
       <div style={{ minHeight: '100vh', background: '#FAF6F0' }}>
         <div style={{ padding: '48px 24px 120px' }}>
-          <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '13px', cursor: 'pointer', padding: '0 0 24px' }}>← Back</button>
+          <button onClick={handleEndGame} style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '13px', cursor: 'pointer', padding: '0 0 24px' }}>End game</button>
 
           <div style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 60%, #4338CA 100%)', borderRadius: '20px', padding: '28px 24px', marginBottom: '32px', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
@@ -429,7 +440,7 @@ function HotTakeContent() {
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '13px', cursor: 'pointer', padding: 0 }}>← Back</button>
+          <button onClick={handleEndGame} style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '13px', cursor: 'pointer', padding: 0 }}>End game</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontSize: '12px', color: '#9CA3AF' }}>{currentIndex + 1} / {questions.length}</span>
             <button onClick={handleSkip} style={{ background: 'none', border: '0.5px solid #E8DDD0', borderRadius: '12px', padding: '4px 12px', fontSize: '12px', color: '#9CA3AF', cursor: 'pointer' }}>Skip</button>

@@ -267,6 +267,11 @@ function RabbitHolePlayContent() {
         .select('status, id')
         .eq('id', session.id)
         .maybeSingle()
+      if (sess?.status === 'abandoned') {
+        clearInterval(pollRef.current)
+        router.push('/game-room')
+        return
+      }
       if (sess?.status === 'completed' || sess?.status === 'expired') {
         clearInterval(pollRef.current)
         router.push(`/game-room/rabbit-hole/debrief?sessionId=${sess.id}`)
@@ -529,6 +534,20 @@ function RabbitHolePlayContent() {
     }
   }
 
+  const handleEndGame = async () => {
+    if (signalingReady) return
+    setSignalingReady(true)
+    try {
+      await supabase
+        .from('game_sessions')
+        .update({ status: 'abandoned' })
+        .eq('id', session?.id)
+      router.push('/game-room')
+    } catch {
+      setSignalingReady(false)
+    }
+  }
+
   if (gamePhase === 'loading_initial' || gamePhase === 'loading_round' || gamePhase === 'loading_debrief') {
     return (
       <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -549,7 +568,7 @@ function RabbitHolePlayContent() {
 
         {/* Timer bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <button onClick={() => router.push('/game-room/lobby?mode=rabbit-hole')} style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '13px', cursor: 'pointer', padding: 0 }}>← Back</button>
+          <button onClick={handleEndGame} style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '13px', cursor: 'pointer', padding: 0 }}>End game</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontSize: '11px', letterSpacing: '0.1em', color: '#9CA3AF', textTransform: 'uppercase' }}>Round {roundNumber}</span>
             {timerExpired ? (
