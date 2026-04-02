@@ -39,6 +39,20 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Failed to save check-in' }, { status: 500 })
     }
 
+    // Log activity to daily_checkins
+    const { getTodayString } = await import('@/lib/dates')
+    const todayStr = getTodayString()
+    await supabase
+      .from('daily_checkins')
+      .upsert({
+        user_id: userId,
+        couple_id: coupleId,
+        check_date: todayStr,
+        question_id: ritualId || null,
+        question_text: null,
+        question_response: completed ? 'completed' : 'skipped',
+      }, { onConflict: 'user_id,check_date' })
+
     // If completed, increment streak on the ritual row
     if (completed) {
       const { data: current } = await supabase

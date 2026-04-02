@@ -39,6 +39,20 @@ export async function POST(request) {
         responded_at: new Date().toISOString(),
       }, { onConflict: 'spark_id,user_id' })
 
+    // Log activity to daily_checkins
+    const { getTodayString } = await import('@/lib/dates')
+    const todayStr = getTodayString()
+    await supabase
+      .from('daily_checkins')
+      .upsert({
+        user_id: user.id,
+        couple_id: coupleId,
+        check_date: todayStr,
+        question_id: sparkRow?.question_id || sparkId,
+        question_text: sparkRow?.question || null,
+        question_response: responseText || null,
+      }, { onConflict: 'user_id,check_date' })
+
     // Step 5: Derive partnerId from couple
     const { data: coupleRow } = await supabase
       .from('couples')

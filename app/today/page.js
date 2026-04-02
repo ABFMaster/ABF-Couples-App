@@ -214,7 +214,6 @@ export default function TodayPage() {
             .select('check_date')
             .eq('user_id', user.id)
             .eq('couple_id', couple.id)
-            .not('question_response', 'is', null)
             .order('check_date', { ascending: false })
             .limit(60)
           if (!data?.length) return
@@ -222,7 +221,14 @@ export default function TodayPage() {
           let count = 0
           const cursor = new Date(today)
           for (const row of data) {
-            if (row.check_date === cursor.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })) {
+            const cursorStr = cursor.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })
+            const cursorDay = cursor.toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long' })
+            if (cursorDay === 'Saturday') {
+              count++
+              cursor.setDate(cursor.getDate() - 1)
+              continue
+            }
+            if (row.check_date === cursorStr) {
               count++
               cursor.setDate(cursor.getDate() - 1)
             } else break

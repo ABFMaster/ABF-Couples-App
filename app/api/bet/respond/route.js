@@ -69,6 +69,20 @@ export async function POST(request) {
         .insert({ bet_id: betId, user_id: userId, couple_id: resolvedCoupleId, ...updatePayload })
     }
 
+    // Log activity to daily_checkins
+    const { getTodayString } = await import('@/lib/dates')
+    const todayStr = getTodayString()
+    await supabase
+      .from('daily_checkins')
+      .upsert({
+        user_id: userId,
+        couple_id: resolvedCoupleId,
+        check_date: todayStr,
+        question_id: betRow?.id || null,
+        question_text: betRow?.question || null,
+        question_response: prediction || null,
+      }, { onConflict: 'user_id,check_date' })
+
     // Fetch both response rows after save
     const [{ data: mine }, { data: theirs }] = await Promise.all([
       supabase
