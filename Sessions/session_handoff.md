@@ -1,5 +1,5 @@
 # ABF — Developer Handoff Briefing
-# Last Updated: 2026-03-31
+# Last Updated: 2026-04-02
 
 ---
 
@@ -600,14 +600,57 @@ The Challenge (2026-03-29):
 - forceNew only expires active/completed sessions not lobby — prevents dual session on replay
 - isHostRef stale closure fixed by moving host identity to DB
 
+**COMPLETED THIS SESSION (2026-04-02):**
+
+Sprint work:
+- generate-hole: three-tier topic selection — shared interests first, complementary second, wild card exception. Cullen Davis test confirmed working.
+- Hot Take summary: Nora insight on surprising disagreement — why it stood out, what it reveals about each person, nudge to discuss. Confirmed working.
+- Challenge rank verdict: fixed dual-ranking bug — now correctly frames coupleResponse as one joint ranking
+- Cron hour guard removed — was silently failing after DST shift. Schedule updated to 0 10 * * * (10:00 UTC = 3am PDT). Tonight's cron will create Thursday Spark and future content automatically.
+- Today's bet manually inserted for 2026-04-01 to restore Wednesday functionality.
+- daily_checkins activity log wiring: Spark/Bet/Ritual completions now write to daily_checkins on completion. mood and connection_score made nullable. Streak counter updated to auto-count Saturdays and skip requiring a row.
+
+Game Room design session — locked decisions:
+- Challenge Story: alternating blind sentences, Mad Libs style, no discussion during writing
+- Challenge Rank: Option A — individual rankings submitted blind, then conflict resolution item by item, Nora comments on negotiation not result
+- Challenge Memory: 1-3 hint system, Cass sees answer first, holds it while Matt tries to remember, reveal after
+- Challenge Pitch: hostile investor Nora — interrupts, challenges, pushes back
+- Challenge Plan: PARKED — elevated feature, revisit with Date Night sprint
+- The Reframe: PARKED — better as third daily activity or Tuesday Spark variant than Saturday game. Design: Nora pulls real memory, one partner writes other's perspective blind, reveal after, Nora names the gap.
+- The Call: NEW mode replacing Plan in Game Room. Full design below.
+- Nora voice in Challenge: snarky, absurdist, game show host energy — bend her into the absurdity of the game
+
+THE CALL — Full locked design:
+Five rounds. Alternates who's in the hot seat. Predictor sees scenario + three options first, locks prediction blind. Hot seat sees same scenario, locks real answer. Simultaneous reveal. Hot seat writes one sentence explanation ("Tell her why"). Nora scores and comments on the gap.
+
+Three scenario tiers:
+- Tier 1: Absurd and light (IKEA meatballs, wrong order at restaurant, toilet paper on shoe)
+- Tier 2: Revealing but fun (partner's friend telling story you've heard before, who's late, flight upgrade)
+- Tier 3: Instinct under real pressure (job offer in another city, friend doesn't like partner, public disagreement)
+
+Scoring: predictor gets point for correct prediction. Running tally. Nora end line based on score — 5/5 through 0/5 each has a distinct sharp line.
+
+Laughter mechanics: prediction gap reveal, mundane scenario absurdity, Nora's dry verdict lines (0/5: "Matt, introduce yourself.")
+
+Nora memory signal: explanation field after each reveal is high-value relationship data. Patterns across 5 rounds feed Nora memory.
+
+Backlog additions:
+- Daily activity gap: need third distinct daily activity to complement Spark (Mon/Tue/Thu) and Bet (Wed). The Reframe is one candidate. Dedicated design sprint needed.
+- Plan mode + Date Night crossover: build together when Date Night sprint happens. City guide infrastructure, real constraints, decision-by-decision debate capture.
+
+Known bugs to fix in bug hunt session:
+- Hot Take: host (User 1) countdown not firing, page not advancing after both answer. Had to skip to end. Caused mismatched scores (Cass 3/4, Matt 2/3).
+- Game Room universal: exit and re-entry goes straight into old active session instead of clean lobby. Affects all modes.
+- Challenge/Today lobby: "Matt says you are remote" hardcoded — not reading actual session together/remote value.
+
 **NEXT SESSION PRIORITY ORDER:**
-1. Game Room code quality audit (4-part — see PRODUCT-BACKLOG.md)
-2. Pre-Nora full codebase audit (see PRODUCT-BACKLOG.md) — do not start Nora architecture until complete
-3. Nora topic variety — generate-hole uses couple interests more aggressively
-4. Hot Take remaining polish: re-entry after exit, summary depth
-5. Challenge: Nora verdict prompt fix, Write a Story prompt quality
-6. Vercel Pro upgrade before 20 test users
-7. The Remake and The Hunt — after audits complete and clean foundation confirmed
+1. Game Room redesign — lock final mechanics for all 5 Challenge modes + The Call (new mode replacing Plan) before touching any code
+2. Build The Call — new Game Room mode (full design below)
+3. Rebuild Challenge modes with correct mechanics (Story alternating blind, Rank Option A, Memory with hints, Pitch with hostile Nora, Reframe parked)
+4. The Remake and The Hunt builds
+5. Hot Take re-entry bug fix
+6. Full bug hunt sweep across all Game Room modes
+7. Daily activity gap — design third activity to complement Spark and Bet
 
 ---
 
@@ -632,11 +675,13 @@ The Challenge (2026-03-29):
 - Bet card design slightly jarring — shadow/border added, full sweep needed
 - Google Places API returning 503 for date suggestions
 - Google Maps race condition in `/dates/custom`
-- Challenge Rank verdict: Nora lists both rankings separately as if users ranked independently — prompt needs fixing
 - Challenge Write a Story: prompts are abstract and difficult, verdict hard to follow — content review needed
 - Too many push notifications firing at game end — audit needed before scaling
 - `game_sessions.current_round` column required by `partnerRoundPoll` — confirm column exists in production schema before testing
 - `nora_nudge` not surfaced to partner on round transitions (only in API response, not DB row) — partner sees no Nora nudge when entering loading_round via poll; acceptable for now
+- The Call: designed, not yet built — full spec in session handoff above
+- Challenge modes: mechanics need rebuild — Story (alternating blind), Rank (Option A individual then reconcile), Memory (hints + reveal after), Pitch (hostile Nora). Plan replaced by The Call.
+- Daily activity gap: Tuesday doubles Spark, no third activity type designed yet. The Reframe parked here as candidate.
 
 ---
 
