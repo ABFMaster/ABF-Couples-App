@@ -93,6 +93,23 @@ function HotTakeContent() {
     init()
   }, [router])
 
+  // Always-on session status watcher — detects abandoned regardless of answer state
+  useEffect(() => {
+    if (!session?.id) return
+    const abandonPoll = setInterval(async () => {
+      const { data: sessStatus } = await supabase
+        .from('game_sessions')
+        .select('status')
+        .eq('id', session.id)
+        .maybeSingle()
+      if (sessStatus?.status === 'abandoned') {
+        clearInterval(abandonPoll)
+        router.push('/game-room')
+      }
+    }, 3000)
+    return () => clearInterval(abandonPoll)
+  }, [session])
+
   const handleStartGame = async (tiers) => {
     if (!session || !coupleId) return
     setTierPreference(tiers)
