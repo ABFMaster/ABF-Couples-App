@@ -239,7 +239,6 @@ function CallPlayContent() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ roundId: round.id, explanation: '—' }),
     })
-    setPhase('next')
   }
 
   const handleNext = async () => {
