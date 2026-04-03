@@ -672,10 +672,22 @@ function ChallengePlayContent() {
               </p>
             </div>
 
-            <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '16px', padding: '16px 20px', marginBottom: '16px' }}>
-              <p style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#9CA3AF', textTransform: 'uppercase', margin: '0 0 8px' }}>Your answer</p>
-              <p style={{ fontSize: '15px', color: '#1C1510', lineHeight: 1.6, whiteSpace: 'pre-line', margin: 0 }}>{response}</p>
-            </div>
+            {challengeType === 'story' ? (
+              <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '16px', padding: '16px 20px', marginBottom: '16px' }}>
+                <p style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#9CA3AF', textTransform: 'uppercase', margin: '0 0 12px' }}>The story you wrote</p>
+                {sentences.map((s, i) => (
+                  <div key={i} style={{ marginBottom: '8px' }}>
+                    <p style={{ fontSize: '10px', color: s.user_id === userId ? '#4338CA' : '#9CA3AF', margin: '0 0 2px', fontWeight: 700 }}>{s.user_id === userId ? 'You' : partnerName}</p>
+                    <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#1A1A1A', lineHeight: 1.5, margin: 0 }}>{s.text}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '16px', padding: '16px 20px', marginBottom: '16px' }}>
+                <p style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#9CA3AF', textTransform: 'uppercase', margin: '0 0 8px' }}>Your answer</p>
+                <p style={{ fontSize: '15px', color: '#1C1510', lineHeight: 1.6, whiteSpace: 'pre-line', margin: 0 }}>{response}</p>
+              </div>
+            )}
 
             {challengeType === 'plan' && (
               <div style={{ background: '#EEF2FF', border: '0.5px solid #C4B5FD', borderRadius: '16px', padding: '16px 20px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
