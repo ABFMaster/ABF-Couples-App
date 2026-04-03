@@ -25,6 +25,7 @@ function CallPlayContent() {
   const [explanationSubmitted, setExplanationSubmitted] = useState(false)
   const [score, setScore] = useState(0)
   const [verdict, setVerdict] = useState(null)
+  const [isHost, setIsHost] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
   const pollRef = useRef(null)
@@ -72,6 +73,8 @@ function CallPlayContent() {
         .select('host_user_id')
         .eq('id', sessionId)
         .maybeSingle()
+
+      setIsHost(sess?.host_user_id === user.id)
 
       if (sess?.host_user_id === user.id) {
         const res = await fetch('/api/game-room/call/generate', {
@@ -473,10 +476,21 @@ function CallPlayContent() {
                 )}
 
                 {/* Predictor or after explanation — Next button */}
-                {(!isHotSeat || explanationSubmitted) && (
-                  <button onClick={handleNext} style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}>
-                    {currentRound >= totalRounds ? 'See the verdict ✦' : 'Next round →'}
-                  </button>
+                {isHost ? (
+                  (!isHotSeat || explanationSubmitted) && (
+                    <button onClick={handleNext} style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}>
+                      {currentRound >= totalRounds ? 'See the verdict ✦' : 'Next round →'}
+                    </button>
+                  )
+                ) : (
+                  (!isHotSeat || explanationSubmitted) && (
+                    <div style={{ textAlign: 'center', padding: '12px 0', color: '#9CA3AF', fontSize: '13px' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                        Waiting for {partnerName}...
+                      </div>
+                    </div>
+                  )
                 )}
               </div>
             )}
