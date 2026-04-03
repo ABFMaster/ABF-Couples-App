@@ -170,15 +170,18 @@ function CallPlayContent() {
           clearInterval(pollRef.current)
           const couple = coupleRef.current
           const hotSeatUserId = callSession.current_round % 2 === 1 ? couple.user1_id : couple.user2_id
-          setCurrentRound(callSession.current_round)
-          setRound(nextRoundData)
-          setMyAnswer(null)
-          setPartnerAnswer(null)
-          setNoraComment(null)
-          setExplanation('')
-          setExplanationSubmitted(false)
-          setIsHotSeat(userId === hotSeatUserId)
-          setPhase('answering')
+          setPhase('loading_round')
+          setTimeout(() => {
+            setCurrentRound(callSession.current_round)
+            setRound(nextRoundData)
+            setMyAnswer(null)
+            setPartnerAnswer(null)
+            setNoraComment(null)
+            setExplanation('')
+            setExplanationSubmitted(false)
+            setIsHotSeat(userId === hotSeatUserId)
+            setPhase('answering')
+          }, 1200)
         }
       }
 
@@ -347,7 +350,7 @@ function CallPlayContent() {
     } catch {}
   }
 
-  if (loading || phase === 'loading') {
+  if (loading || phase === 'loading' || phase === 'loading_round') {
     return (
       <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
