@@ -99,6 +99,21 @@ Respond in this exact JSON format with no other text:
   "prompt": "${basePrompt.prompt}",
   "items": ${JSON.stringify(basePrompt.items)}
 }`
+    } else if (challengeType === 'story') {
+      userPrompt = `You are Nora personalising a story prompt for ${profileSummary}.
+
+Base prompt: "${basePrompt.prompt}"
+Couple memory: ${noraMemory?.memory_summary || 'none yet'}
+
+Rules:
+- Keep the base prompt EXACTLY as written — do not rewrite or expand it
+- You may add ONE short sentence (max 10 words) that makes it feel personal to this couple — only if you have something genuinely specific to say
+- If you have nothing specific, return the base prompt unchanged
+
+Respond in this exact JSON format with no other text:
+{
+  "prompt": "the prompt — identical to base or with one short personal addition at the end"
+}`
     } else {
       userPrompt = `Personalise this challenge prompt for ${profileSummary}.
 
