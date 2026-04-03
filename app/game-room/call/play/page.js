@@ -148,6 +148,40 @@ function CallPlayContent() {
         }
       }
 
+      if (phase === 'reveal' && !isHost) {
+        const { data: callSession } = await supabase
+          .from('call_sessions')
+          .select('current_round, status')
+          .eq('id', callSessionId)
+          .maybeSingle()
+        if (callSession?.status === 'complete') {
+          clearInterval(pollRef.current)
+          loadVerdict()
+          return
+        }
+        if (callSession?.current_round > currentRound) {
+          const { data: nextRoundData } = await supabase
+            .from('call_rounds')
+            .select('*')
+            .eq('session_id', callSessionId)
+            .eq('round_number', callSession.current_round)
+            .maybeSingle()
+          if (!nextRoundData) return
+          clearInterval(pollRef.current)
+          const couple = coupleRef.current
+          const hotSeatUserId = callSession.current_round % 2 === 1 ? couple.user1_id : couple.user2_id
+          setCurrentRound(callSession.current_round)
+          setRound(nextRoundData)
+          setMyAnswer(null)
+          setPartnerAnswer(null)
+          setNoraComment(null)
+          setExplanation('')
+          setExplanationSubmitted(false)
+          setIsHotSeat(userId === hotSeatUserId)
+          setPhase('answering')
+        }
+      }
+
       // Poll for explanation submitted — advance to next round
       if (phase === 'explanation') {
         const { data: roundData } = await supabase
