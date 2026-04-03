@@ -99,6 +99,12 @@ function ChallengePlayContent() {
   const [submitted, setSubmitted] = useState(false)
   const [isScribe, setIsScribe] = useState(false)
   const [error, setError] = useState(null)
+  const [sentences, setSentences] = useState([])
+  const [currentTurnUserId, setCurrentTurnUserId] = useState(null)
+  const [noraNudge, setNoraNudge] = useState(null)
+  const [storyInput, setStoryInput] = useState('')
+  const [storySubmitting, setStorySubmitting] = useState(false)
+  const [userName, setUserName] = useState('')
   const [newLobbySession, setNewLobbySession] = useState(null)
   const pollRef = useRef(null)
   const completePollRef = useRef(null)
@@ -124,6 +130,13 @@ function ChallengePlayContent() {
         .eq('user_id', partnerId)
         .maybeSingle()
       if (partnerProfile?.display_name) setPartnerName(partnerProfile.display_name)
+
+      const { data: myProfile } = await supabase
+        .from('user_profiles')
+        .select('display_name')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (myProfile?.display_name) setUserName(myProfile.display_name)
     }
     init()
   }, [router])
@@ -154,6 +167,24 @@ function ChallengePlayContent() {
         return
       }
 
+      if (challengeType === 'story' && round) {
+        const { data: storyRound } = await supabase
+          .from('challenge_rounds')
+          .select('sentences, current_turn_user_id, nora_nudge, nora_verdict, story_complete')
+          .eq('id', round.id)
+          .maybeSingle()
+        if (storyRound) {
+          setSentences(storyRound.sentences || [])
+          setCurrentTurnUserId(storyRound.current_turn_user_id)
+          if (storyRound.nora_nudge) setNoraNudge(storyRound.nora_nudge)
+          if (storyRound.nora_verdict && phase !== 'verdict') {
+            setNoraVerdict(storyRound.nora_verdict)
+            setPhase('verdict')
+          }
+        }
+        return
+      }
+
       // Check current round for verdict
       const { data: roundRow } = await supabase
         .from('challenge_rounds')
@@ -165,6 +196,10 @@ function ChallengePlayContent() {
       // Watcher: advance from loading to challenge when round appears
       if (roundRow && !isScribe && phase === 'loading') {
         setRound(roundRow)
+        if (challengeType === 'story') {
+          setSentences(roundRow.sentences || [])
+          setCurrentTurnUserId(roundRow.current_turn_user_id)
+        }
         if (challengeType === 'rank') {
           try {
             const parsed = JSON.parse(roundRow.prompt)
@@ -246,6 +281,11 @@ function ChallengePlayContent() {
       const r = data.round
       setRound(r)
 
+      if (challengeType === 'story') {
+        setSentences(r.sentences || [])
+        setCurrentTurnUserId(r.current_turn_user_id)
+      }
+
       if (challengeType === 'rank') {
         try {
           const parsed = JSON.parse(r.prompt)
@@ -318,6 +358,49 @@ function ChallengePlayContent() {
       }
     } catch {
       setError('Something went wrong advancing to the next round.')
+    }
+  }
+
+  async function handleStorySentence() {
+    if (!storyInput.trim() || storySubmitting) return
+    setStorySubmitting(true)
+    try {
+      const res = await fetch('/api/game-room/challenge/story/submit-sentence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roundId: round.id,
+          userId,
+          coupleId,
+          sentence: storyInput.trim(),
+          challengeSessionId,
+        }),
+      })
+      const data = await res.json()
+      if (data.round) {
+        setSentences(data.round.sentences || [])
+        setCurrentTurnUserId(data.round.current_turn_user_id)
+        if (data.noraNudge) setNoraNudge(data.noraNudge)
+        setStoryInput('')
+      }
+      if (data.storyComplete) {
+        const submitRes = await fetch('/api/game-room/challenge/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId, coupleId, challengeSessionId,
+            roundId: round.id, challengeType,
+            prompt: round.prompt, coupleResponse: '',
+          }),
+        })
+        const submitData = await submitRes.json()
+        if (submitData.noraVerdict) {
+          setNoraVerdict(submitData.noraVerdict)
+          setPhase('verdict')
+        }
+      }
+    } catch {} finally {
+      setStorySubmitting(false)
     }
   }
 
@@ -442,6 +525,59 @@ function ChallengePlayContent() {
 
         {phase === 'challenge' && (
           <>
+            {challengeType === 'story' && (
+              <div style={{ marginBottom: '24px' }}>
+                {sentences.length > 0 && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <p style={{ fontSize: '10px', letterSpacing: '0.12em', color: '#9CA3AF', textTransform: 'uppercase', margin: '0 0 12px', fontWeight: 700 }}>The story so far</p>
+                    {sentences.map((s, i) => (
+                      <div key={i} style={{ background: s.user_id === userId ? '#EEF2FF' : '#F5F0EA', border: `0.5px solid ${s.user_id === userId ? '#C7D2FE' : '#E8DDD0'}`, borderRadius: '12px', padding: '12px 16px', marginBottom: '8px' }}>
+                        <p style={{ fontSize: '10px', color: s.user_id === userId ? '#4338CA' : '#9CA3AF', margin: '0 0 4px', fontWeight: 700 }}>{s.user_id === userId ? 'You' : partnerName} · sentence {i + 1}</p>
+                        <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#1A1A1A', lineHeight: 1.5, margin: 0 }}>{s.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {noraNudge && (
+                  <div style={{ background: '#F5F3FF', border: '0.5px solid #C4B5FD', borderRadius: '12px', padding: '12px 16px', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#7C3AED' }} />
+                      <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#7C3AED', textTransform: 'uppercase', margin: 0, fontWeight: 700 }}>Nora</p>
+                    </div>
+                    <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#1E1B4B', fontStyle: 'italic', margin: 0 }}>{noraNudge}</p>
+                  </div>
+                )}
+
+                {currentTurnUserId === userId ? (
+                  <div>
+                    <p style={{ fontSize: '13px', color: '#9CA3AF', marginBottom: '8px', textAlign: 'center' }}>
+                      {sentences.length === 0 ? 'Write the first sentence' : `Sentence ${sentences.length + 1} of 6 — your turn`}
+                    </p>
+                    <textarea
+                      value={storyInput}
+                      onChange={e => setStoryInput(e.target.value)}
+                      placeholder="Continue the story..."
+                      style={{ width: '100%', minHeight: '100px', padding: '16px', fontSize: '16px', lineHeight: '1.6', color: '#1C1510', background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '16px', resize: 'vertical', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: '12px' }}
+                    />
+                    <button
+                      onClick={handleStorySentence}
+                      disabled={!storyInput.trim() || storySubmitting}
+                      style={{ width: '100%', padding: '16px', background: storyInput.trim() ? 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)' : '#E8DDD0', color: storyInput.trim() ? '#FFFFFF' : '#B8A898', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: storyInput.trim() ? 'pointer' : 'not-allowed' }}>
+                      {storySubmitting ? 'Submitting…' : sentences.length === 5 ? 'End the story ✦' : 'Add sentence →'}
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '16px 0', color: '#9CA3AF', fontSize: '13px' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                      {sentences.length === 0 ? `Waiting for ${partnerName} to start the story...` : `${partnerName} is writing sentence ${sentences.length + 1}...`}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {isScribe && !submitted && (
               <>
                 {challengeType === 'rank' ? (

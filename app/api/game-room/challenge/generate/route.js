@@ -145,6 +145,7 @@ Respond in this exact JSON format with no other text:
           round_number: roundNumber,
           prompt: finalPrompt,
           prompt_key: basePrompt.key,
+          current_turn_user_id: challengeType === 'story' ? userId : null,
         },
         { onConflict: 'session_id,round_number', ignoreDuplicates: true }
       )

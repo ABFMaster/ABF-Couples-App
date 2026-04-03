@@ -11,7 +11,7 @@ export async function POST(request) {
   try {
     const { userId, coupleId, challengeSessionId, roundId, challengeType, prompt, coupleResponse } = await request.json()
 
-    if (!userId || !coupleId || !challengeSessionId || !roundId || !challengeType || !prompt || !coupleResponse) {
+    if (!userId || !coupleId || !challengeSessionId || !roundId || !challengeType || !prompt) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -28,6 +28,18 @@ export async function POST(request) {
       .in('user_id', [coupleData.user1_id, coupleData.user2_id])
 
     const names = profiles ? profiles.map(p => p.display_name).join(' and ') : 'this couple'
+
+    let storyText = coupleResponse || ''
+    if (challengeType === 'story') {
+      const { data: roundData } = await supabase
+        .from('challenge_rounds')
+        .select('sentences')
+        .eq('id', roundId)
+        .maybeSingle()
+      if (roundData?.sentences?.length > 0) {
+        storyText = roundData.sentences.map((s, i) => `${i + 1}. ${s.text}`).join('\n')
+      }
+    }
 
     const { data: noraMemory } = await supabase
       .from('nora_memory')
@@ -63,7 +75,7 @@ Do not restate the full ranking. Do not compare two separate rankings — there 
       verdictPrompt = `You are Nora, an AI relationship coach. ${names} just wrote a story together.
 
 The prompt they were given: "${prompt}"
-Their story: "${coupleResponse}"
+Their story:\n${storyText}
 Couple memory: ${noraMemory?.memory_summary || 'none yet'}
 
 Give a verdict that:
