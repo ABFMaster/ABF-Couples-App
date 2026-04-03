@@ -25,6 +25,7 @@ function CallPlayContent() {
   const [explanationSubmitted, setExplanationSubmitted] = useState(false)
   const [score, setScore] = useState(0)
   const [verdict, setVerdict] = useState(null)
+  const [partnerExplanation, setPartnerExplanation] = useState(null)
   const [isHost, setIsHost] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -159,6 +160,14 @@ function CallPlayContent() {
           loadVerdict()
           return
         }
+        const { data: roundUpdate } = await supabase
+          .from('call_rounds')
+          .select('hot_seat_explanation')
+          .eq('id', round?.id)
+          .maybeSingle()
+        if (roundUpdate?.hot_seat_explanation && roundUpdate.hot_seat_explanation !== '—') {
+          setPartnerExplanation(roundUpdate.hot_seat_explanation)
+        }
         if (callSession?.current_round > currentRound) {
           const { data: nextRoundData } = await supabase
             .from('call_rounds')
@@ -179,6 +188,7 @@ function CallPlayContent() {
             setNoraComment(null)
             setExplanation('')
             setExplanationSubmitted(false)
+            setPartnerExplanation(null)
             setIsHotSeat(userId === hotSeatUserId)
             setPhase('answering')
           }, 1200)
@@ -264,7 +274,6 @@ function CallPlayContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ roundId: round.id, explanation }),
       })
-      setPhase('next')
     } catch {}
   }
 
@@ -491,6 +500,13 @@ function CallPlayContent() {
                       <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#7C3AED', textTransform: 'uppercase', margin: 0, fontWeight: 700 }}>Nora</p>
                     </div>
                     <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#1E1B4B', fontStyle: 'italic', margin: 0 }}>{noraComment}</p>
+                  </div>
+                )}
+
+                {!isHotSeat && partnerExplanation && (
+                  <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '16px', padding: '14px 18px', marginBottom: '16px' }}>
+                    <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#4338CA', textTransform: 'uppercase', margin: '0 0 6px', fontWeight: 700 }}>{partnerName} says</p>
+                    <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#1A1A1A', fontStyle: 'italic', margin: 0 }}>"{partnerExplanation}"</p>
                   </div>
                 )}
 
