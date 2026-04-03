@@ -578,7 +578,9 @@ function ChallengePlayContent() {
               </div>
             )}
 
-            {isScribe && !submitted && (
+            {challengeType === 'story' && null}
+
+            {challengeType !== 'story' && isScribe && !submitted && (
               <>
                 {challengeType === 'rank' ? (
                   <div style={{ marginBottom: '24px' }}>
@@ -618,7 +620,7 @@ function ChallengePlayContent() {
               </>
             )}
 
-            {isScribe && submitted && (
+            {challengeType !== 'story' && isScribe && submitted && (
               <div style={{ textAlign: 'center', padding: '24px 0', color: '#9CA3AF', fontSize: '14px' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
@@ -627,7 +629,7 @@ function ChallengePlayContent() {
               </div>
             )}
 
-            {!isScribe && (
+            {challengeType !== 'story' && !isScribe && (
               <div style={{ marginTop: '8px' }}>
                 {challengeType === 'rank' && rankItems.length > 0 && (
                   <div style={{ marginBottom: '16px' }}>
