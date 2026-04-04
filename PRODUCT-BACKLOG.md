@@ -151,6 +151,42 @@ The Us page was deprioritized during Home and Today builds. Needs a full design 
 
 ## NEXT SPRINT (ready to build)
 
+---
+
+## TENSION INTELLIGENCE ARC — Nora as Relationship Safety Net
+*Designed: 2026-04-03*
+
+### The Problem
+ABF surfaces real relationship topics. Real topics sometimes create real tension. The product currently has no way to notice, hold, or help when that happens. A couple that hits a hard question and goes quiet is invisible to the app. That gap is both a product failure and a missed opportunity.
+
+### The Philosophy
+ABF is not here to make every night easy. It is here to make relationships stronger. Sometimes those are different things. The product needs to say this clearly, repeatedly, and without fear — and then back it up with intelligence that earns the couple's trust.
+
+Nora is not a therapist. She is not a referee. She notices, names, and offers. She never diagnoses, never demands, never overreacts. Trust is built through consistency, transparency, and restraint.
+
+### Sprint 1 — Foundation (ready to design)
+- Tier 3 pre-game framing: one Nora line on Hot Take tier selection screen before game starts. Mutual opt-in tap from both users before tier 3 questions fire. Sets the contract without killing the fun.
+- Signal logging: log skip, abandon, and stall events tagged to question ID, tier, and couple ID. Abandon = session ended mid-game. Skip = neither user answered. Stall = 3x average response time with no answer. None of these are proof of tension — all are signals.
+- Post-session soft CTA: when a tier 3 signal is detected, Hot Take summary screen shows a quiet Nora line below the score — not a button, not an alarm. "One of those questions seemed to land differently. Nora's here if you want to talk it through." Tap opens ai-coach pre-loaded with question and both answers as context.
+
+### Sprint 2 — Intelligence (requires convincing)
+- Post-session Nora bridge: when couple returns to app after an abandoned session, Nora appears once — not immediately, not aggressively. "I noticed you both dropped off after the question about X. Is that something you'd want to talk through?" Two responses: Yes or Not right now. Both respected.
+- Signal pattern detection: if same topic triggers a signal across multiple sessions, Nora connects the dots. "This has come up before. You two have a pattern here worth understanding."
+- Nora memory update from tension signals: Nora files what she noticed — not what happened. She never assumes. She holds the signal until the couple opens the door.
+
+Note: Matt is skeptical this can be built at the required level of elegance. It needs to be this good or not at all. A clumsy version is worse than nothing — it breaks trust instead of building it.
+
+### Sprint 3 — Depth (connection math)
+- Nora-guided post-tension conversation: structured but not scripted. Nora holds the context, opens the conversation, follows the couple's lead.
+- Repair prompt library: specific to conflict type, attachment pairing, and what was surfaced. Draws from Gottman repair attempt research.
+- Relationship timeline of hard conversations: couple can see what they've worked through together. Reframes tension as progress.
+
+### Why other apps don't do this
+Fear and capability. Fear of liability, negative reviews, being blamed for a fight. Lack of memory — a generic app can't tell the difference between playful disagreement and a real fault line. ABF has the memory. ABF has Nora. ABF can go where others won't — and that is the moat.
+
+### The onboarding contract (needs to be written)
+Not a disclaimer. A philosophy. Woven into onboarding, tier selection, and Nora's first message after assessment completion. The couple needs to know from day one that ABF is built for both easy and hard — and that Nora will always ask before she goes anywhere with what she notices.
+
 ### Game Room Code Quality Audit
 *Added: 2026-04-01*
 Four-part audit of all Game Room code (Rabbit Hole, Hot Take, The Challenge). Do this before building The Remake or The Hunt.
