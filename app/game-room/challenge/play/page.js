@@ -77,6 +77,94 @@ function RankInput({ items, onChange }) {
   )
 }
 
+function RankInputPartial({ items, lockedPositions, onChange }) {
+  const buildInitialRanked = () => {
+    const result = []
+    const freeItems = items.filter((_, i) => !lockedPositions[i + 1])
+    let freeIndex = 0
+    for (let i = 0; i < items.length; i++) {
+      if (lockedPositions[i + 1]) {
+        result.push({ item: lockedPositions[i + 1], locked: true, position: i + 1 })
+      } else {
+        result.push({ item: freeItems[freeIndex] || items[i], locked: false, position: i + 1 })
+        freeIndex++
+      }
+    }
+    return result
+  }
+
+  const [ranked, setRanked] = useState(buildInitialRanked)
+
+  useEffect(() => {
+    onChange(ranked.map(r => r.item))
+  }, [ranked])
+
+  function moveUp(index) {
+    if (index === 0) return
+    const reordered = [...ranked]
+    let swapIndex = index - 1
+    while (swapIndex >= 0 && reordered[swapIndex].locked) swapIndex--
+    if (swapIndex < 0) return
+    const temp = reordered[index]
+    reordered[index] = { ...reordered[swapIndex], position: index + 1 }
+    reordered[swapIndex] = { ...temp, position: swapIndex + 1 }
+    setRanked(reordered)
+  }
+
+  function moveDown(index) {
+    if (index === ranked.length - 1) return
+    const reordered = [...ranked]
+    let swapIndex = index + 1
+    while (swapIndex < reordered.length && reordered[swapIndex].locked) swapIndex++
+    if (swapIndex >= reordered.length) return
+    const temp = reordered[index]
+    reordered[index] = { ...reordered[swapIndex], position: index + 1 }
+    reordered[swapIndex] = { ...temp, position: swapIndex + 1 }
+    setRanked(reordered)
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      {ranked.map((entry, index) => (
+        <div
+          key={entry.item}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            background: entry.locked ? '#ECFDF5' : '#FFFFFF',
+            border: `1.5px solid ${entry.locked ? '#6EE7B7' : '#E8DDD0'}`,
+            borderRadius: '12px',
+            padding: '12px 16px',
+            opacity: entry.locked ? 0.85 : 1,
+          }}
+        >
+          <span style={{
+            width: '24px', height: '24px', borderRadius: '50%',
+            background: entry.locked ? '#059669' : '#1E1B4B',
+            color: '#FFFFFF',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '12px', fontWeight: '600', flexShrink: 0,
+          }}>
+            {index + 1}
+          </span>
+          <span style={{ flex: 1, fontSize: '15px', color: '#1C1510' }}>{entry.item}</span>
+          {entry.locked ? (
+            <span style={{ fontSize: '12px', color: '#059669', fontWeight: 600 }}>✓ locked</span>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <button onClick={() => moveUp(index)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6, fontSize: '12px', padding: '2px 4px', lineHeight: 1 }}>▲</button>
+              <button onClick={() => moveDown(index)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', opacity: 0.6, fontSize: '12px', padding: '2px 4px', lineHeight: 1 }}>▼</button>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function ChallengePlayContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -704,38 +792,38 @@ function ChallengePlayContent() {
                       </div>
                     )}
 
-                    <button
-                      onClick={() => setRankPhase('ranking_r2')}
-                      style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', marginTop: '8px' }}>
-                      Make your case and resubmit →
-                    </button>
-                  </div>
-                )}
-
-                {/* Round 2 — resubmit */}
-                {rankPhase === 'ranking_r2' && (
-                  <div>
-                    <p style={{ fontSize: '13px', color: '#9CA3AF', marginBottom: '16px', textAlign: 'center' }}>
-                      Final ranking — hold firm or change your mind.
-                    </p>
-                    <RankInput
-                      items={rankItems}
-                      onChange={(ordered) => setMyRanking(ordered.split('\n').map(s => s.replace(/^\d+\.\s/, '')))}
-                    />
-                    <button
-                      onClick={() => handleRankSubmit(myRanking.length > 0 ? myRanking : rankItems, 2)}
-                      disabled={rankSubmitting}
-                      style={{ width: '100%', marginTop: '16px', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: rankSubmitting ? 'not-allowed' : 'pointer', opacity: rankSubmitting ? 0.7 : 1 }}>
-                      {rankSubmitting ? 'Locking in...' : 'Final answer →'}
-                    </button>
-                    {rankSubmitting && (
-                      <div style={{ textAlign: 'center', padding: '12px 0', color: '#9CA3AF', fontSize: '13px' }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
-                          Waiting for {partnerName}...
+                    <div style={{ marginTop: '20px' }}>
+                      <p style={{ fontSize: '13px', color: '#9CA3AF', marginBottom: '12px', textAlign: 'center' }}>
+                        Debate it — then lock in your final ranking below
+                      </p>
+                      <RankInputPartial
+                        items={rankItems}
+                        lockedPositions={(() => {
+                          const myR1 = isUser1 ? rankR1User1 : rankR1User2
+                          const theirR1 = isUser1 ? rankR1User2 : rankR1User1
+                          const locked = {}
+                          myR1?.forEach((item, i) => {
+                            if (theirR1?.[i] === item) locked[i + 1] = item
+                          })
+                          return locked
+                        })()}
+                        onChange={(orderedArray) => setMyRanking(orderedArray)}
+                      />
+                      <button
+                        onClick={() => handleRankSubmit(myRanking.length > 0 ? myRanking : rankItems, 2)}
+                        disabled={rankSubmitting}
+                        style={{ width: '100%', marginTop: '16px', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: rankSubmitting ? 'not-allowed' : 'pointer', opacity: rankSubmitting ? 0.7 : 1 }}>
+                        {rankSubmitting ? 'Locking in...' : 'Final answer →'}
+                      </button>
+                      {rankSubmitting && (
+                        <div style={{ textAlign: 'center', padding: '12px 0', color: '#9CA3AF', fontSize: '13px' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                            Waiting for {partnerName}...
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 )}
 
