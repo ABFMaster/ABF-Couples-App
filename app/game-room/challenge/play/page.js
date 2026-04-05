@@ -106,6 +106,18 @@ function ChallengePlayContent() {
   const [storySubmitting, setStorySubmitting] = useState(false)
   const [userName, setUserName] = useState('')
   const [newLobbySession, setNewLobbySession] = useState(null)
+  const [rankR1User1, setRankR1User1] = useState(null)
+  const [rankR1User2, setRankR1User2] = useState(null)
+  const [rankR2Submitted, setRankR2Submitted] = useState(false)
+  const [rankAgreements, setRankAgreements] = useState([])
+  const [rankDisagreements, setRankDisagreements] = useState([])
+  const [rankNoAgreements, setRankNoAgreements] = useState([])
+  const [rankFinal, setRankFinal] = useState([])
+  const [rankNudge, setRankNudge] = useState(null)
+  const [rankPhase, setRankPhase] = useState('ranking_r1')
+  const [myRanking, setMyRanking] = useState([])
+  const [rankSubmitting, setRankSubmitting] = useState(false)
+  const [isUser1, setIsUser1] = useState(false)
   const pollRef = useRef(null)
   const completePollRef = useRef(null)
 
@@ -122,6 +134,7 @@ function ChallengePlayContent() {
         .maybeSingle()
       if (!couple) { router.push('/connect'); return }
       setCoupleId(couple.id)
+      setIsUser1(couple.user1_id === user.id)
 
       const partnerId = couple.user1_id === user.id ? couple.user2_id : couple.user1_id
       const { data: partnerProfile } = await supabase
@@ -167,6 +180,44 @@ function ChallengePlayContent() {
         return
       }
 
+      if (challengeType === 'rank' && round) {
+        const { data: rankRound } = await supabase
+          .from('challenge_rounds')
+          .select('rank_user1_r1, rank_user2_r1, rank_user1_r2, rank_user2_r2, rank_nora_interjection, rank_final, no_agreements, rank_round, nora_verdict')
+          .eq('id', round.id)
+          .maybeSingle()
+        if (!rankRound) return
+
+        // Round 1 both submitted — show partial reveal
+        if (rankRound.rank_user1_r1 && rankRound.rank_user2_r1 && rankPhase === 'ranking_r1') {
+          setRankR1User1(rankRound.rank_user1_r1)
+          setRankR1User2(rankRound.rank_user2_r1)
+          if (rankRound.rank_nora_interjection) setRankNudge(rankRound.rank_nora_interjection)
+          if (rankRound.rank_round === 3) {
+            setRankPhase('reveal_final')
+          } else {
+            setRankPhase('reveal_r1')
+          }
+        }
+
+        // Round 2 both submitted — show final reveal
+        if (rankRound.rank_user1_r2 && rankRound.rank_user2_r2 && rankPhase === 'ranking_r2') {
+          if (rankRound.rank_final && rankRound.no_agreements) {
+            setRankFinal(rankRound.rank_final)
+            setRankNoAgreements(rankRound.no_agreements)
+            setRankPhase('reveal_final')
+          }
+        }
+
+        // Nora verdict ready
+        if (rankRound.nora_verdict && phase !== 'verdict') {
+          setNoraVerdict(rankRound.nora_verdict)
+          setPhase('verdict')
+        }
+
+        return
+      }
+
       if (challengeType === 'story' && round) {
         const { data: storyRound } = await supabase
           .from('challenge_rounds')
@@ -203,8 +254,13 @@ function ChallengePlayContent() {
         if (challengeType === 'rank') {
           try {
             const parsed = JSON.parse(roundRow.prompt)
-            setRankItems(parsed.items || [])
-          } catch { setRankItems([]) }
+            const items = parsed.items || []
+            setRankItems(items)
+            setMyRanking(items)
+          } catch {
+            setRankItems([])
+            setMyRanking([])
+          }
         }
         setPhase('challenge')
         return
@@ -289,8 +345,13 @@ function ChallengePlayContent() {
       if (challengeType === 'rank') {
         try {
           const parsed = JSON.parse(r.prompt)
-          setRankItems(parsed.items || [])
-        } catch { setRankItems([]) }
+          const items = parsed.items || []
+          setRankItems(items)
+          setMyRanking(items)
+        } catch {
+          setRankItems([])
+          setMyRanking([])
+        }
       }
 
       setPhase('challenge')
@@ -402,6 +463,64 @@ function ChallengePlayContent() {
     } catch {} finally {
       setStorySubmitting(false)
     }
+  }
+
+  async function handleRankSubmit(rankingArray, rankRound) {
+    if (rankSubmitting) return
+    setRankSubmitting(true)
+    try {
+      const res = await fetch('/api/game-room/challenge/rank/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roundId: round.id,
+          userId,
+          coupleId,
+          ranking: rankingArray,
+          rankRound,
+        }),
+      })
+      const data = await res.json()
+      if (rankRound === 1) {
+        if (data.perfectMatch) {
+          setRankFinal(data.rankFinal || [])
+          setRankNoAgreements([])
+          setRankPhase('reveal_final')
+        } else if (data.r1Complete) {
+          setRankR1User1(data.round?.rank_user1_r1)
+          setRankR1User2(data.round?.rank_user2_r1)
+          if (data.round?.rank_nora_interjection) setRankNudge(data.round.rank_nora_interjection)
+          setRankPhase('reveal_r1')
+        }
+      }
+      if (rankRound === 2 && data.r2Complete) {
+        setRankFinal(data.rankFinal || [])
+        setRankNoAgreements(data.noAgreements || [])
+        setRankPhase('reveal_final')
+      }
+    } catch {} finally {
+      setRankSubmitting(false)
+    }
+  }
+
+  async function handleRankFinalize() {
+    try {
+      const res = await fetch('/api/game-room/challenge/rank/finalize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roundId: round.id,
+          coupleId,
+          challengeSessionId,
+          prompt: round.prompt,
+        }),
+      })
+      const data = await res.json()
+      if (data.noraVerdict) {
+        setNoraVerdict(data.noraVerdict)
+        setPhase('verdict')
+      }
+    } catch {}
   }
 
   function getRankPromptData() {
@@ -525,6 +644,135 @@ function ChallengePlayContent() {
 
         {phase === 'challenge' && (
           <>
+            {challengeType === 'rank' && (
+              <div style={{ marginBottom: '24px' }}>
+
+                {/* Round 1 — blind ranking */}
+                {rankPhase === 'ranking_r1' && (
+                  <div>
+                    <p style={{ fontSize: '13px', color: '#9CA3AF', marginBottom: '16px', textAlign: 'center' }}>
+                      Rank these independently — your partner won't see your order until you both submit.
+                    </p>
+                    <RankInput
+                      items={rankItems}
+                      onChange={(ordered) => setMyRanking(ordered.split('\n').map(s => s.replace(/^\d+\.\s/, '')))}
+                    />
+                    <button
+                      onClick={() => handleRankSubmit(myRanking.length > 0 ? myRanking : rankItems, 1)}
+                      disabled={rankSubmitting}
+                      style={{ width: '100%', marginTop: '16px', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: rankSubmitting ? 'not-allowed' : 'pointer', opacity: rankSubmitting ? 0.7 : 1 }}>
+                      {rankSubmitting ? 'Locking in...' : 'Lock in my ranking →'}
+                    </button>
+                    {rankSubmitting && (
+                      <div style={{ textAlign: 'center', padding: '12px 0', color: '#9CA3AF', fontSize: '13px' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                          Waiting for {partnerName}...
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Round 1 reveal — partial, disagreements hidden */}
+                {rankPhase === 'reveal_r1' && rankR1User1 && rankR1User2 && (
+                  <div>
+                    <p style={{ fontSize: '13px', color: '#9CA3AF', marginBottom: '16px', textAlign: 'center' }}>Round 1 results — debate and resubmit</p>
+                    {(() => {
+                      const myR1 = isUser1 ? rankR1User1 : rankR1User2
+                      const theirR1 = isUser1 ? rankR1User2 : rankR1User1
+                      return myR1.map((item, i) => {
+                        const agreed = theirR1[i] === item
+                        return (
+                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: agreed ? '#ECFDF5' : '#FEF2F2', border: `1.5px solid ${agreed ? '#6EE7B7' : '#FECACA'}`, borderRadius: '12px', padding: '12px 16px', marginBottom: '8px' }}>
+                            <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: agreed ? '#059669' : '#DC2626', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 600, flexShrink: 0 }}>{i + 1}</span>
+                            <span style={{ flex: 1, fontSize: '15px', color: '#1A1A1A', fontFamily: "'Fraunces', Georgia, serif" }}>{agreed ? item : item}</span>
+                            <span style={{ fontSize: '18px' }}>{agreed ? '✓' : '?'}</span>
+                            {!agreed && <span style={{ fontSize: '11px', color: '#DC2626', fontStyle: 'italic' }}>{partnerName} disagrees</span>}
+                          </div>
+                        )
+                      })
+                    })()}
+
+                    {rankNudge && (
+                      <div style={{ background: '#F5F3FF', border: '0.5px solid #C4B5FD', borderRadius: '12px', padding: '12px 16px', margin: '16px 0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#7C3AED' }} />
+                          <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#7C3AED', textTransform: 'uppercase', margin: 0, fontWeight: 700 }}>Nora</p>
+                        </div>
+                        <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#1E1B4B', fontStyle: 'italic', margin: 0 }}>{rankNudge}</p>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => setRankPhase('ranking_r2')}
+                      style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', marginTop: '8px' }}>
+                      Make your case and resubmit →
+                    </button>
+                  </div>
+                )}
+
+                {/* Round 2 — resubmit */}
+                {rankPhase === 'ranking_r2' && (
+                  <div>
+                    <p style={{ fontSize: '13px', color: '#9CA3AF', marginBottom: '16px', textAlign: 'center' }}>
+                      Final ranking — hold firm or change your mind.
+                    </p>
+                    <RankInput
+                      items={rankItems}
+                      onChange={(ordered) => setMyRanking(ordered.split('\n').map(s => s.replace(/^\d+\.\s/, '')))}
+                    />
+                    <button
+                      onClick={() => handleRankSubmit(myRanking.length > 0 ? myRanking : rankItems, 2)}
+                      disabled={rankSubmitting}
+                      style={{ width: '100%', marginTop: '16px', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: rankSubmitting ? 'not-allowed' : 'pointer', opacity: rankSubmitting ? 0.7 : 1 }}>
+                      {rankSubmitting ? 'Locking in...' : 'Final answer →'}
+                    </button>
+                    {rankSubmitting && (
+                      <div style={{ textAlign: 'center', padding: '12px 0', color: '#9CA3AF', fontSize: '13px' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                          Waiting for {partnerName}...
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Final reveal */}
+                {rankPhase === 'reveal_final' && (
+                  <div>
+                    <p style={{ fontSize: '13px', color: '#9CA3AF', marginBottom: '16px', textAlign: 'center' }}>Final results</p>
+                    {rankFinal.map((r, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#ECFDF5', border: '1.5px solid #6EE7B7', borderRadius: '12px', padding: '12px 16px', marginBottom: '8px' }}>
+                        <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#059669', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 600, flexShrink: 0 }}>{r.position}</span>
+                        <span style={{ flex: 1, fontSize: '15px', color: '#1A1A1A', fontFamily: "'Fraunces', Georgia, serif" }}>{r.item}</span>
+                        <span style={{ fontSize: '14px' }}>✓</span>
+                      </div>
+                    ))}
+                    {rankNoAgreements.map((r, i) => (
+                      <div key={i} style={{ background: '#FEF2F2', border: '1.5px solid #FECACA', borderRadius: '12px', padding: '12px 16px', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
+                          <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#DC2626', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 600, flexShrink: 0 }}>{r.position}</span>
+                          <span style={{ fontSize: '11px', color: '#DC2626', fontWeight: 600 }}>No agreement</span>
+                        </div>
+                        <div style={{ paddingLeft: '36px' }}>
+                          <p style={{ fontSize: '13px', color: '#9CA3AF', margin: '0 0 2px' }}>You: <span style={{ color: '#1A1A1A' }}>{isUser1 ? r.user1Item : r.user2Item}</span></p>
+                          <p style={{ fontSize: '13px', color: '#9CA3AF', margin: 0 }}>{partnerName}: <span style={{ color: '#1A1A1A' }}>{isUser1 ? r.user2Item : r.user1Item}</span></p>
+                        </div>
+                      </div>
+                    ))}
+                    <button
+                      onClick={handleRankFinalize}
+                      style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', marginTop: '8px' }}>
+                      Get Nora's verdict ✦
+                    </button>
+                  </div>
+                )}
+
+              </div>
+            )}
+
             {challengeType === 'story' && (
               <div style={{ marginBottom: '24px' }}>
                 {sentences.length > 0 && (
@@ -580,7 +828,7 @@ function ChallengePlayContent() {
 
             {challengeType === 'story' && null}
 
-            {challengeType !== 'story' && isScribe && !submitted && (
+            {challengeType !== 'story' && challengeType !== 'rank' && isScribe && !submitted && (
               <>
                 {challengeType === 'rank' ? (
                   <div style={{ marginBottom: '24px' }}>
@@ -620,7 +868,7 @@ function ChallengePlayContent() {
               </>
             )}
 
-            {challengeType !== 'story' && isScribe && submitted && (
+            {challengeType !== 'story' && challengeType !== 'rank' && isScribe && submitted && (
               <div style={{ textAlign: 'center', padding: '24px 0', color: '#9CA3AF', fontSize: '14px' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
@@ -629,7 +877,7 @@ function ChallengePlayContent() {
               </div>
             )}
 
-            {challengeType !== 'story' && !isScribe && (
+            {challengeType !== 'story' && challengeType !== 'rank' && !isScribe && (
               <div style={{ marginTop: '8px' }}>
                 {challengeType === 'rank' && rankItems.length > 0 && (
                   <div style={{ marginBottom: '16px' }}>
