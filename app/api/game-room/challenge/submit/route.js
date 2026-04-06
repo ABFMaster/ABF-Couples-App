@@ -11,7 +11,7 @@ export async function POST(request) {
   try {
     const { userId, coupleId, challengeSessionId, roundId, challengeType, prompt, coupleResponse } = await request.json()
 
-    if (!userId || !coupleId || !challengeSessionId || !roundId || !challengeType || !prompt) {
+    if (!userId || !coupleId || !challengeSessionId || !roundId || !challengeType || !prompt || !coupleResponse) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -88,19 +88,26 @@ Give a verdict that:
 Do not summarise the story. Do not be reverent about it. React to it like you were in the room watching them write it.`
 
     } else if (challengeType === 'pitch') {
-      verdictPrompt = `You are Nora, an AI relationship coach playing the role of a discerning investor. ${names} just pitched you something.
+      const { data: pitchRound } = await supabase
+        .from('challenge_rounds')
+        .select('nora_challenge, couple_response')
+        .eq('id', roundId)
+        .maybeSingle()
+
+      verdictPrompt = `You are Nora — a hostile, sharp, witty investor. ${names} pitched you something, you challenged them, and they defended it.
 
 The pitch challenge: "${prompt}"
-Their pitch: "${coupleResponse}"
+Their original pitch: "${pitchRound?.couple_response || coupleResponse}"
+Your challenge question: "${pitchRound?.nora_challenge || 'N/A'}"
+Their defense: "${coupleResponse}"
 Couple memory: ${noraMemory?.memory_summary || 'none yet'}
 
-Give a verdict that:
-- Rules on whether you'd invest (yes, no, or conditionally)
-- Gives one sharp, specific reason for your decision
-- Finds something in the pitch that reveals their dynamic as a couple
-- Is confident, witty, and 2-4 sentences max
-
-Be opinionated. Nora is not a pushover investor.`
+Give a final verdict:
+- Rule on whether you invest — yes, no, or conditionally. Be decisive.
+- Reference something specific from their defense — did they convince you or not?
+- Find what the pitch AND the defense together reveal about their dynamic as a couple
+- End with one sharp line that makes them feel the weight of the decision
+- 2-4 sentences max. Be opinionated. Nora is not a pushover.`
 
     } else if (challengeType === 'memory') {
       verdictPrompt = `You are Nora, an AI relationship coach. ${names} just completed a memory challenge.

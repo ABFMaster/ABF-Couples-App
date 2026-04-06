@@ -207,6 +207,10 @@ function ChallengePlayContent() {
   const [myRanking, setMyRanking] = useState([])
   const [rankSubmitting, setRankSubmitting] = useState(false)
   const [isUser1, setIsUser1] = useState(false)
+  const [pitchPhase, setPitchPhase] = useState('pitching')
+  const [noraChallenge, setNoraChallenge] = useState(null)
+  const [pitchDefense, setPitchDefense] = useState('')
+  const [pitchSubmitting, setPitchSubmitting] = useState(false)
   const pollRef = useRef(null)
   const completePollRef = useRef(null)
 
@@ -304,6 +308,23 @@ function ChallengePlayContent() {
           setPhase('verdict')
         }
 
+        return
+      }
+
+      if (challengeType === 'pitch' && round) {
+        const { data: pitchRound } = await supabase
+          .from('challenge_rounds')
+          .select('nora_challenge, nora_verdict')
+          .eq('id', round.id)
+          .maybeSingle()
+        if (pitchRound?.nora_challenge && !noraChallenge) {
+          setNoraChallenge(pitchRound.nora_challenge)
+          setPitchPhase('defending')
+        }
+        if (pitchRound?.nora_verdict && phase !== 'verdict') {
+          setNoraVerdict(pitchRound.nora_verdict)
+          setPhase('verdict')
+        }
         return
       }
 
@@ -413,6 +434,10 @@ function ChallengePlayContent() {
     setNoraVerdict(null)
     setError(null)
     setSubmitted(false)
+    setPitchPhase('pitching')
+    setNoraChallenge(null)
+    setPitchDefense('')
+    setPitchSubmitting(false)
     setRankPhase('ranking_r1')
     setRankR1User1(null)
     setRankR1User2(null)
@@ -620,6 +645,56 @@ function ChallengePlayContent() {
         setPhase('verdict')
       }
     } catch {}
+  }
+
+  async function handlePitchSubmit() {
+    if (!response.trim() || pitchSubmitting || submitted) return
+    setPitchSubmitting(true)
+    setSubmitted(true)
+    try {
+      const res = await fetch('/api/game-room/challenge/pitch/challenge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roundId: round.id,
+          coupleId,
+          pitch: response,
+          prompt: round.prompt,
+        }),
+      })
+      const data = await res.json()
+      if (data.noraChallenge) {
+        setNoraChallenge(data.noraChallenge)
+        setPitchPhase('defending')
+      }
+    } catch {
+      setSubmitted(false)
+    } finally {
+      setPitchSubmitting(false)
+    }
+  }
+
+  async function handlePitchDefenseSubmit() {
+    if (!pitchDefense.trim() || pitchSubmitting) return
+    setPitchSubmitting(true)
+    try {
+      const res = await fetch('/api/game-room/challenge/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId, coupleId, challengeSessionId,
+          roundId: round.id, challengeType,
+          prompt: round.prompt, coupleResponse: pitchDefense,
+        }),
+      })
+      const data = await res.json()
+      if (data.noraVerdict) {
+        setNoraVerdict(data.noraVerdict)
+        setPhase('verdict')
+      }
+    } catch {} finally {
+      setPitchSubmitting(false)
+    }
   }
 
   function getRankPromptData() {
@@ -862,6 +937,89 @@ function ChallengePlayContent() {
               </div>
             )}
 
+            {challengeType === 'pitch' && (
+              <div style={{ marginBottom: '24px' }}>
+
+                {/* Phase 1 — initial pitch */}
+                {pitchPhase === 'pitching' && isScribe && !submitted && (
+                  <div>
+                    <textarea
+                      value={response}
+                      onChange={e => setResponse(e.target.value)}
+                      placeholder="Make your pitch..."
+                      style={{ width: '100%', minHeight: '160px', padding: '16px', fontSize: '16px', lineHeight: '1.6', color: '#1C1510', background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '16px', resize: 'vertical', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: '16px' }}
+                    />
+                    <button
+                      onClick={handlePitchSubmit}
+                      disabled={!response.trim() || pitchSubmitting}
+                      style={{ width: '100%', padding: '16px', background: response.trim() ? 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)' : '#E8DDD0', color: response.trim() ? '#FFFFFF' : '#B8A898', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: response.trim() ? 'pointer' : 'not-allowed' }}>
+                      {pitchSubmitting ? 'Pitching...' : 'Pitch it →'}
+                    </button>
+                    <p style={{ textAlign: 'center', fontSize: '13px', color: '#9CA3AF', marginTop: '12px', fontStyle: 'italic' }}>{partnerName} is watching — talk it through together</p>
+                  </div>
+                )}
+
+                {/* Watcher during pitch phase */}
+                {pitchPhase === 'pitching' && !isScribe && (
+                  <div style={{ background: '#F5F0EA', border: '0.5px solid #E8DDD0', borderRadius: '16px', padding: '20px', textAlign: 'center' }}>
+                    <p style={{ fontSize: '14px', fontWeight: 600, color: '#1A1A1A', margin: '0 0 4px' }}>{partnerName} is writing the pitch</p>
+                    <p style={{ fontSize: '13px', color: '#9CA3AF', fontStyle: 'italic', margin: 0 }}>Talk it through together — they'll type what you decide</p>
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#9CA3AF', fontSize: '13px' }}>
+                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                        Waiting for {partnerName} to submit...
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Nora's challenge — both users see it */}
+                {pitchPhase === 'defending' && noraChallenge && (
+                  <div>
+                    <div style={{ background: '#FEF2F2', border: '1.5px solid #FECACA', borderRadius: '16px', padding: '20px', marginBottom: '20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#DC2626' }} />
+                        <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#DC2626', textTransform: 'uppercase', margin: 0, fontWeight: 700 }}>Nora challenges you</p>
+                      </div>
+                      <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '17px', color: '#1A1A1A', lineHeight: 1.5, margin: 0, fontStyle: 'italic' }}>{noraChallenge}</p>
+                    </div>
+
+                    {isScribe && (
+                      <div>
+                        <textarea
+                          value={pitchDefense}
+                          onChange={e => setPitchDefense(e.target.value)}
+                          placeholder="Defend your pitch..."
+                          style={{ width: '100%', minHeight: '120px', padding: '16px', fontSize: '16px', lineHeight: '1.6', color: '#1C1510', background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '16px', resize: 'vertical', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: '16px' }}
+                        />
+                        <button
+                          onClick={handlePitchDefenseSubmit}
+                          disabled={!pitchDefense.trim() || pitchSubmitting}
+                          style={{ width: '100%', padding: '16px', background: pitchDefense.trim() ? 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)' : '#E8DDD0', color: pitchDefense.trim() ? '#FFFFFF' : '#B8A898', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: pitchDefense.trim() ? 'pointer' : 'not-allowed' }}>
+                          {pitchSubmitting ? 'Submitting...' : 'Make your case →'}
+                        </button>
+                        <p style={{ textAlign: 'center', fontSize: '13px', color: '#9CA3AF', marginTop: '12px', fontStyle: 'italic' }}>Talk it through — then defend it together</p>
+                      </div>
+                    )}
+
+                    {!isScribe && (
+                      <div style={{ background: '#F5F0EA', border: '0.5px solid #E8DDD0', borderRadius: '16px', padding: '20px', textAlign: 'center' }}>
+                        <p style={{ fontSize: '14px', fontWeight: 600, color: '#1A1A1A', margin: '0 0 4px' }}>{partnerName} is writing your defense</p>
+                        <p style={{ fontSize: '13px', color: '#9CA3AF', fontStyle: 'italic', margin: 0 }}>Argue your case out loud — they'll type it</p>
+                        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#9CA3AF', fontSize: '13px' }}>
+                            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                            Waiting for Nora's verdict...
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+              </div>
+            )}
+
             {challengeType === 'story' && (
               <div style={{ marginBottom: '24px' }}>
                 {sentences.length > 0 && (
@@ -917,7 +1075,7 @@ function ChallengePlayContent() {
 
             {challengeType === 'story' && null}
 
-            {challengeType !== 'story' && challengeType !== 'rank' && isScribe && !submitted && (
+            {challengeType !== 'story' && challengeType !== 'rank' && challengeType !== 'pitch' && isScribe && !submitted && (
               <>
                 {challengeType === 'rank' ? (
                   <div style={{ marginBottom: '24px' }}>
@@ -957,7 +1115,7 @@ function ChallengePlayContent() {
               </>
             )}
 
-            {challengeType !== 'story' && challengeType !== 'rank' && isScribe && submitted && (
+            {challengeType !== 'story' && challengeType !== 'rank' && challengeType !== 'pitch' && isScribe && submitted && (
               <div style={{ textAlign: 'center', padding: '24px 0', color: '#9CA3AF', fontSize: '14px' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
@@ -966,7 +1124,7 @@ function ChallengePlayContent() {
               </div>
             )}
 
-            {challengeType !== 'story' && challengeType !== 'rank' && !isScribe && (
+            {challengeType !== 'story' && challengeType !== 'rank' && challengeType !== 'pitch' && !isScribe && (
               <div style={{ marginTop: '8px' }}>
                 {challengeType === 'rank' && rankItems.length > 0 && (
                   <div style={{ marginBottom: '16px' }}>
