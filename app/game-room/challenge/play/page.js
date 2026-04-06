@@ -648,11 +648,10 @@ function ChallengePlayContent() {
   }
 
   async function handlePitchSubmit() {
-    if (!response.trim() || pitchSubmitting || submitted) return
+    if (!response.trim() || pitchSubmitting) return
     setPitchSubmitting(true)
-    setSubmitted(true)
     try {
-      const res = await fetch('/api/game-room/challenge/pitch/challenge', {
+      await fetch('/api/game-room/challenge/pitch/challenge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -662,14 +661,7 @@ function ChallengePlayContent() {
           prompt: round.prompt,
         }),
       })
-      const data = await res.json()
-      if (data.noraChallenge) {
-        setNoraChallenge(data.noraChallenge)
-        setPitchPhase('defending')
-      }
-    } catch {
-      setSubmitted(false)
-    } finally {
+    } catch {} finally {
       setPitchSubmitting(false)
     }
   }
