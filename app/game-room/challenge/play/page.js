@@ -651,20 +651,16 @@ function ChallengePlayContent() {
     if (!response.trim() || pitchSubmitting) return
     setPitchSubmitting(true)
     try {
-      const payload = {
-        roundId: round.id,
-        coupleId,
-        pitch: response,
-        prompt: round.prompt,
-      }
-      console.log('[Pitch] submitting:', payload)
-      const res = await fetch('/api/game-room/challenge/pitch/challenge', {
+      await fetch('/api/game-room/challenge/pitch/challenge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          roundId: round.id,
+          coupleId,
+          pitch: response,
+          prompt: round.prompt,
+        }),
       })
-      const data = await res.json()
-      console.log('[Pitch] response:', data)
     } catch {} finally {
       setPitchSubmitting(false)
     }
@@ -1203,6 +1199,19 @@ function ChallengePlayContent() {
                       </div>
                     ))}
                   </div>
+                )}
+              </div>
+            ) : challengeType === 'pitch' ? (
+              <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '16px', padding: '16px 20px', marginBottom: '16px' }}>
+                <p style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#9CA3AF', textTransform: 'uppercase', margin: '0 0 8px' }}>Your pitch</p>
+                <p style={{ fontSize: '15px', color: '#1C1510', lineHeight: 1.6, whiteSpace: 'pre-line', margin: '0 0 16px' }}>{response}</p>
+                {noraChallenge && (
+                  <>
+                    <p style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#DC2626', textTransform: 'uppercase', margin: '0 0 6px' }}>Nora challenged</p>
+                    <p style={{ fontSize: '14px', color: '#1C1510', fontStyle: 'italic', lineHeight: 1.5, margin: '0 0 16px' }}>{noraChallenge}</p>
+                    <p style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#9CA3AF', textTransform: 'uppercase', margin: '0 0 6px' }}>Your defense</p>
+                    <p style={{ fontSize: '15px', color: '#1C1510', lineHeight: 1.6, whiteSpace: 'pre-line', margin: 0 }}>{pitchDefense}</p>
+                  </>
                 )}
               </div>
             ) : (
