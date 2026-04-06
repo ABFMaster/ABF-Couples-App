@@ -79,14 +79,15 @@ function RankInput({ items, onChange }) {
 
 function RankInputPartial({ items, lockedPositions, onChange }) {
   const buildInitialRanked = () => {
+    const lockedValues = new Set(Object.values(lockedPositions))
+    const freeItems = items.filter(item => !lockedValues.has(item))
     const result = []
-    const freeItems = items.filter((_, i) => !lockedPositions[i + 1])
     let freeIndex = 0
     for (let i = 0; i < items.length; i++) {
       if (lockedPositions[i + 1]) {
         result.push({ item: lockedPositions[i + 1], locked: true, position: i + 1 })
       } else {
-        result.push({ item: freeItems[freeIndex] || items[i], locked: false, position: i + 1 })
+        result.push({ item: freeItems[freeIndex], locked: false, position: i + 1 })
         freeIndex++
       }
     }
