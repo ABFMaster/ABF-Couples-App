@@ -933,7 +933,7 @@ function ChallengePlayContent() {
               <div style={{ marginBottom: '24px' }}>
 
                 {/* Phase 1 — initial pitch */}
-                {pitchPhase === 'pitching' && isScribe && !submitted && (
+                {pitchPhase === 'pitching' && isScribe && (
                   <div>
                     <textarea
                       value={response}
