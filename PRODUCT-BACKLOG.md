@@ -211,6 +211,25 @@ Design complete (see above). Highest leverage build in the entire product. Makes
 
 ---
 
+## VERDICT QUALITY PASS — Nora speaks to the individual, not just the couple
+*Added: 2026-04-05*
+
+Current verdict quality is observational — Nora names what happened between the couple but doesn't tell the individual what it means about them specifically. The person reading it wants to know: is this a pattern? Is this a strength or a weakness? What does this say about me, not just about us?
+
+The fix is three-layered:
+
+**Layer 1 — Individual address:** Every verdict should speak directly to each person's choice, not just describe the couple dynamic. "Matt, you put price third because..." not "Matt put price third." The reader should feel seen as an individual, not just as half of a couple.
+
+**Layer 2 — Pattern connection:** Where Nora's memory has context, she connects the verdict to a pattern she's observed before. "This is consistent with what I've seen from you..." — not a diagnosis, but a recognition. Makes the verdict feel earned and specific rather than generated.
+
+**Layer 3 — Something to sit with:** Not a question, not a summary — an observation that opens territory rather than closing it. The goal is that the couple puts their phones down and keeps talking. The verdict is the ignition, not the destination.
+
+**Scope:** All Challenge mode verdicts, Hot Take summary Nora insight, Rabbit Hole debrief convergence. Each prompt needs a targeted pass to build in these three layers.
+
+**Dependency:** Layer 2 requires Nora memory to be populated with sufficient couple history. Build Layer 1 and 3 first — they require prompt engineering only. Layer 2 follows naturally as memory accumulates.
+
+---
+
 ## TECHNICAL DEBT — DATA INTEGRITY
 
 ### user_profiles ID mismatch
