@@ -111,6 +111,20 @@ Respond in this exact JSON format with no other text:
 {
   "prompt": "base prompt returned exactly as written"
 }`
+    } else if (challengeType === 'pitch') {
+      userPrompt = `You are Nora personalising a pitch challenge prompt for ${profileSummary}.
+
+Base prompt: "${basePrompt.prompt}"
+Couple memory: ${noraMemory?.memory_summary || 'none yet'}
+
+The pitch is always directed at Nora as the investor — never at the partner. Keep that framing intact.
+
+CRITICAL: Return the base prompt VERBATIM unless you have a highly specific couple fact that makes it more personal. If you personalise, keep the investor framing — Nora is always the one being pitched. Max one sentence of addition.
+
+Respond in this exact JSON format with no other text:
+{
+  "prompt": "base prompt returned exactly as written or with one specific personal addition"
+}`
     } else {
       userPrompt = `Personalise this challenge prompt for ${profileSummary}.
 

@@ -379,7 +379,7 @@ function ChallengePlayContent() {
       if (roundRow?.nora_verdict && phase !== 'verdict' && phase !== 'complete') {
         setRound(roundRow)
         setNoraVerdict(roundRow.nora_verdict)
-        setResponse(roundRow.couple_response || '')
+        if (roundRow.couple_response) setResponse(roundRow.couple_response)
         setPhase('verdict')
         return
       }
