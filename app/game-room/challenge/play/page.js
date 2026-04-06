@@ -651,16 +651,20 @@ function ChallengePlayContent() {
     if (!response.trim() || pitchSubmitting) return
     setPitchSubmitting(true)
     try {
-      await fetch('/api/game-room/challenge/pitch/challenge', {
+      const payload = {
+        roundId: round.id,
+        coupleId,
+        pitch: response,
+        prompt: round.prompt,
+      }
+      console.log('[Pitch] submitting:', payload)
+      const res = await fetch('/api/game-room/challenge/pitch/challenge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          roundId: round.id,
-          coupleId,
-          pitch: response,
-          prompt: round.prompt,
-        }),
+        body: JSON.stringify(payload),
       })
+      const data = await res.json()
+      console.log('[Pitch] response:', data)
     } catch {} finally {
       setPitchSubmitting(false)
     }
