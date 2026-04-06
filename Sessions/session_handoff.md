@@ -37,6 +37,17 @@ One actor generates/writes → DB signal → other actor polls and reacts.
 - Complete to Definition of Done before starting anything new
 - Definition of Done: works end-to-end for both users, no console.logs, committed
 
+### 6. GAME MODE BUILD CHECKLIST
+Before writing any UI code for a new game mode or mechanic, verify each of these is designed and accounted for:
+
+- **Dual-caller prevention:** Who generates/finalizes? Host only. Partner polls DB signal. Never both users calling the same endpoint.
+- **Partner phase transitions:** Every phase change must be detectable via DB poll. Never rely on client state to advance partner. Identify the DB signal for every transition before coding.
+- **Loading transitions:** Every state change for every user gets a loading moment. No screen snaps. Add loading phase to the state machine before coding UI.
+- **Verdict screen content:** Verdict screen must branch by mode/type. Never render a generic `response` field. Design the verdict display for this specific mode before coding.
+- **State reset between rounds:** List every piece of state that must reset when a round advances. Write the reset explicitly. Never assume state clears automatically.
+
+If any of these five are not designed before coding begins — stop and design them first.
+
 ---
 
 ## 1. THE APP
