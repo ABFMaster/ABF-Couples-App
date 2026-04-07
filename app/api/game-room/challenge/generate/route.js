@@ -199,7 +199,7 @@ ${timelineContext}
 
 YOUR JOB:
 1. Write one specific question about ${answerHolderName} that ${guesserName} should be able to answer if they know their partner well — but might surprise them if they don't. The question must have a real, specific answer that ${answerHolderName} will recognise as true about themselves.
-2. Write what you believe ${answerHolderName}'s answer most likely is, based on the couple data above. ${answerHolderName} will confirm or correct this in the game — so make your best educated guess. If you have no data, write a plausible answer that fits the question territory.
+2. Only if you can find a SPECIFIC real data point in the couple's app history above that directly answers this question, write it as ${answerHolderName}'s answer. This means an actual Spark answer, Bet response, or Timeline event that contains a concrete answer to the question — not an inference, not a synthesis, not a guess. If no specific data point exists, return memory_answer as an empty string and answerType as "unknown". Do not fabricate or synthesize an answer.
 3. Write 3 progressive hints for ${guesserName}. Hint 1 is evocative but indirect. Hint 2 narrows the territory significantly. Hint 3 basically gives it away — that's fine, the learning matters more than the guessing.
 
 PHILOSOPHY: This is not a gotcha quiz. The goal is to surface what ${guesserName} knows about ${answerHolderName}'s inner world — and to teach them something new if they don't know it. A miss with good hints is still a win.
@@ -213,6 +213,7 @@ Respond in this exact JSON format with no other text:
   "hint_1": "evocative, indirect hint",
   "hint_2": "narrows territory significantly",
   "hint_3": "basically gives it away",
+  "answerType": "known or unknown",
   "guesser_user_id": "${guesserUserId}"
 }`
     } else {
@@ -264,7 +265,7 @@ Respond in this exact JSON format with no other text:
       current_turn_user_id: challengeType === 'story' ? userId : null,
       ...(challengeType === 'memory' && {
         memory_question: parsed.memory_question,
-        memory_answer: parsed.memory_answer,
+        memory_answer: parsed.memory_answer || '',
         hint_1: parsed.hint_1,
         hint_2: parsed.hint_2,
         hint_3: parsed.hint_3,

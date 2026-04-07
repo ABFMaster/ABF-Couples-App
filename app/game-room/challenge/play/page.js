@@ -8,7 +8,7 @@ const CHALLENGE_INSTRUCTIONS = {
   story: 'One of you take the lead — write together out loud.',
   pitch: 'One of you take the lead — make your case together.',
   rank: 'One of you drag to reorder. Discuss as you go.',
-  memory: 'One of you take the lead — answer together.',
+  memory: 'Only the answer-holder can see the answer. Guesser — no peeking.',
   plan: 'One of you take the lead — make it real together.',
 }
 
