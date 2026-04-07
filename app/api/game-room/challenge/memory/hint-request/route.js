@@ -16,7 +16,7 @@ export async function POST(request) {
     // Fetch current round state
     const { data: round, error: fetchError } = await supabase
       .from('challenge_rounds')
-      .select('hint_requests, hint_pending')
+      .select('hint_requests, hints_granted, hint_pending')
       .eq('session_id', sessionId)
       .eq('round_number', roundNumber)
       .single()
@@ -25,9 +25,10 @@ export async function POST(request) {
       return Response.json({ error: 'Round not found' }, { status: 404 })
     }
 
-    // Enforce 3 request cap
-    if (round.hint_requests >= 3) {
-      return Response.json({ error: 'Maximum hint requests reached' }, { status: 400 })
+    // Enforce cap on granted hints — denials do not count against the limit
+    const hintsGranted = round.hints_granted || []
+    if (hintsGranted.length >= 3) {
+      return Response.json({ error: 'Maximum hints already granted' }, { status: 400 })
     }
 
     // Enforce one pending request at a time
