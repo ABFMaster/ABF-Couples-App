@@ -64,21 +64,6 @@ export async function POST(request) {
       ? profiles.map(p => p.display_name).join(' and ')
       : 'this couple'
 
-    // For memory type, fetch relevant timeline/spark data
-    let memoryContext = ''
-    if (challengeType === 'memory') {
-      const { data: timelineEvents } = await supabase
-        .from('timeline_events')
-        .select('title, event_date, event_type')
-        .eq('couple_id', coupleId)
-        .order('event_date', { ascending: true })
-        .limit(20)
-
-      if (timelineEvents && timelineEvents.length > 0) {
-        memoryContext = `Their timeline events: ${timelineEvents.map(e => `${e.title} (${e.event_date})`).join(', ')}`
-      }
-    }
-
     const systemPrompt = `You are Nora, an AI relationship coach running a couples game called The Challenge. Your job is to take a base challenge prompt and personalise it for a specific couple. Keep it warm, specific, and playful. Never be generic.`
 
     let userPrompt
@@ -125,13 +110,99 @@ Respond in this exact JSON format with no other text:
 {
   "prompt": "base prompt returned exactly as written or with one specific personal addition"
 }`
+    } else if (challengeType === 'memory') {
+      // Fetch rich couple data for memory question generation
+      const { data: sparkAnswers } = await supabase
+        .from('today_responses')
+        .select('spark_question, spark_answer, user_id')
+        .eq('couple_id', coupleId)
+        .not('spark_answer', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      const { data: betAnswers } = await supabase
+        .from('bets')
+        .select('question, user1_answer, user2_answer, user1_locked, user2_locked')
+        .eq('couple_id', coupleId)
+        .not('user1_answer', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(10)
+
+      const { data: timelineEvents } = await supabase
+        .from('timeline_events')
+        .select('title, event_date, event_type, description')
+        .eq('couple_id', coupleId)
+        .order('event_date', { ascending: true })
+        .limit(30)
+
+      // Determine guesser vs answer-holder for this round
+      // Odd rounds (1, 3): host guesses, partner holds answer
+      // Even rounds (2): partner guesses, host holds answer
+      const isOddRound = roundNumber % 2 !== 0
+      const guesserUserId = isOddRound ? coupleData.user1_id : coupleData.user2_id
+      const answerHolderUserId = isOddRound ? coupleData.user2_id : coupleData.user1_id
+
+      const guesserProfile = profiles?.find(p => p.user_id === guesserUserId || p.id === guesserUserId)
+      const answerHolderProfile = profiles?.find(p => p.user_id === answerHolderUserId || p.id === answerHolderUserId)
+      const guesserName = guesserProfile?.display_name || 'Partner 1'
+      const answerHolderName = answerHolderProfile?.display_name || 'Partner 2'
+
+      // Build context strings
+      const sparkContext = sparkAnswers && sparkAnswers.length > 0
+        ? sparkAnswers.map(s => `Q: ${s.spark_question} — A: ${s.spark_answer}`).join('\n')
+        : 'No Spark answers yet'
+
+      const betContext = betAnswers && betAnswers.length > 0
+        ? betAnswers.map(b => `Q: ${b.question} | ${guesserName}: ${b.user1_answer || '?'} | ${answerHolderName}: ${b.user2_answer || '?'}`).join('\n')
+        : 'No Bet answers yet'
+
+      const timelineContext = timelineEvents && timelineEvents.length > 0
+        ? timelineEvents.map(e => `${e.title} (${e.event_date})${e.description ? ': ' + e.description : ''}`).join('\n')
+        : 'No timeline events yet'
+
+      userPrompt = `You are Nora running a Love Map memory game for ${guesserName} and ${answerHolderName}.
+
+THE GAME: ${guesserName} is the GUESSER. ${answerHolderName} is the ANSWER HOLDER — the question is about ${answerHolderName}, and ${answerHolderName} knows the correct answer about themselves.
+
+BASE QUESTION TERRITORY (pick from or be inspired by):
+"${basePrompt.prompt}"
+
+COUPLE DATA — use this to make the question specific and answerable:
+Nora memory: ${noraMemory?.memory_summary || 'none yet'}
+
+Recent Spark answers:
+${sparkContext}
+
+Recent Bet answers:
+${betContext}
+
+Timeline events:
+${timelineContext}
+
+YOUR JOB:
+1. Write one specific question about ${answerHolderName} that ${guesserName} should be able to answer if they know their partner well — but might surprise them if they don't. The question must have a real, specific answer that ${answerHolderName} will recognise as true about themselves.
+2. Write what you believe ${answerHolderName}'s answer most likely is, based on the couple data above. ${answerHolderName} will confirm or correct this in the game — so make your best educated guess. If you have no data, write a plausible answer that fits the question territory.
+3. Write 3 progressive hints for ${guesserName}. Hint 1 is evocative but indirect. Hint 2 narrows the territory significantly. Hint 3 basically gives it away — that's fine, the learning matters more than the guessing.
+
+PHILOSOPHY: This is not a gotcha quiz. The goal is to surface what ${guesserName} knows about ${answerHolderName}'s inner world — and to teach them something new if they don't know it. A miss with good hints is still a win.
+
+NORA'S VOICE: Warm game master energy. Specific. Never generic. The question should feel like it was written for this couple, not pulled from a list.
+
+Respond in this exact JSON format with no other text:
+{
+  "memory_question": "the specific question about ${answerHolderName}",
+  "memory_answer": "your best guess at ${answerHolderName}'s answer based on couple data",
+  "hint_1": "evocative, indirect hint",
+  "hint_2": "narrows territory significantly",
+  "hint_3": "basically gives it away",
+  "guesser_user_id": "${guesserUserId}"
+}`
     } else {
       userPrompt = `Personalise this challenge prompt for ${profileSummary}.
 
 Base prompt: "${basePrompt.prompt}"
 Challenge type: ${challengeType}
 Round: ${roundNumber}
-${memoryContext ? `Context: ${memoryContext}` : ''}
 Couple memory: ${noraMemory?.memory_summary || 'none yet'}
 
 Rewrite the prompt so it feels personal and specific to this couple. Keep the core challenge intact. 1-3 sentences max. Warm and direct — Nora is the game master who picked this on purpose.
@@ -144,7 +215,7 @@ Respond in this exact JSON format with no other text:
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 300,
+      max_tokens: 600,
       messages: [{ role: 'user', content: userPrompt }],
       system: systemPrompt,
     })
@@ -154,27 +225,39 @@ Respond in this exact JSON format with no other text:
       const raw = response.content[0].text.replace(/```json|```/g, '').trim()
       parsed = JSON.parse(raw)
     } catch {
-      parsed = { prompt: basePrompt.prompt }
+      parsed = challengeType === 'memory'
+        ? { memory_question: basePrompt.prompt, memory_answer: '', hint_1: '', hint_2: '', hint_3: '', guesser_user_id: coupleData.user1_id }
+        : { prompt: basePrompt.prompt }
     }
 
     const finalPrompt = challengeType === 'rank'
       ? JSON.stringify({ intro: parsed.intro, prompt: parsed.prompt, items: parsed.items || basePrompt.items })
-      : parsed.prompt
+      : challengeType === 'memory'
+        ? parsed.memory_question
+        : parsed.prompt
+
+    // Build upsert payload — memory writes extra fields
+    const upsertPayload = {
+      session_id: challengeSessionId,
+      couple_id: coupleId,
+      round_number: roundNumber,
+      prompt: finalPrompt,
+      prompt_key: basePrompt.key,
+      current_turn_user_id: challengeType === 'story' ? userId : null,
+      ...(challengeType === 'memory' && {
+        memory_question: parsed.memory_question,
+        memory_answer: parsed.memory_answer,
+        hint_1: parsed.hint_1,
+        hint_2: parsed.hint_2,
+        hint_3: parsed.hint_3,
+        guesser_user_id: parsed.guesser_user_id,
+      }),
+    }
 
     // Save round — upsert prevents race condition when both users call generate simultaneously
     const { data: upserted, error } = await supabase
       .from('challenge_rounds')
-      .upsert(
-        {
-          session_id: challengeSessionId,
-          couple_id: coupleId,
-          round_number: roundNumber,
-          prompt: finalPrompt,
-          prompt_key: basePrompt.key,
-          current_turn_user_id: challengeType === 'story' ? userId : null,
-        },
-        { onConflict: 'session_id,round_number', ignoreDuplicates: true }
-      )
+      .upsert(upsertPayload, { onConflict: 'session_id,round_number', ignoreDuplicates: true })
       .select()
       .single()
 
