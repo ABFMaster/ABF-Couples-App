@@ -216,6 +216,9 @@ Design complete (see above). Highest leverage build in the entire product. Makes
 
 Current verdict quality is observational — Nora names what happened between the couple but doesn't tell the individual what it means about them specifically. The person reading it wants to know: is this a pattern? Is this a strength or a weakness? What does this say about me, not just about us?
 
+**Design principle — Memory as earned specificity, never as a summary screen:**
+The temptation is to make Nora's memory visible as a profile or list ("Nora remembers that you feel loved when..."). This is the wrong execution — it turns a relationship into a data dashboard and kills the magic. Memory should show up as earned specificity in the moment. The felt value comes from Nora saying something that could only be said about this specific couple — not from displaying what she knows. A verdict that references a real moment, a real pattern, a real signal she's observed is worth ten memory profile screens. Build toward this in verdict prompts as Nora memory accumulates depth.
+
 The fix is three-layered:
 
 **Layer 1 — Individual address:** Every verdict should speak directly to each person's choice, not just describe the couple dynamic. "Matt, you put price third because..." not "Matt put price third." The reader should feel seen as an individual, not just as half of a couple.
