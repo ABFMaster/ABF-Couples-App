@@ -51,6 +51,21 @@ export async function POST(request) {
       .select('user_id, display_name')
       .in('user_id', [coupleData.user1_id, coupleData.user2_id])
 
+    // Check if answer-holder flagged a delta this round (answer has changed since original)
+    const { data: deltaRecord } = await supabase
+      .from('love_map_updates')
+      .select('original_answer, current_answer, source, delta_flagged')
+      .eq('couple_id', coupleId)
+      .eq('user_id', round.guesser_user_id === coupleData.user1_id ? coupleData.user2_id : coupleData.user1_id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const hasDelta = deltaRecord?.delta_flagged === true
+    const deltaContext = hasDelta
+      ? `IMPORTANT: ${answerHolderName} indicated their answer has changed since they last addressed this. They used to say: "${deltaRecord.original_answer}" — tonight they said: "${deltaRecord.current_answer}". This shift is significant and worth noting in your verdict.`
+      : ''
+
     const guesserProfile = profiles?.find(p => p.user_id === round.guesser_user_id)
     const answerHolderProfile = profiles?.find(p => p.user_id !== round.guesser_user_id)
     const guesserName = guesserProfile?.display_name || 'Partner 1'
@@ -84,6 +99,7 @@ THE QUESTION: "${round.memory_question}"
 ${answerHolderName.toUpperCase()}'S ACTUAL ANSWER: "${correctAnswer}"
 ${guesserName.toUpperCase()}'S GUESS: "${guesserAnswer}"
 HINT STORY: ${hintNarrative}
+${deltaContext ? `\n${deltaContext}` : ''}
 
 YOUR JOB:
 Write Nora's verdict for this round. 3-4 sentences max.

@@ -36,8 +36,26 @@ export async function POST(request) {
 
     const usedKeys = (usedRounds || []).map(r => r.prompt_key).filter(Boolean)
 
+    // For recyclable questions, check when they were last used — re-enter pool after 90 days
+    let recentMemoryRounds = []
+    if (challengeType === 'memory') {
+      const { data: memoryHistory } = await supabase
+        .from('challenge_rounds')
+        .select('prompt_key, created_at')
+        .eq('couple_id', coupleId)
+        .not('prompt_key', 'is', null)
+      recentMemoryRounds = memoryHistory || []
+    }
+
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
+
     const pool = CHALLENGE_PROMPTS[challengeType] || CHALLENGE_PROMPTS.story
-    const available = pool.filter(p => !usedKeys.includes(p.key))
+    const available = pool.filter(p => {
+      if (!usedKeys.includes(p.key)) return true
+      if (!p.recyclable) return false
+      const lastUsed = recentMemoryRounds.find(r => r.prompt_key === p.key)
+      return lastUsed && lastUsed.created_at < ninetyDaysAgo
+    })
     const source = available.length > 0 ? available : pool
 
     const basePrompt = source[Math.floor(Math.random() * source.length)]
