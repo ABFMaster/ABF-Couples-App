@@ -211,6 +211,8 @@ function ChallengePlayContent() {
   const [noraChallenge, setNoraChallenge] = useState(null)
   const [pitchDefense, setPitchDefense] = useState('')
   const [pitchSubmitting, setPitchSubmitting] = useState(false)
+  const [memoryGuess, setMemoryGuess] = useState('')
+  const [memorySubmitting, setMemorySubmitting] = useState(false)
   const pollRef = useRef(null)
   const completePollRef = useRef(null)
 
@@ -346,6 +348,34 @@ function ChallengePlayContent() {
         return
       }
 
+      if (challengeType === 'memory' && round) {
+        const { data: memRound } = await supabase
+          .from('challenge_rounds')
+          .select('answer_holder_ready, guesser_answer, answer_revealed, hint_requests, hints_granted, hint_denials, hint_pending, nora_verdict, memory_answer')
+          .eq('id', round.id)
+          .maybeSingle()
+        if (!memRound) return
+
+        // Always sync round state so both users see phase changes
+        setRound(prev => ({ ...prev, ...memRound }))
+
+        // Trigger verdict generation once answer is revealed
+        if (memRound.answer_revealed && !memRound.nora_verdict) {
+          fetch('/api/game-room/challenge/memory/verdict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound, coupleId }),
+          }).catch(() => {})
+        }
+
+        if (memRound.nora_verdict && phase !== 'verdict') {
+          setNoraVerdict(memRound.nora_verdict)
+          setPhase('verdict')
+        }
+
+        return
+      }
+
       // Check current round for verdict
       const { data: roundRow } = await supabase
         .from('challenge_rounds')
@@ -448,6 +478,8 @@ function ChallengePlayContent() {
     setRankFinal([])
     setRankNudge(null)
     setMyRanking([])
+    setMemoryGuess('')
+    setMemorySubmitting(false)
 
     try {
       const res = await fetch('/api/game-room/challenge/generate', {
@@ -1067,7 +1099,314 @@ function ChallengePlayContent() {
 
             {challengeType === 'story' && null}
 
-            {challengeType !== 'story' && challengeType !== 'rank' && challengeType !== 'pitch' && isScribe && !submitted && (
+            {challengeType === 'memory' && (() => {
+              const isGuesserThisRound = round?.guesser_user_id === userId
+              const hintsGrantedArr = round?.hints_granted || []
+              const hintRequestsCount = round?.hint_requests || 0
+              const hintDenialsCount = round?.hint_denials || 0
+              const hintPendingNow = round?.hint_pending || false
+              const hint1 = round?.hint_1 || ''
+              const hint2 = round?.hint_2 || ''
+              const hint3 = round?.hint_3 || ''
+              const hints = [hint1, hint2, hint3]
+              const prePopulatedAnswer = round?.memory_answer || ''
+              const answerHolderReadyNow = round?.answer_holder_ready || false
+              const guesserAnswerSubmitted = round?.guesser_answer || ''
+              const answerRevealedNow = round?.answer_revealed || false
+
+              // ANSWER-HOLDER FLOW
+              if (!isGuesserThisRound) {
+                // Phase 1 — answer-holder must supply or confirm answer
+                if (!answerHolderReadyNow) {
+                  const [localAnswer, setLocalAnswer] = useState(prePopulatedAnswer)
+                  const [isUpdated, setIsUpdated] = useState(false)
+                  const [readySubmitting, setReadySubmitting] = useState(false)
+
+                  const handleReady = async () => {
+                    if (!localAnswer.trim() || readySubmitting) return
+                    setReadySubmitting(true)
+                    const answerType = prePopulatedAnswer
+                      ? (isUpdated ? 'type_a_updated' : 'type_a_confirmed')
+                      : 'type_b'
+                    await fetch('/api/game-room/challenge/memory/ready', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        sessionId: challengeSessionId,
+                        roundNumber: currentRound,
+                        answerType,
+                        currentAnswer: localAnswer,
+                        originalAnswer: prePopulatedAnswer || null,
+                        dimensionKey: round?.prompt_key || 'unknown',
+                        userId,
+                        coupleId,
+                      }),
+                    })
+                    setReadySubmitting(false)
+                  }
+
+                  return (
+                    <div>
+                      <div style={{ background: '#F5F3FF', border: '0.5px solid #C4B5FD', borderRadius: '16px', padding: '16px 20px', marginBottom: '16px' }}>
+                        <p style={{ fontSize: '11px', letterSpacing: '0.14em', color: '#7C3AED', textTransform: 'uppercase', margin: '0 0 8px', fontWeight: 700 }}>Only you can see this</p>
+                        <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#1E1B4B', margin: 0 }}>
+                          {partnerName} is about to guess. Set the answer before the clock starts.
+                        </p>
+                      </div>
+
+                      {prePopulatedAnswer ? (
+                        <div>
+                          <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '8px' }}>Nora's read on your answer:</p>
+                          <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '12px', padding: '14px 16px', marginBottom: '12px' }}>
+                            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#1C1510', margin: 0, fontStyle: 'italic' }}>"{prePopulatedAnswer}"</p>
+                          </div>
+                          <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '8px' }}>Is this still true?</p>
+                          <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+                            <button
+                              onClick={() => { setLocalAnswer(prePopulatedAnswer); setIsUpdated(false) }}
+                              style={{ flex: 1, padding: '12px', background: localAnswer === prePopulatedAnswer && !isUpdated ? '#1E1B4B' : '#FFFFFF', color: localAnswer === prePopulatedAnswer && !isUpdated ? '#FFFFFF' : '#1C1510', border: '0.5px solid #E8DDD0', borderRadius: '12px', fontSize: '14px', cursor: 'pointer' }}>
+                              Still true
+                            </button>
+                            <button
+                              onClick={() => { setLocalAnswer(''); setIsUpdated(true) }}
+                              style={{ flex: 1, padding: '12px', background: isUpdated ? '#1E1B4B' : '#FFFFFF', color: isUpdated ? '#FFFFFF' : '#1C1510', border: '0.5px solid #E8DDD0', borderRadius: '12px', fontSize: '14px', cursor: 'pointer' }}>
+                              It's changed
+                            </button>
+                          </div>
+                          {isUpdated && (
+                            <textarea
+                              value={localAnswer}
+                              onChange={e => setLocalAnswer(e.target.value)}
+                              placeholder="Where are you now?"
+                              rows={3}
+                              style={{ width: '100%', padding: '14px', border: '0.5px solid #E8DDD0', borderRadius: '12px', fontSize: '15px', fontFamily: "'DM Sans', sans-serif", resize: 'none', background: '#FFFFFF', boxSizing: 'border-box', marginBottom: '12px' }}
+                            />
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '8px' }}>Only you know this. Type your answer so Nora can judge fairly.</p>
+                          <textarea
+                            value={localAnswer}
+                            onChange={e => setLocalAnswer(e.target.value)}
+                            placeholder="Your answer..."
+                            rows={3}
+                            style={{ width: '100%', padding: '14px', border: '0.5px solid #E8DDD0', borderRadius: '12px', fontSize: '15px', fontFamily: "'DM Sans', sans-serif", resize: 'none', background: '#FFFFFF', boxSizing: 'border-box', marginBottom: '12px' }}
+                          />
+                        </div>
+                      )}
+
+                      <button
+                        onClick={handleReady}
+                        disabled={!localAnswer.trim() || readySubmitting}
+                        style={{ width: '100%', padding: '16px', background: !localAnswer.trim() ? '#E5E7EB' : 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: !localAnswer.trim() ? '#9CA3AF' : '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: !localAnswer.trim() ? 'not-allowed' : 'pointer' }}>
+                        {readySubmitting ? 'Starting…' : `I'm ready — start the clock →`}
+                      </button>
+                    </div>
+                  )
+                }
+
+                // Phase 2 — answer-holder watches, handles hint requests, waits for guesser answer
+                if (!guesserAnswerSubmitted) {
+                  return (
+                    <div>
+                      <div style={{ background: '#F5F3FF', border: '0.5px solid #C4B5FD', borderRadius: '16px', padding: '16px 20px', marginBottom: '16px' }}>
+                        <p style={{ fontSize: '11px', letterSpacing: '0.14em', color: '#7C3AED', textTransform: 'uppercase', margin: '0 0 6px', fontWeight: 700 }}>Only you can see this</p>
+                        <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#1E1B4B', margin: 0, fontStyle: 'italic' }}>"{prePopulatedAnswer || round?.memory_answer}"</p>
+                      </div>
+
+                      {hintPendingNow ? (
+                        <div>
+                          <p style={{ fontSize: '14px', color: '#1C1510', marginBottom: '4px', textAlign: 'center', fontWeight: 600 }}>{partnerName} wants a hint</p>
+                          <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '16px', textAlign: 'center' }}>
+                            Hint {hintsGrantedArr.length + 1}: "{hints[hintsGrantedArr.length]}"
+                          </p>
+                          <div style={{ display: 'flex', gap: '10px' }}>
+                            <button
+                              onClick={async () => {
+                                await fetch('/api/game-room/challenge/memory/hint-respond', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound, action: 'grant' }),
+                                })
+                              }}
+                              style={{ flex: 1, padding: '14px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}>
+                              Give it 🤝
+                            </button>
+                            <button
+                              onClick={async () => {
+                                await fetch('/api/game-room/challenge/memory/hint-respond', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound, action: 'deny' }),
+                                })
+                              }}
+                              style={{ flex: 1, padding: '14px', background: '#FFFFFF', color: '#1C1510', border: '0.5px solid #E8DDD0', borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}>
+                              You've got this 😏
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ textAlign: 'center', padding: '12px 0' }}>
+                          <p style={{ fontSize: '14px', color: '#6B7280', margin: '0 0 6px' }}>
+                            {hintRequestsCount === 0
+                              ? `${partnerName} is thinking…`
+                              : `${partnerName} has used ${hintsGrantedArr.length} hint${hintsGrantedArr.length !== 1 ? 's' : ''}, been denied ${hintDenialsCount}`}
+                          </p>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                            <span style={{ fontSize: '13px', color: '#9CA3AF' }}>Waiting for {partnerName}'s answer…</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                }
+
+                // Phase 3 — guesser submitted, answer-holder reveals
+                if (!answerRevealedNow) {
+                  return (
+                    <div>
+                      <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '16px', padding: '20px', marginBottom: '16px' }}>
+                        <p style={{ fontSize: '12px', color: '#9CA3AF', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{partnerName} answered</p>
+                        <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '20px', color: '#1C1510', margin: 0 }}>"{guesserAnswerSubmitted}"</p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          await fetch('/api/game-room/challenge/memory/reveal', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound }),
+                          })
+                        }}
+                        style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}>
+                        Tap to reveal 🎯
+                      </button>
+                    </div>
+                  )
+                }
+
+                // Phase 4 — both see result, waiting for verdict
+                return (
+                  <div style={{ textAlign: 'center', padding: '12px 0' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                      <span style={{ fontSize: '13px', color: '#9CA3AF' }}>Nora is writing her verdict…</span>
+                    </div>
+                  </div>
+                )
+              }
+
+              // GUESSER FLOW
+              // Waiting for answer-holder to get ready
+              if (!answerHolderReadyNow) {
+                return (
+                  <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                      <span style={{ fontSize: '14px', color: '#6B7280' }}>Waiting for {partnerName} to read the answer…</span>
+                    </div>
+                    <p style={{ fontSize: '12px', color: '#9CA3AF', margin: 0 }}>They can see it. You can't. 👀</p>
+                  </div>
+                )
+              }
+
+              // Guesser answering
+              if (!guesserAnswerSubmitted) {
+                return (
+                  <div>
+                    {/* Hints unlocked so far */}
+                    {hintsGrantedArr.map((hintNum, i) => (
+                      <div key={i} style={{ background: '#FFF7ED', border: '0.5px solid #FED7AA', borderRadius: '12px', padding: '12px 16px', marginBottom: '10px' }}>
+                        <p style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#EA580C', textTransform: 'uppercase', margin: '0 0 4px', fontWeight: 700 }}>Hint {hintNum}</p>
+                        <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#1C1510', margin: 0, fontStyle: 'italic' }}>{hints[hintNum - 1]}</p>
+                      </div>
+                    ))}
+
+                    {/* Hint denied message */}
+                    {hintPendingNow === false && hintDenialsCount > 0 && hintDenialsCount > hintsGrantedArr.length && (
+                      <div style={{ background: '#FEF2F2', border: '0.5px solid #FECACA', borderRadius: '12px', padding: '12px 16px', marginBottom: '10px', textAlign: 'center' }}>
+                        <p style={{ fontSize: '14px', color: '#DC2626', margin: 0 }}>{partnerName} thinks you've got this 😏</p>
+                      </div>
+                    )}
+
+                    {/* Hint pending */}
+                    {hintPendingNow && (
+                      <div style={{ background: '#F5F3FF', border: '0.5px solid #C4B5FD', borderRadius: '12px', padding: '12px 16px', marginBottom: '10px', textAlign: 'center' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#7C3AED', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                          <span style={{ fontSize: '13px', color: '#7C3AED' }}>Waiting for {partnerName} to decide…</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Answer input */}
+                    <textarea
+                      value={memoryGuess}
+                      onChange={e => setMemoryGuess(e.target.value)}
+                      placeholder="Your answer…"
+                      rows={3}
+                      style={{ width: '100%', padding: '14px', border: '0.5px solid #E8DDD0', borderRadius: '12px', fontSize: '15px', fontFamily: "'DM Sans', sans-serif", resize: 'none', background: '#FFFFFF', boxSizing: 'border-box', marginBottom: '12px' }}
+                    />
+
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      {hintRequestsCount < 3 && !hintPendingNow && (
+                        <button
+                          onClick={async () => {
+                            await fetch('/api/game-room/challenge/memory/hint-request', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound }),
+                            })
+                          }}
+                          style={{ flex: 1, padding: '14px', background: '#FFFFFF', color: '#1C1510', border: '0.5px solid #E8DDD0', borderRadius: '12px', fontSize: '14px', cursor: 'pointer' }}>
+                          Hint? 🙏
+                        </button>
+                      )}
+                      <button
+                        onClick={async () => {
+                          if (!memoryGuess.trim() || memorySubmitting) return
+                          setMemorySubmitting(true)
+                          await fetch('/api/game-room/challenge/memory/submit', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound, answer: memoryGuess }),
+                          })
+                          setMemorySubmitting(false)
+                        }}
+                        disabled={!memoryGuess.trim() || memorySubmitting}
+                        style={{ flex: hintRequestsCount < 3 && !hintPendingNow ? 2 : 1, padding: '14px', background: !memoryGuess.trim() ? '#E5E7EB' : 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: !memoryGuess.trim() ? '#9CA3AF' : '#FFFFFF', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: !memoryGuess.trim() ? 'not-allowed' : 'pointer' }}>
+                        {memorySubmitting ? 'Submitting…' : 'That\'s my answer →'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              }
+
+              // Guesser submitted — waiting for reveal
+              if (!answerRevealedNow) {
+                return (
+                  <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                      <span style={{ fontSize: '14px', color: '#6B7280' }}>Waiting for {partnerName} to reveal…</span>
+                    </div>
+                  </div>
+                )
+              }
+
+              // Both answered — waiting for verdict
+              return (
+                <div style={{ textAlign: 'center', padding: '12px 0' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                    <span style={{ fontSize: '13px', color: '#9CA3AF' }}>Nora is writing her verdict…</span>
+                  </div>
+                </div>
+              )
+            })()}
+
+            {challengeType !== 'story' && challengeType !== 'rank' && challengeType !== 'pitch' && challengeType !== 'memory' && isScribe && !submitted && (
               <>
                 {challengeType === 'rank' ? (
                   <div style={{ marginBottom: '24px' }}>
@@ -1107,7 +1446,7 @@ function ChallengePlayContent() {
               </>
             )}
 
-            {challengeType !== 'story' && challengeType !== 'rank' && challengeType !== 'pitch' && isScribe && submitted && (
+            {challengeType !== 'story' && challengeType !== 'rank' && challengeType !== 'pitch' && challengeType !== 'memory' && isScribe && submitted && (
               <div style={{ textAlign: 'center', padding: '24px 0', color: '#9CA3AF', fontSize: '14px' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                   <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
@@ -1116,7 +1455,7 @@ function ChallengePlayContent() {
               </div>
             )}
 
-            {challengeType !== 'story' && challengeType !== 'rank' && challengeType !== 'pitch' && !isScribe && (
+            {challengeType !== 'story' && challengeType !== 'rank' && challengeType !== 'pitch' && challengeType !== 'memory' && !isScribe && (
               <div style={{ marginTop: '8px' }}>
                 {challengeType === 'rank' && rankItems.length > 0 && (
                   <div style={{ marginBottom: '16px' }}>
@@ -1212,6 +1551,34 @@ function ChallengePlayContent() {
                     <p style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#9CA3AF', textTransform: 'uppercase', margin: '0 0 6px' }}>Your defense</p>
                     <p style={{ fontSize: '15px', color: '#1C1510', lineHeight: 1.6, whiteSpace: 'pre-line', margin: 0 }}>{pitchDefense}</p>
                   </>
+                )}
+              </div>
+            ) : challengeType === 'memory' ? (
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '12px', padding: '16px', marginBottom: '12px' }}>
+                  <p style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#9CA3AF', textTransform: 'uppercase', margin: '0 0 6px' }}>The question</p>
+                  <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#1C1510', margin: 0, fontStyle: 'italic' }}>{round?.memory_question}</p>
+                </div>
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+                  <div style={{ flex: 1, background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '12px', padding: '14px' }}>
+                    <p style={{ fontSize: '11px', color: '#9CA3AF', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                      {round?.guesser_user_id === userId ? 'Your guess' : `${partnerName}'s guess`}
+                    </p>
+                    <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#1C1510', margin: 0 }}>{round?.guesser_answer || '—'}</p>
+                  </div>
+                  <div style={{ flex: 1, background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '12px', padding: '14px' }}>
+                    <p style={{ fontSize: '11px', color: '#9CA3AF', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>The answer</p>
+                    <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#1C1510', margin: 0 }}>{round?.memory_answer || '—'}</p>
+                  </div>
+                </div>
+                {(round?.hints_granted || []).length > 0 && (
+                  <p style={{ fontSize: '12px', color: '#9CA3AF', margin: 0, textAlign: 'center' }}>
+                    {(round?.hints_granted || []).length} hint{(round?.hints_granted || []).length !== 1 ? 's' : ''} used
+                    {round?.hint_denials > 0 ? ` · ${round.hint_denials} denied` : ''}
+                  </p>
+                )}
+                {round?.hint_requests === 0 && (
+                  <p style={{ fontSize: '12px', color: '#9CA3AF', margin: 0, textAlign: 'center' }}>No hints used</p>
                 )}
               </div>
             ) : (
