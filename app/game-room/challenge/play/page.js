@@ -213,6 +213,9 @@ function ChallengePlayContent() {
   const [pitchSubmitting, setPitchSubmitting] = useState(false)
   const [memoryGuess, setMemoryGuess] = useState('')
   const [memorySubmitting, setMemorySubmitting] = useState(false)
+  const [memoryLocalAnswer, setMemoryLocalAnswer] = useState('')
+  const [memoryIsUpdated, setMemoryIsUpdated] = useState(false)
+  const [memoryReadySubmitting, setMemoryReadySubmitting] = useState(false)
   const pollRef = useRef(null)
   const completePollRef = useRef(null)
 
@@ -480,6 +483,9 @@ function ChallengePlayContent() {
     setMyRanking([])
     setMemoryGuess('')
     setMemorySubmitting(false)
+    setMemoryLocalAnswer('')
+    setMemoryIsUpdated(false)
+    setMemoryReadySubmitting(false)
 
     try {
       const res = await fetch('/api/game-room/challenge/generate', {
@@ -1118,15 +1124,11 @@ function ChallengePlayContent() {
               if (!isGuesserThisRound) {
                 // Phase 1 — answer-holder must supply or confirm answer
                 if (!answerHolderReadyNow) {
-                  const [localAnswer, setLocalAnswer] = useState(prePopulatedAnswer)
-                  const [isUpdated, setIsUpdated] = useState(false)
-                  const [readySubmitting, setReadySubmitting] = useState(false)
-
                   const handleReady = async () => {
-                    if (!localAnswer.trim() || readySubmitting) return
-                    setReadySubmitting(true)
+                    if (!memoryLocalAnswer.trim() || memoryReadySubmitting) return
+                    setMemoryReadySubmitting(true)
                     const answerType = prePopulatedAnswer
-                      ? (isUpdated ? 'type_a_updated' : 'type_a_confirmed')
+                      ? (memoryIsUpdated ? 'type_a_updated' : 'type_a_confirmed')
                       : 'type_b'
                     await fetch('/api/game-room/challenge/memory/ready', {
                       method: 'POST',
@@ -1135,14 +1137,14 @@ function ChallengePlayContent() {
                         sessionId: challengeSessionId,
                         roundNumber: currentRound,
                         answerType,
-                        currentAnswer: localAnswer,
+                        currentAnswer: memoryLocalAnswer,
                         originalAnswer: prePopulatedAnswer || null,
                         dimensionKey: round?.prompt_key || 'unknown',
                         userId,
                         coupleId,
                       }),
                     })
-                    setReadySubmitting(false)
+                    setMemoryReadySubmitting(false)
                   }
 
                   return (
@@ -1163,20 +1165,20 @@ function ChallengePlayContent() {
                           <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '8px' }}>Is this still true?</p>
                           <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
                             <button
-                              onClick={() => { setLocalAnswer(prePopulatedAnswer); setIsUpdated(false) }}
-                              style={{ flex: 1, padding: '12px', background: localAnswer === prePopulatedAnswer && !isUpdated ? '#1E1B4B' : '#FFFFFF', color: localAnswer === prePopulatedAnswer && !isUpdated ? '#FFFFFF' : '#1C1510', border: '0.5px solid #E8DDD0', borderRadius: '12px', fontSize: '14px', cursor: 'pointer' }}>
+                              onClick={() => { setMemoryLocalAnswer(prePopulatedAnswer); setMemoryIsUpdated(false) }}
+                              style={{ flex: 1, padding: '12px', background: memoryLocalAnswer === prePopulatedAnswer && !memoryIsUpdated ? '#1E1B4B' : '#FFFFFF', color: memoryLocalAnswer === prePopulatedAnswer && !memoryIsUpdated ? '#FFFFFF' : '#1C1510', border: '0.5px solid #E8DDD0', borderRadius: '12px', fontSize: '14px', cursor: 'pointer' }}>
                               Still true
                             </button>
                             <button
-                              onClick={() => { setLocalAnswer(''); setIsUpdated(true) }}
-                              style={{ flex: 1, padding: '12px', background: isUpdated ? '#1E1B4B' : '#FFFFFF', color: isUpdated ? '#FFFFFF' : '#1C1510', border: '0.5px solid #E8DDD0', borderRadius: '12px', fontSize: '14px', cursor: 'pointer' }}>
+                              onClick={() => { setMemoryLocalAnswer(''); setMemoryIsUpdated(true) }}
+                              style={{ flex: 1, padding: '12px', background: memoryIsUpdated ? '#1E1B4B' : '#FFFFFF', color: memoryIsUpdated ? '#FFFFFF' : '#1C1510', border: '0.5px solid #E8DDD0', borderRadius: '12px', fontSize: '14px', cursor: 'pointer' }}>
                               It's changed
                             </button>
                           </div>
-                          {isUpdated && (
+                          {memoryIsUpdated && (
                             <textarea
-                              value={localAnswer}
-                              onChange={e => setLocalAnswer(e.target.value)}
+                              value={memoryLocalAnswer}
+                              onChange={e => setMemoryLocalAnswer(e.target.value)}
                               placeholder="Where are you now?"
                               rows={3}
                               style={{ width: '100%', padding: '14px', border: '0.5px solid #E8DDD0', borderRadius: '12px', fontSize: '15px', fontFamily: "'DM Sans', sans-serif", resize: 'none', background: '#FFFFFF', boxSizing: 'border-box', marginBottom: '12px' }}
@@ -1187,8 +1189,8 @@ function ChallengePlayContent() {
                         <div>
                           <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '8px' }}>Only you know this. Type your answer so Nora can judge fairly.</p>
                           <textarea
-                            value={localAnswer}
-                            onChange={e => setLocalAnswer(e.target.value)}
+                            value={memoryLocalAnswer}
+                            onChange={e => setMemoryLocalAnswer(e.target.value)}
                             placeholder="Your answer..."
                             rows={3}
                             style={{ width: '100%', padding: '14px', border: '0.5px solid #E8DDD0', borderRadius: '12px', fontSize: '15px', fontFamily: "'DM Sans', sans-serif", resize: 'none', background: '#FFFFFF', boxSizing: 'border-box', marginBottom: '12px' }}
@@ -1198,9 +1200,9 @@ function ChallengePlayContent() {
 
                       <button
                         onClick={handleReady}
-                        disabled={!localAnswer.trim() || readySubmitting}
-                        style={{ width: '100%', padding: '16px', background: !localAnswer.trim() ? '#E5E7EB' : 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: !localAnswer.trim() ? '#9CA3AF' : '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: !localAnswer.trim() ? 'not-allowed' : 'pointer' }}>
-                        {readySubmitting ? 'Starting…' : `I'm ready — start the clock →`}
+                        disabled={!memoryLocalAnswer.trim() || memoryReadySubmitting}
+                        style={{ width: '100%', padding: '16px', background: !memoryLocalAnswer.trim() ? '#E5E7EB' : 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: !memoryLocalAnswer.trim() ? '#9CA3AF' : '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: !memoryLocalAnswer.trim() ? 'not-allowed' : 'pointer' }}>
+                        {memoryReadySubmitting ? 'Starting…' : `I'm ready — start the clock →`}
                       </button>
                     </div>
                   )
