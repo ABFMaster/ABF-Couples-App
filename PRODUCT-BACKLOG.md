@@ -282,6 +282,155 @@ An unknown user created an account (`id: 019ac609-7b08-49b2-9d84-fb1d9ab84ff8`, 
 - Save to Timeline needs stronger CTA visual treatment
 - Tell me more (remote play) — only fires a message, doesn't share find content with partner
 
+### THE HUNT — Full Design Spec
+*Designed: 2026-04-07*
+
+**What it is:** Nora gives the couple a mission. They leave the app. They complete it together in the real world. They come back with a story. The only Game Room mode explicitly designed to create the self-expansion neurological state — novelty + mild challenge + shared action — that research shows directly combats relationship boredom and restores early-relationship satisfaction.
+
+**Research foundation:** Aron et al. (2000) — couples doing novel/arousing activities showed significantly greater relationship satisfaction increases vs pleasant activities or no-activity control. Effect held across lab experiments, door-to-door surveys, and newspaper questionnaires. Boredom at year 7 predicted less satisfaction at year 16 (Tsapelas, Aron & Orbuch, 2009). Self-expansion through shared novel experiences is one of the most replicable findings in relationship science.
+
+**Gap filled:** ABF currently deepens connection through reflection (Spark, Remake), knowledge (Memory, Bet), and shared creativity (Challenge, Hot Take). Nothing in the ecosystem explicitly creates the novelty + mild challenge + shared action state. The Hunt fills that gap.
+
+**Relationship to other features:**
+- Different from Rabbit Hole: Rabbit Hole = shared curiosity, can happen on the couch. The Hunt = shared action, leaves the app and often the house.
+- Different from Date Night: Date Night = logistics and planning. The Hunt = the experience layer on top of the plan, or the plan itself.
+- Complementary to Date Night: "Add a Hunt" button on date page launches The Hunt with date location + time as Nora context. Full bidirectional integration (Hunt as first-class date stop) is a Date Night redesign sprint item.
+
+**Mission library — 4 categories, all tagged with time + together/remote:**
+
+DISCOVERY missions — go find something specific
+- Places-powered: Nora queries Google Places filtered against couple's date history → surfaces genuinely new places nearby. "You've never been to Altura. It's 4 minutes away. Go find out if it's yours."
+- Sensory discovery: "Find something in your neighborhood that looks like it's been there forever. Photograph it and tell Nora what you think its story is."
+- Stranger interaction: "Find someone who looks interesting and ask them one question: what's the best meal they've ever had?"
+- New order: "Find a restaurant neither of you has been to and order one thing neither of you has ever eaten."
+
+RETURN missions — go back to somewhere that matters (requires couple history — rooted+ stage)
+- "Go back to the neighborhood where you had your first date. Find one thing that's changed."
+- "Go to the place you were when you first said I love you. Just stand there for five minutes."
+- "Find the place that best represents where you are as a couple right now."
+
+CHALLENGE missions — do something together you wouldn't normally do
+- "Walk somewhere for 20 minutes without using maps. Navigate only by instinct and conversation."
+- "Go somewhere in your city neither of you has been. You have 45 minutes."
+- "Order the thing on the menu neither of you would ever order. Eat the whole thing."
+
+CREATION missions — make something together
+- "Take one photograph each that represents how you feel about each other right now. Compare."
+- "Write one sentence each about where you want to be in five years. Read them to each other." (text captured in app, feeds Nora memory)
+- "Find an object that costs nothing that represents where you are as a couple today. Photograph it. Add it to your Timeline."
+
+**Mission selection logic:**
+- Together/remote flag: return + discovery missions require together. Challenge + creation can work remote with adaptation.
+- Couple stage: return missions require shared history (rooted+). All others available from day one.
+- Time available: Quick Hunt (15-30 min, no travel) vs Adventure Hunt (1-2hr, leaves house) vs Date Hunt (time inherited from date)
+- Location: geolocation feeds Places query for discovery missions. If unavailable, falls back to non-location missions.
+- Date context: if launched from Date Night, Nora uses date destination + time as mission framing.
+
+**State machine:**
+BRIEFING → both see mission, both tap "We're in" → MISSION (app goes quiet, timer visible, "Drop a find" + photo available) → RETURN (either partner taps "We're back", both confirm) → DEBRIEF (each types/drops what happened, optional photo) → NORA VERDICT (reads drops + context, delivers short verdict, directed closing question, "Save to Timeline?" prompt)
+
+**Photo capture — first class:**
+- "Drop a photo" is front and center during mission, not buried
+- Every photo drop auto-prompts "Add to Timeline?" — one tap
+- Creation missions explicitly require photo as the output
+- This is ABF's primary photo capture surface — use it aggressively
+
+**Data capture:**
+- Creation mission text responses (5-year sentences, etc) → write to love_map_updates
+- Photo drops → Timeline prompt
+- Nora debrief responses → Nora memory
+- Coaching signals → love_map_updates (same pattern as Remake)
+
+**Date Night integration — V1 (this sprint):**
+- "Add a Hunt" button on date page → navigates to Game Room lobby with ?mode=hunt&dateId=X
+- Hunt play page reads dateId, Nora uses date location + time as mission context
+- One-way bridge: 30 lines of code, no schema changes to dates table
+
+**Date Night integration — V2 (Date Night redesign sprint):**
+- Hunt as first-class stop in date itinerary
+- Any Game Room mode attachable as a date activity stop
+- Push notification trigger from scheduled date start time: "You're heading out tonight. Want a mission?"
+- Full bidirectional relationship
+
+**New files:**
+- lib/hunt-missions.js — mission library
+- app/game-room/hunt/play/page.js — play page
+- app/api/game-room/hunt/start/route.js
+- app/api/game-room/hunt/confirm/route.js
+- app/api/game-room/hunt/drop/route.js
+- app/api/game-room/hunt/return/route.js
+- app/api/game-room/hunt/debrief/route.js
+
+**Places integration:**
+- Reuse existing /api/dates/suggestions infrastructure
+- Add couple date history filter: query dates table, exclude visited places from Places results
+- ~2 hours of work on top of existing plumbing
+
+**Build complexity:** Simplest Game Room mode. No alternating turns, no blind submissions, no verdict complexity. Four states, two users, one Nora generation call at start and one at end. Estimate: 1-2 sessions.
+
+### THE REMAKE — Full Design Spec
+*Designed: 2026-04-07*
+
+**What it is:** A 5-day private reflection cycle where both partners independently revisit a significant shared moment through escalating daily prompts. Reveals on Day 5. Nora synthesizes both partners' responses and hands the conversation back to them.
+
+**Therapeutic target:** Narrative coherence and savoring — the couple actively constructing and dwelling in their shared story. Backed by EFT research (Angus & Greenberg), Gottman oral history findings, and Slatcher & Pennebaker journaling research.
+
+**Architecture — different from all Game Room modes:**
+- Persistent state across 5 days (not a single session)
+- Daily prompt surfaces as a Today action when a cycle is active
+- Inline Nora drawer on prompt page — no navigation away, slides up from bottom
+- Coaching conversation writes signals to love_map_updates (flagged as coaching-sourced, not submitted)
+- Only explicit partner submissions feed the reveal
+- Reveal = Nora synthesis + explicit handoff to live conversation + loop-close ("come back and tell me")
+
+**Moment library — Tier 1 (20 universal moments, written and ready):**
+Each moment has: key, category, stage (new/established/rooted/committed/any), title, Nora intro, 5-day prompt arc (sensory → observation → interior → turning point → carry-forward)
+Categories: firsts (5), commitment (2), hard_times (3), good_times (3), ordinary (2), change (2), present (1)
+Full library exists in design session transcript 2026-04-07 — copy into lib/remake-moments.js when building.
+
+**Moment selection logic:**
+- Nora selects from Tier 1 using couple context: anniversary date, birthdays, assessment answers, Nora memory, living situation, family intent
+- Couple stage derived from anniversary math (new <1yr, established 1-3yr, rooted 3+yr, committed = explicit)
+- "Does this fit your relationship?" mutual confirmation before cycle starts — either partner can decline and Nora surfaces another
+- Tier 2 (specific moments from Timeline/app data) unlocks after sufficient history — same pattern as Memory
+
+**Inline Nora coaching:**
+- Available on every prompt page as a persistent element: "Struggling with this? I can help"
+- Slides up as a drawer — prompt stays visible, no navigation
+- Body-first coaching methodology: physical → observation → meaning
+- Coaching conversation is private from reveal but feeds Nora memory signals
+- This drawer pattern should become a design standard across ABF wherever Nora needs to be inline
+
+**Privacy model:**
+- Coaching conversation never surfaces in reveal without partner's explicit choice
+- Coaching signals write to love_map_updates for Nora memory only
+- Partner always controls what gets submitted
+
+**Where it lives:** Us page redesign — entry
+
+### ONBOARDING DATA GAP
+*Added: 2026-04-07*
+The 28-question compatibility assessment captures love language, attachment style, and conflict style — but is missing high-value life stage signals that would make Nora significantly smarter across the entire app.
+
+Minimum additions needed:
+- Living situation (live together / long distance / same city different homes)
+- Family intent (have kids / want kids / not for us / not sure yet)
+- Relationship length confirmation (anniversary date already in profile — confirm it populates correctly from onboarding)
+
+Wider audit: review all 28 existing questions and identify any other gaps against what Nora needs to speak correctly to different couple types. Cross-reference against Gottman's relationship assessment dimensions and EFT intake questions.
+
+This data improves: Remake moment selection, Ritual suggestions, Spark question relevance, Bet question categories, Hot Take tier selection, Nora memory synthesis quality, Hunt mission selection.
+
+Do this before building The Remake. Can run in parallel with Us page redesign.
+
+### WEEKLY RHYTHM AUDIT — Research + ABF Gap Analysis
+*Added: 2026-04-07*
+Sprint effort. Two parts:
+1. Research audit — identify the highest-value daily/weekly relationship habits from Gottman, EFT, attachment theory, journaling research, and broader couples therapy literature. Map what each habit achieves therapeutically.
+2. ABF audit — map current weekly features (Spark, Bet, Ritual, Weekly Reflection, Game Room) against the research findings. Identify genuine gaps — things the research says matter that ABF doesn't currently do.
+Output: a prioritized list of 2-3 new daily feature candidates to replace the 2 redundant Spark days. At least one candidate should address narrative coherence / shared meaning construction (the gap identified during The Remake design session). One candidate may be a Game Room mode migrated to a daily slot.
+Do this before committing to any new daily feature builds.
+
 ### GAME ROOM DATA CLEANUP
 *Added: 2026-04-07*
 All challenge_rounds, hot_take_answers, call_rounds, and game_finds records for couple_id 8230e60f-44ca-4668-be28-06cb32b1b831 contain test/placeholder data from development. Clean all game room data for this couple once all Game Room modes are functionally complete and signed off. Do not clean until building and testing is fully done — Nora memory synthesis depends on this data being present during development.
