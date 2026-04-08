@@ -363,6 +363,7 @@ function ChallengePlayContent() {
 
         // Always sync round state so both users see phase changes
         setRound(prev => ({ ...prev, ...memRound }))
+        if (!memRound.hint_pending) setMemoryHintResponding(false)
 
         // Trigger verdict generation once answer is revealed
         if (memRound.answer_revealed && !memRound.nora_verdict && !memoryVerdictCalled && isScribe) {
@@ -1238,7 +1239,6 @@ function ChallengePlayContent() {
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound, action: 'grant' }),
                                 })
-                                setMemoryHintResponding(false)
                               }}
                               disabled={memoryHintResponding}
                               style={{ flex: 1, padding: '14px', background: memoryHintResponding ? '#E5E7EB' : 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: memoryHintResponding ? '#9CA3AF' : '#FFFFFF', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: memoryHintResponding ? 'not-allowed' : 'pointer' }}>
@@ -1253,7 +1253,6 @@ function ChallengePlayContent() {
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound, action: 'deny' }),
                                 })
-                                setMemoryHintResponding(false)
                               }}
                               disabled={memoryHintResponding}
                               style={{ flex: 1, padding: '14px', background: memoryHintResponding ? '#E5E7EB' : '#FFFFFF', color: memoryHintResponding ? '#9CA3AF' : '#1C1510', border: '0.5px solid #E8DDD0', borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: memoryHintResponding ? 'not-allowed' : 'pointer' }}>
