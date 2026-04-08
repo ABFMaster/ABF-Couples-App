@@ -46,10 +46,7 @@ export async function POST(request) {
       ? (Date.now() - new Date(userProfile.created_at).getTime()) / (1000 * 60 * 60 * 24 * 7)
       : 0
 
-    const memoryUnlocked =
-      (timelineCount || 0) >= MEMORY_UNLOCK.minTimelineEvents &&
-      (sparkBetCount || 0) + (betCount || 0) >= MEMORY_UNLOCK.minSparkBetResponses &&
-      accountAgeWeeks >= MEMORY_UNLOCK.minAccountAgeWeeks
+    const memoryUnlocked = true // TODO: restore threshold check before wider release
 
     // Fetch couple context for Nora recommendation
     const { data: coupleData } = await supabase
