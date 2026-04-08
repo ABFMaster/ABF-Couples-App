@@ -217,6 +217,7 @@ function ChallengePlayContent() {
   const [memoryIsUpdated, setMemoryIsUpdated] = useState(false)
   const [memoryReadySubmitting, setMemoryReadySubmitting] = useState(false)
   const [memoryVerdictCalled, setMemoryVerdictCalled] = useState(false)
+  const [memoryHintResponding, setMemoryHintResponding] = useState(false)
   const pollRef = useRef(null)
   const completePollRef = useRef(null)
 
@@ -489,6 +490,7 @@ function ChallengePlayContent() {
     setMemoryIsUpdated(false)
     setMemoryReadySubmitting(false)
     setMemoryVerdictCalled(false)
+    setMemoryHintResponding(false)
 
     try {
       const res = await fetch('/api/game-room/challenge/generate', {
@@ -1226,35 +1228,36 @@ function ChallengePlayContent() {
                           <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '16px', textAlign: 'center' }}>
                             Hint {hintsGrantedArr.length + 1}: "{hints[hintsGrantedArr.length]}"
                           </p>
-                          {console.log('hint pending render', { hintPendingNow, memoryReadySubmitting, hintsGrantedArr })}
                           <div style={{ display: 'flex', gap: '10px' }}>
                             <button
                               onClick={async () => {
-                                if (memoryReadySubmitting) return
-                                setMemoryReadySubmitting(true)
+                                if (memoryHintResponding) return
+                                setMemoryHintResponding(true)
                                 await fetch('/api/game-room/challenge/memory/hint-respond', {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound, action: 'grant' }),
                                 })
+                                setMemoryHintResponding(false)
                               }}
-                              disabled={memoryReadySubmitting}
-                              style={{ flex: 1, padding: '14px', background: memoryReadySubmitting ? '#E5E7EB' : 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: memoryReadySubmitting ? '#9CA3AF' : '#FFFFFF', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: memoryReadySubmitting ? 'not-allowed' : 'pointer' }}>
-                              {memoryReadySubmitting ? '...' : 'Give it 🤝'}
+                              disabled={memoryHintResponding}
+                              style={{ flex: 1, padding: '14px', background: memoryHintResponding ? '#E5E7EB' : 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: memoryHintResponding ? '#9CA3AF' : '#FFFFFF', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: memoryHintResponding ? 'not-allowed' : 'pointer' }}>
+                              {memoryHintResponding ? '...' : 'Give it 🤝'}
                             </button>
                             <button
                               onClick={async () => {
-                                if (memoryReadySubmitting) return
-                                setMemoryReadySubmitting(true)
+                                if (memoryHintResponding) return
+                                setMemoryHintResponding(true)
                                 await fetch('/api/game-room/challenge/memory/hint-respond', {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound, action: 'deny' }),
                                 })
+                                setMemoryHintResponding(false)
                               }}
-                              disabled={memoryReadySubmitting}
-                              style={{ flex: 1, padding: '14px', background: memoryReadySubmitting ? '#E5E7EB' : '#FFFFFF', color: memoryReadySubmitting ? '#9CA3AF' : '#1C1510', border: '0.5px solid #E8DDD0', borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: memoryReadySubmitting ? 'not-allowed' : 'pointer' }}>
-                              {memoryReadySubmitting ? '...' : "You've got this 😏"}
+                              disabled={memoryHintResponding}
+                              style={{ flex: 1, padding: '14px', background: memoryHintResponding ? '#E5E7EB' : '#FFFFFF', color: memoryHintResponding ? '#9CA3AF' : '#1C1510', border: '0.5px solid #E8DDD0', borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: memoryHintResponding ? 'not-allowed' : 'pointer' }}>
+                              {memoryHintResponding ? '...' : "You've got this 😏"}
                             </button>
                           </div>
                         </div>
