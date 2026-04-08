@@ -1226,6 +1226,7 @@ function ChallengePlayContent() {
                           <p style={{ fontSize: '13px', color: '#6B7280', marginBottom: '16px', textAlign: 'center' }}>
                             Hint {hintsGrantedArr.length + 1}: "{hints[hintsGrantedArr.length]}"
                           </p>
+                          {console.log('hint pending render', { hintPendingNow, memoryReadySubmitting, hintsGrantedArr })}
                           <div style={{ display: 'flex', gap: '10px' }}>
                             <button
                               onClick={async () => {
