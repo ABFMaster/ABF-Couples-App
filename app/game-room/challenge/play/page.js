@@ -216,6 +216,7 @@ function ChallengePlayContent() {
   const [memoryLocalAnswer, setMemoryLocalAnswer] = useState('')
   const [memoryIsUpdated, setMemoryIsUpdated] = useState(false)
   const [memoryReadySubmitting, setMemoryReadySubmitting] = useState(false)
+  const [memoryVerdictCalled, setMemoryVerdictCalled] = useState(false)
   const pollRef = useRef(null)
   const completePollRef = useRef(null)
 
@@ -363,12 +364,13 @@ function ChallengePlayContent() {
         setRound(prev => ({ ...prev, ...memRound }))
 
         // Trigger verdict generation once answer is revealed
-        if (memRound.answer_revealed && !memRound.nora_verdict) {
+        if (memRound.answer_revealed && !memRound.nora_verdict && !memoryVerdictCalled && isScribe) {
+          setMemoryVerdictCalled(true)
           fetch('/api/game-room/challenge/memory/verdict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound, coupleId }),
-          }).catch(() => {})
+          })
         }
 
         if (memRound.nora_verdict && phase !== 'verdict') {
@@ -486,6 +488,7 @@ function ChallengePlayContent() {
     setMemoryLocalAnswer('')
     setMemoryIsUpdated(false)
     setMemoryReadySubmitting(false)
+    setMemoryVerdictCalled(false)
 
     try {
       const res = await fetch('/api/game-room/challenge/generate', {
