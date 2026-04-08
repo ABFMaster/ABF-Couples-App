@@ -36,7 +36,7 @@ function GameRoomLobbyContent() {
   const [challengeAvailableTypes, setChallengeAvailableTypes] = useState([])
   const [challengeSelectedType, setChallengeSelectedType] = useState(null)
   const [showChallengeTypeSelect, setShowChallengeTypeSelect] = useState(false)
-  const totalRounds = 1
+  const totalRounds = challengeSelectedType === 'memory' ? 3 : 1
 
   useEffect(() => {
     const init = async () => {
@@ -134,7 +134,7 @@ function GameRoomLobbyContent() {
               .maybeSingle()
             if (challengeSess) {
               clearInterval(pollRef.current)
-              router.push(`/game-room/challenge/play?sessionId=${sess.id}&challengeSessionId=${challengeSess.id}&type=${challengeSess.challenge_type}&rounds=1`)
+              router.push(`/game-room/challenge/play?sessionId=${sess.id}&challengeSessionId=${challengeSess.id}&type=${challengeSess.challenge_type}&rounds=${challengeSess.challenge_type === 'memory' ? 3 : 1}&scribe=false`)
             }
             return
           }
