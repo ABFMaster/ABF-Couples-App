@@ -281,3 +281,15 @@ An unknown user created an account (`id: 019ac609-7b08-49b2-9d84-fb1d9ab84ff8`, 
 - Debrief: Convergence and Bigger Picture show same text — generate-debrief needs separate prompts for factual_close vs convergence fields
 - Save to Timeline needs stronger CTA visual treatment
 - Tell me more (remote play) — only fires a message, doesn't share find content with partner
+
+### GAME ROOM DATA CLEANUP
+*Added: 2026-04-07*
+All challenge_rounds, hot_take_answers, call_rounds, and game_finds records for couple_id 8230e60f-44ca-4668-be28-06cb32b1b831 contain test/placeholder data from development. Clean all game room data for this couple once all Game Room modes are functionally complete and signed off. Do not clean until building and testing is fully done — Nora memory synthesis depends on this data being present during development.
+
+### CHALLENGE MEMORY — REMAINING ITEMS
+*Added: 2026-04-07*
+- Restore MEMORY_UNLOCK thresholds (minTimelineEvents: 5, minSparkBetResponses: 10, minAccountAgeWeeks: 3) before any wider release — currently set to 0 for testing
+- Full 3-round playtest with role swap not yet completed — verify guesser/answer-holder roles flip correctly each round
+- Hint quality pass — hints occasionally too abstract, needs prompt tuning in generate route (part of broader verdict quality pass)
+- Love Map data structure — build proper dimension-mapping schema, map Spark/Bet/Timeline data points to Love Map dimensions, store confirmed/updated answers per dimension. Shell exists (love_map_updates table). Full build is a dedicated session.
+- After Dark — two Gottman sexual preference questions (favorite time for lovemaking, what turns partner on sexually) parked for After Dark feature when built
