@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
+import { NORA_VOICE } from '@/lib/nora-knowledge'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -40,6 +41,7 @@ Rules:
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 200,
+      system: NORA_VOICE,
       messages: [{ role: 'user', content: prompt }],
     })
 

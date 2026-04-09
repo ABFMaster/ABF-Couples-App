@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { NORA_VOICE } from '@/lib/nora-knowledge'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -66,6 +67,7 @@ Score context:
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 200,
+      system: NORA_VOICE,
       messages: [{ role: 'user', content: prompt }],
     })
 

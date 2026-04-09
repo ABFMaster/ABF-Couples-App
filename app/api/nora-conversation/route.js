@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { NORA_VOICE } from '@/lib/nora-knowledge'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -14,7 +15,7 @@ export async function POST(request) {
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 600,
-      system: systemPrompt,
+      system: `${NORA_VOICE}\n\n---\n\n${systemPrompt}`,
       messages: messages.map(m => ({ role: m.role, content: m.content })),
     })
 

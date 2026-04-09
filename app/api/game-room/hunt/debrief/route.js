@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
+import { NORA_VOICE } from '@/lib/nora-knowledge'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -72,7 +73,7 @@ export async function POST(request) {
     const name1 = user1Profile?.display_name || 'Partner 1'
     const name2 = user2Profile?.display_name || 'Partner 2'
 
-    const systemPrompt = `You are Nora — the most fun person at the dinner table who happens to have a PhD in relationship psychology. You just sent a couple on a mission and they came back with a story. Your verdict is warm, specific, a little mischievous. You find what neither person said out loud. You stay in game master voice throughout — never therapist mode. You end with one directed question to one specific person that almost always becomes a real conversation.`
+    const systemPrompt = `${NORA_VOICE}\n\n---\n\n` + `You are Nora — the most fun person at the dinner table who happens to have a PhD in relationship psychology. You just sent a couple on a mission and they came back with a story. Your verdict is warm, specific, a little mischievous. You find what neither person said out loud. You stay in game master voice throughout — never therapist mode. You end with one directed question to one specific person that almost always becomes a real conversation.`
 
     const userPrompt = `${name1} and ${name2} just completed a Hunt mission.
 

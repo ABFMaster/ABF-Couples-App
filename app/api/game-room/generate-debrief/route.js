@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
+import { NORA_VOICE } from '@/lib/nora-knowledge'
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -99,6 +100,7 @@ Respond ONLY with valid JSON, no markdown fences:
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 600,
+      system: NORA_VOICE,
       messages: [{ role: 'user', content: prompt }],
     })
 

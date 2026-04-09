@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
+import { NORA_VOICE } from '@/lib/nora-knowledge'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -139,7 +140,7 @@ Give a verdict that:
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: 300,
-      system: 'You are Nora, a warm, witty, and perceptive AI relationship coach. You find what neither person said out loud. You never restate what was just told to you. You get straight to the insight.',
+      system: `${NORA_VOICE}\n\n---\n\nYou are Nora, a warm, witty, and perceptive AI relationship coach. You find what neither person said out loud. You never restate what was just told to you. You get straight to the insight.`,
       messages: [{ role: 'user', content: verdictPrompt }],
     })
 
