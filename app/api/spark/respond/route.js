@@ -139,7 +139,7 @@ You are speaking directly to ${currentUserName}. React to both answers but speak
         maxTokens: 300,
       })
 
-      const noraReaction = completion.content[0]?.text || ''
+      const noraReaction = completion || ''
 
       // Steps 10e & 10f: Write nora_reaction to both users' spark_responses
       await Promise.all([

@@ -65,7 +65,7 @@ If they agreed on everything: react to the fact that they're perfectly aligned â
       maxTokens: 400,
     })
 
-    const noraVerdict = response.content[0].text.trim()
+    const noraVerdict = response
 
     await supabase
       .from('challenge_rounds')

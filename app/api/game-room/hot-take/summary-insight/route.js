@@ -37,7 +37,7 @@ Rules:
 
     const response = await noraVerdict(prompt, { route: 'game-room/hot-take/summary-insight', maxTokens: 400 })
 
-    const insight = response.content[0].text.trim()
+    const insight = response
     return NextResponse.json({ insight })
 
   } catch (err) {

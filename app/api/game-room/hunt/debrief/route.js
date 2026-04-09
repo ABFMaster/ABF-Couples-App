@@ -100,7 +100,7 @@ PHILOSOPHY: The mission was the ignition. The conversation that follows is the p
       maxTokens: 400,
     })
 
-    const verdict = response.content[0].text.trim()
+    const verdict = response
 
     // Write verdict and mark complete
     await supabase

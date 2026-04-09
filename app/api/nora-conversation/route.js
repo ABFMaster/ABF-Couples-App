@@ -16,7 +16,7 @@ export async function POST(request) {
       maxTokens: 1000,
     })
 
-    return NextResponse.json({ content: response.content[0].text.trim() })
+    return NextResponse.json({ content: response })
   } catch (err) {
     console.error('[NoraConversation] Error:', err)
     return NextResponse.json({ error: 'Failed to get response' }, { status: 500 })

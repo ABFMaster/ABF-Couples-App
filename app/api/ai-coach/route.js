@@ -328,7 +328,7 @@ export async function POST(request) {
       maxTokens: 1000,
     });
 
-    const aiResponse = response.content[0].text;
+    const aiResponse = response;
 
     const updatedMessages = [
       ...history.map(msg => ({ role: msg.role, content: msg.content })),

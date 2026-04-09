@@ -116,7 +116,7 @@ PHILOSOPHY: A miss is not a failure — it's a map gap worth knowing about. A hi
       maxTokens: 400,
     })
 
-    const verdict = response.content[0].text.trim()
+    const verdict = response
 
     // Write verdict to DB
     const { error: updateError } = await supabase

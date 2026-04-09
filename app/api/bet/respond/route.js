@@ -154,7 +154,7 @@ You are speaking directly to ${myName}. React to what the predictions and actual
           maxTokens: 200,
         })
 
-        noraReaction = completion.content[0]?.text || ''
+        noraReaction = completion || ''
 
         // Generate Nora pre-reveal intro (short host line shown before cards flip)
         try {
@@ -164,7 +164,7 @@ You are speaking directly to ${myName}. React to what the predictions and actual
             context: 'daily',
             maxTokens: 50,
           })
-          noraIntro = introCompletion.content[0]?.text || ''
+          noraIntro = introCompletion || ''
         } catch (introErr) {
           console.error('[bet/respond] Nora intro error:', introErr)
         }

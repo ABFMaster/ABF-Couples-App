@@ -63,7 +63,7 @@ Score context:
 
     const response = await noraVerdict(prompt, { route: 'game-room/call/verdict', maxTokens: 400 })
 
-    const verdict = response.content[0].text.trim()
+    const verdict = response
 
     return NextResponse.json({ verdict, score, totalRounds })
   } catch (err) {

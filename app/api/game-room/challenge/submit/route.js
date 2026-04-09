@@ -141,7 +141,7 @@ Give a verdict that:
       maxTokens: 400,
     })
 
-    const noraVerdict = response.content[0].text.trim()
+    const noraVerdict = response
 
     // Save response and verdict to round
     const { data: round, error } = await supabase

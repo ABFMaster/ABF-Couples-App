@@ -11,7 +11,7 @@ Question: ${question}
 ${userName || 'Partner 1'} said: ${myAnswer}
 ${partnerName || 'Partner 2'} said: ${partnerAnswer}`, { route: 'spark-reaction', context: 'daily', maxTokens: 300 })
 
-    return NextResponse.json({ reaction: response.content[0].text.trim() })
+    return NextResponse.json({ reaction: response })
   } catch (err) {
     console.error('[SparkReaction] Error:', err)
     return NextResponse.json({ reaction: '' }, { status: 500 })

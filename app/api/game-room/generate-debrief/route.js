@@ -96,7 +96,7 @@ Respond ONLY with valid JSON, no markdown fences:
 
     const response = await noraVerdict(prompt, { route: 'game-room/generate-debrief', maxTokens: 500 })
 
-    const raw = response.content[0].text.trim()
+    const raw = response
     const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
     let debrief
     try {
