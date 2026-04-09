@@ -2,9 +2,8 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
-import { NORA_VOICE } from '@/lib/nora-knowledge'
+import { noraReact } from '@/lib/nora'
 
 export async function POST(request) {
   try {
@@ -148,24 +147,22 @@ ${partnerName}'s actual answer: "${theirs.actual_answer}"
 
 You are speaking directly to ${myName}. React to what the predictions and actual answers reveal but speak TO ${myName} — not about them. Be specific to what they actually said.`
 
-        const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-        const completion = await anthropic.messages.create({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 200,
-          system: `${NORA_VOICE}\n\n---\n\nYou are Nora, an AI relationship coach embedded in a couples app. You are speaking directly to the user who is reading this — always use 'you' for them and their partner's actual name for the partner. Never use 'they', 'them', 'their', or any third-person language. Never restate the question. Never start with an affirmation. React to what the predictions and actual answers reveal about how well these two know each other — be specific, warm, and occasionally playful. Keep your reaction to 1-2 sentences maximum.`,
-          messages: [{ role: 'user', content: userPrompt }],
+        const completion = await noraReact(userPrompt, {
+          route: 'bet/respond/reaction',
+          system: 'You are speaking directly to the user who is reading this — always use \'you\' for them and their partner\'s actual name for the partner. Never use \'they\', \'them\', \'their\', or any third-person language. Never restate the question. Never start with an affirmation. React to what the predictions and actual answers reveal about how well these two know each other — be specific, warm, and occasionally playful. Keep your reaction to 1-2 sentences maximum.',
+          context: 'daily',
+          maxTokens: 200,
         })
 
         noraReaction = completion.content[0]?.text || ''
 
         // Generate Nora pre-reveal intro (short host line shown before cards flip)
         try {
-          const introCompletion = await anthropic.messages.create({
-            model: 'claude-haiku-4-5-20251001',
-            max_tokens: 60,
-            system: `${NORA_VOICE}\n\n---\n\nYou are Nora, the host of a couples game called The Bet. You are warm, witty, and a little mischievous — like the most fun person at the dinner table who also happens to have a PhD. Generate ONE short line (max 12 words) to say before revealing the answers. Reference the question topic if possible. Be playful, not therapeutic. Never use the word 'alright'.`,
-            messages: [{ role: 'user', content: `The question was: "${betRow.question}"` }],
+          const introCompletion = await noraReact(`The question was: "${betRow.question}"`, {
+            route: 'bet/respond/intro',
+            system: 'Generate ONE short line (max 12 words) to say before revealing the answers. Reference the question topic if possible. Be playful, not therapeutic. Never use the word \'alright\'.',
+            context: 'daily',
+            maxTokens: 50,
           })
           noraIntro = introCompletion.content[0]?.text || ''
         } catch (introErr) {

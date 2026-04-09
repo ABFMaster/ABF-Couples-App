@@ -1,9 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
-import { NORA_VOICE } from '@/lib/nora-knowledge'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+import { noraVerdict } from '@/lib/nora'
 
 export async function POST(request) {
   try {
@@ -63,11 +60,9 @@ Give a verdict that:
 
 If they agreed on everything: react to the fact that they're perfectly aligned — that's its own kind of interesting.`
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 200,
-      system: NORA_VOICE,
-      messages: [{ role: 'user', content: verdictPrompt }],
+    const response = await noraVerdict(verdictPrompt, {
+      route: 'challenge/rank/finalize',
+      maxTokens: 400,
     })
 
     const noraVerdict = response.content[0].text.trim()

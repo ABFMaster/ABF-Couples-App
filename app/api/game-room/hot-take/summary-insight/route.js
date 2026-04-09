@@ -1,8 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
-import { NORA_VOICE } from '@/lib/nora-knowledge'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+import { noraVerdict } from '@/lib/nora'
 
 export async function POST(request) {
   try {
@@ -38,12 +35,7 @@ Rules:
 - Be specific to what they actually answered — no generic relationship advice
 - Humor is welcome if it's earned, not forced`
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 200,
-      system: NORA_VOICE,
-      messages: [{ role: 'user', content: prompt }],
-    })
+    const response = await noraVerdict(prompt, { route: 'game-room/hot-take/summary-insight', maxTokens: 400 })
 
     const insight = response.content[0].text.trim()
     return NextResponse.json({ insight })

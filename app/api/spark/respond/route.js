@@ -1,8 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
-import { NORA_VOICE } from '@/lib/nora-knowledge'
+import { noraReact } from '@/lib/nora'
 
 export async function POST(request) {
   try {
@@ -133,13 +132,11 @@ Their profiles: ${currentUserName} is ${myContext}. ${partnerName} is ${partnerC
 
 You are speaking directly to ${currentUserName}. React to both answers but speak TO ${currentUserName} — not about them. Be specific to what they actually said.`
 
-      const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-      const completion = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 150,
-        system: `${NORA_VOICE}\n\n---\n\nYou are Nora, an AI relationship coach embedded in a couples app. You are warm, direct, and perceptive. You are speaking directly to the user who is reading this — always use 'you' for them and their partner's actual name for the partner. Never use 'they', 'them', 'their', or any third-person language — there is no third party, you are talking directly to one of the two people. Never restate the question. Never start with an affirmation. React to what was actually said — be specific, not conceptual. Notice alignment, surprise, tenderness, or humor in the two answers. Keep your reaction to 1-2 sentences maximum.`,
-        messages: [{ role: 'user', content: userPrompt }],
+      const completion = await noraReact(userPrompt, {
+        route: 'spark/respond',
+        system: 'You are speaking directly to the user who is reading this — always use \'you\' for them and their partner\'s actual name for the partner. Never use \'they\', \'them\', \'their\', or any third-person language. Never restate the question. Never start with an affirmation. React to what was actually said — be specific, not conceptual. Notice alignment, surprise, tenderness, or humor in the two answers. Keep your reaction to 1-2 sentences maximum.',
+        context: 'daily',
+        maxTokens: 300,
       })
 
       const noraReaction = completion.content[0]?.text || ''

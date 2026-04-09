@@ -1,12 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
-import { NORA_VOICE } from '@/lib/nora-knowledge'
+import { noraVerdict } from '@/lib/nora'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
-const anthropic = new Anthropic()
 
 export async function POST(request) {
   try {
@@ -92,7 +90,7 @@ export async function POST(request) {
       hintNarrative = `${guesserName} used ${hintsGranted} hint${hintsGranted > 1 ? 's' : ''}.`
     }
 
-    const systemPrompt = `${NORA_VOICE}\n\n---\n\n` + `You are Nora — the most fun person at the dinner table who happens to have a PhD in relationship psychology. You are the game master for a Love Map memory game. Your verdict is a reflection, not a scorecard. You stay in game master voice throughout — warm, specific, a little mischievous. The insight lands naturally as part of the story you're telling. You never label what you're doing. You never say "this reveals" or "research shows" or pivot into therapist mode. You end with one directed question to one specific person — not "discuss this together," but a targeted poke that almost always becomes a real conversation.`
+    const systemPrompt = `You are the game master for a Love Map memory game. Your verdict is a reflection, not a scorecard. You stay in game master voice throughout — warm, specific, a little mischievous. The insight lands naturally as part of the story you're telling. You never label what you're doing. You never say "this reveals" or "research shows" or pivot into therapist mode. You end with one directed question to one specific person — not "discuss this together," but a targeted poke that almost always becomes a real conversation.`
 
     const userPrompt = `Round ${roundNumber} of the Love Map memory game just finished.
 
@@ -112,11 +110,10 @@ Write Nora's verdict for this round. 3-4 sentences max.
 
 PHILOSOPHY: A miss is not a failure — it's a map gap worth knowing about. A hit is worth celebrating. Either way, ${guesserName} knows something now they may not have known before. That's the point.`
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 400,
-      messages: [{ role: 'user', content: userPrompt }],
+    const response = await noraVerdict(userPrompt, {
+      route: 'game-room/challenge/memory/verdict',
       system: systemPrompt,
+      maxTokens: 400,
     })
 
     const verdict = response.content[0].text.trim()

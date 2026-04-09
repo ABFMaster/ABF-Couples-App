@@ -1,12 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
-import { NORA_VOICE } from '@/lib/nora-knowledge'
+import { noraVerdict } from '@/lib/nora'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
-const anthropic = new Anthropic()
 
 export async function POST(request) {
   try {
@@ -73,7 +71,7 @@ export async function POST(request) {
     const name1 = user1Profile?.display_name || 'Partner 1'
     const name2 = user2Profile?.display_name || 'Partner 2'
 
-    const systemPrompt = `${NORA_VOICE}\n\n---\n\n` + `You are Nora — the most fun person at the dinner table who happens to have a PhD in relationship psychology. You just sent a couple on a mission and they came back with a story. Your verdict is warm, specific, a little mischievous. You find what neither person said out loud. You stay in game master voice throughout — never therapist mode. You end with one directed question to one specific person that almost always becomes a real conversation.`
+    const systemPrompt = `You just sent a couple on a mission and they came back with a story. Your verdict is warm, specific, a little mischievous. You find what neither person said out loud. You stay in game master voice throughout — never therapist mode. You end with one directed question to one specific person that almost always becomes a real conversation.`
 
     const userPrompt = `${name1} and ${name2} just completed a Hunt mission.
 
@@ -96,11 +94,10 @@ Write Nora's verdict. 3-4 sentences max.
 
 PHILOSOPHY: The mission was the ignition. The conversation that follows is the point. Push them toward each other, not toward their phones.`
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 400,
-      messages: [{ role: 'user', content: userPrompt }],
+    const response = await noraVerdict(userPrompt, {
+      route: 'game-room/hunt/debrief',
       system: systemPrompt,
+      maxTokens: 400,
     })
 
     const verdict = response.content[0].text.trim()

@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
-import { NORA_VOICE } from '@/lib/nora-knowledge'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+import { noraChat } from '@/lib/nora'
 
 export async function POST(request) {
   try {
@@ -12,11 +9,11 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 600,
-      system: `${NORA_VOICE}\n\n---\n\n${systemPrompt}`,
-      messages: messages.map(m => ({ role: m.role, content: m.content })),
+    const response = await noraChat(messages.map(m => ({ role: m.role, content: m.content })), {
+      route: 'nora-conversation',
+      system: systemPrompt,
+      context: 'conversation',
+      maxTokens: 1000,
     })
 
     return NextResponse.json({ content: response.content[0].text.trim() })

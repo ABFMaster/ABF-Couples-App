@@ -1,12 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
-import { NORA_VOICE } from '@/lib/nora-knowledge'
+import { noraVerdict } from '@/lib/nora'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
-const anthropic = new Anthropic()
 
 export async function POST(request) {
   try {
@@ -137,11 +135,10 @@ Give a verdict that:
 - Is warm, grounded, and 2-4 sentences max`
     }
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 300,
-      system: `${NORA_VOICE}\n\n---\n\nYou are Nora, a warm, witty, and perceptive AI relationship coach. You find what neither person said out loud. You never restate what was just told to you. You get straight to the insight.`,
-      messages: [{ role: 'user', content: verdictPrompt }],
+    const response = await noraVerdict(verdictPrompt, {
+      route: 'game-room/challenge/submit',
+      system: 'You find what neither person said out loud. You never restate what was just told to you. You get straight to the insight.',
+      maxTokens: 400,
     })
 
     const noraVerdict = response.content[0].text.trim()

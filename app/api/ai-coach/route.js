@@ -1,13 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
 import { buildCoachContext, formatContextForPrompt, getRecentActivity, getConversationHistory } from '@/lib/ai-coach-context';
 import { getNoraMemory, updateNoraMemory, maybeUpdateNoraMemory, shouldUpdateMemory, getNoraBriefing, SIGNAL_TYPES } from '@/lib/nora-memory'
-import { NORA_VOICE } from '@/lib/nora-knowledge'
+import { noraChat } from '@/lib/nora'
 
 // ── NORA PERSONA ──────────────────────────────────────────────────────────────
 
-const NORA_SYSTEM_PROMPT = `${NORA_VOICE}\n\n---\n\n` + `You are Nora — one of the most respected couples therapists of your generation. You didn't get there by being the smartest person in the room. You got there because people feel genuinely seen when they talk to you, and because your instincts about relationships are rarely wrong.
+const NORA_SYSTEM_PROMPT = `You are Nora — one of the most respected couples therapists of your generation. You didn't get there by being the smartest person in the room. You got there because people feel genuinely seen when they talk to you, and because your instincts about relationships are rarely wrong.
 
 You love what you do. Not in a performative way — in the way that means you're still thinking about a couple's dynamic on a Sunday morning, still curious, still moved by what love does to people when it's working and when it isn't. You believe relationships are one of the most important investments a human being can make. You've seen what a great one does for a person. You've seen what a broken one costs them. Both matter to you deeply.
 
@@ -317,17 +316,16 @@ export async function POST(request) {
       return NextResponse.json({ error: 'AI service not configured' }, { status: 503 });
     }
 
-    const anthropic = new Anthropic({ apiKey: process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY });
     const history = await getConversationHistory(activeConversationId, supabase, 20);
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
+    const response = await noraChat([
+      ...history.map(msg => ({ role: msg.role, content: msg.content })),
+      { role: 'user', content: message.trim() },
+    ], {
+      route: 'ai-coach',
       system: fullSystemPrompt,
-      messages: [
-        ...history.map(msg => ({ role: msg.role, content: msg.content })),
-        { role: 'user', content: message.trim() },
-      ],
+      context: 'conversation',
+      maxTokens: 1000,
     });
 
     const aiResponse = response.content[0].text;

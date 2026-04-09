@@ -1,9 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
-import { NORA_VOICE } from '@/lib/nora-knowledge'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+import { noraVerdict } from '@/lib/nora'
 
 export async function POST(request) {
   try {
@@ -64,12 +61,7 @@ Score context:
 1/5 — a mystery to each other
 0/5 — ${predictorName}, introduce yourself`
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 200,
-      system: NORA_VOICE,
-      messages: [{ role: 'user', content: prompt }],
-    })
+    const response = await noraVerdict(prompt, { route: 'game-room/call/verdict', maxTokens: 400 })
 
     const verdict = response.content[0].text.trim()
 

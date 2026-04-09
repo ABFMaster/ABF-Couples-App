@@ -1,10 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
-import { NORA_VOICE } from '@/lib/nora-knowledge'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+import { noraVerdict } from '@/lib/nora'
 
 export async function POST(request) {
   try {
@@ -97,12 +94,7 @@ Respond ONLY with valid JSON, no markdown fences:
   "timeline_title": "A short evocative title for this memory (5 words max)"
 }`
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 600,
-      system: NORA_VOICE,
-      messages: [{ role: 'user', content: prompt }],
-    })
+    const response = await noraVerdict(prompt, { route: 'game-room/generate-debrief', maxTokens: 500 })
 
     const raw = response.content[0].text.trim()
     const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
