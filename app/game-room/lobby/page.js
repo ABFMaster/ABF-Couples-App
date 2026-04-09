@@ -139,7 +139,11 @@ function GameRoomLobbyContent() {
             return
           }
           clearInterval(pollRef.current)
-          router.push(`${config.playPath}?sessionId=${sess.id}`)
+          if (mode === 'the-hunt') {
+            router.push(`/game-room/the-hunt/play?sessionId=${sess.id}`)
+          } else {
+            router.push(`${config.playPath}?sessionId=${sess.id}`)
+          }
           return
         }
 
@@ -186,6 +190,26 @@ function GameRoomLobbyContent() {
           together,
         }),
       })
+
+      if (mode === 'the-hunt') {
+        const res = await fetch('/api/game-room/hunt/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            coupleId,
+            sessionId,
+            together,
+            timeTag: null,
+            dateId: searchParams.get('dateId') || null,
+          }),
+        })
+        const data = await res.json()
+        if (!data.huntSession) return
+        router.push(`/game-room/the-hunt/play?sessionId=${sessionId}`)
+        setStarting(false)
+        return
+      }
 
       if (mode === 'the-call') {
         const res = await fetch('/api/game-room/call/start', {

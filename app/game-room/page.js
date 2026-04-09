@@ -57,12 +57,12 @@ const MODES = [
   {
     id: 'the-hunt',
     name: 'The Hunt',
-    tagline: 'Nora builds you a scavenger hunt.',
-    description: 'A trail of clues built from things Nora knows about you. Follow it together.',
+    tagline: 'Nora gives you a mission. You go do it.',
+    description: 'Nora picks a mission built for you two — go somewhere, find something, make something happen. Leave the app. Come back with a story.',
     accent: '#7C3AED',
     accentLight: '#F5F3FF',
     icon: '🗺️',
-    available: false,
+    available: true,
   },
 ]
 
