@@ -1,10 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
-
-const anthropic = new Anthropic({
-  apiKey: process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY,
-})
+import { noraReact } from '@/lib/nora'
 
 export async function POST(request) {
   try {
@@ -19,7 +15,7 @@ export async function POST(request) {
       user2Reason,
     } = await request.json()
 
-    const prompt = `You are a warm, insightful relationship coach analyzing a couple's weekly reflection.
+    const prompt = `Analyze a couple's weekly reflection.
 
 ${user1Name} picked this moment from ${user2Name}'s check-ins this week:
 "${user1Pick}"
@@ -34,13 +30,13 @@ Be warm, specific, and insightful. Notice patterns, emotional themes, or what th
 in each other. Do not be generic. Do not use their names more than once each.
 Do not start with "I" or "It seems". Be direct and meaningful.`
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 200,
-      messages: [{ role: 'user', content: prompt }],
+    const message = await noraReact(prompt, {
+      route: 'weekly-reflection/insight',
+      context: 'daily',
+      maxTokens: 200,
     })
 
-    const insight = message.content[0].text
+    const insight = message
 
     // Save insight to reflection record
     const supabase = createClient(

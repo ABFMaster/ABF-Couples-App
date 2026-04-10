@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import { getWeekStart } from '@/lib/dates'
+import { noraReact } from '@/lib/nora'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 
 export async function POST(request) {
@@ -131,9 +131,7 @@ ${ritualLines || 'None.'}
 `.trim()
 
     // STEP 5 — Generate reflection using Claude
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-    const systemPrompt = `You are Nora, a warm and perceptive relationship coach embedded in ABF, a couples app. You write weekly reflections for couples based on their shared activities throughout the week.
+    const systemPrompt = `You write weekly reflections for couples based on their shared activities throughout the week.
 
 Your voice is:
 - Warm and direct, like a trusted friend who pays close attention
@@ -159,20 +157,15 @@ The moments array should have 2-3 items. Do not include more than 3. If there is
 
 Return only the JSON object. No markdown, no explanation, no wrapper text.`
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1200,
+    const message = await noraReact(`Here is the data for this couple's week:\n\n${contextString}\n\nGenerate their weekly reflection.`, {
+      route: 'reflection/generate',
       system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: `Here is the data for this couple's week:\n\n${contextString}\n\nGenerate their weekly reflection.`,
-        },
-      ],
+      context: 'daily',
+      maxTokens: 1200,
     })
 
     // STEP 6 — Parse response
-    const rawText = message.content[0]?.text || ''
+    const rawText = message || ''
     let parsed
     try {
       parsed = JSON.parse(rawText)
