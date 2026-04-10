@@ -83,6 +83,13 @@ ABF (Always Be Flirting) is a couples relationship app. Partners connect via a 6
 - When Matt says "done" after a Terminal command, that means it ran successfully — check output if needed
 - When Matt says "success" after a Supabase SQL block, that means the query ran successfully
 
+### NORA ARCHITECTURE RULE (CRITICAL)
+- All Anthropic calls go through `lib/nora.js` — NEVER import Anthropic directly in any route or lib file
+- Use the correct wrapper: `noraChat` (conversation), `noraReact` (single reaction), `noraVerdict` (game verdict), `noraGenerate` (JSON/structured), `noraSignal` (internal/haiku)
+- Routes pass context and instructions ONLY — never write "You are Nora" in a route system prompt
+- NORA_VOICE is prepended automatically by the wrapper — routes must not include identity descriptions
+- Violation check: `grep -rn "import Anthropic" app/ lib/` should return zero results outside `lib/nora.js`
+
 ### Development Rules
 - Read a file before editing it — always
 - One change at a time, test before moving to next
