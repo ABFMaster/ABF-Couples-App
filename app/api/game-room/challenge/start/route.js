@@ -45,7 +45,26 @@ export async function POST(request) {
       ? (Date.now() - new Date(userProfile.created_at).getTime()) / (1000 * 60 * 60 * 24 * 7)
       : 0
 
-    const memoryUnlocked = true // TODO: restore threshold check before wider release
+    const { data: timelineEvents } = await supabase
+      .from('timeline_events')
+      .select('id', { count: 'exact' })
+      .eq('couple_id', coupleId)
+    const { data: sparkResponses } = await supabase
+      .from('today_responses')
+      .select('id', { count: 'exact' })
+      .eq('couple_id', coupleId)
+    const { data: coupleRow } = await supabase
+      .from('couples')
+      .select('created_at')
+      .eq('id', coupleId)
+      .single()
+    const accountAgeWeeks = coupleRow?.created_at
+      ? (Date.now() - new Date(coupleRow.created_at).getTime()) / (1000 * 60 * 60 * 24 * 7)
+      : 0
+    const memoryUnlocked =
+      (timelineEvents?.length ?? 0) >= MEMORY_UNLOCK.minTimelineEvents &&
+      (sparkResponses?.length ?? 0) >= MEMORY_UNLOCK.minSparkBetResponses &&
+      accountAgeWeeks >= MEMORY_UNLOCK.minAccountAgeWeeks
 
     // Fetch couple context for Nora recommendation
     const { data: coupleData } = await supabase
