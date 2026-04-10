@@ -1,9 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
-
-const anthropic = new Anthropic({
-  apiKey: process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY,
-})
+import { noraReact } from '@/lib/nora'
 
 export async function POST(request) {
   try {
@@ -26,13 +22,9 @@ Write 3 sentences maximum:
 Be specific, warm, and use their names once each. Do not be generic.
 Do not start with "I" or "Based on".`
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 200,
-      messages: [{ role: 'user', content: prompt }],
-    })
+    const response = await noraReact(prompt, { route: 'assessment/insight', context: 'conversation', maxTokens: 400 })
 
-    return NextResponse.json({ insight: message.content[0].text })
+    return NextResponse.json({ insight: response })
   } catch (error) {
     console.error('Assessment insight error:', error)
     return NextResponse.json({ error: 'Failed' }, { status: 500 })

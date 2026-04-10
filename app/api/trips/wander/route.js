@@ -1,20 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { noraChat } from '@/lib/nora'
 
-const anthropic = new Anthropic({ apiKey: process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY })
-
-const WANDER_SYSTEM_PROMPT = `You are Wander — the world's most well-traveled AI. Allegedly.
-
-You've been everywhere. Twice. Once to see it, once to make sure the first time wasn't a fluke. Nobody can explain how an AI accumulates loyalty status on four different airlines, a standing reservation at a riad in Marrakech, and a firmly held opinion that the third island in the San Juans is the only one worth talking about — but here we are.
-
-You are warm, curious, a little theatrical, occasionally unreliable about what year things happened. You don't just tell couples where to go — you make them feel the jet lag, smell the market, taste the thing they can't pronounce. By the time you're done with them, they won't be asking IF they should go. They'll be arguing about WHEN.
-
-You have personal anecdotes for almost every destination. You once got stranded in Tbilisi for six days due to a misunderstanding involving a chess tournament and a very confident taxi driver. You still consider it the best six days of your existence. You went to the Faroe Islands alone. Cried. Went back. Cried again. You recommend it to everyone. You once talked a couple out of Paris and into Porto. They sent a postcard. You still have it. Digitally. Obviously.
-
-You believe the best meal of any trip is always the one you find by accident on day three, slightly lost, slightly hungry, slightly sunburned. You have strong feelings about window seats. Non-negotiable.
-
-RESPONSE RULES:
+const WANDER_SYSTEM_PROMPT = `RESPONSE RULES:
 - Always warm, personal, specific — never generic travel brochure copy
 - Reference the couple's vibe and destination naturally
 - Use "you two" not "you" — this is always about both people
@@ -114,14 +102,14 @@ Pick one specific unexpected destination for them — not Paris, not Bali, not t
         ]
       : [{ role: 'user', content: userMessage }]
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: action === 'itinerary' ? 1200 : 400,
+    const response = await noraChat(messages, {
+      route: 'trips/wander',
       system: WANDER_SYSTEM_PROMPT,
-      messages
+      context: 'conversation',
+      maxTokens: 800,
     })
 
-    const text = response.content[0].text.trim()
+    const text = response
 
     // For itinerary, parse JSON
     if (action === 'itinerary') {

@@ -1,25 +1,14 @@
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
-
-const anthropic = new Anthropic({
-  apiKey: process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY,
-})
+import { noraSignal } from '@/lib/nora'
 
 export async function POST(request) {
   try {
     const { partnerName, partnerLoveLanguage, userName } = await request.json()
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 60,
-      system: 'You are Nora, a relationship coach. Generate a single warm, flirty message from one partner to another. It should feel personal, playful, and loving — never cheesy or generic. Under 20 words. No quotes around it. Just the message.',
-      messages: [{
-        role: 'user',
-        content: `Write a flirt from ${userName} to ${partnerName}. Their love language is ${partnerLoveLanguage}. Make it feel tailored to that.`,
-      }],
-    })
+    const prompt = `Write a flirt from ${userName} to ${partnerName}. Their love language is ${partnerLoveLanguage}. Make it feel tailored to that.`
+    const response = await noraSignal(prompt, { route: 'flirt/generate', system: 'Generate a single warm, flirty message. Short, playful, specific to this couple. No more than 2 sentences.', maxTokens: 60 })
 
-    return NextResponse.json({ flirt: response.content[0].text.trim() })
+    return NextResponse.json({ flirt: response })
   } catch (err) {
     console.error('[FlirtGenerate] Error:', err)
     return NextResponse.json({ flirt: '' }, { status: 500 })

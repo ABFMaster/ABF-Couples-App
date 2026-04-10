@@ -1,8 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+import { noraGenerate } from '@/lib/nora'
 
 const EXTRACTION_PROMPT = `Read this conversation and extract the following as a JSON object with no other text:
 {
@@ -32,13 +30,10 @@ export async function POST(request) {
 
     let profile
     try {
-      const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 600,
-        messages: [{ role: 'user', content: `${EXTRACTION_PROMPT}\n\n${conversationText}` }],
-      })
+      const prompt = `${EXTRACTION_PROMPT}\n\n${conversationText}`
+      const response = await noraGenerate(prompt, { route: 'flirts/save-profile', maxTokens: 600 })
 
-      const raw = response.content[0].text.trim()
+      const raw = response
       // Strip markdown code fences if present
       const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
       profile = JSON.parse(cleaned)

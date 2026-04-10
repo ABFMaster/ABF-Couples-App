@@ -1,11 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import { noraGenerate } from '@/lib/nora'
 import { searchGifs } from '@/lib/giphy'
 import { searchMovies, searchShows } from '@/lib/omdb'
 import { searchSpotifyTracks } from '@/lib/spotify'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const FLIRT_MODES = ['song', 'gif', 'place', 'memory', 'prompt', 'movie', 'show']
 
@@ -58,7 +56,7 @@ export async function POST(request) {
 
     const mode = requestedMode || FLIRT_MODES[Math.floor(Math.random() * FLIRT_MODES.length)]
 
-    const systemPrompt = `You are Nora, a relationship therapist and creative director helping one partner send a personalized flirt to the other.
+    const systemPrompt = `You are a creative director helping one partner send a personalized flirt to the other.
 
 You know this about the sender:
 - Humor style: ${myProfile?.humor_style || 'unknown'}
@@ -98,14 +96,10 @@ Respond with a JSON object only, no other text:
 
     let flirtData
     try {
-      const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 300,
-        messages: [{ role: 'user', content: 'Generate the flirt suggestion.' }],
-        system: systemPrompt,
-      })
+      const prompt = 'Generate the flirt suggestion.'
+      const response = await noraGenerate(prompt, { route: 'flirts/generate', system: systemPrompt, maxTokens: 400 })
 
-      const raw = response.content[0].text.trim()
+      const raw = response
       const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
       flirtData = JSON.parse(cleaned)
     } catch (err) {

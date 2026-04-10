@@ -1,10 +1,6 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-
-const anthropic = new Anthropic({
-  apiKey: process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY
-})
+import { noraGenerate } from '@/lib/nora'
 
 export async function POST(request) {
   try {
@@ -104,13 +100,9 @@ Examples:
 - "You two haven't been out in weeks. This one's overdue."
 - "Three stops, one night, zero excuses. Go have fun."`
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 600,
-      messages: [{ role: 'user', content: prompt }]
-    })
+    const response = await noraGenerate(prompt, { route: 'dates/conversation-starters', maxTokens: 600 })
 
-    const raw = message.content[0].text.trim()
+    const raw = response
     const starters = JSON.parse(raw)
 
     if (dateId) {

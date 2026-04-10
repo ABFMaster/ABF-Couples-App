@@ -2,13 +2,12 @@ import { createClient } from '@supabase/supabase-js'
 import { getSparkQuestion } from '@/lib/spark-questions'
 import { getBetQuestion } from '@/lib/bet-questions'
 import { getTodayString, getDayOfWeek } from '@/lib/dates'
-import Anthropic from '@anthropic-ai/sdk'
+import { noraGenerate } from '@/lib/nora'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
-const anthropic = new Anthropic()
 
 const SPARK_DAYS = [1, 2, 4] // Mon, Tue, Thu
 const BET_DAYS = [3] // Wed
@@ -193,13 +192,7 @@ async function processRabbitHoleConvergence() {
           }).join('\n')
         : 'No finds recorded.'
 
-      const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
-        system: 'You are Nora, a warm and perceptive AI relationship coach. You are closing out a Rabbit Hole investigation that a couple started but never finished. Be the game master who brings it home — find what neither of them said explicitly.',
-        messages: [{
-          role: 'user',
-          content: `Topic: ${session.hole_topic}
+      const prompt = `Topic: ${session.hole_topic}
 Entry point: ${session.hole_entry || 'not recorded'}
 
 What they found across all rounds:
@@ -213,13 +206,12 @@ Respond in this exact JSON format:
 {
   "factual_close": "...",
   "human_truth": "..."
-}`,
-        }],
-      })
+}`
+      const response = await noraGenerate(prompt, { route: 'cron/scheduled-tasks', system: 'You are closing out a Rabbit Hole investigation that a couple started but never finished. Be the game master who brings it home — find what neither of them said explicitly.', maxTokens: 1000 })
 
       let parsed
       try {
-        const raw = response.content[0].text.replace(/```json|```/g, '').trim()
+        const raw = response.replace(/```json|```/g, '').trim()
         parsed = JSON.parse(raw)
       } catch {
         parsed = {
