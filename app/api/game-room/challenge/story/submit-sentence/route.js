@@ -1,8 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+import { noraSignal } from '@/lib/nora'
 
 export async function POST(request) {
   try {
@@ -46,15 +44,8 @@ export async function POST(request) {
     if (totalSentences === 3) {
       try {
         const storyText = updatedSentences.map(s => s.text).join(' ')
-        const nudgeResponse = await anthropic.messages.create({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 60,
-          messages: [{
-            role: 'user',
-            content: `You are Nora — snarky game show host. A couple is writing a story together alternating sentences. Here are the first three sentences: "${storyText}". Drop one line — a provocation, a challenge, a twist instruction. Max 12 words. Don't summarize. Make the next three sentences more interesting.`
-          }]
-        })
-        noraNudge = nudgeResponse.content[0].text.trim()
+        const nudgeResponse = await noraSignal(`You are Nora — snarky game show host. A couple is writing a story together alternating sentences. Here are the first three sentences: "${storyText}". Drop one line — a provocation, a challenge, a twist instruction. Max 12 words. Don't summarize. Make the next three sentences more interesting.`, { route: 'game-room/challenge/story/submit-sentence', maxTokens: 60 })
+        noraNudge = nudgeResponse
       } catch {}
     }
 

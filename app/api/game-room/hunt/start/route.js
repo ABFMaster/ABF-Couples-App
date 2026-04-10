@@ -1,12 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
 import { getAvailableMissions, ALL_HUNT_MISSIONS } from '@/lib/hunt-missions'
+import { noraGenerate } from '@/lib/nora'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
-const anthropic = new Anthropic()
 
 export async function POST(request) {
   try {
@@ -98,7 +97,7 @@ export async function POST(request) {
       : 'this couple'
 
     // Use Nora to pick the best mission from the pool
-    const systemPrompt = `You are Nora, the AI relationship coach for ABF. You are selecting a Hunt mission for a couple. Pick the mission that will be most interesting, surprising, and well-suited to this specific couple. Return only valid JSON.`
+    const systemPrompt = `You are selecting a Hunt mission for a couple. Pick the mission that will be most interesting, surprising, and well-suited to this specific couple. Return only valid JSON.`
 
     const missionChoices = pool.slice(0, 8).map(m => ({ key: m.key, title: m.title, category: m.category, mission_text: m.mission_text }))
 
@@ -122,16 +121,11 @@ Respond in this exact JSON format with no other text:
   "selected_key": "hunt_xx"
 }`
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 100,
-      messages: [{ role: 'user', content: userPrompt }],
-      system: systemPrompt,
-    })
+    const response = await noraGenerate(userPrompt, { route: 'game-room/hunt/start', system: systemPrompt, maxTokens: 100 })
 
     let selectedKey
     try {
-      const raw = response.content[0].text.replace(/```json|```/g, '').trim()
+      const raw = response.replace(/```json|```/g, '').trim()
       const parsed = JSON.parse(raw)
       selectedKey = parsed.selected_key
     } catch {

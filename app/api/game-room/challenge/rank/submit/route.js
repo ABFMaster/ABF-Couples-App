@@ -1,8 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+import { noraSignal } from '@/lib/nora'
 
 export async function POST(request) {
   try {
@@ -64,15 +62,8 @@ export async function POST(request) {
         const u1Name = u1Profile?.display_name || 'Partner 1'
         const u2Name = u2Profile?.display_name || 'Partner 2'
 
-        const res = await anthropic.messages.create({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 60,
-          messages: [{
-            role: 'user',
-            content: `You are Nora — sharp, dry game show host. A couple just ranked something and disagreed at position ${mostInteresting.position}. One put "${mostInteresting.user1Item}" here, the other put "${mostInteresting.user2Item}". Fire one line that pokes at the tension or absurdity of this disagreement. Max 12 words. No therapy-speak.`
-          }]
-        })
-        noraInterjection = res.content[0].text.trim()
+        const res = await noraSignal(`You are Nora — sharp, dry game show host. A couple just ranked something and disagreed at position ${mostInteresting.position}. One put "${mostInteresting.user1Item}" here, the other put "${mostInteresting.user2Item}". Fire one line that pokes at the tension or absurdity of this disagreement. Max 12 words. No therapy-speak.`, { route: 'game-room/challenge/rank/submit', maxTokens: 60 })
+        noraInterjection = res
 
         await supabase
           .from('challenge_rounds')

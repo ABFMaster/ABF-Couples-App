@@ -1,8 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+import { noraGenerate } from '@/lib/nora'
 
 export async function POST(request) {
   try {
@@ -191,13 +189,9 @@ Respond ONLY with JSON, no markdown:
 }`
     }
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 800,
-      messages: [{ role: 'user', content: prompt }],
-    })
+    const response = await noraGenerate(prompt, { route: 'game-room/generate-hole', maxTokens: 800 })
 
-    const raw = response.content[0].text.trim()
+    const raw = response
     const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
     let generated
     try {

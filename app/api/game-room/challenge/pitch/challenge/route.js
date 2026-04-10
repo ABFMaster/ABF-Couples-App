@@ -1,8 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+import { noraSignal } from '@/lib/nora'
 
 export async function POST(request) {
   try {
@@ -40,21 +38,14 @@ export async function POST(request) {
 
     const names = `${u1Profile?.display_name || 'Partner 1'} and ${u2Profile?.display_name || 'Partner 2'}`
 
-    const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 80,
-      messages: [{
-        role: 'user',
-        content: `You are Nora — a hostile, sharp, witty investor who has heard every pitch in the world. ${names} just pitched you this:
+    const response = await noraSignal(`You are Nora — a hostile, sharp, witty investor who has heard every pitch in the world. ${names} just pitched you this:
 
 Pitch challenge: "${prompt}"
 Their pitch: "${pitch}"
 
-Fire ONE hostile follow-up question that challenges the weakest part of their pitch. Be specific to what they actually said. Max 15 words. No softening. You are not impressed yet.`
-      }]
-    })
+Fire ONE hostile follow-up question that challenges the weakest part of their pitch. Be specific to what they actually said. Max 15 words. No softening. You are not impressed yet.`, { route: 'game-room/challenge/pitch/challenge', maxTokens: 80 })
 
-    const noraChallenge = response.content[0].text.trim()
+    const noraChallenge = response
 
     await supabase
       .from('challenge_rounds')

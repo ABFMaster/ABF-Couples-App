@@ -1,12 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
 import { CHALLENGE_PROMPTS, MEMORY_UNLOCK } from '@/lib/challenge-prompts'
+import { noraGenerate } from '@/lib/nora'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
-const anthropic = new Anthropic()
 
 export async function POST(request) {
   try {
@@ -77,7 +76,7 @@ export async function POST(request) {
       ? profiles.map(p => `${p.display_name}: love language ${p.love_language || 'unknown'}, attachment ${p.attachment_style || 'unknown'}`).join('; ')
       : 'couple profiles unavailable'
 
-    const systemPrompt = `You are Nora, an AI relationship coach. You recommend one challenge type for a couple based on their context. Be brief and warm. Your recommendation should feel personal, not generic.`
+    const systemPrompt = `You recommend one challenge type for a couple. Be brief and warm. Your recommendation should feel personal, not generic.`
 
     const userPrompt = `Recommend one challenge type for this couple and give a single sentence reason why it suits them right now.
 
@@ -94,16 +93,11 @@ Respond in this exact JSON format with no other text:
   "reason": "one sentence, warm and specific to this couple"
 }`
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 200,
-      messages: [{ role: 'user', content: userPrompt }],
-      system: systemPrompt,
-    })
+    const response = await noraGenerate(userPrompt, { route: 'game-room/challenge/start', system: systemPrompt, maxTokens: 200 })
 
     let recommendation
     try {
-      const raw = response.content[0].text.replace(/```json|```/g, '').trim()
+      const raw = response.replace(/```json|```/g, '').trim()
       recommendation = JSON.parse(raw)
     } catch {
       recommendation = { recommendedType: 'story', reason: 'A good place to start.' }

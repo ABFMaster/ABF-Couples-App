@@ -1,8 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+import { noraSignal } from '@/lib/nora'
 
 export async function POST(request) {
   try {
@@ -72,12 +70,8 @@ export async function POST(request) {
           ? `A couple both ${answer ? 'agreed' : 'disagreed'} with this hot take: "${questionText}". Write a single witty Nora one-liner (5-8 words max) that provokes them to actually talk about WHY they agree. Be mischievous. No punctuation at end. Examples: "Of course you do. Explain yourselves", "Bold stance. Back it up", "Suspiciously unanimous. Fight about it"`
           : `A couple split on this hot take: "${questionText}". One agreed, one disagreed. Write a single witty Nora one-liner (5-8 words max) that stirs the pot. Be mischievous. No punctuation at end. Examples: "There it is. Talk about it", "Interesting. One of you is wrong", "Now we are getting somewhere"`
 
-        const response = await anthropic.messages.create({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 40,
-          messages: [{ role: 'user', content: prompt }],
-        })
-        noraComment = response.content[0].text.trim().replace(/['"]/g, '')
+        const response = await noraSignal(prompt, { route: 'game-room/hot-take/answer', maxTokens: 40 })
+        noraComment = response.replace(/['"]/g, '')
       } catch { noraComment = agreed ? 'Bold. Both of you explain.' : 'There it is. Talk about it.' }
 
       // Save Nora comment

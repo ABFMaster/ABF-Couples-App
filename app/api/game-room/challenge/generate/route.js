@@ -1,12 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
 import { CHALLENGE_PROMPTS } from '@/lib/challenge-prompts'
+import { noraGenerate } from '@/lib/nora'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
-const anthropic = new Anthropic()
 
 export async function POST(request) {
   try {
@@ -82,7 +81,7 @@ export async function POST(request) {
       ? profiles.map(p => p.display_name).join(' and ')
       : 'this couple'
 
-    const systemPrompt = `You are Nora, an AI relationship coach running a couples game called The Challenge. Your job is to take a base challenge prompt and personalise it for a specific couple. Keep it warm, specific, and playful. Never be generic.`
+    const systemPrompt = `You are running a couples game called The Challenge. Your job is to take a base challenge prompt and personalise it for a specific couple. Keep it warm, specific, and playful. Never be generic.`
 
     let userPrompt
     if (challengeType === 'rank') {
@@ -232,16 +231,11 @@ Respond in this exact JSON format with no other text:
 }`
     }
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 600,
-      messages: [{ role: 'user', content: userPrompt }],
-      system: systemPrompt,
-    })
+    const response = await noraGenerate(userPrompt, { route: 'game-room/challenge/generate', system: systemPrompt, maxTokens: 600 })
 
     let parsed
     try {
-      const raw = response.content[0].text.replace(/```json|```/g, '').trim()
+      const raw = response.replace(/```json|```/g, '').trim()
       parsed = JSON.parse(raw)
     } catch {
       parsed = challengeType === 'memory'

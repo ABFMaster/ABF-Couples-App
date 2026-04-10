@@ -1,8 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
 import { NextResponse } from 'next/server'
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+import { noraSignal } from '@/lib/nora'
 
 export async function POST(request) {
   try {
@@ -71,13 +69,9 @@ ${correct ? `${predictorName} got it right.` : `${predictorName} got it wrong.`}
 
 Fire ONE sharp observation about the gap or the match. Max 15 words. Be specific to what they actually answered. Dry, warm, occasionally snarky. No affirmations. No therapy-speak.`
 
-    const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 60,
-      messages: [{ role: 'user', content: noraPrompt }],
-    })
+    const response = await noraSignal(noraPrompt, { route: 'game-room/call/answer', maxTokens: 60 })
 
-    const noraComment = response.content[0].text.trim()
+    const noraComment = response
 
     // Save correct + nora_comment, update status
     const { data: updatedRound } = await supabase
