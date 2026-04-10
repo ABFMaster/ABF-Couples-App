@@ -446,11 +446,7 @@ function GameRoomLobbyContent() {
                   ))}
                 </div>
               </>
-            ) : (
-              <p style={{ fontSize: '14px', color: 'rgba(0,0,0,0.4)', textAlign: 'center', padding: '12px 0 20px', fontFamily: "'Fraunces', Georgia, serif", fontStyle: 'italic' }}>
-                {together === null ? `Waiting for ${partnerName} to set up...` : together ? `${partnerName} says you're together 👫` : `${partnerName} says you're remote 📱`}
-              </p>
-            )}
+            ) : null}
 
             {/* Timer — only for modes that need it */}
             {config.hasTimer && (
