@@ -220,6 +220,8 @@ function ChallengePlayContent() {
   const [memoryHintResponding, setMemoryHintResponding] = useState(false)
   const pollRef = useRef(null)
   const completePollRef = useRef(null)
+  const phaseRef = useRef(phase)
+  useEffect(() => { phaseRef.current = phase }, [phase])
 
   useEffect(() => {
     async function init() {
@@ -310,7 +312,7 @@ function ChallengePlayContent() {
         }
 
         // Nora verdict ready
-        if (rankRound.nora_verdict && phase !== 'verdict') {
+        if (rankRound.nora_verdict && phaseRef.current !== 'verdict') {
           setNoraVerdict(rankRound.nora_verdict)
           setPhase('verdict')
         }
@@ -328,7 +330,7 @@ function ChallengePlayContent() {
           setNoraChallenge(pitchRound.nora_challenge)
           setPitchPhase('defending')
         }
-        if (pitchRound?.nora_verdict && phase !== 'verdict') {
+        if (pitchRound?.nora_verdict && phaseRef.current !== 'verdict') {
           setNoraVerdict(pitchRound.nora_verdict)
           setPhase('verdict')
         }
@@ -345,10 +347,10 @@ function ChallengePlayContent() {
           setSentences(storyRound.sentences || [])
           setCurrentTurnUserId(storyRound.current_turn_user_id)
           if (storyRound.nora_nudge) setNoraNudge(storyRound.nora_nudge)
-          if (storyRound.nora_verdict && phase !== 'verdict') {
+          if (storyRound.nora_verdict && phaseRef.current !== 'verdict') {
             setNoraVerdict(storyRound.nora_verdict)
             setPhase('verdict')
-          } else if (storyRound.story_complete && !storyRound.nora_verdict && phase !== 'verdict') {
+          } else if (storyRound.story_complete && !storyRound.nora_verdict && phaseRef.current !== 'verdict') {
             // Partner submitted sentence 6 — trigger verdict fetch for this user
             const submitRes = await fetch('/api/game-room/challenge/submit', {
               method: 'POST',
@@ -391,7 +393,7 @@ function ChallengePlayContent() {
           })
         }
 
-        if (memRound.nora_verdict && phase !== 'verdict') {
+        if (memRound.nora_verdict && phaseRef.current !== 'verdict') {
           setNoraVerdict(memRound.nora_verdict)
           setPhase('verdict')
         }
@@ -408,7 +410,7 @@ function ChallengePlayContent() {
         .maybeSingle()
 
       // Watcher: advance from loading to challenge when round appears
-      if (roundRow && !isScribe && phase === 'loading') {
+      if (roundRow && !isScribe && phaseRef.current === 'loading') {
         setRound(roundRow)
         if (challengeType === 'story') {
           setSentences(roundRow.sentences || [])
@@ -429,7 +431,7 @@ function ChallengePlayContent() {
         return
       }
 
-      if (roundRow?.nora_verdict && phase !== 'verdict' && phase !== 'complete') {
+      if (roundRow?.nora_verdict && phaseRef.current !== 'verdict' && phaseRef.current !== 'complete') {
         setRound(roundRow)
         setNoraVerdict(roundRow.nora_verdict)
         if (roundRow.couple_response) setResponse(roundRow.couple_response)
@@ -446,20 +448,20 @@ function ChallengePlayContent() {
 
       if (!challengeSession) return
 
-      if (challengeSession.status === 'complete' && phase !== 'complete') {
+      if (challengeSession.status === 'complete' && phaseRef.current !== 'complete') {
         clearInterval(pollRef.current)
         setPhase('complete')
         return
       }
 
-      if (challengeSession.current_round > currentRound && phase === 'verdict') {
+      if (challengeSession.current_round > currentRound && phaseRef.current === 'verdict') {
         clearInterval(pollRef.current)
         setCurrentRound(challengeSession.current_round)
         generateRound(challengeSession.current_round)
       }
     }, 3000)
     return () => clearInterval(pollRef.current)
-  }, [challengeSessionId, currentRound, phase])
+  }, [challengeSessionId, currentRound])
 
   // Poll for partner starting a new lobby session — complete screen only
   useEffect(() => {
