@@ -121,6 +121,7 @@ export default function TodayPage() {
   const [sparkData, setSparkData] = useState(null)
   const [sparkLoading, setSparkLoading] = useState(true)
   const [sparkIntroShown, setSparkIntroShown] = useState(false)
+  const sparkReactionPollRef = useRef(null)
 
   // Bet state
   const [betData, setBetData] = useState(null)
@@ -403,6 +404,21 @@ export default function TodayPage() {
       body: JSON.stringify({ sparkId: sparkData.spark.id, responseText: text }),
     })
     await fetchSpark()
+    // Poll until nora_reaction appears — fires when partner submits and Nora generates
+    if (sparkReactionPollRef.current) clearInterval(sparkReactionPollRef.current)
+    sparkReactionPollRef.current = setInterval(async () => {
+      const { data: { session: s } } = await supabase.auth.getSession()
+      if (!s) return
+      const res = await fetch('/api/spark/today?spark=true', {
+        headers: { Authorization: `Bearer ${s.access_token}` },
+      })
+      const data = await res.json()
+      if (data?.mine?.nora_reaction) {
+        setSparkData(data)
+        clearInterval(sparkReactionPollRef.current)
+        sparkReactionPollRef.current = null
+      }
+    }, 3000)
   }
 
   const handleSparkSkip = async () => {
