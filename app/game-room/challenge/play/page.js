@@ -348,6 +348,22 @@ function ChallengePlayContent() {
           if (storyRound.nora_verdict && phase !== 'verdict') {
             setNoraVerdict(storyRound.nora_verdict)
             setPhase('verdict')
+          } else if (storyRound.story_complete && !storyRound.nora_verdict && phase !== 'verdict') {
+            // Partner submitted sentence 6 — trigger verdict fetch for this user
+            const submitRes = await fetch('/api/game-room/challenge/submit', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId, coupleId, challengeSessionId,
+                roundId: round.id, challengeType,
+                prompt: round.prompt, coupleResponse: '',
+              }),
+            })
+            const submitData = await submitRes.json()
+            if (submitData.noraVerdict) {
+              setNoraVerdict(submitData.noraVerdict)
+              setPhase('verdict')
+            }
           }
         }
         return
@@ -1102,7 +1118,7 @@ function ChallengePlayContent() {
                   <div style={{ textAlign: 'center', padding: '16px 0', color: '#9CA3AF', fontSize: '13px' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                       <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
-                      {sentences.length === 0 ? `Waiting for ${partnerName} to start the story...` : `${partnerName} is writing sentence ${sentences.length + 1}...`}
+                      {sentences.length === 0 ? `Waiting for ${partnerName} to start the story...` : sentences.length >= 6 ? `Finishing the story...` : `${partnerName} is writing sentence ${sentences.length + 1}...`}
                     </div>
                   </div>
                 )}
