@@ -374,7 +374,7 @@ function ChallengePlayContent() {
       if (challengeType === 'memory' && round) {
         const { data: memRound } = await supabase
           .from('challenge_rounds')
-          .select('answer_holder_ready, guesser_answer, answer_revealed, hint_requests, hints_granted, hint_denials, hint_pending, nora_verdict, memory_answer')
+          .select('answer_holder_ready, guesser_answer, answer_revealed, hint_requests, hints_granted, hint_denials, hint_pending, nora_verdict, memory_answer, guesser_user_id, memory_question, hint_1, hint_2, hint_3, prompt_key')
           .eq('id', round.id)
           .maybeSingle()
         if (!memRound) return
