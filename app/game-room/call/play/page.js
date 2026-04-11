@@ -162,10 +162,10 @@ function CallPlayContent() {
         }
         const { data: roundUpdate } = await supabase
           .from('call_rounds')
-          .select('hot_seat_explanation')
+          .select('hot_seat_explanation, explanation_revealed')
           .eq('id', round?.id)
           .maybeSingle()
-        if (roundUpdate?.hot_seat_explanation && roundUpdate.hot_seat_explanation !== '—') {
+        if (roundUpdate?.explanation_revealed && roundUpdate.hot_seat_explanation && roundUpdate.hot_seat_explanation !== '—') {
           setPartnerExplanation(roundUpdate.hot_seat_explanation)
         }
         if (callSession?.current_round > currentRound) {
@@ -288,6 +288,13 @@ function CallPlayContent() {
   }
 
   const handleNext = async () => {
+    // Reveal explanation to partner before advancing
+    if (round?.id) {
+      await supabase
+        .from('call_rounds')
+        .update({ explanation_revealed: true })
+        .eq('id', round.id)
+    }
     const res = await fetch('/api/game-room/call/next', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
