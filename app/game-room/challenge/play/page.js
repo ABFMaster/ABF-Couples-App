@@ -1154,7 +1154,7 @@ function ChallengePlayContent() {
                     const answerType = prePopulatedAnswer
                       ? (memoryIsUpdated ? 'type_a_updated' : 'type_a_confirmed')
                       : 'type_b'
-                    await fetch('/api/game-room/challenge/memory/ready', {
+                    const readyRes = await fetch('/api/game-room/challenge/memory/ready', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
@@ -1168,6 +1168,9 @@ function ChallengePlayContent() {
                         coupleId,
                       }),
                     })
+                    if (readyRes.ok) {
+                      setRound(prev => prev ? { ...prev, answer_holder_ready: true, memory_answer: memoryLocalAnswer } : prev)
+                    }
                     setMemoryReadySubmitting(false)
                   }
 
