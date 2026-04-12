@@ -388,6 +388,7 @@ function ChallengePlayContent() {
         if (!memRound.hint_pending) setMemoryHintResponding(false)
 
         // Trigger verdict generation once answer is revealed
+        console.log('[VERDICT CHECK]', { answer_revealed: memRound.answer_revealed, nora_verdict: memRound.nora_verdict, memoryVerdictCalledRef: memoryVerdictCalledRef.current, isScribeRef: isScribeRef.current })
         if (memRound.answer_revealed && !memRound.nora_verdict && !memoryVerdictCalledRef.current && isScribeRef.current) {
           memoryVerdictCalledRef.current = true
           fetch('/api/game-room/challenge/memory/verdict', {
