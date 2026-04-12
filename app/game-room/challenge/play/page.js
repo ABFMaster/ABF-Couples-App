@@ -220,8 +220,10 @@ function ChallengePlayContent() {
   const [memoryHintResponding, setMemoryHintResponding] = useState(false)
   const pollRef = useRef(null)
   const completePollRef = useRef(null)
+  const roundRef = useRef(null)
   const phaseRef = useRef(phase)
   useEffect(() => { phaseRef.current = phase }, [phase])
+  useEffect(() => { roundRef.current = round }, [round])
 
   useEffect(() => {
     async function init() {
@@ -286,7 +288,7 @@ function ChallengePlayContent() {
         const { data: rankRound } = await supabase
           .from('challenge_rounds')
           .select('rank_user1_r1, rank_user2_r1, rank_user1_r2, rank_user2_r2, rank_nora_interjection, rank_final, no_agreements, rank_round, nora_verdict')
-          .eq('id', round.id)
+          .eq('id', roundRef.current?.id)
           .maybeSingle()
         if (!rankRound) return
 
@@ -324,7 +326,7 @@ function ChallengePlayContent() {
         const { data: pitchRound } = await supabase
           .from('challenge_rounds')
           .select('nora_challenge, nora_verdict')
-          .eq('id', round.id)
+          .eq('id', roundRef.current?.id)
           .maybeSingle()
         if (pitchRound?.nora_challenge && !noraChallenge) {
           setNoraChallenge(pitchRound.nora_challenge)
@@ -341,7 +343,7 @@ function ChallengePlayContent() {
         const { data: storyRound } = await supabase
           .from('challenge_rounds')
           .select('sentences, current_turn_user_id, nora_nudge, nora_verdict, story_complete')
-          .eq('id', round.id)
+          .eq('id', roundRef.current?.id)
           .maybeSingle()
         if (storyRound) {
           setSentences(storyRound.sentences || [])
@@ -371,11 +373,11 @@ function ChallengePlayContent() {
         return
       }
 
-      if (challengeType === 'memory' && round) {
+      if (challengeType === 'memory' && roundRef.current) {
         const { data: memRound } = await supabase
           .from('challenge_rounds')
           .select('answer_holder_ready, guesser_answer, answer_revealed, hint_requests, hints_granted, hint_denials, hint_pending, nora_verdict, memory_answer, guesser_user_id, memory_question, hint_1, hint_2, hint_3, prompt_key')
-          .eq('id', round.id)
+          .eq('id', roundRef.current?.id)
           .maybeSingle()
         if (!memRound) return
 
