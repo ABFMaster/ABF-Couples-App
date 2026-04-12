@@ -216,7 +216,6 @@ function ChallengePlayContent() {
   const [memoryLocalAnswer, setMemoryLocalAnswer] = useState('')
   const [memoryIsUpdated, setMemoryIsUpdated] = useState(false)
   const [memoryReadySubmitting, setMemoryReadySubmitting] = useState(false)
-  const [memoryVerdictCalled, setMemoryVerdictCalled] = useState(false)
   const [memoryHintResponding, setMemoryHintResponding] = useState(false)
   const pollRef = useRef(null)
   const completePollRef = useRef(null)
@@ -224,6 +223,9 @@ function ChallengePlayContent() {
   const phaseRef = useRef(phase)
   useEffect(() => { phaseRef.current = phase }, [phase])
   useEffect(() => { roundRef.current = round }, [round])
+  const isScribeRef = useRef(false)
+  useEffect(() => { isScribeRef.current = isScribe }, [isScribe])
+  const memoryVerdictCalledRef = useRef(false)
 
   useEffect(() => {
     async function init() {
@@ -386,8 +388,8 @@ function ChallengePlayContent() {
         if (!memRound.hint_pending) setMemoryHintResponding(false)
 
         // Trigger verdict generation once answer is revealed
-        if (memRound.answer_revealed && !memRound.nora_verdict && !memoryVerdictCalled && isScribe) {
-          setMemoryVerdictCalled(true)
+        if (memRound.answer_revealed && !memRound.nora_verdict && !memoryVerdictCalledRef.current && isScribeRef.current) {
+          memoryVerdictCalledRef.current = true
           fetch('/api/game-room/challenge/memory/verdict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -509,7 +511,7 @@ function ChallengePlayContent() {
     setMemoryLocalAnswer('')
     setMemoryIsUpdated(false)
     setMemoryReadySubmitting(false)
-    setMemoryVerdictCalled(false)
+    memoryVerdictCalledRef.current = false
     setMemoryHintResponding(false)
 
     try {
