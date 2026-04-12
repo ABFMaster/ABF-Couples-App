@@ -1140,6 +1140,7 @@ function ChallengePlayContent() {
               const hints = [hint1, hint2, hint3]
               const prePopulatedAnswer = round?.memory_answer || ''
               const answerHolderReadyNow = round?.answer_holder_ready || false
+              console.log('[MEMORY DEBUG]', { isGuesserThisRound, answerHolderReadyNow, roundId: round?.id, guesserUserId: round?.guesser_user_id, userId, challengeType })
               const guesserAnswerSubmitted = round?.guesser_answer || ''
               const answerRevealedNow = round?.answer_revealed || false
 
