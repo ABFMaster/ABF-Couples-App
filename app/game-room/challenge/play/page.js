@@ -225,6 +225,8 @@ function ChallengePlayContent() {
   useEffect(() => { roundRef.current = round }, [round])
   const isScribeRef = useRef(false)
   useEffect(() => { isScribeRef.current = isScribe }, [isScribe])
+  const coupleIdRef = useRef(null)
+  useEffect(() => { coupleIdRef.current = coupleId }, [coupleId])
   const memoryVerdictCalledRef = useRef(false)
 
   useEffect(() => {
@@ -396,7 +398,7 @@ function ChallengePlayContent() {
           fetch('/api/game-room/challenge/memory/verdict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound, coupleId }),
+            body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound, coupleId: coupleIdRef.current }),
           }).catch(() => {
             memoryVerdictCalledRef.current = false
           })
