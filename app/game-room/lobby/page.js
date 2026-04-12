@@ -430,8 +430,8 @@ function GameRoomLobbyContent() {
         {/* Together/Remote + Timer — only show when both in lobby */}
         {bothInLobby && (
           <div style={{ marginBottom: '24px' }}>
-            {/* Together or remote */}
-            {isHost ? (
+            {/* Together or remote — not shown for Challenge since mechanic is proximity-independent */}
+            {isHost && mode !== 'challenge' ? (
               <>
                 <p style={{ fontSize: '13px', fontWeight: 600, color: '#1A1A1A', marginBottom: '12px' }}>Are you together right now?</p>
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>

@@ -120,6 +120,27 @@ Before fixing any bug, answer: (1) What is the actual root cause — not the sym
 ### ONE FEATURE AT A TIME
 Do not context switch mid-session. Complete the current feature to Definition of Done before starting anything new.
 
+### STALE CLOSURE RULE (CRITICAL FOR ASYNC FEATURES)
+Any state variable read inside a `setInterval` callback that is NOT in the `useEffect` dependency array will be stale — it will always read the value from when the effect first mounted, never the updated value.
+
+Symptoms: DB has correct data, but UI condition never triggers. console.log inside the interval shows the old value.
+
+Fix pattern:
+1. Create a ref: `const myValueRef = useRef(initialValue)`
+2. Sync it: `useEffect(() => { myValueRef.current = myValue }, [myValue])`
+3. Read the ref inside the interval: `myValueRef.current` instead of `myValue`
+
+Refs already established in challenge/play/page.js: `phaseRef`, `roundRef`, `isScribeRef`, `memoryVerdictCalledRef`
+
+Debug protocol for two-player async bugs:
+1. Verify DB first — is the expected data actually there?
+2. If yes — instrument the failing condition with one console.log showing every variable
+3. If DB correct but UI wrong — suspect stale closure immediately
+4. Check if failing variable is state inside a setInterval with incomplete deps
+5. Fix with ref pattern above
+
+Do not add rules to fix blindly. Always state root cause before writing any code.
+
 ---
 
 ## 4. AI SELF-REVIEW (REQUIRED BEFORE EVERY HANDOFF)
