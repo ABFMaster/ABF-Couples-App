@@ -392,10 +392,13 @@ function ChallengePlayContent() {
         console.log('[VERDICT CHECK]', { answer_revealed: memRound.answer_revealed, nora_verdict: memRound.nora_verdict, memoryVerdictCalledRef: memoryVerdictCalledRef.current, isScribeRef: isScribeRef.current })
         if (memRound.answer_revealed && !memRound.nora_verdict && !memoryVerdictCalledRef.current && isScribeRef.current) {
           memoryVerdictCalledRef.current = true
+          console.log('[VERDICT FETCH FIRING]', { sessionId: challengeSessionId, roundNumber: currentRound, coupleId })
           fetch('/api/game-room/challenge/memory/verdict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound, coupleId }),
+          }).catch(() => {
+            memoryVerdictCalledRef.current = false
           })
         }
 
