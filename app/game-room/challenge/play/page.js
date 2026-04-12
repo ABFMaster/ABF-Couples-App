@@ -483,7 +483,6 @@ function ChallengePlayContent() {
   }, [phase, coupleId, userId])
 
   async function generateRound(roundNumber) {
-    clearInterval(pollRef.current)
     setPhase('loading')
     if (challengeType !== 'pitch') setResponse('')
     setNoraVerdict(null)
