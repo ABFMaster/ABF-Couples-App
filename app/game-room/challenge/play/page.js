@@ -420,7 +420,7 @@ function ChallengePlayContent() {
         .from('challenge_rounds')
         .select('*')
         .eq('session_id', challengeSessionId)
-        .eq('round_number', currentRound)
+        .eq('round_number', currentRoundRef.current)
         .maybeSingle()
 
       // Watcher: advance from loading to challenge when round appears
