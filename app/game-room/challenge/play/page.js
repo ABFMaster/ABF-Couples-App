@@ -412,7 +412,7 @@ function ChallengePlayContent() {
           setPhase('verdict')
         }
 
-        return
+        // Fall through to general round advancement check below
       }
 
       // Check current round for verdict
