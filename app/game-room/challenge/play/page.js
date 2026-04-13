@@ -468,10 +468,28 @@ function ChallengePlayContent() {
 
       if (challengeSession.current_round > currentRound && phaseRef.current === 'verdict') {
         clearInterval(pollRef.current)
-        setCurrentRound(challengeSession.current_round)
-        if (generateCalledForRoundRef.current !== challengeSession.current_round) {
-          generateCalledForRoundRef.current = challengeSession.current_round
-          generateRound(challengeSession.current_round)
+        const nextRound = challengeSession.current_round
+        setCurrentRound(nextRound)
+        if (isScribeRef.current) {
+          // Host already called generateRound in handleNext — nothing to do here
+        } else {
+          // Partner: load the round the host already generated
+          const { data: nextRoundRow } = await supabase
+            .from('challenge_rounds')
+            .select('*')
+            .eq('session_id', challengeSessionId)
+            .eq('round_number', nextRound)
+            .maybeSingle()
+          if (nextRoundRow) {
+            setRound(nextRoundRow)
+            setNoraVerdict(null)
+            setResponse('')
+            setSubmitted(false)
+            setMemoryLocalAnswer('')
+            setMemoryIsUpdated(false)
+            memoryVerdictCalledRef.current = false
+            setPhase('challenge')
+          }
         }
       }
     }, 3000)
