@@ -484,13 +484,28 @@ function ChallengePlayContent() {
             .eq('round_number', nextRound)
             .maybeSingle()
           if (nextRoundRow) {
-            setRound(nextRoundRow)
+            setPhase('loading')
             setNoraVerdict(null)
+            setError(null)
             setResponse('')
             setSubmitted(false)
+            setPitchPhase('pitching')
+            setNoraChallenge(null)
+            setRankPhase('ranking_r1')
+            setRankR1User1(null)
+            setRankR1User2(null)
+            setRankR2Submitted(false)
+            setRankAgreements([])
+            setMyRanking([])
+            setMemoryGuess('')
+            setMemorySubmitting(false)
             setMemoryLocalAnswer('')
             setMemoryIsUpdated(false)
+            setMemoryReadySubmitting(false)
+            setMemoryHintResponding(false)
+            setNoraNudge(null)
             memoryVerdictCalledRef.current = false
+            setRound(nextRoundRow)
             setPhase('challenge')
           }
         }
@@ -1177,7 +1192,7 @@ function ChallengePlayContent() {
               const hints = [hint1, hint2, hint3]
               const prePopulatedAnswer = round?.memory_answer || ''
               const answerHolderReadyNow = round?.answer_holder_ready || false
-              console.log('[MEMORY DEBUG]', { isGuesserThisRound, answerHolderReadyNow, roundId: round?.id, guesserUserId: round?.guesser_user_id, userId, challengeType })
+              console.log('[MEMORY DEBUG]', { isGuesserThisRound, answerHolderReadyNow, roundId: round?.id, guesserUserId: round?.guesser_user_id, userId, challengeType, phase: phaseRef.current, currentRound: currentRoundRef.current, noraVerdict: !!noraVerdict })
               const guesserAnswerSubmitted = round?.guesser_answer || ''
               const answerRevealedNow = round?.answer_revealed || false
 
