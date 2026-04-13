@@ -227,6 +227,8 @@ function ChallengePlayContent() {
   useEffect(() => { isScribeRef.current = isScribe }, [isScribe])
   const coupleIdRef = useRef(null)
   useEffect(() => { coupleIdRef.current = coupleId }, [coupleId])
+  const currentRoundRef = useRef(1)
+  useEffect(() => { currentRoundRef.current = currentRound }, [currentRound])
   const generateCalledForRoundRef = useRef(0)
   const memoryVerdictCalledRef = useRef(false)
 
@@ -466,9 +468,10 @@ function ChallengePlayContent() {
         return
       }
 
-      if (challengeSession.current_round > currentRound && phaseRef.current === 'verdict') {
+      if (challengeSession.current_round > currentRoundRef.current && phaseRef.current === 'verdict') {
         clearInterval(pollRef.current)
         const nextRound = challengeSession.current_round
+        currentRoundRef.current = nextRound
         setCurrentRound(nextRound)
         if (isScribeRef.current) {
           // Host already called generateRound in handleNext — nothing to do here
