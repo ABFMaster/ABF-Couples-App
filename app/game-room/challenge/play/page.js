@@ -891,7 +891,7 @@ function ChallengePlayContent() {
       <div style={{ padding: '0 24px', maxWidth: '480px', margin: '0 auto' }}>
 
         {/* Prompt card */}
-        {phase !== 'verdict' && (
+        {phase !== 'verdict' && !noraVerdict && (
           <div style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 60%, #4338CA 100%)', borderRadius: '20px', padding: '28px 24px', marginBottom: '24px', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
             {challengeType === 'rank' && rankData?.intro && (
