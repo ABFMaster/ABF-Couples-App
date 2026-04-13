@@ -394,10 +394,8 @@ function ChallengePlayContent() {
         if (!memRound.hint_pending) setMemoryHintResponding(false)
 
         // Trigger verdict generation once answer is revealed
-        console.log('[VERDICT CHECK]', { answer_revealed: memRound.answer_revealed, nora_verdict: memRound.nora_verdict, memoryVerdictCalledRef: memoryVerdictCalledRef.current, isScribeRef: isScribeRef.current })
         if (memRound.answer_revealed && !memRound.nora_verdict && !memoryVerdictCalledRef.current && isScribeRef.current) {
           memoryVerdictCalledRef.current = true
-          console.log('[VERDICT FETCH FIRING]', { sessionId: challengeSessionId, roundNumber: currentRound, coupleId })
           fetch('/api/game-room/challenge/memory/verdict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -905,12 +903,6 @@ function ChallengePlayContent() {
 
       <div style={{ padding: '0 24px', maxWidth: '480px', margin: '0 auto' }}>
 
-        {true && (
-          <div style={{ background: 'rgba(0,0,0,0.8)', color: '#fff', fontSize: '11px', padding: '4px 8px', borderRadius: '4px', marginBottom: '8px', fontFamily: 'monospace' }}>
-            phase: {phase} | noraVerdict: {noraVerdict ? 'set' : 'null'} | round: {currentRound} | isScribe: {String(isScribe)}
-          </div>
-        )}
-
         {/* Prompt card */}
         {phase !== 'verdict' && !noraVerdict && (
           <div style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 60%, #4338CA 100%)', borderRadius: '20px', padding: '28px 24px', marginBottom: '24px', position: 'relative', overflow: 'hidden' }}>
@@ -1198,7 +1190,6 @@ function ChallengePlayContent() {
               const hints = [hint1, hint2, hint3]
               const prePopulatedAnswer = round?.memory_answer || ''
               const answerHolderReadyNow = round?.answer_holder_ready || false
-              console.log('[MEMORY DEBUG]', { isGuesserThisRound, answerHolderReadyNow, roundId: round?.id, guesserUserId: round?.guesser_user_id, userId, challengeType, phase: phaseRef.current, currentRound: currentRoundRef.current, noraVerdict: !!noraVerdict })
               const guesserAnswerSubmitted = round?.guesser_answer || ''
               const answerRevealedNow = round?.answer_revealed || false
 
