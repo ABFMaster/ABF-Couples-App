@@ -164,6 +164,14 @@ Respond in this exact JSON format with no other text:
       const guesserName = guesserProfile?.display_name || 'Partner 1'
       const answerHolderName = answerHolderProfile?.display_name || 'Partner 2'
 
+      // Fetch previously used questions for this session to prevent repeats
+      const { data: usedRounds } = await supabase
+        .from('challenge_rounds')
+        .select('memory_question')
+        .eq('session_id', challengeSessionId)
+        .not('memory_question', 'is', null)
+      const usedQuestions = (usedRounds || []).map(r => r.memory_question).filter(Boolean)
+
       // Build context strings
       const sparkContext = sparkAnswers && sparkAnswers.length > 0
         ? sparkAnswers.map(s => `Q: ${s.spark_question} — A: ${s.spark_answer}`).join('\n')
@@ -197,7 +205,7 @@ Timeline events:
 ${timelineContext}
 
 YOUR JOB:
-1. Write one specific question about ${answerHolderName} that ${guesserName} should be able to answer if they know their partner well — but might surprise them if they don't. The question must have a real, specific answer that ${answerHolderName} will recognise as true about themselves.
+1. Write one specific question about ${answerHolderName} — and ONLY about ${answerHolderName}, never about ${guesserName}. ${guesserName} is the one guessing; the question must be about ${answerHolderName}'s life, memories, preferences, or inner world. The question must have a real, specific answer that ${answerHolderName} will recognise as true about themselves.${usedQuestions.length > 0 ? ` Do NOT ask any of these questions which have already been used this session: ${usedQuestions.map(q => `"${q}"`).join(', ')}.` : ''}
 2. Only if you can find a SPECIFIC real data point in the couple's app history above that directly answers this question, write it as ${answerHolderName}'s answer. This means an actual Spark answer, Bet response, or Timeline event that contains a concrete answer to the question — not an inference, not a synthesis, not a guess. If no specific data point exists, return memory_answer as an empty string and answerType as "unknown". Do not fabricate or synthesize an answer.
 3. Write 3 progressive hints for ${guesserName} that narrow toward the specific answer — not toward ${answerHolderName}'s personality or character. Hints should be about the answer itself. Hint 1: a clue about the category or territory of the answer (e.g. for a food question — "it's something you'd order at the end of a meal in Italy"). Hint 2: narrows significantly, removes most wrong answers (e.g. "it's citrus-based and often served as a drink or dessert"). Hint 3: basically gives it away (e.g. "it starts with L and ends in a vowel"). The guesser should be able to work toward the answer with each hint, not just learn about their partner's taste.
 
