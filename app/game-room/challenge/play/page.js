@@ -227,6 +227,7 @@ function ChallengePlayContent() {
   useEffect(() => { isScribeRef.current = isScribe }, [isScribe])
   const coupleIdRef = useRef(null)
   useEffect(() => { coupleIdRef.current = coupleId }, [coupleId])
+  const generateCalledForRoundRef = useRef(0)
   const memoryVerdictCalledRef = useRef(false)
 
   useEffect(() => {
@@ -468,7 +469,10 @@ function ChallengePlayContent() {
       if (challengeSession.current_round > currentRound && phaseRef.current === 'verdict') {
         clearInterval(pollRef.current)
         setCurrentRound(challengeSession.current_round)
-        generateRound(challengeSession.current_round)
+        if (generateCalledForRoundRef.current !== challengeSession.current_round) {
+          generateCalledForRoundRef.current = challengeSession.current_round
+          generateRound(challengeSession.current_round)
+        }
       }
     }, 3000)
     return () => clearInterval(pollRef.current)
@@ -610,6 +614,7 @@ function ChallengePlayContent() {
       if (data.complete) {
         setPhase('complete')
       } else {
+        generateCalledForRoundRef.current = data.nextRound
         setCurrentRound(data.nextRound)
         generateRound(data.nextRound)
       }
