@@ -42,7 +42,7 @@ export async function POST(request) {
         supabase.from('game_finds').delete().in('session_id', ids),
         supabase.from('hot_take_sessions').delete().in('session_id', ids),
         supabase.from('hot_take_answers').delete().in('session_id', ids),
-        supabase.from('challenge_sessions').delete().in('session_id', ids),
+        supabase.from('challenge_sessions').update({ status: 'abandoned' }).in('session_id', ids),
         supabase.from('challenge_rounds').delete().in('session_id', ids),
       ])
 
