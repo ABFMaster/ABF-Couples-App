@@ -279,7 +279,8 @@ function ChallengePlayContent() {
   // Poll for partner state changes
   useEffect(() => {
     if (!challengeSessionId || !currentRound) return
-    pollRef.current = setInterval(async () => {
+    const intervalId = setInterval(async () => {
+    pollRef.current = intervalId
       const { data: sessStatus } = await supabase
         .from('game_sessions')
         .select('status')
@@ -509,7 +510,7 @@ function ChallengePlayContent() {
         }
       }
     }, 3000)
-    return () => clearInterval(pollRef.current)
+    return () => clearInterval(intervalId)
   }, [challengeSessionId, currentRound])
 
   // Poll for partner starting a new lobby session — complete screen only
