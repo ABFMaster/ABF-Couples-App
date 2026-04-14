@@ -470,6 +470,7 @@ function ChallengePlayContent() {
       }
 
       if (challengeSession.current_round > currentRoundRef.current && phaseRef.current === 'verdict') {
+        console.log('[ROUND ADVANCE CHECK]', { sessionRound: challengeSession.current_round, currentRoundRef: currentRoundRef.current, phase: phaseRef.current, isScribe: isScribeRef.current })
         clearInterval(pollRef.current)
         const nextRound = challengeSession.current_round
         currentRoundRef.current = nextRound
