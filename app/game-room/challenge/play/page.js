@@ -230,6 +230,7 @@ function ChallengePlayContent() {
   const currentRoundRef = useRef(1)
   useEffect(() => { currentRoundRef.current = currentRound }, [currentRound])
   const generateCalledForRoundRef = useRef(0)
+  const roundAdvancingRef = useRef(false)
   const memoryVerdictCalledRef = useRef(false)
 
   useEffect(() => {
@@ -281,6 +282,7 @@ function ChallengePlayContent() {
     if (!challengeSessionId || !currentRound) return
     const intervalId = setInterval(async () => {
     pollRef.current = intervalId
+      if (roundAdvancingRef.current) return
       const { data: sessStatus } = await supabase
         .from('game_sessions')
         .select('status')
@@ -483,6 +485,7 @@ function ChallengePlayContent() {
             .eq('round_number', nextRound)
             .maybeSingle()
           if (nextRoundRow) {
+            roundAdvancingRef.current = true
             setPhase('loading')
             setNoraVerdict(null)
             setError(null)
@@ -506,6 +509,7 @@ function ChallengePlayContent() {
             memoryVerdictCalledRef.current = false
             setRound(nextRoundRow)
             setPhase('challenge')
+            setTimeout(() => { roundAdvancingRef.current = false }, 1000)
           }
         }
       }
