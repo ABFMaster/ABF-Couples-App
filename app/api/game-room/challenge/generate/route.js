@@ -245,6 +245,20 @@ Respond in this exact JSON format with no other text:
     try {
       const raw = response.replace(/```json|```/g, '').trim()
       parsed = JSON.parse(raw)
+      // Validate: question must be about answerHolderName, not guesserName
+      // If Nora wrote about the wrong person, fall back to the library prompt
+      if (parsed?.memory_question && challengeType === 'memory') {
+        const q = parsed.memory_question.toLowerCase()
+        const gNameLower = guesserName.toLowerCase()
+        const aNameLower = answerHolderName.toLowerCase()
+        if (q.includes(gNameLower) && !q.includes(aNameLower)) {
+          parsed.memory_question = basePrompt.prompt
+          parsed.memory_answer = ''
+          parsed.hint_1 = ''
+          parsed.hint_2 = ''
+          parsed.hint_3 = ''
+        }
+      }
     } catch {
       parsed = challengeType === 'memory'
         ? { memory_question: basePrompt.prompt, memory_answer: '', hint_1: '', hint_2: '', hint_3: '', guesser_user_id: coupleData.user1_id }
