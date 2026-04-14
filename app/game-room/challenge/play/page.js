@@ -471,6 +471,9 @@ function ChallengePlayContent() {
 
       if (challengeSession.current_round > currentRoundRef.current && phaseRef.current === 'verdict') {
         console.log('[ROUND ADVANCE CHECK]', { sessionRound: challengeSession.current_round, currentRoundRef: currentRoundRef.current, phase: phaseRef.current, isScribe: isScribeRef.current })
+        if (!isScribeRef.current) {
+          supabase.from('challenge_sessions').update({ debug_notes: `partner_advance_fired_at_${Date.now()}` }).eq('id', challengeSessionId).then(() => {})
+        }
         clearInterval(pollRef.current)
         const nextRound = challengeSession.current_round
         currentRoundRef.current = nextRound
