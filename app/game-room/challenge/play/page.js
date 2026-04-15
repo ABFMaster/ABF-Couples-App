@@ -337,6 +337,14 @@ function ChallengePlayContent() {
           return
         }
 
+        // Partner loading → challenge transition
+        if (phaseRef.current === 'loading') {
+          setRound(memRound)
+          setNoraVerdict(null)
+          setPhase('challenge')
+          return
+        }
+
         // Sync round state
         setRound(prev => ({ ...prev, ...memRound }))
         if (!memRound.hint_pending) setMemoryHintResponding(false)
