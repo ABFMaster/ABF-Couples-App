@@ -218,6 +218,7 @@ function ChallengePlayContent() {
   const [memoryReadySubmitting, setMemoryReadySubmitting] = useState(false)
   const [memoryHintResponding, setMemoryHintResponding] = useState(false)
   const pollRef = useRef(null)
+  const memoryVerdictCalledRef = useRef(false)
   const completePollRef = useRef(null)
   const roundRef = useRef(null)
   const phaseRef = useRef(phase)
@@ -331,6 +332,7 @@ function ChallengePlayContent() {
           setMemoryReadySubmitting(false)
           setMemoryHintResponding(false)
           setNoraNudge(null)
+          memoryVerdictCalledRef.current = false
           setCurrentRound(memRound.round_number)
           setRound(memRound)
           setPhase('challenge')
@@ -350,11 +352,14 @@ function ChallengePlayContent() {
         if (!memRound.hint_pending) setMemoryHintResponding(false)
 
         // Host-only: trigger verdict generation when answer is revealed and verdict not yet written
-        if (memRound.answer_revealed && !memRound.nora_verdict && isScribeRef.current) {
+        if (memRound.answer_revealed && !memRound.nora_verdict && isScribeRef.current && !memoryVerdictCalledRef.current) {
+          memoryVerdictCalledRef.current = true
           fetch('/api/game-room/challenge/memory/verdict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: memRound.round_number, coupleId: coupleIdRef.current }),
+          }).catch(() => {
+            memoryVerdictCalledRef.current = false
           })
         }
 
