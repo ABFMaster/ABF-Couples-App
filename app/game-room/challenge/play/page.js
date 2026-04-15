@@ -564,6 +564,7 @@ function ChallengePlayContent() {
             setMyRanking([])
           }
         }
+        setNoraVerdict(null)
         setPhase('challenge')
         return
       }
