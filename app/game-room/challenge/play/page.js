@@ -912,7 +912,7 @@ function ChallengePlayContent() {
               <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginBottom: '10px', fontStyle: 'italic' }}>{rankData.intro}</p>
             )}
             <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '20px', lineHeight: 1.5, color: '#FFFFFF', margin: '0 0 12px', position: 'relative' }}>
-              {challengeType === 'rank' ? rankData?.prompt : round?.prompt}
+              {challengeType === 'rank' ? rankData?.prompt : challengeType === 'memory' ? round?.memory_question : round?.prompt}
             </p>
             <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', margin: 0 }}>
               {CHALLENGE_INSTRUCTIONS[challengeType]}
