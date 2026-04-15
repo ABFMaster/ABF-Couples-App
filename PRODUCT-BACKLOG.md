@@ -203,6 +203,15 @@ Full audit of all pre-protocol code before Nora architecture is built. Covers: S
 - Do NOT build Nora architecture until this audit is complete.
 Estimated time: 2-3 sessions.
 
+### SESSION TECHNICAL DEBT — 2026-04-14
+Items identified during Memory mode bug hunt that need cleanup:
+
+1. **challenge_sessions.debug_notes column** — added for debugging, remove usage before launch. Column can stay for future debugging but stop writing to it.
+2. **Orphaned session audit** — challenge_sessions accumulate as active even when parent game_sessions expire. expireAndClean now marks them abandoned. Need full audit of ALL child session tables (hunt_sessions, call_sessions, hot_take_sessions) to verify consistent cleanup across all modes.
+3. **Memory poll complete refactor** — the challenge/play/page.js poll has grown into a complex multi-branch system with 8+ refs to manage stale closures. Before launch, consider refactoring to Supabase realtime subscriptions which eliminate the stale closure problem entirely.
+4. **Memory hint copy** — hints in challenge-prompts.js still use theatrical language ("spaces between"). Needs voice pass before Memory is released to wider audience.
+5. **debug_notes column on challenge_sessions** — created 2026-04-14 for debugging. Clean up write calls after Memory bug is resolved.
+
 ### Saturday Feature — The Game Room
 Design session complete (see above). Build The Rabbit Hole first — it's the most original concept in the library and the best proof of concept for the broader Game Room mechanic. Nora-guided, leaves the app intentionally, returns with a story.
 
