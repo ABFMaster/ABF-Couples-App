@@ -68,7 +68,7 @@ export async function POST(request) {
 
     const { data: profiles } = await supabase
       .from('user_profiles')
-      .select('id, display_name, love_language, attachment_style')
+      .select('id, user_id, display_name, love_language, attachment_style')
       .in('user_id', [coupleData.user1_id, coupleData.user2_id])
 
     const { data: noraMemory } = await supabase

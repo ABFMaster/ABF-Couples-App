@@ -7,6 +7,17 @@
 
 These are non-negotiable. If I violate any of these, stop me immediately.
 
+### 0. ADVERSARIAL VERIFIER — RUN THIS BEFORE ANY FIX
+
+Before proposing or implementing any fix, Claude must answer these questions as a skeptical senior engineer. Assume the current solution is incorrect or incomplete.
+
+1. **Most likely incorrect assumptions** — what are we taking for granted that may not be true?
+2. **Specific failure points or edge cases** — where will this break?
+3. **What we might be misunderstanding about the root cause** — is this actually the root cause, or a symptom?
+4. **The simplest test, log, or observation that would prove this approach is wrong** — what would falsify this fix?
+
+Do not suggest fixes until this checklist is complete. Be critical and concise. If the fix cannot survive adversarial scrutiny, stop and redesign.
+
 ### 1. ROOT CAUSE CHECKLIST — BEFORE ANY FIX
 Write this visibly in chat before touching code:
 - **Root cause:** [specific answer — not the symptom]
