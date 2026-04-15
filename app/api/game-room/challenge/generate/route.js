@@ -83,6 +83,7 @@ export async function POST(request) {
 
     const systemPrompt = `You are running a couples game called The Challenge. Your job is to take a base challenge prompt and personalise it for a specific couple. Keep it warm, specific, and playful. Never be generic.`
 
+    let guesserUserId = coupleData.user1_id
     let userPrompt
     if (challengeType === 'rank') {
       userPrompt = `Personalise this ranking challenge for ${profileSummary}.
@@ -157,7 +158,7 @@ Respond in this exact JSON format with no other text:
       // Even rounds (2): partner guesses, host holds answer
       const isOddRound = roundNumber % 2 !== 0
       const partnerId = userId === coupleData.user1_id ? coupleData.user2_id : coupleData.user1_id
-      const guesserUserId = isOddRound ? userId : partnerId
+      guesserUserId = isOddRound ? userId : partnerId
       const answerHolderUserId = isOddRound ? partnerId : userId
 
       const guesserProfile = profiles?.find(p => p.user_id === guesserUserId || p.id === guesserUserId)
