@@ -84,6 +84,7 @@ export async function POST(request) {
     const systemPrompt = `You are running a couples game called The Challenge. Your job is to take a base challenge prompt and personalise it for a specific couple. Keep it warm, specific, and playful. Never be generic.`
 
     let guesserUserId = coupleData.user1_id
+    let personalizedPrompt = ''
     let userPrompt
     if (challengeType === 'rank') {
       userPrompt = `Personalise this ranking challenge for ${profileSummary}.
@@ -160,7 +161,7 @@ Respond in this exact JSON format with no other text:
       const partnerId = userId === coupleData.user1_id ? coupleData.user2_id : coupleData.user1_id
       guesserUserId = isOddRound ? userId : partnerId
       const answerHolderUserId = isOddRound ? partnerId : userId
-      const personalizedPrompt = basePrompt.prompt.replace(/\{answerHolder\}/g, answerHolderName)
+      personalizedPrompt = basePrompt.prompt.replace(/\{answerHolder\}/g, answerHolderName)
 
       const guesserProfile = profiles?.find(p => p.user_id === guesserUserId || p.id === guesserUserId)
       const answerHolderProfile = profiles?.find(p => p.user_id === answerHolderUserId || p.id === answerHolderUserId)
