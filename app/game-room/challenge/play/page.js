@@ -227,11 +227,7 @@ function ChallengePlayContent() {
   useEffect(() => { isScribeRef.current = isScribe }, [isScribe])
   const coupleIdRef = useRef(null)
   useEffect(() => { coupleIdRef.current = coupleId }, [coupleId])
-  const currentRoundRef = useRef(1)
-  useEffect(() => { currentRoundRef.current = currentRound }, [currentRound])
   const generateCalledForRoundRef = useRef(0)
-  const roundAdvancingRef = useRef(false)
-  const memoryVerdictCalledRef = useRef(false)
 
   useEffect(() => {
     async function init() {
@@ -281,8 +277,9 @@ function ChallengePlayContent() {
   useEffect(() => {
     if (!challengeSessionId || !currentRound) return
     const intervalId = setInterval(async () => {
-    pollRef.current = intervalId
-      if (roundAdvancingRef.current) return
+      pollRef.current = intervalId
+
+      // Check for abandoned session
       const { data: sessStatus } = await supabase
         .from('game_sessions')
         .select('status')
@@ -294,70 +291,75 @@ function ChallengePlayContent() {
         return
       }
 
-      // Fetch session state upfront — used by memory fall-through and non-memory advance
+      // Fetch session state — source of truth for current round
       const { data: challengeSession } = await supabase
         .from('challenge_sessions')
         .select('current_round, status')
         .eq('id', challengeSessionId)
         .maybeSingle()
-
       if (!challengeSession) return
 
-      if (challengeType !== 'memory') {
-        if (challengeSession.status === 'complete' && phaseRef.current !== 'complete') {
-          clearInterval(pollRef.current)
-          setPhase('complete')
+      // Complete check — all types
+      if (challengeSession.status === 'complete' && phaseRef.current !== 'complete') {
+        clearInterval(pollRef.current)
+        setPhase('complete')
+        return
+      }
+
+      // --- MEMORY ---
+      if (challengeType === 'memory') {
+        // Fetch round by DB session round — not client ref
+        const { data: memRound } = await supabase
+          .from('challenge_rounds')
+          .select('answer_holder_ready, guesser_answer, answer_revealed, hint_requests, hints_granted, hint_denials, hint_pending, nora_verdict, memory_answer, guesser_user_id, memory_question, hint_1, hint_2, hint_3, prompt_key, round_number, id')
+          .eq('session_id', challengeSessionId)
+          .eq('round_number', challengeSession.current_round)
+          .maybeSingle()
+
+        if (!memRound) return
+
+        // DB is ahead of client — round has advanced
+        if (memRound.round_number !== currentRound) {
+          setNoraVerdict(null)
+          setError(null)
+          setResponse('')
+          setSubmitted(false)
+          setMemoryGuess('')
+          setMemorySubmitting(false)
+          setMemoryLocalAnswer('')
+          setMemoryIsUpdated(false)
+          setMemoryReadySubmitting(false)
+          setMemoryHintResponding(false)
+          setNoraNudge(null)
+          setCurrentRound(memRound.round_number)
+          setRound(memRound)
+          setPhase('challenge')
           return
         }
 
-        if (challengeSession.current_round > currentRoundRef.current && phaseRef.current === 'verdict') {
-          console.log('[ROUND ADVANCE CHECK]', { sessionRound: challengeSession.current_round, currentRoundRef: currentRoundRef.current, phase: phaseRef.current, isScribe: isScribeRef.current })
-          if (!isScribeRef.current) {
-            supabase.from('challenge_sessions').update({ debug_notes: `partner_advance_fired_at_${Date.now()}` }).eq('id', challengeSessionId).then(() => {})
-          }
-          clearInterval(pollRef.current)
-          const nextRound = challengeSession.current_round
-          currentRoundRef.current = nextRound
-          setCurrentRound(nextRound)
-          if (isScribeRef.current) {
-            // Host already called generateRound in handleNext — nothing to do here
-          } else {
-            // Partner: load the round the host already generated
-            const { data: nextRoundRow } = await supabase
-              .from('challenge_rounds')
-              .select('*')
-              .eq('session_id', challengeSessionId)
-              .eq('round_number', nextRound)
-              .maybeSingle()
-            if (nextRoundRow) {
-              roundAdvancingRef.current = true
-              setPhase('loading')
-              setNoraVerdict(null)
-              setError(null)
-              setResponse('')
-              setSubmitted(false)
-              setPitchPhase('pitching')
-              setNoraChallenge(null)
-              setRankPhase('ranking_r1')
-              setRankR1User1(null)
-              setRankR1User2(null)
-              setRankR2Submitted(false)
-              setRankAgreements([])
-              setMyRanking([])
-              setMemoryGuess('')
-              setMemorySubmitting(false)
-              setMemoryLocalAnswer('')
-              setMemoryIsUpdated(false)
-              setMemoryReadySubmitting(false)
-              setMemoryHintResponding(false)
-              setNoraNudge(null)
-              memoryVerdictCalledRef.current = false
-              setTimeout(() => { roundAdvancingRef.current = false }, 1000)
-            }
-          }
+        // Sync round state
+        setRound(prev => ({ ...prev, ...memRound }))
+        if (!memRound.hint_pending) setMemoryHintResponding(false)
+
+        // Host-only: trigger verdict generation when answer is revealed and verdict not yet written
+        if (memRound.answer_revealed && !memRound.nora_verdict && isScribeRef.current) {
+          fetch('/api/game-room/challenge/memory/verdict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: memRound.round_number, coupleId: coupleIdRef.current }),
+          })
         }
+
+        // Verdict ready
+        if (memRound.nora_verdict && phaseRef.current !== 'verdict') {
+          setNoraVerdict(memRound.nora_verdict)
+          setPhase('verdict')
+        }
+
+        return
       }
 
+      // --- RANK ---
       if (challengeType === 'rank' && round) {
         const { data: rankRound } = await supabase
           .from('challenge_rounds')
@@ -366,7 +368,6 @@ function ChallengePlayContent() {
           .maybeSingle()
         if (!rankRound) return
 
-        // Round 1 both submitted — show partial reveal
         if (rankRound.rank_user1_r1 && rankRound.rank_user2_r1 && rankPhase !== 'reveal_r1' && rankPhase !== 'reveal_final' && rankPhase !== 'verdict') {
           setRankR1User1(rankRound.rank_user1_r1)
           setRankR1User2(rankRound.rank_user2_r1)
@@ -378,7 +379,6 @@ function ChallengePlayContent() {
           }
         }
 
-        // Round 2 both submitted — show final reveal
         if (rankRound.rank_user1_r2 && rankRound.rank_user2_r2 && rankPhase !== 'reveal_final' && rankPhase !== 'verdict') {
           if (rankRound.rank_final && rankRound.no_agreements !== undefined) {
             setRankFinal(rankRound.rank_final)
@@ -387,7 +387,6 @@ function ChallengePlayContent() {
           }
         }
 
-        // Nora verdict ready
         if (rankRound.nora_verdict && phaseRef.current !== 'verdict') {
           setNoraVerdict(rankRound.nora_verdict)
           setPhase('verdict')
@@ -396,6 +395,7 @@ function ChallengePlayContent() {
         return
       }
 
+      // --- PITCH ---
       if (challengeType === 'pitch' && round) {
         const { data: pitchRound } = await supabase
           .from('challenge_rounds')
@@ -413,6 +413,7 @@ function ChallengePlayContent() {
         return
       }
 
+      // --- STORY ---
       if (challengeType === 'story' && round) {
         const { data: storyRound } = await supabase
           .from('challenge_rounds')
@@ -427,7 +428,6 @@ function ChallengePlayContent() {
             setNoraVerdict(storyRound.nora_verdict)
             setPhase('verdict')
           } else if (storyRound.story_complete && !storyRound.nora_verdict && phaseRef.current !== 'verdict') {
-            // Partner submitted sentence 6 — trigger verdict fetch for this user
             const submitRes = await fetch('/api/game-room/challenge/submit', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -447,123 +447,16 @@ function ChallengePlayContent() {
         return
       }
 
-      if (challengeType === 'memory' && roundRef.current && challengeSessionId && currentRound) {
-        const { data: memRound } = await supabase
-          .from('challenge_rounds')
-          .select('answer_holder_ready, guesser_answer, answer_revealed, hint_requests, hints_granted, hint_denials, hint_pending, nora_verdict, memory_answer, guesser_user_id, memory_question, hint_1, hint_2, hint_3, prompt_key')
-          .eq('session_id', challengeSessionId)
-          .eq('round_number', currentRoundRef.current)
-          .maybeSingle()
-        if (!memRound) return
-
-        // Always sync round state so both users see phase changes
-        setRound(prev => ({ ...prev, ...memRound }))
-        if (!memRound.hint_pending) setMemoryHintResponding(false)
-
-        // Trigger verdict generation once answer is revealed
-        if (memRound.answer_revealed && !memRound.nora_verdict && !memoryVerdictCalledRef.current && isScribeRef.current) {
-          memoryVerdictCalledRef.current = true
-          fetch('/api/game-room/challenge/memory/verdict', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound, coupleId: coupleIdRef.current }),
-          }).catch(() => {
-            memoryVerdictCalledRef.current = false
-          })
-        }
-
-        if (memRound.nora_verdict && phaseRef.current !== 'verdict' && !roundAdvancingRef.current) {
-          setNoraVerdict(memRound.nora_verdict)
-          setPhase('verdict')
-        }
-
-        if (challengeSession && challengeSession.current_round > currentRoundRef.current && phaseRef.current === 'verdict') {
-          // fall through to advance logic below
-        } else {
-          return
-        }
-      }
-
-      // Memory fall-through: complete check and advance block
-      if (challengeSession.status === 'complete' && phaseRef.current !== 'complete') {
-        clearInterval(pollRef.current)
-        setPhase('complete')
-        return
-      }
-
-      if (challengeSession.current_round > currentRoundRef.current && phaseRef.current === 'verdict') {
-        console.log('[ROUND ADVANCE CHECK]', { sessionRound: challengeSession.current_round, currentRoundRef: currentRoundRef.current, phase: phaseRef.current, isScribe: isScribeRef.current })
-        if (!isScribeRef.current) {
-          supabase.from('challenge_sessions').update({ debug_notes: `partner_advance_fired_at_${Date.now()}` }).eq('id', challengeSessionId).then(() => {})
-        }
-        clearInterval(pollRef.current)
-        const nextRound = challengeSession.current_round
-        currentRoundRef.current = nextRound
-        setCurrentRound(nextRound)
-        if (isScribeRef.current) {
-          // Host already called generateRound in handleNext — nothing to do here
-        } else {
-          // Partner: load the round the host already generated
-          const { data: nextRoundRow } = await supabase
-            .from('challenge_rounds')
-            .select('*')
-            .eq('session_id', challengeSessionId)
-            .eq('round_number', nextRound)
-            .maybeSingle()
-          if (nextRoundRow) {
-            roundAdvancingRef.current = true
-            setPhase('loading')
-            setNoraVerdict(null)
-            setError(null)
-            setResponse('')
-            setSubmitted(false)
-            setPitchPhase('pitching')
-            setNoraChallenge(null)
-            setRankPhase('ranking_r1')
-            setRankR1User1(null)
-            setRankR1User2(null)
-            setRankR2Submitted(false)
-            setRankAgreements([])
-            setMyRanking([])
-            setMemoryGuess('')
-            setMemorySubmitting(false)
-            setMemoryLocalAnswer('')
-            setMemoryIsUpdated(false)
-            setMemoryReadySubmitting(false)
-            setMemoryHintResponding(false)
-            setNoraNudge(null)
-            memoryVerdictCalledRef.current = false
-            setTimeout(() => { roundAdvancingRef.current = false }, 1000)
-          }
-        }
-      }
-
-      // Check current round for verdict
+      // --- GENERAL: round appearance watcher + verdict check ---
       const { data: roundRow } = await supabase
         .from('challenge_rounds')
         .select('*')
         .eq('session_id', challengeSessionId)
-        .eq('round_number', currentRoundRef.current)
+        .eq('round_number', challengeSession.current_round)
         .maybeSingle()
 
-      // Watcher: advance from loading to challenge when round appears
       if (roundRow && !isScribe && phaseRef.current === 'loading') {
         setRound(roundRow)
-        if (challengeType === 'story') {
-          setSentences(roundRow.sentences || [])
-          setCurrentTurnUserId(roundRow.current_turn_user_id)
-        }
-        if (challengeType === 'rank') {
-          try {
-            const parsed = JSON.parse(roundRow.prompt)
-            const items = parsed.items || []
-            setRankItems(items)
-            setMyRanking(items)
-          } catch {
-            setRankItems([])
-            setMyRanking([])
-          }
-        }
         setNoraVerdict(null)
         setPhase('challenge')
         return
@@ -576,6 +469,39 @@ function ChallengePlayContent() {
         setPhase('verdict')
         return
       }
+
+      // Partner round advance — non-memory types only (memory handles its own above)
+      if (challengeSession.current_round > currentRound && phaseRef.current === 'verdict') {
+        clearInterval(pollRef.current)
+        const nextRound = challengeSession.current_round
+        setCurrentRound(nextRound)
+        if (!isScribeRef.current) {
+          const { data: nextRoundRow } = await supabase
+            .from('challenge_rounds')
+            .select('*')
+            .eq('session_id', challengeSessionId)
+            .eq('round_number', nextRound)
+            .maybeSingle()
+          if (nextRoundRow) {
+            setNoraVerdict(null)
+            setError(null)
+            setResponse('')
+            setSubmitted(false)
+            setPitchPhase('pitching')
+            setNoraChallenge(null)
+            setRankPhase('ranking_r1')
+            setRankR1User1(null)
+            setRankR1User2(null)
+            setRankR2Submitted(false)
+            setRankAgreements([])
+            setMyRanking([])
+            setNoraNudge(null)
+            setRound(nextRoundRow)
+            setPhase('loading')
+          }
+        }
+      }
+
     }, 3000)
     return () => clearInterval(intervalId)
   }, [challengeSessionId, currentRound])
@@ -624,7 +550,6 @@ function ChallengePlayContent() {
     setMemoryLocalAnswer('')
     setMemoryIsUpdated(false)
     setMemoryReadySubmitting(false)
-    memoryVerdictCalledRef.current = false
     setMemoryHintResponding(false)
 
     try {
