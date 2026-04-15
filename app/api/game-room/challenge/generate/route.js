@@ -156,8 +156,9 @@ Respond in this exact JSON format with no other text:
       // Odd rounds (1, 3): host guesses, partner holds answer
       // Even rounds (2): partner guesses, host holds answer
       const isOddRound = roundNumber % 2 !== 0
-      const guesserUserId = isOddRound ? coupleData.user1_id : coupleData.user2_id
-      const answerHolderUserId = isOddRound ? coupleData.user2_id : coupleData.user1_id
+      const partnerId = userId === coupleData.user1_id ? coupleData.user2_id : coupleData.user1_id
+      const guesserUserId = isOddRound ? userId : partnerId
+      const answerHolderUserId = isOddRound ? partnerId : userId
 
       const guesserProfile = profiles?.find(p => p.user_id === guesserUserId || p.id === guesserUserId)
       const answerHolderProfile = profiles?.find(p => p.user_id === answerHolderUserId || p.id === answerHolderUserId)
