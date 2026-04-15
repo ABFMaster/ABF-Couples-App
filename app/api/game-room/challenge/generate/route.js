@@ -161,12 +161,11 @@ Respond in this exact JSON format with no other text:
       const partnerId = userId === coupleData.user1_id ? coupleData.user2_id : coupleData.user1_id
       guesserUserId = isOddRound ? userId : partnerId
       const answerHolderUserId = isOddRound ? partnerId : userId
-      personalizedPrompt = basePrompt.prompt.replace(/\{answerHolder\}/g, answerHolderName)
-
       const guesserProfile = profiles?.find(p => p.user_id === guesserUserId || p.id === guesserUserId)
       const answerHolderProfile = profiles?.find(p => p.user_id === answerHolderUserId || p.id === answerHolderUserId)
       const guesserName = guesserProfile?.display_name || 'Partner 1'
       const answerHolderName = answerHolderProfile?.display_name || 'Partner 2'
+      personalizedPrompt = basePrompt.prompt.replace(/\{answerHolder\}/g, answerHolderName)
 
       // Fetch previously used questions for this session to prevent repeats
       const { data: usedRounds } = await supabase
