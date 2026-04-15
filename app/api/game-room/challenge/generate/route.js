@@ -10,7 +10,6 @@ const supabase = createClient(
 export async function POST(request) {
   try {
     const { userId, coupleId, challengeSessionId, challengeType, roundNumber } = await request.json()
-    console.log('[GENERATE] userId received:', userId, 'roundNumber:', roundNumber)
 
     if (!userId || !coupleId || !challengeSessionId || !challengeType || !roundNumber) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
@@ -263,7 +262,7 @@ Respond in this exact JSON format with no other text:
       }
     } catch {
       parsed = challengeType === 'memory'
-        ? { memory_question: basePrompt.prompt, memory_answer: '', hint_1: '', hint_2: '', hint_3: '', guesser_user_id: coupleData.user1_id }
+        ? { memory_question: basePrompt.prompt, memory_answer: '', hint_1: '', hint_2: '', hint_3: '', guesser_user_id: guesserUserId }
         : { prompt: basePrompt.prompt }
     }
 
@@ -287,7 +286,7 @@ Respond in this exact JSON format with no other text:
         hint_1: parsed.hint_1,
         hint_2: parsed.hint_2,
         hint_3: parsed.hint_3,
-        guesser_user_id: parsed.guesser_user_id,
+        guesser_user_id: guesserUserId,
       }),
     }
 
