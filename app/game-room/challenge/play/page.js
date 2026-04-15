@@ -542,6 +542,7 @@ function ChallengePlayContent() {
     setPhase('loading')
     if (challengeType !== 'pitch') setResponse('')
     setNoraVerdict(null)
+    memoryVerdictCalledRef.current = false
     setError(null)
     setSubmitted(false)
     setPitchPhase('pitching')
