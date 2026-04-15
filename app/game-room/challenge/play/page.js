@@ -472,7 +472,7 @@ function ChallengePlayContent() {
           })
         }
 
-        if (memRound.nora_verdict && phaseRef.current !== 'verdict') {
+        if (memRound.nora_verdict && phaseRef.current !== 'verdict' && !roundAdvancingRef.current) {
           setNoraVerdict(memRound.nora_verdict)
           setPhase('verdict')
         }
