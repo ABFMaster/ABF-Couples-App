@@ -165,6 +165,7 @@ Respond in this exact JSON format with no other text:
       const answerHolderProfile = profiles?.find(p => p.user_id === answerHolderUserId || p.id === answerHolderUserId)
       const guesserName = guesserProfile?.display_name || 'Partner 1'
       const answerHolderName = answerHolderProfile?.display_name || 'Partner 2'
+      console.log('[MEMORY] profiles:', JSON.stringify(profiles), 'answerHolderUserId:', answerHolderUserId, 'answerHolderName:', answerHolderName)
       personalizedPrompt = basePrompt.prompt.replace(/\{answerHolder\}/g, answerHolderName)
 
       // Fetch previously used questions for this session to prevent repeats
