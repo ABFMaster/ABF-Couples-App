@@ -413,7 +413,7 @@ function ChallengePlayContent() {
           setPhase('verdict')
         }
 
-        // Fall through to general round advancement check below
+        return
       }
 
       // Check current round for verdict
@@ -511,8 +511,6 @@ function ChallengePlayContent() {
             setMemoryHintResponding(false)
             setNoraNudge(null)
             memoryVerdictCalledRef.current = false
-            setRound(nextRoundRow)
-            setPhase('challenge')
             setTimeout(() => { roundAdvancingRef.current = false }, 1000)
           }
         }
