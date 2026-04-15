@@ -160,6 +160,7 @@ Respond in this exact JSON format with no other text:
       const partnerId = userId === coupleData.user1_id ? coupleData.user2_id : coupleData.user1_id
       guesserUserId = isOddRound ? userId : partnerId
       const answerHolderUserId = isOddRound ? partnerId : userId
+      const personalizedPrompt = basePrompt.prompt.replace(/\{answerHolder\}/g, answerHolderName)
 
       const guesserProfile = profiles?.find(p => p.user_id === guesserUserId || p.id === guesserUserId)
       const answerHolderProfile = profiles?.find(p => p.user_id === answerHolderUserId || p.id === answerHolderUserId)
@@ -192,7 +193,7 @@ Respond in this exact JSON format with no other text:
 THE GAME: ${guesserName} is the GUESSER. ${answerHolderName} is the ANSWER HOLDER — the question is about ${answerHolderName}, and ${answerHolderName} knows the correct answer about themselves.
 
 BASE QUESTION TERRITORY (pick from or be inspired by):
-"${basePrompt.prompt}"
+"${personalizedPrompt}"
 
 COUPLE DATA — use this to make the question specific and answerable:
 Nora memory: ${noraMemory?.memory_summary || 'none yet'}
@@ -263,7 +264,7 @@ Respond in this exact JSON format with no other text:
       }
     } catch {
       parsed = challengeType === 'memory'
-        ? { memory_question: basePrompt.prompt, memory_answer: '', hint_1: '', hint_2: '', hint_3: '', guesser_user_id: guesserUserId }
+        ? { memory_question: personalizedPrompt, memory_answer: '', hint_1: '', hint_2: '', hint_3: '', guesser_user_id: guesserUserId }
         : { prompt: basePrompt.prompt }
     }
 
