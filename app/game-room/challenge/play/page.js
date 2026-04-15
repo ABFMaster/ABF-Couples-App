@@ -294,6 +294,70 @@ function ChallengePlayContent() {
         return
       }
 
+      // Fetch session state upfront — used by memory fall-through and non-memory advance
+      const { data: challengeSession } = await supabase
+        .from('challenge_sessions')
+        .select('current_round, status')
+        .eq('id', challengeSessionId)
+        .maybeSingle()
+
+      if (!challengeSession) return
+
+      if (challengeType !== 'memory') {
+        if (challengeSession.status === 'complete' && phaseRef.current !== 'complete') {
+          clearInterval(pollRef.current)
+          setPhase('complete')
+          return
+        }
+
+        if (challengeSession.current_round > currentRoundRef.current && phaseRef.current === 'verdict') {
+          console.log('[ROUND ADVANCE CHECK]', { sessionRound: challengeSession.current_round, currentRoundRef: currentRoundRef.current, phase: phaseRef.current, isScribe: isScribeRef.current })
+          if (!isScribeRef.current) {
+            supabase.from('challenge_sessions').update({ debug_notes: `partner_advance_fired_at_${Date.now()}` }).eq('id', challengeSessionId).then(() => {})
+          }
+          clearInterval(pollRef.current)
+          const nextRound = challengeSession.current_round
+          currentRoundRef.current = nextRound
+          setCurrentRound(nextRound)
+          if (isScribeRef.current) {
+            // Host already called generateRound in handleNext — nothing to do here
+          } else {
+            // Partner: load the round the host already generated
+            const { data: nextRoundRow } = await supabase
+              .from('challenge_rounds')
+              .select('*')
+              .eq('session_id', challengeSessionId)
+              .eq('round_number', nextRound)
+              .maybeSingle()
+            if (nextRoundRow) {
+              roundAdvancingRef.current = true
+              setPhase('loading')
+              setNoraVerdict(null)
+              setError(null)
+              setResponse('')
+              setSubmitted(false)
+              setPitchPhase('pitching')
+              setNoraChallenge(null)
+              setRankPhase('ranking_r1')
+              setRankR1User1(null)
+              setRankR1User2(null)
+              setRankR2Submitted(false)
+              setRankAgreements([])
+              setMyRanking([])
+              setMemoryGuess('')
+              setMemorySubmitting(false)
+              setMemoryLocalAnswer('')
+              setMemoryIsUpdated(false)
+              setMemoryReadySubmitting(false)
+              setMemoryHintResponding(false)
+              setNoraNudge(null)
+              memoryVerdictCalledRef.current = false
+              setTimeout(() => { roundAdvancingRef.current = false }, 1000)
+            }
+          }
+        }
+      }
+
       if (challengeType === 'rank' && round) {
         const { data: rankRound } = await supabase
           .from('challenge_rounds')
@@ -413,56 +477,14 @@ function ChallengePlayContent() {
           setPhase('verdict')
         }
 
-        return
-      }
-
-      // Check current round for verdict
-      const { data: roundRow } = await supabase
-        .from('challenge_rounds')
-        .select('*')
-        .eq('session_id', challengeSessionId)
-        .eq('round_number', currentRoundRef.current)
-        .maybeSingle()
-
-      // Watcher: advance from loading to challenge when round appears
-      if (roundRow && !isScribe && phaseRef.current === 'loading') {
-        setRound(roundRow)
-        if (challengeType === 'story') {
-          setSentences(roundRow.sentences || [])
-          setCurrentTurnUserId(roundRow.current_turn_user_id)
+        if (challengeSession && challengeSession.current_round > currentRoundRef.current && phaseRef.current === 'verdict') {
+          // fall through to advance logic below
+        } else {
+          return
         }
-        if (challengeType === 'rank') {
-          try {
-            const parsed = JSON.parse(roundRow.prompt)
-            const items = parsed.items || []
-            setRankItems(items)
-            setMyRanking(items)
-          } catch {
-            setRankItems([])
-            setMyRanking([])
-          }
-        }
-        setPhase('challenge')
-        return
       }
 
-      if (roundRow?.nora_verdict && phaseRef.current !== 'verdict' && phaseRef.current !== 'complete') {
-        setRound(roundRow)
-        setNoraVerdict(roundRow.nora_verdict)
-        if (roundRow.couple_response) setResponse(roundRow.couple_response)
-        setPhase('verdict')
-        return
-      }
-
-      // Check if session has advanced round or completed
-      const { data: challengeSession } = await supabase
-        .from('challenge_sessions')
-        .select('current_round, status')
-        .eq('id', challengeSessionId)
-        .maybeSingle()
-
-      if (!challengeSession) return
-
+      // Memory fall-through: complete check and advance block
       if (challengeSession.status === 'complete' && phaseRef.current !== 'complete') {
         clearInterval(pollRef.current)
         setPhase('complete')
@@ -514,6 +536,44 @@ function ChallengePlayContent() {
             setTimeout(() => { roundAdvancingRef.current = false }, 1000)
           }
         }
+      }
+
+      // Check current round for verdict
+      const { data: roundRow } = await supabase
+        .from('challenge_rounds')
+        .select('*')
+        .eq('session_id', challengeSessionId)
+        .eq('round_number', currentRoundRef.current)
+        .maybeSingle()
+
+      // Watcher: advance from loading to challenge when round appears
+      if (roundRow && !isScribe && phaseRef.current === 'loading') {
+        setRound(roundRow)
+        if (challengeType === 'story') {
+          setSentences(roundRow.sentences || [])
+          setCurrentTurnUserId(roundRow.current_turn_user_id)
+        }
+        if (challengeType === 'rank') {
+          try {
+            const parsed = JSON.parse(roundRow.prompt)
+            const items = parsed.items || []
+            setRankItems(items)
+            setMyRanking(items)
+          } catch {
+            setRankItems([])
+            setMyRanking([])
+          }
+        }
+        setPhase('challenge')
+        return
+      }
+
+      if (roundRow?.nora_verdict && phaseRef.current !== 'verdict' && phaseRef.current !== 'complete') {
+        setRound(roundRow)
+        setNoraVerdict(roundRow.nora_verdict)
+        if (roundRow.couple_response) setResponse(roundRow.couple_response)
+        setPhase('verdict')
+        return
       }
     }, 3000)
     return () => clearInterval(intervalId)
