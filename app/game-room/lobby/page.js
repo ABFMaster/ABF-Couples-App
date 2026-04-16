@@ -220,6 +220,7 @@ function GameRoomLobbyContent() {
           body: JSON.stringify({ sessionId, coupleId, userId }),
         })
         const data = await res.json()
+        console.log('[CALL START RESPONSE]', data)
         if (!data.callSession) return
         router.push(`/game-room/call/play?sessionId=${sessionId}&callSessionId=${data.callSession.id}`)
         setStarting(false)
