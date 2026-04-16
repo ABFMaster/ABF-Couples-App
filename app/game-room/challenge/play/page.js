@@ -307,6 +307,36 @@ function ChallengePlayContent() {
         return
       }
 
+      // --- GENERAL: round appearance watcher + verdict check ---
+      const { data: roundRow } = await supabase
+        .from('challenge_rounds')
+        .select('*')
+        .eq('session_id', challengeSessionId)
+        .eq('round_number', challengeSession.current_round)
+        .maybeSingle()
+
+      if (roundRow && !isScribe && phaseRef.current === 'loading') {
+        setRound(roundRow)
+        setNoraVerdict(null)
+        if (challengeType === 'story') {
+          setSentences(roundRow.sentences || [])
+          setCurrentTurnUserId(roundRow.current_turn_user_id)
+        }
+        if (challengeType === 'rank') {
+          try {
+            const parsed = JSON.parse(roundRow.prompt)
+            const items = parsed.items || []
+            setRankItems(items)
+            setMyRanking(items)
+          } catch {
+            setRankItems([])
+            setMyRanking([])
+          }
+        }
+        setPhase('challenge')
+        return
+      }
+
       // --- MEMORY ---
       if (challengeType === 'memory') {
         // Fetch round by DB session round — not client ref
@@ -458,36 +488,6 @@ function ChallengePlayContent() {
             }
           }
         }
-        return
-      }
-
-      // --- GENERAL: round appearance watcher + verdict check ---
-      const { data: roundRow } = await supabase
-        .from('challenge_rounds')
-        .select('*')
-        .eq('session_id', challengeSessionId)
-        .eq('round_number', challengeSession.current_round)
-        .maybeSingle()
-
-      if (roundRow && !isScribe && phaseRef.current === 'loading') {
-        setRound(roundRow)
-        setNoraVerdict(null)
-        if (challengeType === 'story') {
-          setSentences(roundRow.sentences || [])
-          setCurrentTurnUserId(roundRow.current_turn_user_id)
-        }
-        if (challengeType === 'rank') {
-          try {
-            const parsed = JSON.parse(roundRow.prompt)
-            const items = parsed.items || []
-            setRankItems(items)
-            setMyRanking(items)
-          } catch {
-            setRankItems([])
-            setMyRanking([])
-          }
-        }
-        setPhase('challenge')
         return
       }
 
