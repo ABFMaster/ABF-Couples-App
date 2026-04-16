@@ -149,6 +149,17 @@ function CallPlayContent() {
         }
       }
 
+      if (phase === 'reveal' && isHost) {
+        const { data: roundUpdate } = await supabase
+          .from('call_rounds')
+          .select('hot_seat_explanation, explanation_revealed')
+          .eq('id', round?.id)
+          .maybeSingle()
+        if (roundUpdate?.explanation_revealed && roundUpdate.hot_seat_explanation && roundUpdate.hot_seat_explanation !== '—') {
+          setPartnerExplanation(roundUpdate.hot_seat_explanation)
+        }
+      }
+
       if (phase === 'reveal' && !isHost) {
         const { data: callSession } = await supabase
           .from('call_sessions')
