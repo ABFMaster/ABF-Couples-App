@@ -107,7 +107,6 @@ function GameRoomLobbyContent() {
       if (sess) {
         const { data: { user } } = await supabase.auth.getUser()
         const freshIsHost = sess.host_user_id === user.id
-        console.log('[LOBBY POLL]', { mode, status: sess.status, freshIsHost, hostId: sess.host_user_id, userId: user?.id })
         setIsHost(freshIsHost)
 
         if (sess.status === 'active') {
@@ -180,7 +179,6 @@ function GameRoomLobbyContent() {
     if (starting || !sessionId) return
     if (mode !== 'challenge' && together === null) return
     setStarting(true)
-    console.log('[HANDLE START]', { mode, together, sessionId })
     try {
       await fetch('/api/game-room/start-session', {
         method: 'POST',
@@ -220,7 +218,6 @@ function GameRoomLobbyContent() {
           body: JSON.stringify({ sessionId, coupleId, userId }),
         })
         const data = await res.json()
-        console.log('[CALL START RESPONSE]', data)
         if (!data.callSession) return
         router.push(`/game-room/call/play?sessionId=${sessionId}&callSessionId=${data.callSession.id}`)
         setStarting(false)
@@ -245,7 +242,6 @@ function GameRoomLobbyContent() {
 
       router.push(`${config.playPath}?sessionId=${sessionId}`)
     } catch (err) {
-      console.log('[HANDLE START ERROR]', err)
       setStarting(false)
     } finally { setStarting(false) }
   }
