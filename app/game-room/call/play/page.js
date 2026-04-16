@@ -530,7 +530,7 @@ function CallPlayContent() {
 
                 {/* Predictor or after explanation — Next button */}
                 {isHost ? (
-                  (!isHotSeat || explanationSubmitted) && (
+                  (explanationSubmitted || (!isHotSeat && partnerExplanation)) && (
                     <button onClick={handleNext} style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}>
                       {currentRound >= totalRounds ? 'See the verdict ✦' : 'Next round →'}
                     </button>
