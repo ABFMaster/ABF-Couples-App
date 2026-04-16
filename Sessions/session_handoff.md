@@ -1,5 +1,5 @@
 # ABF — Developer Handoff Briefing
-# Last Updated: 2026-04-06
+# Last Updated: 2026-04-16
 
 ---
 
@@ -162,6 +162,26 @@ Before writing the session handoff, Claude must answer these four questions hone
 2. What caused that struggle?
 3. What should we change in prompts, structure, or tools?
 4. What should be standardized going forward?
+
+### Self-Review: 2026-04-16
+
+1. **What went wrong this session?**
+Multiple incremental patches before committing to proper re-architecture on the Memory poll. Story verdict required 6+ fix attempts due to compounding issues: stale closures, missing select fields, variable naming conflict with imported function, and empty string validation. Each fix revealed the next hidden issue rather than being diagnosed holistically upfront.
+
+2. **What specific protocols were violated?**
+- ADVERSARIAL VERIFIER: Not applied consistently before each fix. Applied reactively after failures instead of proactively before writing code.
+- ROOT CAUSE RULE: Several fixes addressed symptoms (adding guards, patching fields) before the actual root cause was confirmed via logs.
+
+3. **What is the current state?**
+- Memory: fully verified end-to-end ✓
+- The Call: fully verified end-to-end ✓
+- Story: fully verified end-to-end ✓
+- Spark reaction polling: pending (needs Spark day)
+- All RLS policies audited and gaps filled ✓
+- Universal watcher block architecture: loading→challenge transition now happens before any type-specific poll logic ✓
+
+4. **What must change going forward?**
+Run the adversarial verifier before every fix, not after it fails. Read the actual error before guessing the cause.
 
 ### Self-Review: 2026-04-14
 
@@ -560,80 +580,40 @@ Must be wrapped in Suspense boundary or build will fail.
 
 ## 21. NEXT SESSION PRIORITIES
 
-1. **Memory verdict stacking bug — FIRST PRIORITY**
-   - Root cause not isolated despite full day of debugging
-   - Partner advancement code fires (confirmed via debug_notes in DB)
-   - Debug overlay is deployed in challenge/play/page.js
-   - Protocol: Have Cass use browser (not PWA). Play round 1 to verdict. Matt taps Next Round. Cass screenshots overlay IMMEDIATELY — before stacking appears. Read phase/noraVerdict/round/isScribe values. Fix from data only.
-   - Suspected: noraVerdict being re-set after reset by poll tick that fires between state commits
-   - All stale closure fixes applied: phaseRef, roundRef, isScribeRef, currentRoundRef, coupleIdRef, memoryVerdictCalledRef
-   - roundAdvancingRef guards poll during transition
-   - Interval race condition fixed with local intervalId capture
+1. **Spark reaction polling verification** — needs Spark day (Monday/Tuesday/Thursday). Submit Spark, verify first submitter sees Nora reaction when partner responds.
 
-2. **Remove debug artifacts after Memory bug fix**
-   - Remove console.log statements from challenge/play/page.js
-   - Remove debug overlay from challenge/play/page.js
-   - Remove debug_notes column usage (keep column, stop writing to it)
-   - Remove `[ROUND ADVANCE CHECK]` log
+2. **Universal verdict double-generation bug** — affects The Call confirmed, likely Hot Take. Both clients independently call verdict route before either writes to DB. Fix: host-only generation, write to DB, partner polls. Audit all verdict routes. Own sprint before F&F release.
 
-3. **Memory round 2 question subject**
-   - Nora keeps writing questions about the guesser instead of answer-holder
-   - Validation added to reject wrong-subject questions and fall back to library
-   - Library prompts use "your partner" which is correct but generic
-   - May need stronger prompt instruction or question library specific to each role
+3. **F&F release readiness sweep**
+   - Game data scrub from testing
+   - Memory unlock thresholds — raise before wider release
+   - Push notifications firing too many at game end
+   - Codebase quality audit
 
-4. **Bug hunt sweep with Cass — remaining two-player bugs**
-   - The Call: explanation_revealed flag wired, needs verification
-   - Spark reaction polling: wired, needs verification with fresh session
-   - Story sentence 7: fixed, needs verification
+4. **Nora voice quality pass** — verdict length, theatrical copy, closing questions
 
-5. **Nora voice quality pass**
-   - NORA_VOICE deployed across all routes
-   - Third-person pronoun rule added
-   - Memory hint copy still theatrical ("spaces between") — needs prompt pass on challenge-prompts.js hint generation
-   - Verdict length — some running too long
-
-6. **Orphaned session cleanup**
-   - challenge_sessions now marks abandoned instead of deleting ✓
-   - Full audit of all child session tables needed pre-launch
-   - Add to codebase audit sprint
-
-7. **Onboarding data gap** — living situation + family intent
-
-8. **Timeline + Weekly Reflection + Trips polish** — grouped sprint
-
-9. **The Remake + Us page redesign** — own sprint
+5. **Bet 401 on Today page** — pre-existing auth issue
 
 ---
 
 ## 22. KNOWN ISSUES
 
 **P1 — Active, blocking**
-- Memory verdict stacking: Cass sees round 1 verdict persisting into round 2. Partner advancement code confirmed firing. Debug overlay deployed. Root cause not isolated. See Section 21 for debug protocol.
-- Memory round 2 question subject: Nora generates questions about guesser instead of answer-holder. Validation added but library fallback prompts are generic ("your partner"). Needs stronger fix.
+- Universal verdict double-generation: both clients call verdict route independently before DB write. Affects The Call confirmed, likely Hot Take. Sprint item before F&F.
 
 **P2 — Fixed this session, needs verification**
-- Challenge Story sentence 7: fixed — story_complete now triggers verdict for both partners
-- Spark reaction polling: first submitter now polls for nora_reaction
-- Challenge Finish → verdict pop-back: phaseRef prevents poll from overriding complete state
-- The Call explanation timing: explanation_revealed flag added
-- Together/remote showing "remote" for all partners: DB default removed
-- Challenge sessions orphaned: expireAndClean now marks abandoned instead of deleting
+- Spark reaction polling: wired, needs verification on Spark day
 
 **P3 — Known, backlogged**
 - Nora punctuation (missing apostrophes in signal calls)
 - Verdict length — some running too long
-- Memory hint copy theatrical — needs prompt pass on challenge-prompts.js
-- Memory unlock thresholds all 0 — raise before wider release
-- Memory 3-round role swap — partially working, round 2 transition broken
 - Cass PWA caching — use browser for testing until native app
-- Push notifications firing too many at game end
+- Memory unlock thresholds all 0 — raise before wider release
 - Google Places 503 — date suggestions broken
 - Hunt photo capture — aspirational, native app only
 - Timeline: no history page, Weekly Reflection page outdated, Trips needs polish
 - Orphaned session cleanup — full audit needed pre-launch
 - challenge_sessions debug_notes column — clean up after Memory bug fixed
-- Bet 401 error on Today page — pre-existing auth issue
 
 ---
 
