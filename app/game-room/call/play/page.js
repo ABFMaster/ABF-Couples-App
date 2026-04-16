@@ -316,6 +316,7 @@ function CallPlayContent() {
       setNoraComment(null)
       setExplanation('')
       setExplanationSubmitted(false)
+      setPartnerExplanation(null)
       const couple = coupleRef.current
       const hotSeatUserId = data.nextRound % 2 === 1 ? couple.user1_id : couple.user2_id
       setIsHotSeat(userId === hotSeatUserId)
