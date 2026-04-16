@@ -471,6 +471,21 @@ function ChallengePlayContent() {
       if (roundRow && !isScribe && phaseRef.current === 'loading') {
         setRound(roundRow)
         setNoraVerdict(null)
+        if (challengeType === 'story') {
+          setSentences(roundRow.sentences || [])
+          setCurrentTurnUserId(roundRow.current_turn_user_id)
+        }
+        if (challengeType === 'rank') {
+          try {
+            const parsed = JSON.parse(roundRow.prompt)
+            const items = parsed.items || []
+            setRankItems(items)
+            setMyRanking(items)
+          } catch {
+            setRankItems([])
+            setMyRanking([])
+          }
+        }
         setPhase('challenge')
         return
       }
