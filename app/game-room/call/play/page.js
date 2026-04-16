@@ -167,6 +167,7 @@ function CallPlayContent() {
           .maybeSingle()
         if (roundUpdate?.explanation_revealed && roundUpdate.hot_seat_explanation && roundUpdate.hot_seat_explanation !== '—') {
           setPartnerExplanation(roundUpdate.hot_seat_explanation)
+          setPhase('reveal')
         }
         if (callSession?.current_round > currentRound) {
           const { data: nextRoundData } = await supabase
@@ -199,12 +200,12 @@ function CallPlayContent() {
       if (phase === 'explanation') {
         const { data: roundData } = await supabase
           .from('call_rounds')
-          .select('hot_seat_explanation, status')
+          .select('hot_seat_explanation, explanation_revealed, status')
           .eq('id', round.id)
           .maybeSingle()
-        if (roundData?.hot_seat_explanation && roundData?.status === 'answered') {
-          clearInterval(pollRef.current)
-          setPhase('next')
+        if (roundData?.explanation_revealed && roundData?.hot_seat_explanation) {
+          setPartnerExplanation(roundData.hot_seat_explanation)
+          setPhase('reveal')
         }
       }
 
@@ -288,13 +289,6 @@ function CallPlayContent() {
   }
 
   const handleNext = async () => {
-    // Reveal explanation to partner before advancing
-    if (round?.id) {
-      await supabase
-        .from('call_rounds')
-        .update({ explanation_revealed: true })
-        .eq('id', round.id)
-    }
     const res = await fetch('/api/game-room/call/next', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
