@@ -153,6 +153,29 @@ The Us page was deprioritized during Home and Today builds. Needs a full design 
 
 ---
 
+## PRE-LAUNCH REQUIREMENTS
+*Items that must be resolved before Friends & Family release*
+
+### RLS Policy Audit
+Every new DB table must have a `couple_access` RLS policy before shipping. `call_sessions` and `call_rounds` were missing policies and caused silent auth failures in production. Add to new table checklist: create RLS policy, verify client-side read works before closing feature.
+
+### Host Push Notification Fix
+Host receives their own "game is starting" push notification. On mobile this can pull the host away from the app mid-navigation. Fix written but never deployed: only send push to partner (not host) in `start-session/route.js`. Deploy before F&F testing.
+
+### End Game Session Cleanup Verification
+Manual DB resets were required multiple times during testing. Verify End Game button correctly cleans all session state for every game mode before F&F release. Test: play each mode, tap End Game, start a new session — confirm no stale state.
+
+### Shadowed Import Audit
+`challenge/submit/route.js` had `noraVerdict` imported as a function and redeclared as a local variable — silent 500 in production. Pre-launch: grep for shadowed imports across all routes. Command: `grep -rn "const noraVerdict\|const noraChat\|const noraReact\|const noraGenerate\|const noraSignal" app/api/`
+
+### Universal Verdict Double-Generation
+Both clients independently call verdict routes before either writes to DB — produces two different Nora verdicts. Confirmed in The Call, likely affects Hot Take. Fix: host-only generation, write verdict to DB, partner polls. Requires adding `nora_verdict` column to `call_sessions` and `hot_take_sessions`. Audit all verdict routes. Own sprint before F&F.
+
+### Challenge Instruction Copy Audit
+Story instruction was wrong ("One of you take the lead — write together out loud"). Fixed. Audit all `CHALLENGE_INSTRUCTIONS` entries in `challenge/play/page.js` for accuracy before F&F.
+
+---
+
 ## TENSION INTELLIGENCE ARC — Nora as Relationship Safety Net
 *Designed: 2026-04-03*
 
