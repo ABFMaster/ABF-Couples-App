@@ -144,14 +144,14 @@ Give a verdict that:
       maxTokens: 400,
     })
 
-    const noraVerdict = response
+    const verdictText = response
 
     // Save response and verdict to round
     const { data: round, error } = await supabase
       .from('challenge_rounds')
       .update({
         couple_response: coupleResponse,
-        nora_verdict: noraVerdict,
+        nora_verdict: verdictText,
         completed_at: new Date().toISOString(),
       })
       .eq('id', roundId)
@@ -162,7 +162,7 @@ Give a verdict that:
       return Response.json({ error: 'Failed to save round' }, { status: 500 })
     }
 
-    return Response.json({ round, noraVerdict })
+    return Response.json({ round, noraVerdict: verdictText })
   } catch (err) {
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
