@@ -9,6 +9,7 @@ const supabase = createClient(
 export async function POST(request) {
   try {
     const { userId, coupleId, challengeSessionId, roundId, challengeType, prompt, coupleResponse } = await request.json()
+    console.log('[SUBMIT] received:', { userId, coupleId, challengeSessionId, roundId, challengeType, prompt: prompt?.slice(0, 50) })
 
     if (!userId || !coupleId || !challengeSessionId || !roundId || !challengeType || !prompt || !coupleResponse) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
