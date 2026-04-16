@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 const CHALLENGE_INSTRUCTIONS = {
-  story: 'One of you take the lead — write together out loud.',
+  story: 'Alternate sentences — keep it going.',
   pitch: 'One of you take the lead — make your case together.',
   rank: 'One of you drag to reorder. Discuss as you go.',
   memory: 'Only the answer-holder can see the answer. Guesser — no peeking.',
