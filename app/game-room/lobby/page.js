@@ -107,6 +107,7 @@ function GameRoomLobbyContent() {
       if (sess) {
         const { data: { user } } = await supabase.auth.getUser()
         const freshIsHost = sess.host_user_id === user.id
+        console.log('[LOBBY POLL]', { mode, status: sess.status, freshIsHost, hostId: sess.host_user_id, userId: user?.id })
         setIsHost(freshIsHost)
 
         if (sess.status === 'active') {
