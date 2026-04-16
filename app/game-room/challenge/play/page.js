@@ -229,6 +229,8 @@ function ChallengePlayContent() {
   useEffect(() => { isScribeRef.current = isScribe }, [isScribe])
   const coupleIdRef = useRef(null)
   useEffect(() => { coupleIdRef.current = coupleId }, [coupleId])
+  const userIdRef = useRef(null)
+  useEffect(() => { userIdRef.current = userId }, [userId])
   const generateCalledForRoundRef = useRef(0)
 
   useEffect(() => {
@@ -461,7 +463,7 @@ function ChallengePlayContent() {
       if (challengeType === 'story' && challengeSession.current_round) {
         const { data: storyRound } = await supabase
           .from('challenge_rounds')
-          .select('sentences, current_turn_user_id, nora_nudge, nora_verdict, story_complete')
+          .select('id, prompt, sentences, current_turn_user_id, nora_nudge, nora_verdict, story_complete')
           .eq('session_id', challengeSessionId)
           .eq('round_number', challengeSession.current_round)
           .maybeSingle()
@@ -478,7 +480,7 @@ function ChallengePlayContent() {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                userId, coupleId, challengeSessionId,
+                userId: userIdRef.current, coupleId: coupleIdRef.current, challengeSessionId,
                 roundId: storyRound.id, challengeType,
                 prompt: storyRound.prompt, coupleResponse: '',
               }),
