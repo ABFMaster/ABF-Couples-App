@@ -219,6 +219,7 @@ function ChallengePlayContent() {
   const [memoryHintResponding, setMemoryHintResponding] = useState(false)
   const pollRef = useRef(null)
   const memoryVerdictCalledRef = useRef(false)
+  const storyVerdictCalledRef = useRef(false)
   const completePollRef = useRef(null)
   const roundRef = useRef(null)
   const phaseRef = useRef(phase)
@@ -471,21 +472,19 @@ function ChallengePlayContent() {
           if (storyRound.nora_verdict && phaseRef.current !== 'verdict') {
             setNoraVerdict(storyRound.nora_verdict)
             setPhase('verdict')
-          } else if (storyRound.story_complete && !storyRound.nora_verdict && phaseRef.current !== 'verdict') {
-            const submitRes = await fetch('/api/game-room/challenge/submit', {
+          } else if (storyRound.story_complete && !storyRound.nora_verdict && phaseRef.current !== 'verdict' && isScribeRef.current && !storyVerdictCalledRef.current) {
+            storyVerdictCalledRef.current = true
+            fetch('/api/game-room/challenge/submit', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 userId, coupleId, challengeSessionId,
-                roundId: round.id, challengeType,
-                prompt: round.prompt, coupleResponse: '',
+                roundId: storyRound.id, challengeType,
+                prompt: storyRound.prompt, coupleResponse: '',
               }),
+            }).catch(() => {
+              storyVerdictCalledRef.current = false
             })
-            const submitData = await submitRes.json()
-            if (submitData.noraVerdict) {
-              setNoraVerdict(submitData.noraVerdict)
-              setPhase('verdict')
-            }
           }
         }
         return
@@ -559,6 +558,7 @@ function ChallengePlayContent() {
     if (challengeType !== 'pitch') setResponse('')
     setNoraVerdict(null)
     memoryVerdictCalledRef.current = false
+    storyVerdictCalledRef.current = false
     setError(null)
     setSubmitted(false)
     setPitchPhase('pitching')
@@ -701,22 +701,6 @@ function ChallengePlayContent() {
         setCurrentTurnUserId(data.round.current_turn_user_id)
         if (data.noraNudge) setNoraNudge(data.noraNudge)
         setStoryInput('')
-      }
-      if (data.storyComplete) {
-        const submitRes = await fetch('/api/game-room/challenge/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId, coupleId, challengeSessionId,
-            roundId: round.id, challengeType,
-            prompt: round.prompt, coupleResponse: '',
-          }),
-        })
-        const submitData = await submitRes.json()
-        if (submitData.noraVerdict) {
-          setNoraVerdict(submitData.noraVerdict)
-          setPhase('verdict')
-        }
       }
     } catch {} finally {
       setStorySubmitting(false)
