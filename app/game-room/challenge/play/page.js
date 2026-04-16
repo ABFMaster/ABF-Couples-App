@@ -427,11 +427,12 @@ function ChallengePlayContent() {
       }
 
       // --- STORY ---
-      if (challengeType === 'story' && round) {
+      if (challengeType === 'story' && challengeSession.current_round) {
         const { data: storyRound } = await supabase
           .from('challenge_rounds')
           .select('sentences, current_turn_user_id, nora_nudge, nora_verdict, story_complete')
-          .eq('id', roundRef.current?.id)
+          .eq('session_id', challengeSessionId)
+          .eq('round_number', challengeSession.current_round)
           .maybeSingle()
         if (storyRound) {
           setSentences(storyRound.sentences || [])
