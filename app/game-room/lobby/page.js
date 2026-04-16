@@ -180,6 +180,7 @@ function GameRoomLobbyContent() {
     if (starting || !sessionId) return
     if (mode !== 'challenge' && together === null) return
     setStarting(true)
+    console.log('[HANDLE START]', { mode, together, sessionId })
     try {
       await fetch('/api/game-room/start-session', {
         method: 'POST',
