@@ -14,6 +14,16 @@ export async function POST(request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     )
 
+    // Idempotency — return existing verdict if already generated
+    const { data: existingSession } = await supabase
+      .from('call_sessions')
+      .select('nora_verdict')
+      .eq('id', callSessionId)
+      .maybeSingle()
+    if (existingSession?.nora_verdict) {
+      return NextResponse.json({ verdict: existingSession.nora_verdict, score, totalRounds })
+    }
+
     // Get all rounds for context
     const { data: rounds } = await supabase
       .from('call_rounds')
@@ -64,7 +74,10 @@ Score context:
     const response = await noraVerdict(prompt, { route: 'game-room/call/verdict', maxTokens: 400 })
 
     const verdict = response
-
+    await supabase
+      .from('call_sessions')
+      .update({ nora_verdict: verdict })
+      .eq('id', callSessionId)
     return NextResponse.json({ verdict, score, totalRounds })
   } catch (err) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

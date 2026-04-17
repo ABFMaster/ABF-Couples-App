@@ -319,21 +319,16 @@ function HotTakeContent() {
   }
 
   useEffect(() => {
-    if (!showSummary || answers.length === 0) return
-    const disagreedAnswers = answers.filter(a => !a.agreed)
-    const surprisingOne = disagreedAnswers[0] || answers[answers.length - 1]
-    if (!surprisingOne) return
+    if (!showSummary || !session?.id || !userId) return
     setLoadingInsight(true)
     fetch('/api/game-room/hot-take/summary-insight', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        surprisingQuestion: surprisingOne.question.text,
-        myAnswer: surprisingOne.myAnswer,
-        partnerAnswer: surprisingOne.partnerAnswer,
+        sessionId: session.id,
+        userId,
         userName,
         partnerName,
-        allAnswers: answers,
       }),
     })
       .then(r => r.json())
