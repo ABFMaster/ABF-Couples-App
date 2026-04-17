@@ -296,7 +296,6 @@ function HotTakeContent() {
   }
 
   const handleSkip = async () => {
-    clearInterval(nextPollRef.current)
     const isLast = currentIndex >= questions.length - 1
     if (isLast) {
       await supabase
