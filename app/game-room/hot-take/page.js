@@ -25,6 +25,7 @@ function HotTakeContent() {
   const [userName, setUserName] = useState('')
   const [partnerName, setPartnerName] = useState('your partner')
   const [isUser1, setIsUser1] = useState(false)
+  const [isHost, setIsHost] = useState(false)
   const [summary, setSummary] = useState(null)
   const [answers, setAnswers] = useState([]) // all answers for summary
   const [showSummary, setShowSummary] = useState(false)
@@ -86,6 +87,7 @@ function HotTakeContent() {
 
       if (!sess) { router.push('/game-room'); return }
       setSession(sess)
+      setIsHost(sess.host_user_id === user.id)
       setTogether(sess.together || false)
 
       setLoading(false)
@@ -320,22 +322,40 @@ function HotTakeContent() {
 
   useEffect(() => {
     if (!showSummary || !session?.id || !userId) return
-    setLoadingInsight(true)
-    fetch('/api/game-room/hot-take/summary-insight', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId: session.id,
-        userId,
-        userName,
-        partnerName,
-      }),
-    })
-      .then(r => r.json())
-      .then(d => { if (d.insight) setNoraInsight(d.insight) })
-      .catch(() => {})
-      .finally(() => setLoadingInsight(false))
-  }, [showSummary])
+    if (isHost) {
+      setLoadingInsight(true)
+      fetch('/api/game-room/hot-take/summary-insight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: session.id,
+          userId,
+          userName,
+          partnerName,
+        }),
+      })
+        .then(r => r.json())
+        .then(d => { if (d.insight) setNoraInsight(d.insight) })
+        .catch(() => {})
+        .finally(() => setLoadingInsight(false))
+    } else {
+      // Partner polls for insight
+      setLoadingInsight(true)
+      const insightPoll = setInterval(async () => {
+        const { data: htSession } = await supabase
+          .from('hot_take_sessions')
+          .select('nora_insight')
+          .eq('session_id', session.id)
+          .maybeSingle()
+        if (htSession?.nora_insight) {
+          clearInterval(insightPoll)
+          setNoraInsight(htSession.nora_insight)
+          setLoadingInsight(false)
+        }
+      }, 2000)
+      return () => clearInterval(insightPoll)
+    }
+  }, [showSummary, isHost])
 
   const agreedCount = answers.filter(a => a.agreed).length
 
@@ -348,20 +368,33 @@ function HotTakeContent() {
     )
   }
 
-  // Tier selection screen
   if (tierPreference === null) {
+    if (!isHost) {
+      return (
+        <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 60%, #4338CA 100%)', borderRadius: '20px', padding: '28px 24px', marginBottom: '32px', width: '100%', maxWidth: '400px', textAlign: 'center' }}>
+            <p style={{ fontSize: '11px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', margin: '0 0 8px' }}>Hot Take</p>
+            <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '28px', fontWeight: 400, color: '#FFFFFF', margin: '0 0 8px' }}>Get ready</h1>
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', margin: 0 }}>{partnerName} is picking the vibe.</p>
+          </div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#9CA3AF', fontSize: '13px' }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+            Waiting for {partnerName} to choose...
+          </div>
+          <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }`}</style>
+        </div>
+      )
+    }
     return (
       <div style={{ minHeight: '100vh', background: '#FAF6F0' }}>
         <div style={{ padding: '48px 24px 120px' }}>
           <button onClick={handleEndGame} style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '13px', cursor: 'pointer', padding: '0 0 24px' }}>End game</button>
-
           <div style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 60%, #4338CA 100%)', borderRadius: '20px', padding: '28px 24px', marginBottom: '32px', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
             <p style={{ fontSize: '11px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', margin: '0 0 8px' }}>Hot Take</p>
             <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '28px', fontWeight: 400, color: '#FFFFFF', margin: '0 0 8px' }}>How deep are we going?</h1>
             <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', margin: 0 }}>Pick a vibe. Nora picks the takes.</p>
           </div>
-
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {[
               { tiers: [1], label: 'Warm Up', description: 'Fun, light, no wrong answers. Great for a first round.', icon: '☀️' },
@@ -466,7 +499,7 @@ function HotTakeContent() {
           <button onClick={handleEndGame} style={{ background: 'none', border: 'none', color: '#9CA3AF', fontSize: '13px', cursor: 'pointer', padding: 0 }}>End game</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontSize: '12px', color: '#9CA3AF' }}>{currentIndex + 1} / {questions.length}</span>
-            <button onClick={handleSkip} style={{ background: 'none', border: '0.5px solid #E8DDD0', borderRadius: '12px', padding: '4px 12px', fontSize: '12px', color: '#9CA3AF', cursor: 'pointer' }}>Skip</button>
+            {isHost && <button onClick={handleSkip} style={{ background: 'none', border: '0.5px solid #E8DDD0', borderRadius: '12px', padding: '4px 12px', fontSize: '12px', color: '#9CA3AF', cursor: 'pointer' }}>Skip</button>}
           </div>
         </div>
 
@@ -573,12 +606,21 @@ function HotTakeContent() {
               </div>
             )}
 
-            <button
-              onClick={handleNext}
-              style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}
-            >
-              {currentIndex >= questions.length - 1 ? 'See the summary →' : 'Next take 🔥'}
-            </button>
+            {isHost ? (
+              <button
+                onClick={handleNext}
+                style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer' }}
+              >
+                {currentIndex >= questions.length - 1 ? 'See the summary →' : 'Next take 🔥'}
+              </button>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '12px 0', color: '#9CA3AF', fontSize: '13px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                  Waiting for {partnerName}...
+                </div>
+              </div>
+            )}
           </div>
         )}
 
