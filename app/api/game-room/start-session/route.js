@@ -71,18 +71,21 @@ export async function POST(request) {
       const body = modeBodies[mode] || "Your game is starting."
       const url = modeUrls[mode] || '/game-room'
 
-      await Promise.all([
-        fetch(`${appBase}/api/push/send`, {
+      // Only notify the partner — host is already in the app starting the game
+      const { data: hostSession } = await supabase
+        .from('game_sessions')
+        .select('host_user_id')
+        .eq('id', sessionId)
+        .maybeSingle()
+      const partnerId = hostSession?.host_user_id === couple.user1_id ? couple.user2_id : couple.user1_id
+      const { data: sessionData } = await supabase.from('game_sessions').select('together').eq('id', sessionId).maybeSingle()
+      if (!sessionData?.together) {
+        await fetch(`${appBase}/api/push/send`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: couple.user1_id, title, body, url }),
-        }).catch(() => {}),
-        fetch(`${appBase}/api/push/send`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: couple.user2_id, title, body, url }),
-        }).catch(() => {}),
-      ])
+          body: JSON.stringify({ userId: partnerId, title, body, url }),
+        }).catch(() => {})
+      }
     }
 
     return NextResponse.json({ session })

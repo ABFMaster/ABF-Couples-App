@@ -40,6 +40,8 @@ export async function POST(request) {
 
     // Notify partner that this user is ready
     const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
+    const { data: gameSession } = await supabase.from('game_sessions').select('together').eq('id', sessionId).maybeSingle()
+    const isRemote = !gameSession?.together
 
     // Get user's name for notification
     const { data: myProfile } = await supabase
@@ -57,41 +59,45 @@ export async function POST(request) {
         .eq('session_id', sessionId)
         .eq('round_number', roundNumber)
 
-      // Notify both — next round is starting
-      await Promise.all([
-        fetch(`${appBase}/api/push/send`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: couple.user1_id,
-            title: 'The Rabbit Hole',
-            body: "You're both ready — Nora is sending you deeper.",
-            url: '/game-room/rabbit-hole/play',
-          }),
-        }).catch(() => {}),
-        fetch(`${appBase}/api/push/send`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: couple.user2_id,
-            title: 'The Rabbit Hole',
-            body: "You're both ready — Nora is sending you deeper.",
-            url: '/game-room/rabbit-hole/play',
-          }),
-        }).catch(() => {}),
-      ])
+      if (isRemote) {
+        // Notify both — next round is starting
+        await Promise.all([
+          fetch(`${appBase}/api/push/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: couple.user1_id,
+              title: 'The Rabbit Hole',
+              body: "You're both ready — Nora is sending you deeper.",
+              url: '/game-room/rabbit-hole/play',
+            }),
+          }).catch(() => {}),
+          fetch(`${appBase}/api/push/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: couple.user2_id,
+              title: 'The Rabbit Hole',
+              body: "You're both ready — Nora is sending you deeper.",
+              url: '/game-room/rabbit-hole/play',
+            }),
+          }).catch(() => {}),
+        ])
+      }
     } else {
-      // Notify partner that this user is ready
-      await fetch(`${appBase}/api/push/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: partnerId,
-          title: 'The Rabbit Hole',
-          body: `${myName} is ready for the next thread whenever you are.`,
-          url: '/game-room/rabbit-hole/play',
-        }),
-      }).catch(() => {})
+      if (isRemote) {
+        // Notify partner that this user is ready
+        await fetch(`${appBase}/api/push/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: partnerId,
+            title: 'The Rabbit Hole',
+            body: `${myName} is ready for the next thread whenever you are.`,
+            url: '/game-room/rabbit-hole/play',
+          }),
+        }).catch(() => {})
+      }
     }
 
     return NextResponse.json({

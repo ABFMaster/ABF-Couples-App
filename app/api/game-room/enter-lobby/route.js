@@ -124,16 +124,20 @@ export async function POST(request) {
     const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
     const partnerId = isUser1 ? couple.user2_id : couple.user1_id
     const notificationUrl = `/game-room/lobby?mode=${mode}`
-    await fetch(`${appBase}/api/push/send`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: partnerId,
-        title: 'The Game Room',
-        body: 'Your partner is in the lobby. Ready to play?',
-        url: notificationUrl,
-      }),
-    }).catch(() => {})
+    // Only notify partner if they are not already in the lobby
+    const partnerAlreadyIn = isUser1 ? session?.user2_in_lobby : session?.user1_in_lobby
+    if (!partnerAlreadyIn) {
+      await fetch(`${appBase}/api/push/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: partnerId,
+          title: 'The Game Room',
+          body: 'Your partner is in the lobby. Ready to play?',
+          url: notificationUrl,
+        }),
+      }).catch(() => {})
+    }
 
     const bothInLobby = session?.user1_in_lobby && session?.user2_in_lobby
     return NextResponse.json({ session, bothInLobby })

@@ -174,6 +174,13 @@ Both clients independently call verdict routes before either writes to DB — pr
 ### Challenge Instruction Copy Audit
 Story instruction was wrong ("One of you take the lead — write together out loud"). Fixed. Audit all `CHALLENGE_INSTRUCTIONS` entries in `challenge/play/page.js` for accuracy before F&F.
 
+### Push Subscription Staleness
+Cass's push subscriptions are from March and daily notifications are not delivering despite `Push errors: []` in Vercel logs. Web-push reports success but Apple APNS may be silently dropping stale subscriptions. Needs investigation:
+1. Check if subscriptions are being re-registered on PWA open — verify service worker push registration fires on every app open, not just first install
+2. Add subscription freshness check — re-register if subscription is older than 7 days
+3. Consider adding a visible "Enable notifications" button in Profile so users can manually re-register
+4. Test end-to-end: send a test push directly to Cass's subscription endpoint and verify delivery
+
 ---
 
 ## TENSION INTELLIGENCE ARC — Nora as Relationship Safety Net
