@@ -1,5 +1,5 @@
 # ABF — Developer Handoff Briefing
-# Last Updated: 2026-04-16
+# Last Updated: 2026-04-17
 
 ---
 
@@ -162,6 +162,27 @@ Before writing the session handoff, Claude must answer these four questions hone
 2. What caused that struggle?
 3. What should we change in prompts, structure, or tools?
 4. What should be standardized going forward?
+
+### Self-Review: 2026-04-17
+
+1. **What went wrong this session?**
+Hot Take required multiple fix iterations on skip functionality because the nextPoll useEffect condition was too restrictive — it only ran when bothAnswered was true, which meant skipped questions left the partner stranded. The poll condition should have been audited before the first fix was shipped.
+
+2. **What specific protocols were violated?**
+- ADVERSARIAL VERIFIER: Applied reactively on some fixes but not consistently before every change. The skip bug required 3 iterations that a single adversarial pass would have caught upfront.
+- ROOT CAUSE RULE: The nextPoll condition was the root cause but was missed in the first two fixes.
+
+3. **What is the current state?**
+- Hot Take: fully rebuilt to follow universal host-only pattern ✓
+- Push notifications: cleaned up — together/remote gating, host suppression, lobby dedup ✓
+- Verdict double-generation: fixed for Hot Take (host-only + DB idempotency) and The Call (DB idempotency) ✓
+- Story: fully verified end-to-end ✓
+- The Call: fully verified end-to-end ✓
+- Memory: fully verified end-to-end ✓
+- All game modes now follow universal multiplayer pattern ✓
+
+4. **What must change going forward?**
+Run the adversarial verifier on every fix before shipping. One pass upfront is cheaper than three fix iterations.
 
 ### Self-Review: 2026-04-16
 
@@ -580,40 +601,44 @@ Must be wrapped in Suspense boundary or build will fail.
 
 ## 21. NEXT SESSION PRIORITIES
 
-1. **Spark reaction polling verification** — needs Spark day (Monday/Tuesday/Thursday). Submit Spark, verify first submitter sees Nora reaction when partner responds.
+1. **Spark reaction polling verification** — needs Spark day (Mon/Tue/Thu). Submit Spark, verify first submitter sees Nora reaction when partner responds.
 
-2. **Universal verdict double-generation bug** — affects The Call confirmed, likely Hot Take. Both clients independently call verdict route before either writes to DB. Fix: host-only generation, write to DB, partner polls. Audit all verdict routes. Own sprint before F&F release.
+2. **End Game cleanup verification** — play each mode, tap End Game, start fresh session. Confirm no stale state for all modes before F&F.
 
-3. **F&F release readiness sweep**
-   - Game data scrub from testing
-   - Memory unlock thresholds — raise before wider release
-   - Push notifications firing too many at game end
-   - Codebase quality audit
+3. **Rabbit Hole verification** — hasn't been tested since poll rewrite. Run a full end-to-end session.
 
-4. **Nora voice quality pass** — verdict length, theatrical copy, closing questions
+4. **Game data scrub** — clear all test session data before real users touch the app.
 
-5. **Bet 401 on Today page** — pre-existing auth issue
+5. **Memory unlock thresholds** — currently all 0, raise before wider release.
+
+6. **Push notification re-registration** — Cass's subscriptions stale since March. Daily notifications not delivering. See PRE-LAUNCH REQUIREMENTS in backlog for investigation steps.
+
+7. **Nora voice quality pass** — verdict length, theatrical copy, closing questions.
+
+8. **Bet 401 on Today page** — pre-existing auth issue, non-blocking.
 
 ---
 
 ## 22. KNOWN ISSUES
 
 **P1 — Active, blocking**
-- Universal verdict double-generation: both clients call verdict route independently before DB write. Affects The Call confirmed, likely Hot Take. Sprint item before F&F.
+- None. All previously blocking issues resolved.
 
-**P2 — Fixed this session, needs verification**
+**P2 — Fixed, needs verification**
 - Spark reaction polling: wired, needs verification on Spark day
+- Rabbit Hole: not tested since poll rewrite, needs full verification run
 
 **P3 — Known, backlogged**
-- Nora punctuation (missing apostrophes in signal calls)
-- Verdict length — some running too long
-- Cass PWA caching — use browser for testing until native app
-- Memory unlock thresholds all 0 — raise before wider release
+- Push notification re-registration — daily notifications not delivering for Cass
+- Nora voice quality — verdict length, theatrical copy
+- Memory unlock thresholds — all 0, raise before wider release
+- Bet 401 error on Today page — pre-existing auth issue
 - Google Places 503 — date suggestions broken
-- Hunt photo capture — aspirational, native app only
-- Timeline: no history page, Weekly Reflection page outdated, Trips needs polish
+- Push notifications — some redundancy in game-end notifications still possible
+- hot_take_sessions.session_id unique constraint — race condition hardening
+- Timeline: no history page, Weekly Reflection outdated, Trips needs polish
 - Orphaned session cleanup — full audit needed pre-launch
-- challenge_sessions debug_notes column — clean up after Memory bug fixed
+- Codebase quality audit — pre-wider-release requirement
 
 ---
 
