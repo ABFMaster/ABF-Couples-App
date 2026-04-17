@@ -241,7 +241,7 @@ function HotTakeContent() {
 
   // Poll for partner advancing to next question or summary
   useEffect(() => {
-    if (!session?.id || !bothAnswered || countdown !== 0) return
+    if (!session?.id) return
     nextPollRef.current = setInterval(async () => {
       const { data: htSession } = await supabase
         .from('hot_take_sessions')
