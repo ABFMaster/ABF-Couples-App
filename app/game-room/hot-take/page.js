@@ -295,12 +295,23 @@ function HotTakeContent() {
     setCountdown(null)
   }
 
-  const handleSkip = () => {
-    if (currentIndex >= questions.length - 1) {
+  const handleSkip = async () => {
+    clearInterval(nextPollRef.current)
+    const isLast = currentIndex >= questions.length - 1
+    if (isLast) {
+      await supabase
+        .from('hot_take_sessions')
+        .update({ show_summary: true })
+        .eq('session_id', session.id)
       setShowSummary(true)
       return
     }
-    setCurrentIndex(prev => prev + 1)
+    const nextIndex = currentIndex + 1
+    await supabase
+      .from('hot_take_sessions')
+      .update({ current_index: nextIndex })
+      .eq('session_id', session.id)
+    setCurrentIndex(nextIndex)
     setMyAnswer(null)
     setPartnerAnswer(null)
     setBothAnswered(false)
