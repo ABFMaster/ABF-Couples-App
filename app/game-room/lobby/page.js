@@ -138,6 +138,20 @@ function GameRoomLobbyContent() {
             }
             return
           }
+          if (['story', 'pitch', 'rank', 'plan', 'memory'].includes(mode)) {
+            if (freshIsHost) return
+            const { data: challengeSess } = await supabase
+              .from('challenge_sessions')
+              .select('id, challenge_type, total_rounds')
+              .eq('session_id', sess.id)
+              .eq('status', 'active')
+              .maybeSingle()
+            if (challengeSess) {
+              clearInterval(pollRef.current)
+              router.push(`/game-room/challenge/play?sessionId=${sess.id}&challengeSessionId=${challengeSess.id}&type=${challengeSess.challenge_type}&rounds=${challengeSess.total_rounds}&scribe=false`)
+            }
+            return
+          }
           clearInterval(pollRef.current)
           if (mode === 'the-hunt') {
             router.push(`/game-room/the-hunt/play?sessionId=${sess.id}`)
@@ -236,6 +250,25 @@ function GameRoomLobbyContent() {
         setChallengeAvailableTypes(data.availableTypes || [])
         setChallengeSelectedType(null)
         setShowChallengeTypeSelect(true)
+        setStarting(false)
+        return
+      }
+
+      if (['story', 'pitch', 'rank', 'plan', 'memory'].includes(mode)) {
+        const typeMap = { story: 'story', pitch: 'pitch', rank: 'rank', plan: 'plan', memory: 'memory' }
+        const challengeType = typeMap[mode]
+        const confirmRes = await fetch('/api/game-room/challenge/confirm-type', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            coupleId,
+            challengeType,
+            totalRounds: challengeType === 'rank' ? 1 : 3,
+          }),
+        })
+        const confirmData = await confirmRes.json()
+        router.push(`/game-room/challenge/play?sessionId=${sessionId}&challengeSessionId=${confirmData.challengeSession.id}&type=${challengeType}&rounds=${challengeType === 'rank' ? 1 : 3}&scribe=true`)
         setStarting(false)
         return
       }
