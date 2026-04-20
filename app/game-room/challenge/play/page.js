@@ -857,7 +857,7 @@ function ChallengePlayContent() {
                 </p>
               </div>
               <button
-                onClick={() => router.push(`/game-room/lobby?mode=challenge`)}
+                onClick={() => router.push(`/game-room/lobby?mode=${challengeType}&forceNew=true`)}
                 style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '16px', fontWeight: 600, cursor: 'pointer', marginBottom: '10px' }}
               >
                 Join {partnerName} →
@@ -872,10 +872,10 @@ function ChallengePlayContent() {
           ) : (
             <div style={{ width: '100%', maxWidth: '400px' }}>
               <button
-                onClick={() => router.push('/game-room/lobby?mode=challenge&forceNew=true')}
+                onClick={() => router.push(`/game-room/lobby?mode=${challengeType}&forceNew=true`)}
                 style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '16px', fontWeight: 600, cursor: 'pointer', marginBottom: '10px' }}
               >
-                Play another challenge →
+                Play again →
               </button>
               <button
                 onClick={() => router.push('/game-room')}

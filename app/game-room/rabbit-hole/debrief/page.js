@@ -175,6 +175,12 @@ function RabbitHoleDebriefContent() {
             </button>
           )}
           <button
+            onClick={() => router.push('/game-room/lobby?mode=rabbit-hole&forceNew=true')}
+            style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', marginBottom: '10px' }}
+          >
+            Play again 🕳️
+          </button>
+          <button
             onClick={() => router.push('/game-room')}
             style={{ width: '100%', padding: '14px', background: 'transparent', border: '0.5px solid #E8DDD0', borderRadius: '30px', fontSize: '14px', color: '#9CA3AF', cursor: 'pointer' }}
           >
