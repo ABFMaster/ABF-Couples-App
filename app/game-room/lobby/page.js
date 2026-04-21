@@ -31,12 +31,6 @@ function GameRoomLobbyContent() {
   // Challenge-specific state
   const [callSessionId, setCallSessionId] = useState(null)
   const [challengeSessionId, setChallengeSessionId] = useState(null)
-  const [challengeRecommendedType, setChallengeRecommendedType] = useState(null)
-  const [challengeRecommendedReason, setChallengeRecommendedReason] = useState(null)
-  const [challengeAvailableTypes, setChallengeAvailableTypes] = useState([])
-  const [challengeSelectedType, setChallengeSelectedType] = useState(null)
-  const [showChallengeTypeSelect, setShowChallengeTypeSelect] = useState(false)
-  const totalRounds = challengeSelectedType === 'memory' ? 3 : 1
 
   useEffect(() => {
     const init = async () => {
@@ -123,21 +117,7 @@ function GameRoomLobbyContent() {
             }
             return
           }
-          if (mode === 'challenge') {
-            // Only partner polls for challenge session — host navigates directly from Let's go
-            if (freshIsHost) return
-            const { data: challengeSess } = await supabase
-              .from('challenge_sessions')
-              .select('id, challenge_type')
-              .eq('session_id', sess.id)
-              .eq('status', 'active')
-              .maybeSingle()
-            if (challengeSess) {
-              clearInterval(pollRef.current)
-              router.push(`/game-room/challenge/play?sessionId=${sess.id}&challengeSessionId=${challengeSess.id}&type=${challengeSess.challenge_type}&rounds=${challengeSess.challenge_type === 'memory' ? 3 : 1}&scribe=false`)
-            }
-            return
-          }
+
           if (['story', 'pitch', 'rank', 'plan', 'memory'].includes(mode)) {
             if (freshIsHost) return
             const { data: challengeSess } = await supabase
@@ -238,21 +218,7 @@ function GameRoomLobbyContent() {
         return
       }
 
-      if (mode === 'challenge') {
-        const res = await fetch('/api/game-room/challenge/start', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, coupleId, sessionId, totalRounds }),
-        })
-        const data = await res.json()
-        setChallengeRecommendedType(data.recommendedType)
-        setChallengeRecommendedReason(data.reason)
-        setChallengeAvailableTypes(data.availableTypes || [])
-        setChallengeSelectedType(null)
-        setShowChallengeTypeSelect(true)
-        setStarting(false)
-        return
-      }
+
 
       if (['story', 'pitch', 'rank', 'plan', 'memory'].includes(mode)) {
         const typeMap = { story: 'story', pitch: 'pitch', rank: 'rank', plan: 'plan', memory: 'memory' }
@@ -288,124 +254,9 @@ function GameRoomLobbyContent() {
     )
   }
 
-  const CHALLENGE_TYPES = [
-    { id: 'story', name: 'Write a Story', emoji: '✍️', description: 'Take a prompt and write something together — absurd, tender, or dramatic.' },
-    { id: 'pitch', name: 'The Pitch', emoji: '💼', description: 'Nora gives you something to sell. Convince her to invest.' },
-    { id: 'rank', name: 'Rank It', emoji: '🏆', description: 'Nora gives you a list. You put it in order — then defend your choices.' },
-    { id: 'plan', name: 'Make a Plan', emoji: '🗓️', description: 'Nora gives you something to plan. Make it real.' },
-    { id: 'memory', name: 'Memory Test', emoji: '🧠', description: 'Nora asks about your relationship. How well do you actually know each other?' },
-  ]
-
-  if (showChallengeTypeSelect) {
-    const recommendedConfig = CHALLENGE_TYPES.find(t => t.id === challengeRecommendedType)
-    return (
-      <div style={{ minHeight: '100vh', background: '#FAF6F0' }}>
-        <div style={{ padding: '56px 24px 120px' }}>
-
-          <button onClick={() => setShowChallengeTypeSelect(false)} style={{ background: 'none', border: 'none', padding: '0 0 20px', cursor: 'pointer', color: '#7A8C6E', fontSize: '14px' }}>
-            ← Back
-          </button>
-
-          <div style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 60%, #4338CA 100%)', borderRadius: '20px', padding: '28px 24px', marginBottom: '28px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
-            <p style={{ fontSize: '11px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', margin: '0 0 8px' }}>The Challenge</p>
-            <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '28px', fontWeight: 400, color: '#FFFFFF', margin: '0 0 4px' }}>Pick your challenge</h1>
-            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', margin: 0 }}>Nora has a recommendation.</p>
-          </div>
-
-          {/* Nora's recommendation */}
-          {recommendedConfig && (
-            <div style={{ background: '#EEF2FF', border: '2px solid #4338CA', borderRadius: '16px', padding: '20px', marginBottom: '20px' }}>
-              <p style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#4338CA', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 10px' }}>Nora's pick</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-                <span style={{ fontSize: '24px' }}>{recommendedConfig.emoji}</span>
-                <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '18px', fontWeight: 400, color: '#1A1A1A', margin: 0 }}>{recommendedConfig.name}</p>
-              </div>
-              {challengeRecommendedReason && (
-                <p style={{ fontSize: '14px', color: '#4338CA', fontStyle: 'italic', margin: 0, lineHeight: 1.5 }}>"{challengeRecommendedReason}"</p>
-              )}
-            </div>
-          )}
-
-          {/* All type cards */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '28px' }}>
-            {CHALLENGE_TYPES.map(type => {
-              const isAvailable = challengeAvailableTypes.includes(type.id)
-              const isSelected = challengeSelectedType === type.id
-              const isMemoryLocked = type.id === 'memory' && !isAvailable
-
-              return (
-                <button
-                  key={type.id}
-                  onClick={() => !isMemoryLocked && setChallengeSelectedType(type.id)}
-                  style={{
-                    background: isSelected ? '#EEF2FF' : '#FFFFFF',
-                    border: `2px solid ${isSelected ? '#4338CA' : '#E8DDD0'}`,
-                    borderRadius: '16px',
-                    padding: '18px 20px',
-                    textAlign: 'left',
-                    cursor: isMemoryLocked ? 'default' : 'pointer',
-                    opacity: isMemoryLocked ? 0.6 : 1,
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '14px',
-                    width: '100%',
-                  }}
-                >
-                  <span style={{ fontSize: '24px', flexShrink: 0, marginTop: '2px' }}>{type.emoji}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', fontWeight: 400, color: isSelected ? '#4338CA' : '#1A1A1A', margin: 0 }}>{type.name}</p>
-                      {type.id === challengeRecommendedType && (
-                        <span style={{ fontSize: '10px', letterSpacing: '0.08em', color: '#4338CA', background: '#EEF2FF', borderRadius: '6px', padding: '2px 7px', fontWeight: 600 }}>Nora's pick</span>
-                      )}
-                      {isMemoryLocked && (
-                        <span style={{ fontSize: '10px', letterSpacing: '0.08em', color: '#B8A898', background: '#F5F0EA', borderRadius: '6px', padding: '2px 7px' }}>Locked</span>
-                      )}
-                    </div>
-                    <p style={{ fontSize: '13px', color: '#9CA3AF', lineHeight: 1.5, margin: 0 }}>
-                      {isMemoryLocked ? MEMORY_LOCKED_COPY.body : type.description}
-                    </p>
-                  </div>
-                  {isSelected && !isMemoryLocked && (
-                    <span style={{ color: '#4338CA', fontSize: '18px', flexShrink: 0, alignSelf: 'center' }}>✓</span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-
-          <button
-            onClick={async () => {
-              if (!challengeSelectedType || !sessionId) return
-              const res = await fetch('/api/game-room/challenge/confirm-type', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  sessionId,
-                  coupleId,
-                  challengeType: challengeSelectedType,
-                  totalRounds,
-                }),
-              })
-              const data = await res.json()
-              if (!data.challengeSession) return
-              router.push(`/game-room/challenge/play?sessionId=${sessionId}&challengeSessionId=${data.challengeSession.id}&type=${challengeSelectedType}&rounds=${totalRounds}&scribe=true`)
-            }}
-            disabled={!challengeSelectedType}
-            style={{ width: '100%', padding: '16px', background: challengeSelectedType ? 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)' : '#E8DDD0', color: challengeSelectedType ? '#FFFFFF' : '#B8A898', border: 'none', borderRadius: '30px', fontSize: '16px', fontWeight: 600, cursor: challengeSelectedType ? 'pointer' : 'not-allowed' }}
-          >
-            Let's go →
-          </button>
-
-        </div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    )
-  }
 
   const bothInLobby = iAmIn && partnerIsIn
-  const canStart = bothInLobby && (mode === 'challenge' || together !== null) && (!config.hasTimer || selectedTimer)
+  const canStart = bothInLobby && (['story', 'pitch', 'rank', 'plan', 'memory'].includes(mode) || together !== null) && (!config.hasTimer || selectedTimer)
 
   return (
     <div style={{ minHeight: '100vh', background: '#FAF6F0' }}>
