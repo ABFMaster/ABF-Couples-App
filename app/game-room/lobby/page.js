@@ -264,11 +264,11 @@ function GameRoomLobbyContent() {
             sessionId,
             coupleId,
             challengeType,
-            totalRounds: challengeType === 'rank' ? 1 : 3,
+            totalRounds: challengeType === 'memory' ? 3 : 1,
           }),
         })
         const confirmData = await confirmRes.json()
-        router.push(`/game-room/challenge/play?sessionId=${sessionId}&challengeSessionId=${confirmData.challengeSession.id}&type=${challengeType}&rounds=${challengeType === 'rank' ? 1 : 3}&scribe=true`)
+        router.push(`/game-room/challenge/play?sessionId=${sessionId}&challengeSessionId=${confirmData.challengeSession.id}&type=${challengeType}&rounds=${challengeType === 'memory' ? 3 : 1}&scribe=true`)
         setStarting(false)
         return
       }
