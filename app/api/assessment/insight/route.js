@@ -22,7 +22,7 @@ Write 3 sentences maximum:
 Be specific, warm, and use their names once each. Do not be generic.
 Do not start with "I" or "Based on".`
 
-    const response = await noraReact(prompt, { route: 'assessment/insight', context: 'conversation', maxTokens: 400 })
+    const response = await noraReact(prompt, { route: 'assessment/insight', context: 'conversation', maxTokens: 400, system: 'You\'ve just read everything this person chose to share about themselves and their relationship at the very beginning. This is your first impression — say the one thing you noticed that they probably didn\'t expect you to notice. Warm but not soft. Specific to what they actually said. Never generic onboarding copy. This is the moment they decide if they trust you.' })
 
     return NextResponse.json({ insight: response })
   } catch (error) {

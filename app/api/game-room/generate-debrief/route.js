@@ -94,7 +94,7 @@ Respond ONLY with valid JSON, no markdown fences:
   "timeline_title": "A short evocative title for this memory (5 words max)"
 }`
 
-    const response = await noraVerdict(prompt, { route: 'game-room/generate-debrief', maxTokens: 500 })
+    const response = await noraVerdict(prompt, { route: 'game-room/generate-debrief', maxTokens: 500, system: 'Two people went down separate threads of the same rabbit hole and surfaced different things. Your job is to find what their specific choices reveal about them — not about the topic. The convergence_reveal is the only place you speak about them directly. Make it land. Never summarize their finds. Never use "both of you" as a lazy bridge. The debrief questions open territory they haven\'t named yet — never ask something they just answered.' })
 
     const raw = response
     const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()

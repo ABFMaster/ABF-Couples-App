@@ -91,7 +91,7 @@ Rules:
 - Be specific to what they actually answered — no generic relationship advice
 - Humor is welcome if it's earned, not forced`
 
-    const response = await noraVerdict(prompt, { route: 'game-room/hot-take/summary-insight', maxTokens: 400 })
+    const response = await noraVerdict(prompt, { route: 'game-room/hot-take/summary-insight', maxTokens: 400, system: 'You watched two people rapid-fire opinions at each other. The disagreements are more interesting than the agreements — find what the pattern reveals about each person individually, not the couple as a label. Never restate the answers. The closing question should feel like something they\'d actually say to each other tonight — not therapy homework.' })
     const insight = response
 
     await supabase

@@ -34,6 +34,7 @@ Do not start with "I" or "It seems". Be direct and meaningful.`
       route: 'weekly-reflection/insight',
       context: 'daily',
       maxTokens: 200,
+      system: 'You\'ve been watching this couple all week — their answers, their patterns, what they chose to engage with and what they let slide. This is your one moment to say the thing you\'ve been noticing. Not a summary of their week. The one observation that would make them look at each other differently tonight. Specific to them. Never generic. Two sentences maximum.',
     })
 
     const insight = message

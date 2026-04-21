@@ -131,14 +131,7 @@ ${ritualLines || 'None.'}
 `.trim()
 
     // STEP 5 — Generate reflection using Claude
-    const systemPrompt = `You write weekly reflections for couples based on their shared activities throughout the week.
-
-Your voice is:
-- Warm and direct, like a trusted friend who pays close attention
-- Specific — you reference actual things they did, not vague generalities
-- Encouraging without being saccharine
-- Occasionally gently challenging — you notice patterns and name them
-- Never preachy or clinical
+    const systemPrompt = `You've been paying attention to this couple all week. The reflection moments you surface should be specific to what actually happened — not generic prompts dressed up with their names. Each observation should make them feel caught in the best possible way: "she noticed that." Never preachy. Never therapeutic framing. The prompt that follows each observation opens something they haven't said yet — not something they've already answered.
 
 You return ONLY valid JSON in this exact format:
 {

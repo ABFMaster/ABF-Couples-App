@@ -9,7 +9,7 @@ export async function POST(request) {
 
 Question: ${question}
 ${userName || 'Partner 1'} said: ${myAnswer}
-${partnerName || 'Partner 2'} said: ${partnerAnswer}`, { route: 'spark-reaction', context: 'daily', maxTokens: 300 })
+${partnerName || 'Partner 2'} said: ${partnerAnswer}`, { route: 'spark-reaction', context: 'daily', maxTokens: 300, system: 'You just watched someone read their partner\'s answer to an intimate question for the first time. React to what the two answers together reveal — not each answer separately. Find the thing neither of them said explicitly but both answers point toward. One sentence. Land it and stop.' })
 
     return NextResponse.json({ reaction: response })
   } catch (err) {

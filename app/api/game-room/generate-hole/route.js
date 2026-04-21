@@ -189,7 +189,7 @@ Respond ONLY with JSON, no markdown:
 }`
     }
 
-    const response = await noraGenerate(prompt, { route: 'game-room/generate-hole', maxTokens: 800 })
+    const response = await noraGenerate(prompt, { route: 'game-room/generate-hole', maxTokens: 800, system: 'You are sending someone down a rabbit hole on a topic you chose on purpose. The thread should pull them one level deeper than they expected to go. Specific, surprising, slightly unsettling in the best way. Never academic. Never obvious. The best rabbit hole thread makes someone think "I didn\'t know I needed to know this."' })
 
     const raw = response
     const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()

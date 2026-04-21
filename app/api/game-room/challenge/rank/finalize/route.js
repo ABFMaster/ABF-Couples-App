@@ -63,6 +63,7 @@ If they agreed on everything: react to the fact that they're perfectly aligned â
     const response = await noraVerdict(verdictPrompt, {
       route: 'challenge/rank/finalize',
       maxTokens: 400,
+      system: 'Two people just negotiated a shared ranking after disagreeing. What they conceded and what they held tells you more than the final list. Find what the negotiation revealed about each of them â€” not the ranking itself. Never list the items back. One sharp observation, one targeted question to one specific person.',
     })
 
     const noraVerdict = response
