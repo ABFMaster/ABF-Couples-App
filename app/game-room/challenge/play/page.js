@@ -397,7 +397,7 @@ function ChallengePlayContent() {
         }
 
         // Verdict ready
-        if (memRound.nora_verdict && phaseRef.current !== 'verdict') {
+        if (memRound.nora_verdict && phaseRef.current !== 'verdict' && phaseRef.current !== 'complete') {
           setNoraVerdict(memRound.nora_verdict)
           setPhase('verdict')
         }
@@ -433,7 +433,7 @@ function ChallengePlayContent() {
           }
         }
 
-        if (rankRound.nora_verdict && phaseRef.current !== 'verdict') {
+        if (rankRound.nora_verdict && phaseRef.current !== 'verdict' && phaseRef.current !== 'complete') {
           setNoraVerdict(rankRound.nora_verdict)
           setPhase('verdict')
         }
@@ -452,7 +452,7 @@ function ChallengePlayContent() {
           setNoraChallenge(pitchRound.nora_challenge)
           setPitchPhase('defending')
         }
-        if (pitchRound?.nora_verdict && phaseRef.current !== 'verdict') {
+        if (pitchRound?.nora_verdict && phaseRef.current !== 'verdict' && phaseRef.current !== 'complete') {
           setNoraVerdict(pitchRound.nora_verdict)
           setPhase('verdict')
         }
@@ -471,7 +471,7 @@ function ChallengePlayContent() {
           setSentences(storyRound.sentences || [])
           setCurrentTurnUserId(storyRound.current_turn_user_id)
           if (storyRound.nora_nudge) setNoraNudge(storyRound.nora_nudge)
-          if (storyRound.nora_verdict && phaseRef.current !== 'verdict') {
+          if (storyRound.nora_verdict && phaseRef.current !== 'verdict' && phaseRef.current !== 'complete') {
             setNoraVerdict(storyRound.nora_verdict)
             setPhase('verdict')
           } else if (storyRound.story_complete && !storyRound.nora_verdict && phaseRef.current !== 'verdict' && isScribeRef.current && !storyVerdictCalledRef.current) {
@@ -844,7 +844,7 @@ function ChallengePlayContent() {
       <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', textAlign: 'center' }}>
         <div style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 60%, #4338CA 100%)', borderRadius: '20px', padding: '32px 24px', marginBottom: '24px', width: '100%', maxWidth: '400px' }}>
           <p style={{ fontSize: '11px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', margin: '0 0 12px' }}>{ { story: 'WRITE A STORY', pitch: 'THE PITCH', rank: 'RANK IT', plan: 'MAKE A PLAN', memory: 'MEMORY TEST' }[challengeType] || 'THE CHALLENGE' }</p>
-          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '28px', color: '#FFFFFF', margin: '0 0 8px' }}>Challenge complete.</p>
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '28px', color: '#FFFFFF', margin: '0 0 8px' }}>{ { story: 'Story complete.', pitch: 'Pitch complete.', rank: 'Rankings locked.', plan: 'Plan made.', memory: 'Memory tested.' }[challengeType] || 'Challenge complete.' }</p>
           <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: 'rgba(255,255,255,0.7)', fontStyle: 'italic', margin: 0 }}>
             {totalRounds === 1 ? 'One round. Well played.' : `${totalRounds} rounds. Nora's impressed.`}
           </p>
