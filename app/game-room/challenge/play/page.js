@@ -435,7 +435,12 @@ function ChallengePlayContent() {
           }
         }
 
-        if (rankRound.rank_user1_r2 && rankRound.rank_user2_r2 && rankPhaseRef.current !== 'reveal_final' && rankPhaseRef.current !== 'verdict' && rankPhaseRef.current !== 'waiting_r2') {
+        const bothR2Done = rankRound.rank_user1_r2 && rankRound.rank_user2_r2
+        const shouldAdvanceFromR2 = bothR2Done && (
+          rankPhaseRef.current === 'waiting_r2' ||
+          (rankPhaseRef.current !== 'reveal_final' && rankPhaseRef.current !== 'verdict')
+        )
+        if (shouldAdvanceFromR2) {
           if (rankRound.rank_final && rankRound.no_agreements !== undefined) {
             setRankFinal(rankRound.rank_final)
             setRankNoAgreements(rankRound.no_agreements)
