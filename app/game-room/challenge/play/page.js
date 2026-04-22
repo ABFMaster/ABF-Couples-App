@@ -204,6 +204,7 @@ function ChallengePlayContent() {
   const [rankFinal, setRankFinal] = useState([])
   const [rankNudge, setRankNudge] = useState(null)
   const [rankPhase, setRankPhase] = useState('ranking_r1')
+  const [rankFinalizing, setRankFinalizing] = useState(false)
   const rankPhaseRef = useRef('ranking_r1')
   const [myRanking, setMyRanking] = useState([])
   const [rankSubmitting, setRankSubmitting] = useState(false)
@@ -416,7 +417,7 @@ function ChallengePlayContent() {
           .maybeSingle()
         if (!rankRound) return
 
-        if (rankRound.rank_user1_r1 && rankRound.rank_user2_r1 && rankPhaseRef.current !== 'reveal_r1' && rankPhaseRef.current !== 'reveal_final' && rankPhaseRef.current !== 'verdict') {
+        if (rankRound.rank_user1_r1 && rankRound.rank_user2_r1 && rankPhaseRef.current !== 'reveal_r1' && rankPhaseRef.current !== 'reveal_final' && rankPhaseRef.current !== 'verdict' && rankPhaseRef.current !== 'waiting_r1' && rankPhaseRef.current !== 'waiting_r2') {
           setRankR1User1(rankRound.rank_user1_r1)
           setRankR1User2(rankRound.rank_user2_r1)
           if (rankRound.rank_nora_interjection) setRankNudge(rankRound.rank_nora_interjection)
@@ -429,7 +430,7 @@ function ChallengePlayContent() {
           }
         }
 
-        if (rankRound.rank_user1_r2 && rankRound.rank_user2_r2 && rankPhaseRef.current !== 'reveal_final' && rankPhaseRef.current !== 'verdict') {
+        if (rankRound.rank_user1_r2 && rankRound.rank_user2_r2 && rankPhaseRef.current !== 'reveal_final' && rankPhaseRef.current !== 'verdict' && rankPhaseRef.current !== 'waiting_r2') {
           if (rankRound.rank_final && rankRound.no_agreements !== undefined) {
             setRankFinal(rankRound.rank_final)
             setRankNoAgreements(rankRound.no_agreements)
@@ -758,6 +759,8 @@ function ChallengePlayContent() {
   }
 
   async function handleRankFinalize() {
+    if (rankFinalizing) return
+    setRankFinalizing(true)
     try {
       const res = await fetch('/api/game-room/challenge/rank/finalize', {
         method: 'POST',
@@ -774,7 +777,9 @@ function ChallengePlayContent() {
         setNoraVerdict(data.noraVerdict)
         setPhase('verdict')
       }
-    } catch {}
+    } catch {} finally {
+      setRankFinalizing(false)
+    }
   }
 
   async function handlePitchSubmit() {
@@ -993,8 +998,6 @@ function ChallengePlayContent() {
                         Debate the items you disagreed on. Drag to reorder, then lock in your final ranking together.
                       </p>
                     </div>
-                    <p style={{ fontSize: '13px', color: '#9CA3AF', marginBottom: '16px', textAlign: 'center' }}>Round 1 — debate and lock in your final ranking below</p>
-
                     {rankNudge && (
                       <div style={{ background: '#F5F3FF', border: '0.5px solid #C4B5FD', borderRadius: '12px', padding: '12px 16px', marginBottom: '16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
@@ -1074,8 +1077,9 @@ function ChallengePlayContent() {
                     {isScribe ? (
                       <button
                         onClick={handleRankFinalize}
-                        style={{ width: '100%', padding: '16px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', marginTop: '8px' }}>
-                        Get Nora's verdict ✦
+                        disabled={rankFinalizing}
+                        style={{ width: '100%', padding: '16px', background: rankFinalizing ? '#6B7280' : 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: '#FFFFFF', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: rankFinalizing ? 'not-allowed' : 'pointer', marginTop: '8px' }}>
+                        {rankFinalizing ? 'Nora is thinking...' : 'Get Nora\'s verdict ✦'}
                       </button>
                     ) : (
                       <div style={{ textAlign: 'center', padding: '16px 0', color: '#9CA3AF', fontSize: '13px' }}>
