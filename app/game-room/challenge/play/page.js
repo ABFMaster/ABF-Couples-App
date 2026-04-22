@@ -408,7 +408,7 @@ function ChallengePlayContent() {
       }
 
       // --- RANK ---
-      if (challengeType === 'rank' && round) {
+      if (challengeType === 'rank' && roundRef.current) {
         const { data: rankRound } = await supabase
           .from('challenge_rounds')
           .select('rank_user1_r1, rank_user2_r1, rank_user1_r2, rank_user2_r2, rank_nora_interjection, rank_final, no_agreements, rank_round, nora_verdict')
