@@ -417,6 +417,8 @@ function ChallengePlayContent() {
           .maybeSingle()
         if (!rankRound) return
 
+        console.log('[RANK POLL TICK]', { rankPhaseRef: rankPhaseRef.current, u1r1: !!rankRound.rank_user1_r1, u2r1: !!rankRound.rank_user2_r1, rank_round: rankRound.rank_round })
+
         if (rankRound.rank_user1_r1 && rankRound.rank_user2_r1 && rankPhaseRef.current !== 'reveal_r1' && rankPhaseRef.current !== 'reveal_final' && rankPhaseRef.current !== 'verdict' && rankPhaseRef.current !== 'waiting_r1' && rankPhaseRef.current !== 'waiting_r2') {
           setRankR1User1(rankRound.rank_user1_r1)
           setRankR1User2(rankRound.rank_user2_r1)
