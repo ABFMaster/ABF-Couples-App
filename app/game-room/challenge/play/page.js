@@ -419,6 +419,8 @@ function ChallengePlayContent() {
           setRankR1User2(rankRound.rank_user2_r1)
           if (rankRound.rank_nora_interjection) setRankNudge(rankRound.rank_nora_interjection)
           if (rankRound.rank_round === 3) {
+            setRankFinal(rankRound.rank_final || [])
+            setRankNoAgreements(rankRound.no_agreements || [])
             setRankPhase('reveal_final')
           } else {
             setRankPhase('reveal_r1')
@@ -735,12 +737,18 @@ function ChallengePlayContent() {
           setRankR1User2(data.round?.rank_user2_r1)
           if (data.round?.rank_nora_interjection) setRankNudge(data.round.rank_nora_interjection)
           setRankPhase('reveal_r1')
+        } else {
+          setRankPhase('waiting_r1')
         }
       }
-      if (rankRound === 2 && data.r2Complete) {
-        setRankFinal(data.rankFinal || [])
-        setRankNoAgreements(data.noAgreements || [])
-        setRankPhase('reveal_final')
+      if (rankRound === 2) {
+        if (data.r2Complete) {
+          setRankFinal(data.rankFinal || [])
+          setRankNoAgreements(data.noAgreements || [])
+          setRankPhase('reveal_final')
+        } else {
+          setRankPhase('waiting_r2')
+        }
       }
     } catch {} finally {
       setRankSubmitting(false)
@@ -960,9 +968,29 @@ function ChallengePlayContent() {
                   </div>
                 )}
 
+                {rankPhase === 'waiting_r1' && (
+                  <div style={{ textAlign: 'center', padding: '40px 24px' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '16px' }}>⏳</div>
+                    <p style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1E1B4B', marginBottom: '8px' }}>
+                      Your ranking is locked in.
+                    </p>
+                    <p style={{ fontSize: '0.95rem', color: '#6B7280' }}>
+                      Waiting for your partner to lock theirs in...
+                    </p>
+                  </div>
+                )}
+
                 {/* Round 1 reveal — partial, disagreements hidden */}
                 {rankPhase === 'reveal_r1' && rankR1User1 && rankR1User2 && (
                   <div>
+                    <div style={{ background: '#F0F4FF', border: '1px solid #C7D2FE', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+                      <p style={{ fontSize: '0.95rem', color: '#1E1B4B', fontWeight: 600, margin: '0 0 4px 0' }}>
+                        Round 2 — Find your agreement
+                      </p>
+                      <p style={{ fontSize: '0.875rem', color: '#4338CA', margin: 0 }}>
+                        Debate the items you disagreed on. Drag to reorder, then lock in your final ranking together.
+                      </p>
+                    </div>
                     <p style={{ fontSize: '13px', color: '#9CA3AF', marginBottom: '16px', textAlign: 'center' }}>Round 1 — debate and lock in your final ranking below</p>
 
                     {rankNudge && (
@@ -1003,6 +1031,18 @@ function ChallengePlayContent() {
                         </div>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {rankPhase === 'waiting_r2' && (
+                  <div style={{ textAlign: 'center', padding: '40px 24px' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '16px' }}>⏳</div>
+                    <p style={{ fontSize: '1.1rem', fontWeight: 600, color: '#1E1B4B', marginBottom: '8px' }}>
+                      Your final ranking is locked in.
+                    </p>
+                    <p style={{ fontSize: '0.95rem', color: '#6B7280' }}>
+                      Waiting for your partner to lock theirs in...
+                    </p>
                   </div>
                 )}
 

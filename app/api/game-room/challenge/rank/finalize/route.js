@@ -66,14 +66,14 @@ If they agreed on everything: react to the fact that they're perfectly aligned â
       system: 'Two people just negotiated a shared ranking after disagreeing. What they conceded and what they held tells you more than the final list. Find what the negotiation revealed about each of them â€” not the ranking itself. Never list the items back. One sharp observation, one targeted question to one specific person.',
     })
 
-    const noraVerdict = response
+    const verdictText = response
 
     await supabase
       .from('challenge_rounds')
-      .update({ nora_verdict: noraVerdict, completed_at: new Date().toISOString() })
+      .update({ nora_verdict: verdictText, completed_at: new Date().toISOString() })
       .eq('id', roundId)
 
-    return NextResponse.json({ noraVerdict, rankFinal, noAgreements })
+    return NextResponse.json({ noraVerdict: verdictText, rankFinal, noAgreements })
   } catch (err) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
