@@ -417,9 +417,12 @@ function ChallengePlayContent() {
           .maybeSingle()
         if (!rankRound) return
 
-        console.log('[RANK POLL TICK]', { rankPhaseRef: rankPhaseRef.current, u1r1: !!rankRound.rank_user1_r1, u2r1: !!rankRound.rank_user2_r1, rank_round: rankRound.rank_round })
-
-        if (rankRound.rank_user1_r1 && rankRound.rank_user2_r1 && rankPhaseRef.current !== 'reveal_r1' && rankPhaseRef.current !== 'reveal_final' && rankPhaseRef.current !== 'verdict' && rankPhaseRef.current !== 'waiting_r1' && rankPhaseRef.current !== 'waiting_r2') {
+        const bothR1Done = rankRound.rank_user1_r1 && rankRound.rank_user2_r1
+        const shouldAdvanceFromR1 = bothR1Done && (
+          rankPhaseRef.current === 'waiting_r1' ||
+          (rankPhaseRef.current !== 'reveal_r1' && rankPhaseRef.current !== 'reveal_final' && rankPhaseRef.current !== 'verdict' && rankPhaseRef.current !== 'waiting_r2')
+        )
+        if (shouldAdvanceFromR1) {
           setRankR1User1(rankRound.rank_user1_r1)
           setRankR1User2(rankRound.rank_user2_r1)
           if (rankRound.rank_nora_interjection) setRankNudge(rankRound.rank_nora_interjection)
@@ -563,7 +566,6 @@ function ChallengePlayContent() {
   }, [phase, coupleId, userId])
 
   async function generateRound(roundNumber) {
-    console.log('[GENERATE ROUND CALLED]', { roundNumber, phase: phaseRef.current, rankPhase })
     setPhase('loading')
     if (challengeType !== 'pitch') setResponse('')
     setNoraVerdict(null)
