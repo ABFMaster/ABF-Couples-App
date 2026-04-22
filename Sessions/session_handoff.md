@@ -1,5 +1,5 @@
 # ABF — Developer Handoff Briefing
-# Last Updated: 2026-04-17
+# Last Updated: 2026-04-22
 
 ---
 
@@ -162,6 +162,29 @@ Before writing the session handoff, Claude must answer these four questions hone
 2. What caused that struggle?
 3. What should we change in prompts, structure, or tools?
 4. What should be standardized going forward?
+
+### Self-Review: 2026-04-22
+
+1. **What went wrong this session?**
+The Rank stale closure bug required multiple iterations to fully resolve. We fixed the poll entry guard (round vs roundRef), added waiting phases, added guards to prevent revert, then discovered the guards blocked legitimate advancement — requiring a third pass to distinguish terminal vs transitional phases. The root cause chain was correct each time but we didn't anticipate the downstream consequence of each fix.
+
+2. **What specific protocols were violated?**
+- ADVERSARIAL VERIFIER: Applied correctly on the Rank bug but not before adding the waiting phase guards — we added them without fully thinking through how they would interact with the advancement conditions.
+- ROOT CAUSE RULE: Each fix addressed a real root cause but we didn't model the full state machine before implementing, which caused the fix chain.
+
+3. **What is the current state?**
+- Hot Take: verified end-to-end ✓
+- Rabbit Hole: verified end-to-end ✓
+- Spark reaction polling: verified ✓
+- Challenge container flattened — Story, Pitch, Rank, Plan, Memory promoted to first-class modes ✓
+- Play Again: all modes ✓
+- All Challenge modes single round except Memory (3 rounds) ✓
+- NORA_VOICE v3: Perel, Sedaris, Schwarzenegger, dinner party brief, hard moments, trust, questioning philosophy ✓
+- Route-level Nora instructions: 9 routes wired ✓
+- Rank: fully functional end-to-end ✓
+
+4. **What must change going forward?**
+When adding new phases to a poll-driven state machine, explicitly design whether each phase is terminal or transitional before writing any code. Write the full transition table first.
 
 ### Self-Review: 2026-04-17
 
@@ -416,13 +439,14 @@ Full chat, rich context, cross-session memory via `nora_memory` table.
 
 | Mode | Status | Play Path |
 |------|--------|-----------|
-| The Rabbit Hole | ✅ Built | `/game-room/rabbit-hole/play` |
-| Hot Take | ✅ Built | `/game-room/hot-take` |
+| The Rabbit Hole | ✅ Verified | `/game-room/rabbit-hole/play` |
+| Hot Take | ✅ Verified | `/game-room/hot-take` |
 | The Call | ✅ Built | `/game-room/call/play` |
-| The Challenge — Story | ✅ Rebuilt | `/game-room/challenge/play?type=story` |
-| The Challenge — Rank | ✅ Rebuilt | `/game-room/challenge/play?type=rank` |
-| The Challenge — Pitch | ✅ Rebuilt | `/game-room/challenge/play?type=pitch` |
-| The Challenge — Memory | 🔜 Designed, not built | `/game-room/challenge/play?type=memory` |
+| Write a Story | ✅ Verified | `/game-room/challenge/play?type=story` |
+| Rank It | ✅ Verified | `/game-room/challenge/play?type=rank` |
+| The Pitch | ✅ Built | `/game-room/challenge/play?type=pitch` |
+| Make a Plan | ✅ Built | `/game-room/challenge/play?type=plan` |
+| Memory Test | 🔜 Built, locked | `/game-room/challenge/play?type=memory` |
 | The Remake | 🔜 Designed | `/game-room/remake/play` |
 | The Hunt | 🔜 Designed | `/game-room/the-hunt/play` |
 
@@ -601,19 +625,19 @@ Must be wrapped in Suspense boundary or build will fail.
 
 ## 21. NEXT SESSION PRIORITIES
 
-1. **Spark reaction polling verification** — needs Spark day (Mon/Tue/Thu). Submit Spark, verify first submitter sees Nora reaction when partner responds.
+1. **Game Room redesign sprint** — Featured + Grid layout. Nora mode recommendations based on couple history. Story, Pitch, Rank, Plan, Memory now first-class cards needing visual identity (accent colors, taglines, icons locked in code but layout needs redesign).
 
-2. **End Game cleanup verification** — play each mode, tap End Game, start fresh session. Confirm no stale state for all modes before F&F.
+2. **Game data scrub** — clear all test session data before real users touch the app.
 
-3. **Rabbit Hole verification** — hasn't been tested since poll rewrite. Run a full end-to-end session.
+3. **Cass as real tester** — all verification done solo with two accounts. Need genuine two-person experience to surface real UX issues. Schedule dedicated session with Cass.
 
-4. **Game data scrub** — clear all test session data before real users touch the app.
+4. **Push notification re-registration** — Cass's daily notifications not delivering. Stale subscriptions since March.
 
-5. **Memory unlock thresholds** — currently all 0, raise before wider release.
+5. **Memory Test unlock thresholds** — currently all 0. Raise before wider release.
 
-6. **Push notification re-registration** — Cass's subscriptions stale since March. Daily notifications not delivering. See PRE-LAUNCH REQUIREMENTS in backlog for investigation steps.
+6. **Nora voice — next pass** — route-level instructions wired for 9 routes. Next: evaluate verdicts in the wild with real couples and refine from what we see. Living document.
 
-7. **Nora voice quality pass** — verdict length, theatrical copy, closing questions.
+7. **Tension Intelligence Arc Sprint 1** — tier 3 pre-game framing, signal logging, post-session soft CTA. Ready to design.
 
 8. **Bet 401 on Today page** — pre-existing auth issue, non-blocking.
 
@@ -622,23 +646,27 @@ Must be wrapped in Suspense boundary or build will fail.
 ## 22. KNOWN ISSUES
 
 **P1 — Active, blocking**
-- None. All previously blocking issues resolved.
+- None.
 
-**P2 — Fixed, needs verification**
-- Spark reaction polling: wired, needs verification on Spark day
-- Rabbit Hole: not tested since poll rewrite, needs full verification run
+**P2 — Fixed, needs verification with real users**
+- Spark reaction polling: verified with test accounts, needs real couple verification
+- Rank: fully fixed and verified end-to-end
 
 **P3 — Known, backlogged**
-- Push notification re-registration — daily notifications not delivering for Cass
-- Nora voice quality — verdict length, theatrical copy
-- Memory unlock thresholds — all 0, raise before wider release
+- Hot Take: skip button not visible for User 2 (host-only skip is intentional design decision, mutual skip backlogged)
+- Hot Take: skip transition snaps with no loading moment — polish post-launch
+- Hot Take: skip button appears on reveal screen — should be hidden — post-launch
+- Rabbit Hole: Tell Me More button fires push notification only, no in-app response — complete or remove post-launch
+- Rabbit Hole: Back to Game Room requires both users to tap — passive routing needed pre-launch
+- Rabbit Hole: topic pool small enough that same topic can repeat — add deduplication logic
+- Rank: no drag-to-reorder on mobile (arrow buttons only) — UX improvement post-launch
+- Push notifications: some redundancy in game-end notifications still possible
 - Bet 401 error on Today page — pre-existing auth issue
 - Google Places 503 — date suggestions broken
-- Push notifications — some redundancy in game-end notifications still possible
-- hot_take_sessions.session_id unique constraint — race condition hardening
-- Timeline: no history page, Weekly Reflection outdated, Trips needs polish
+- Memory unlock thresholds — all 0, raise before wider release
 - Orphaned session cleanup — full audit needed pre-launch
 - Codebase quality audit — pre-wider-release requirement
+- Game Room redesign — Featured + Grid layout, Nora mode recommendations
 
 ---
 

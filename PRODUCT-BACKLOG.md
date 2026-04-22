@@ -481,3 +481,31 @@ All challenge_rounds, hot_take_answers, call_rounds, and game_finds records for 
 - Hint quality pass — hints occasionally too abstract, needs prompt tuning in generate route (part of broader verdict quality pass)
 - Love Map data structure — build proper dimension-mapping schema, map Spark/Bet/Timeline data points to Love Map dimensions, store confirmed/updated answers per dimension. Shell exists (love_map_updates table). Full build is a dedicated session.
 - After Dark — two Gottman sexual preference questions (favorite time for lovemaking, what turns partner on sexually) parked for After Dark feature when built
+
+---
+
+## BACKLOG ADDITIONS — 2026-04-22
+
+### HOT TAKE — MUTUAL SKIP
+*Added: 2026-04-22*
+Both users can skip independently. Option A reveal: "passed on this one" soft label. Medium lift, post-launch.
+
+### RABBIT HOLE — PLAY AGAIN
+*Added: 2026-04-22*
+Added to debrief screen ✓ (shipped)
+
+### CHALLENGE MODES — SINGLE ROUND + PLAY AGAIN
+*Added: 2026-04-22*
+All modes now single round except Memory. Play Again wired to correct mode. ✓ (shipped)
+
+### NORA_VOICE v3
+*Added: 2026-04-22*
+Perel precision, Sedaris humor, Schwarzenegger attention, dinner party brief, hard moments, trust, questioning philosophy. Living document — refine from real usage data.
+
+### GAME ROOM REDESIGN
+*Added: 2026-04-22*
+Featured + Grid layout. Nora recommends mode based on couple history. Story, Pitch, Rank, Plan, Memory now first-class cards — visual identity (accent colors, taglines, icons) locked in code but layout needs full redesign sprint.
+
+### RANK UX — DRAG TO REORDER
+*Added: 2026-04-22*
+No drag-to-reorder on mobile. Arrow buttons functional but less intuitive. UX improvement post-launch.
