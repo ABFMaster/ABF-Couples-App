@@ -204,6 +204,7 @@ function ChallengePlayContent() {
   const [rankFinal, setRankFinal] = useState([])
   const [rankNudge, setRankNudge] = useState(null)
   const [rankPhase, setRankPhase] = useState('ranking_r1')
+  const rankPhaseRef = useRef('ranking_r1')
   const [myRanking, setMyRanking] = useState([])
   const [rankSubmitting, setRankSubmitting] = useState(false)
   const [isUser1, setIsUser1] = useState(false)
@@ -231,6 +232,7 @@ function ChallengePlayContent() {
   useEffect(() => { coupleIdRef.current = coupleId }, [coupleId])
   const userIdRef = useRef(null)
   useEffect(() => { userIdRef.current = userId }, [userId])
+  useEffect(() => { rankPhaseRef.current = rankPhase }, [rankPhase])
   const generateCalledForRoundRef = useRef(0)
 
   useEffect(() => {
@@ -414,7 +416,7 @@ function ChallengePlayContent() {
           .maybeSingle()
         if (!rankRound) return
 
-        if (rankRound.rank_user1_r1 && rankRound.rank_user2_r1 && rankPhase !== 'reveal_r1' && rankPhase !== 'reveal_final' && rankPhase !== 'verdict') {
+        if (rankRound.rank_user1_r1 && rankRound.rank_user2_r1 && rankPhaseRef.current !== 'reveal_r1' && rankPhaseRef.current !== 'reveal_final' && rankPhaseRef.current !== 'verdict') {
           setRankR1User1(rankRound.rank_user1_r1)
           setRankR1User2(rankRound.rank_user2_r1)
           if (rankRound.rank_nora_interjection) setRankNudge(rankRound.rank_nora_interjection)
@@ -427,7 +429,7 @@ function ChallengePlayContent() {
           }
         }
 
-        if (rankRound.rank_user1_r2 && rankRound.rank_user2_r2 && rankPhase !== 'reveal_final' && rankPhase !== 'verdict') {
+        if (rankRound.rank_user1_r2 && rankRound.rank_user2_r2 && rankPhaseRef.current !== 'reveal_final' && rankPhaseRef.current !== 'verdict') {
           if (rankRound.rank_final && rankRound.no_agreements !== undefined) {
             setRankFinal(rankRound.rank_final)
             setRankNoAgreements(rankRound.no_agreements)
