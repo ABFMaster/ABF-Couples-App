@@ -561,6 +561,7 @@ function ChallengePlayContent() {
   }, [phase, coupleId, userId])
 
   async function generateRound(roundNumber) {
+    console.log('[GENERATE ROUND CALLED]', { roundNumber, phase: phaseRef.current, rankPhase })
     setPhase('loading')
     if (challengeType !== 'pitch') setResponse('')
     setNoraVerdict(null)
