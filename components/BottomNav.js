@@ -2,16 +2,16 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Sparkles, Heart, Sun, User } from 'lucide-react'
+import { Home, Sparkles, Heart, Gamepad2, User } from 'lucide-react'
 
 const EXCLUDED = ['/login', '/signup', '/onboarding', '/connect', '/assessment', '/shared/add']
 
 const TABS = [
-  { href: '/dashboard', icon: Home,     label: 'Home' },
-  { href: '/ai-coach',  icon: Sparkles, label: 'Nora' },
-  { href: '/us',        icon: Heart,    label: 'Us' },
-  { href: '/today',     icon: Sun,      label: 'Today' },
-  { href: '/profile',   icon: User,     label: 'Profile' },
+  { href: '/dashboard',  icon: Home,      label: 'Home' },
+  { href: '/ai-coach',   icon: Sparkles,  label: 'Nora' },
+  { href: '/us',         icon: Heart,     label: 'Us' },
+  { href: '/game-room',  icon: Gamepad2,  label: 'Game Room' },
+  { href: '/profile',    icon: User,      label: 'Profile' },
 ]
 
 export default function BottomNav({ badgeTabs = {} }) {
@@ -26,7 +26,7 @@ export default function BottomNav({ badgeTabs = {} }) {
           const active =
             pathname === tab.href ||
             (tab.href !== '/dashboard' && !!pathname && pathname.startsWith(tab.href))
-          const tabKey = tab.href.replace('/', '') || 'dashboard'
+          const tabKey = tab.label.toLowerCase()
           const hasBadge = !!badgeTabs[tabKey]
           return (
             <Link

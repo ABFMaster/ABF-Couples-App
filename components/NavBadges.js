@@ -89,5 +89,5 @@ export default function NavBadges() {
     }
   }, [])
 
-  return <BottomNav badgeTabs={{ today: todayHasBadge }} />
+  return <BottomNav badgeTabs={{ home: todayHasBadge }} />
 }
