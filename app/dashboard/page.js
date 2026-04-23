@@ -47,71 +47,6 @@ function getDateHype(daysUntil, title, hypeLine) {
   return { emoji: '🗓️', text: `Something to look forward to — ${title}` }
 }
 
-
-function buildFeatureCards({ todayCheckinDone, nextDate, lastFlirtDaysAgo, memoryCount, activeTrip }) {
-  return [
-    {
-      emoji: '💬',
-      label: 'Daily Check-in',
-      status: todayCheckinDone ? 'Done today ✓' : 'Not done yet',
-      statusColor: todayCheckinDone ? 'text-green-500' : 'text-[#9CA3AF]',
-      accent: 'border-[#E8614D]',
-    },
-    {
-      emoji: '🗓️',
-      label: 'Date Night',
-      status: nextDate ? nextDate.title : 'Plan something special',
-      statusColor: nextDate ? 'text-[#3D3580]' : 'text-[#9CA3AF]',
-      href: '/dates',
-      accent: 'border-[#E8614D]',
-    },
-    {
-      emoji: '💌',
-      label: 'Send a Flirt',
-      status: lastFlirtDaysAgo === null
-        ? 'Send one now'
-        : lastFlirtDaysAgo === 0
-          ? 'Sent today ✓'
-          : `Sent ${lastFlirtDaysAgo}d ago`,
-      statusColor: lastFlirtDaysAgo === 0 ? 'text-green-500' : 'text-[#9CA3AF]',
-      href: '/flirts',
-      accent: 'border-[#E8614D]',
-    },
-    {
-      emoji: '💬',
-      label: 'Nora',
-      status: 'Chat now',
-      statusColor: 'text-[#3D3580]',
-      href: '/ai-coach',
-      accent: 'border-[#E8614D]',
-    },
-    {
-      emoji: '🗺️',
-      label: 'Trip Planning',
-      status: activeTrip || 'Plan a trip',
-      statusColor: activeTrip ? 'text-[#3D3580]' : 'text-[#9CA3AF]',
-      href: '/trips',
-      accent: 'border-[#E8614D]',
-    },
-    {
-      emoji: '📸',
-      label: 'Our Timeline',
-      status: memoryCount > 0 ? `${memoryCount} memories` : 'Add your first memory',
-      statusColor: memoryCount > 0 ? 'text-[#3D3580]' : 'text-[#9CA3AF]',
-      href: '/timeline',
-      accent: 'border-[#E8614D]',
-    },
-    {
-      emoji: '📝',
-      label: 'Weekly Reflection',
-      status: 'Reflect on the week',
-      statusColor: 'text-[#9CA3AF]',
-      href: '/weekly-reflection',
-      accent: 'border-[#E8614D]',
-    },
-  ]
-}
-
 // ── MAIN DASHBOARD ───────────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -486,53 +421,6 @@ export default function Dashboard() {
   const pendingDateAction = pendingDate
   const checkinDone = todayCheckinDone
 
-  // Section 3 — build 2 contextual action cards + 1 Nora surprise slot
-  const suggestedActions = []
-
-  if (lastFlirtDaysAgo === null || lastFlirtDaysAgo >= 2) {
-    suggestedActions.push({
-      id: 'flirt',
-      verb: `Send ${partnerName} a flirt`,
-      hint: 'Keep the spark going',
-      nudge: lastFlirtDaysAgo >= 2 ? `${lastFlirtDaysAgo} days since last one` : null,
-      urgent: lastFlirtDaysAgo >= 3,
-      onClick: () => setFlirtSheetOpen(true),
-    })
-  }
-
-  if (!nextDate) {
-    suggestedActions.push({
-      id: 'date',
-      verb: 'Plan a date night',
-      hint: 'Nothing on the books yet',
-      nudge: null,
-      urgent: false,
-      href: '/dates',
-    })
-  }
-
-  if (upcomingTrip === null) {
-    suggestedActions.push({
-      id: 'trip',
-      verb: 'Dream a trip together',
-      hint: 'Let Wander take you somewhere',
-      nudge: null,
-      urgent: false,
-      href: '/trips',
-    })
-  }
-
-  suggestedActions.push({
-    id: 'reflection',
-    verb: 'Weekly reflection',
-    hint: 'Sunday · 2 min',
-    nudge: null,
-    urgent: false,
-    href: '/weekly-reflection',
-  })
-
-  const displayActions = suggestedActions.slice(0, 2)
-
   // Mood vibe from health + streak
   const getMoodVibe = () => {
     if (streak >= 7) return { emoji: '🔥', label: 'On fire this week', sub: `${streak} day streak` }
@@ -605,7 +493,7 @@ export default function Dashboard() {
               <button
                 onClick={() => {
                   if (heroData?.message) sessionStorage.setItem('nora_opener', heroData.message)
-                  window.location.href = heroData?.cta_href || primaryCTA.href
+                  router.push(heroData?.cta_href || primaryCTA.href)
                 }}
                 className="text-[14px] font-semibold text-[#E8614D]"
               >
@@ -625,7 +513,7 @@ export default function Dashboard() {
               {checkinDone && (
                 <div className="flex justify-center mt-3">
                   <button
-                    onClick={() => window.location.href = '/ai-coach'}
+                    onClick={() => router.push('/ai-coach')}
                     className="text-[13px] text-white/40 font-medium"
                   >
                     Talk to Nora instead
@@ -722,123 +610,6 @@ export default function Dashboard() {
             </button>
           </section>
         ) : null}
-
-        {/* COUPLES DEBRIEF CARD */}
-        {showCouplesDebrief && (
-          <section>
-            <div className="bg-white border border-[#E8614D]/20 rounded-2xl p-5 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-[#E8614D]/5 -translate-y-8 translate-x-8 pointer-events-none" />
-              <button
-                onClick={() => {
-                  localStorage.setItem('abf_couples_debrief_dismissed', 'true')
-                  setShowCouplesDebrief(false)
-                  supabase.from('user_profiles').update({ couples_debrief_dismissed: true }).eq('user_id', user.id).then(() => {}).catch(() => {})
-                }}
-                className="absolute top-4 right-4 w-6 h-6 flex items-center justify-center text-neutral-300 hover:text-neutral-500"
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
-              </button>
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#252048] to-[#6B4A72] flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-sm font-bold">N</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold text-neutral-800 mb-1">You both have profiles now</p>
-                  <p className="text-[13px] text-neutral-500 leading-relaxed mb-4">Nora has read both of yours. She wants to walk you through what your combination means — what works naturally and what to watch for.</p>
-                  <button
-                    onClick={() => {
-                      if (typeof window !== 'undefined') {
-                        const opener = `${userName || 'Hey'} — I've now read both your profile and ${partnerName}'s. Your combination is really interesting and I want to walk you through it together. There's a lot here about how you naturally complement each other, and a few things worth being mindful of. Where would you like to start — what works, or what to watch for?`
-                        sessionStorage.setItem('nora_opener', opener)
-                        localStorage.setItem('nora_pending_couples_opener', opener)
-                      }
-                      localStorage.setItem('abf_couples_debrief_dismissed', 'true')
-                      setShowCouplesDebrief(false)
-                      supabase.from('user_profiles').update({ couples_debrief_dismissed: true }).eq('user_id', user.id).then(() => {}).catch(() => {})
-                      router.push('/ai-coach?new=true')
-                    }}
-                    className="w-full min-h-[44px] bg-[#E8614D] text-white rounded-xl text-[14px] font-semibold active:scale-[0.98] transition-transform"
-                  >
-                    Meet with Nora →
-                  </button>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* SECTION 2 — PRIMARY ACTION */}
-        {nextDate && (
-          <section>
-            <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
-              Coming up
-            </div>
-            <button
-              onClick={() => window.location.href = '/dates'}
-              className="w-full rounded-2xl overflow-hidden relative min-h-[100px] active:scale-[0.99] transition-transform"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-[#1B5E47] to-[#2E9B70]" />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent" />
-              <div className="relative p-5 text-left">
-                <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-white/50 mb-2">📅 Date Night</p>
-                <p className="text-white text-[22px] leading-tight mb-1"
-                   style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                  {nextDate.title}
-                </p>
-                <p className="text-white/60 text-[12px] font-medium">
-                  {(() => {
-                    const days = getDaysUntil(nextDate.date_time)
-                    if (days === 0) return 'Tonight'
-                    if (days === 1) return 'Tomorrow'
-                    return `${days} days away`
-                  })()}
-                </p>
-              </div>
-              <div className="absolute right-5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-white text-lg backdrop-blur-sm">
-                ›
-              </div>
-            </button>
-          </section>
-        )}
-
-
-        {/* SECTION 4 — OPTIONAL CONTENT: Today's Read */}
-        {todaysRead && (
-          <section>
-            <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
-              Today's read
-            </div>
-            <a href={todaysRead.url} target="_blank" rel="noopener noreferrer" className="block">
-              <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-5">
-                <div className="flex items-start gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span
-                        className="inline-block px-2 py-0.5 rounded-full text-white text-[10px] font-bold"
-                        style={{ backgroundColor: todaysRead.sourceColor || '#3D3580' }}
-                      >
-                        {todaysRead.source}
-                      </span>
-                      <span className="text-[11px] text-neutral-400">5 min read</span>
-                    </div>
-                    <p className="text-[15px] text-neutral-900 leading-snug line-clamp-2"
-                       style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                      {todaysRead.title}
-                    </p>
-                    {todaysRead.description && (
-                      <p className="text-[12px] text-neutral-400 mt-1.5 line-clamp-2 leading-relaxed">
-                        {todaysRead.description}
-                      </p>
-                    )}
-                  </div>
-                  <div className="w-14 h-14 rounded-xl bg-neutral-100 flex-shrink-0 flex items-center justify-center text-2xl">
-                    📖
-                  </div>
-                </div>
-              </div>
-            </a>
-          </section>
-        )}
 
       </div>
 
