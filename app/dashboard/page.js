@@ -3,10 +3,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { getTodayString } from '@/lib/dates'
 import FlirtSheet from '@/components/FlirtSheet'
-import WeatherWidget from '@/components/WeatherWidget'
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -460,71 +458,82 @@ export default function Dashboard() {
   }
   const primaryCTA = getPrimaryCTA()
 
+  const hour = new Date().getHours()
+  const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
+  const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+  const coupleMoment = null
+
   return (
-    <div className="min-h-screen bg-[#F7F4EF]">
-      <div className="px-6 pt-10 pb-32 space-y-8">
+    <div style={{ minHeight: '100vh', background: '#F7F4EF' }}>
+      <div style={{ paddingTop: 52, paddingBottom: 120 }}>
 
-        {/* SECTION 1 — STATUS: Nora hero + mood */}
-        <section className="space-y-3">
+        {/* SECTION 1 — HEADER */}
+        <div style={{ padding: '0 20px', marginBottom: 16 }}>
+          <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 38, fontWeight: 300, color: '#1C1410', lineHeight: 1.15, margin: 0, marginBottom: 5 }}>
+            Good {timeOfDay}, {userName}.
+          </p>
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: '#C4AA87', margin: 0, marginBottom: coupleMoment ? 10 : 0 }}>
+            {dateStr}{weather?.temp ? ` · ${weather.temp}° ${weather.condition}` : ''}
+          </p>
+          {coupleMoment && (
+            <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', marginTop: 10 }}>
+              <span style={{ width: 6, height: 6, borderRadius: 2, background: '#C4714A', display: 'inline-block', flexShrink: 0 }} />
+              <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: '#1C1410' }}>{coupleMoment}</span>
+              <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: '#C4AA87' }}>›</span>
+            </button>
+          )}
+        </div>
+        <div style={{ height: 1, background: '#EDE4D8', margin: '0 20px 20px' }} />
 
-          {/* Nora message card */}
-          <div className="bg-gradient-to-br from-[#252048] via-[#3E3585] to-[#6B4A72] rounded-2xl p-6 relative overflow-hidden">
-            <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-[#E8614D]/10 pointer-events-none" />
-            <div className="relative">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-2 h-2 rounded-full bg-[#F2A090] animate-pulse" />
-                <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-white/40">Nora</span>
-                <span className="text-white/20 text-xs">·</span>
-                <span className="text-white/40 text-xs capitalize">Good {getGreetingWord()}</span>
-                {weather && (
-                  <div style={{ marginLeft: 'auto' }}>
-                    <WeatherWidget temp={weather.temp} condition={weather.condition} dark />
-                  </div>
-                )}
-              </div>
-
-              <p className="text-white text-[20px] leading-[1.4] mb-5"
-                 style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                {heroLoading
-                  ? <span className="inline-block w-48 h-6 bg-white/20 rounded animate-pulse" />
-                  : heroData?.message || `Good ${getGreetingWord()}, ${userName}.`}
-              </p>
-
-              <button
-                onClick={() => {
-                  if (heroData?.message) sessionStorage.setItem('nora_opener', heroData.message)
-                  router.push(heroData?.cta_href || primaryCTA.href)
-                }}
-                className="text-[14px] font-semibold text-[#E8614D]"
-              >
-                {heroData?.cta_label || primaryCTA.label}
-              </button>
-
-              {heroData?.pills?.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '16px' }}>
-                  {heroData.pills.map((pill, i) => (
-                    <span key={i} style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '10px', padding: '6px 12px', fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>
-                      {pill}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {checkinDone && (
-                <div className="flex justify-center mt-3">
-                  <button
-                    onClick={() => router.push('/ai-coach')}
-                    className="text-[13px] text-white/40 font-medium"
-                  >
-                    Talk to Nora instead
-                  </button>
-                </div>
-              )}
+        {/* SECTION 2 — TODAY'S FEATURE CARD */}
+        <div style={{ borderRadius: 20, overflow: 'hidden', margin: '0 16px 14px', boxShadow: '0 2px 12px rgba(28,20,16,0.08)' }}>
+          <div style={{ height: 64, background: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #D4956A 100%)', display: 'flex', alignItems: 'flex-end', padding: '0 14px 10px' }}>
+            <span style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 20, padding: '3px 10px', fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontFamily: "'DM Sans', sans-serif", letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              Daily Spark
+            </span>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.4)', display: 'inline-block' }} />
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontFamily: "'DM Sans', sans-serif" }}>Waiting for {partnerName}</span>
             </div>
           </div>
+          <div style={{ background: '#fff', padding: 18 }}>
+            <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 18, fontWeight: 400, color: '#1C1410', lineHeight: 1.35, margin: 0, marginBottom: 14 }}>
+              What's something you've been curious about trying but haven't brought up?
+            </p>
+            <div style={{ background: '#FAF6F0', border: '1px solid #EDE4D8', borderRadius: 12, padding: '11px 14px', marginBottom: 14 }}>
+              <p style={{ fontSize: 10, color: '#C4AA87', fontFamily: "'DM Sans', sans-serif", letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0, marginBottom: 5 }}>Your answer</p>
+              <p style={{ fontSize: 13, color: '#C4AA87', fontFamily: "'DM Sans', sans-serif", fontStyle: 'italic', margin: 0 }}>Tap to answer…</p>
+            </div>
+            <button style={{ width: '100%', padding: 13, background: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #D4956A 100%)', color: '#fff', borderRadius: 30, fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", border: 'none', cursor: 'pointer' }}>
+              Answer the Spark
+            </button>
+          </div>
+        </div>
 
-          {/* Mood card */}
-          <div className="bg-white rounded-2xl border border-neutral-200 p-5 flex items-center gap-4 shadow-sm">
+        {/* SECTION 3 — NORA SECONDARY CARD */}
+        <div style={{ background: 'linear-gradient(145deg, #1C1410 0%, #2D3561 100%)', borderRadius: 18, padding: '18px 20px', margin: '0 16px 14px', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(201,168,76,0.07)', pointerEvents: 'none' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 9, position: 'relative' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#C9A84C', display: 'inline-block' }} />
+            <span style={{ fontSize: 9, fontFamily: "'DM Sans', sans-serif", fontWeight: 700, color: '#C9A84C', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Nora</span>
+          </div>
+          <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 16, fontWeight: 300, fontStyle: 'italic', color: '#fff', lineHeight: 1.55, margin: 0, marginBottom: 10, position: 'relative' }}>
+            {heroLoading
+              ? <span style={{ display: 'inline-block', width: 180, height: 16, background: 'rgba(255,255,255,0.1)', borderRadius: 4 }} />
+              : heroData?.message || `Good ${timeOfDay}, ${userName}.`}
+          </p>
+          <button
+            onClick={() => router.push('/ai-coach')}
+            style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: 'rgba(255,255,255,0.45)', cursor: 'pointer', display: 'block', position: 'relative' }}
+          >
+            Talk to Nora →
+          </button>
+        </div>
+
+        {/* SECTION 4 — DAYS TOGETHER + MEMORY */}
+        <div style={{ padding: '0 16px' }}>
+
+          <div className="bg-white rounded-2xl border border-neutral-200 p-5 flex items-center gap-4 shadow-sm" style={{ marginBottom: 14 }}>
             <div className="w-12 h-12 rounded-xl bg-neutral-100 flex items-center justify-center text-2xl flex-shrink-0">
               {mood.emoji}
             </div>
@@ -546,70 +555,94 @@ export default function Dashboard() {
             </div>
           </div>
 
-        </section>
-
-        {/* TIMELINE MEMORY CARD */}
-        {memoryLoading ? (
-          <section>
-            <div className="h-4 w-32 bg-neutral-200 rounded mb-3 animate-pulse" />
-            <div className="bg-white rounded-2xl border border-neutral-200 p-5 h-24 animate-pulse" />
-          </section>
-        ) : memoryCard?.empty ? (
-          <section>
-            <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
-              Your Story
+          {memoryLoading ? (
+            <div>
+              <div className="h-4 w-32 bg-neutral-200 rounded mb-3 animate-pulse" />
+              <div className="bg-white rounded-2xl border border-neutral-200 p-5 h-24 animate-pulse" />
             </div>
-            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-5">
-              <div className="flex items-center gap-1.5 mb-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#F2A090]" />
-                <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-[#E8614D]">Nora</span>
+          ) : memoryCard?.empty ? (
+            <div>
+              <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
+                Your Story
               </div>
-              <p className="text-[14px] text-neutral-600 leading-relaxed mb-3">
-                Every relationship has a story. Add your first memory — your first date, a trip, anything that matters.
-              </p>
+              <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-5">
+                <div className="flex items-center gap-1.5 mb-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#F2A090]" />
+                  <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-[#E8614D]">Nora</span>
+                </div>
+                <p className="text-[14px] text-neutral-600 leading-relaxed mb-3">
+                  Every relationship has a story. Add your first memory — your first date, a trip, anything that matters.
+                </p>
+                <button
+                  onClick={() => router.push('/timeline')}
+                  className="text-[14px] font-semibold text-[#E8614D]"
+                >
+                  Add a memory →
+                </button>
+              </div>
+            </div>
+          ) : memoryCard && !memoryCard.empty ? (
+            <div>
+              <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
+                From Your Timeline
+              </div>
               <button
                 onClick={() => router.push('/timeline')}
-                className="text-[14px] font-semibold text-[#E8614D]"
+                className="w-full bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden text-left active:scale-[0.99] transition-transform"
               >
-                Add a memory →
+                {memoryCard.photo_urls?.[0] && (
+                  <img
+                    src={memoryCard.photo_urls[0]}
+                    alt={memoryCard.title}
+                    className="w-full h-36 object-cover"
+                  />
+                )}
+                <div className="p-5">
+                  {memoryCard.event_type && (
+                    <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-1">
+                      {({ custom: 'Memory', trip: 'Trip', milestone: 'Milestone', anniversary: 'Anniversary', first: 'First', other: 'Moment' }[memoryCard.event_type] ?? memoryCard.event_type.charAt(0).toUpperCase() + memoryCard.event_type.slice(1))}
+                    </p>
+                  )}
+                  <p className="text-[18px] text-neutral-900 leading-snug mb-1"
+                     style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
+                    {memoryCard.title}
+                  </p>
+                  {memoryCard.event_date && (
+                    <p className="text-[12px] text-neutral-400">
+                      {new Date(memoryCard.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  )}
+                </div>
               </button>
             </div>
-          </section>
-        ) : memoryCard && !memoryCard.empty ? (
-          <section>
-            <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
-              From Your Timeline
-            </div>
+          ) : null}
+
+        </div>
+
+        {/* SECTION 5 — FLIRTS */}
+        <div style={{ padding: '0 16px', marginTop: 22 }}>
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 9, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C4AA87', margin: 0, marginBottom: 10 }}>
+            Send a flirt
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <button
-              onClick={() => router.push('/timeline')}
-              className="w-full bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden text-left active:scale-[0.99] transition-transform"
+              onClick={() => setFlirtSheetOpen(true)}
+              style={{ background: '#fff', borderRadius: 14, padding: 14, border: '1px solid #EDE4D8', textAlign: 'left', cursor: 'pointer' }}
             >
-              {memoryCard.photo_urls?.[0] && (
-                <img
-                  src={memoryCard.photo_urls[0]}
-                  alt={memoryCard.title}
-                  className="w-full h-36 object-cover"
-                />
-              )}
-              <div className="p-5">
-                {memoryCard.event_type && (
-                  <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-1">
-                    {({ custom: 'Memory', trip: 'Trip', milestone: 'Milestone', anniversary: 'Anniversary', first: 'First', other: 'Moment' }[memoryCard.event_type] ?? memoryCard.event_type.charAt(0).toUpperCase() + memoryCard.event_type.slice(1))}
-                  </p>
-                )}
-                <p className="text-[18px] text-neutral-900 leading-snug mb-1"
-                   style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                  {memoryCard.title}
-                </p>
-                {memoryCard.event_date && (
-                  <p className="text-[12px] text-neutral-400">
-                    {new Date(memoryCard.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                  </p>
-                )}
-              </div>
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: '#7A8C7E', marginBottom: 8 }} />
+              <p style={{ fontSize: 13, color: '#1C1410', fontFamily: "'DM Sans', sans-serif", margin: 0, marginBottom: 3 }}>Send a song</p>
+              <p style={{ fontSize: 10, color: '#C4AA87', fontFamily: "'DM Sans', sans-serif", margin: 0 }}>What you're thinking of</p>
             </button>
-          </section>
-        ) : null}
+            <button
+              onClick={() => setFlirtSheetOpen(true)}
+              style={{ background: '#fff', borderRadius: 14, padding: 14, border: '1px solid #EDE4D8', textAlign: 'left', cursor: 'pointer' }}
+            >
+              <div style={{ width: 8, height: 8, borderRadius: 2, background: '#C4714A', marginBottom: 8 }} />
+              <p style={{ fontSize: 13, color: '#1C1410', fontFamily: "'DM Sans', sans-serif", margin: 0, marginBottom: 3 }}>Send a prompt</p>
+              <p style={{ fontSize: 10, color: '#C4AA87', fontFamily: "'DM Sans', sans-serif", margin: 0 }}>Start a conversation</p>
+            </button>
+          </div>
+        </div>
 
       </div>
 
