@@ -43,7 +43,7 @@ export default function FlirtOnboardingPage() {
     } catch (err) {
       console.error('[FlirtOnboarding] save-profile error:', err)
     }
-    router.push('/today')
+    router.push('/dashboard')
   }
 
   return (

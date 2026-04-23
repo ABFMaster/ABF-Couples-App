@@ -88,7 +88,7 @@ export async function POST(request) {
         userId: partnerId,
         title: 'The Spark',
         body: `${currentUserName} just answered The Spark.`,
-        url: '/today',
+        url: '/dashboard',
       }),
     }).catch(() => {})
 

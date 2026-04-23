@@ -119,7 +119,7 @@ export async function POST(request) {
         userId: partnerId,
         title: 'The Bet',
         body: pushBody,
-        url: '/today',
+        url: '/dashboard',
       }),
     }).catch(() => {})
 

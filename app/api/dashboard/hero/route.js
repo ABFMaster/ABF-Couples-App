@@ -170,11 +170,11 @@ export async function GET(request) {
       if (!mineActed && !theirsActed) {
         priority  = 1
         cta_label = 'Go to Today'
-        cta_href  = '/today'
+        cta_href  = '/dashboard'
       } else if (theirsActed && !mineActed) {
         priority  = 2
         cta_label = 'Go to Today'
-        cta_href  = '/today'
+        cta_href  = '/dashboard'
       } else if (mineActed && theirsActed) {
         priority  = 3
         cta_label = 'Talk to Nora'
@@ -183,7 +183,7 @@ export async function GET(request) {
     } else if (feature?.type === 'ritual') {
       priority  = 1
       cta_label = 'Go to Today'
-      cta_href  = '/today'
+      cta_href  = '/dashboard'
     }
 
     if (priority === 5 && nextDate && daysUntilDate <= 3) {

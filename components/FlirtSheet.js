@@ -133,7 +133,7 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
       await fetch('/api/push/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: partnerId, title: "You've got a flirt 💌", body: "Open ABF to see what they sent you", url: "/today" }),
+        body: JSON.stringify({ userId: partnerId, title: "You've got a flirt 💌", body: "Open ABF to see what they sent you", url: "/dashboard" }),
       })
       await fetch('/api/flirts/mark-sent', {
         method: 'POST',

@@ -239,7 +239,7 @@ Return only the JSON object. No markdown, no explanation, no wrapper text.`
               userId: couple.user1_id,
               title: 'Weekly Reflection',
               body: "Your week together is ready to reflect on.",
-              url: '/today',
+              url: '/dashboard',
             }),
           }).catch(() => {}),
           fetch(`${appBase}/api/push/send`, {
@@ -249,7 +249,7 @@ Return only the JSON object. No markdown, no explanation, no wrapper text.`
               userId: couple.user2_id,
               title: 'Weekly Reflection',
               body: "Your week together is ready to reflect on.",
-              url: '/today',
+              url: '/dashboard',
             }),
           }).catch(() => {}),
         ])
