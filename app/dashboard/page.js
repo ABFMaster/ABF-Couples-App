@@ -5,9 +5,9 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getTodayString } from '@/lib/dates'
 import FlirtSheet from '@/components/FlirtSheet'
-// import SparkCard from '@/components/SparkCard'
-// import BetCard from '@/components/BetCard'
-// import RitualCard from '@/components/RitualCard'
+import SparkCard from '@/components/SparkCard'
+import BetCard from '@/components/BetCard'
+import RitualCard from '@/components/RitualCard'
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -539,14 +539,72 @@ export default function Dashboard() {
         <div style={{ height: 1, background: '#EDE4D8', margin: '0 20px 20px' }} />
 
         {/* SECTION 2 — TODAY'S FEATURE CARD */}
-        {anyScheduled && (
-          <div style={{ margin: '0 16px 14px', padding: '20px', background: 'white', borderRadius: '18px', textAlign: 'center' }}>
-            <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#1C1410' }}>Feature loading...</p>
+        {showSpark && (
+          <div style={{ margin: '0 16px 14px' }}>
+            <SparkCard
+              spark={spark}
+              mine={mine}
+              theirs={theirs}
+              partnerName={partnerName}
+              sparkIntroShown={sparkIntroShown}
+              onRespond={() => {}}
+              onSkip={() => {}}
+              onReact={() => {}}
+            />
+          </div>
+        )}
+        {showBet && (
+          <div style={{ margin: '0 16px 14px' }}>
+            <BetCard
+              bet={bet}
+              mine={betMine}
+              theirs={betTheirs}
+              partnerId={partnerId}
+              partnerName={partnerName}
+              userId={userId}
+              coupleId={coupleId}
+            />
+          </div>
+        )}
+        {showRitual && userId && coupleId && (
+          <div style={{ margin: '0 16px 14px' }}>
+            <RitualCard
+              userId={userId}
+              coupleId={coupleId}
+              partnerName={partnerName}
+            />
+          </div>
+        )}
+        {showGameRoom && (
+          <div style={{ margin: '0 16px 14px' }}>
+            <button
+              onClick={() => router.push('/game-room')}
+              style={{
+                width: '100%',
+                background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 60%, #4338CA 100%)',
+                borderRadius: '20px',
+                padding: '24px 20px',
+                textAlign: 'left',
+                cursor: 'pointer',
+                border: 'none',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{ position: 'absolute', top: '-15px', right: '-15px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+              <p style={{ fontSize: '11px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', margin: '0 0 6px' }}>The Game Room</p>
+              <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '24px', fontWeight: 300, color: '#FFFFFF', margin: '0 0 6px', lineHeight: 1.2 }}>
+                What are we playing?
+              </p>
+              <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: '14px', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', margin: 0 }}>
+                Two games ready. Nora picks the topic.
+              </p>
+            </button>
           </div>
         )}
         {!anyScheduled && (
           <div style={{ margin: '0 16px 14px', textAlign: 'center', padding: '24px 0' }}>
-            <p style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic', color: '#C4AA87', fontSize: '18px' }}>Nothing scheduled today. Enjoy the day.</p>
+            <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontStyle: 'italic', color: '#C4AA87', fontSize: '18px' }}>Nothing scheduled today. Enjoy the day.</p>
           </div>
         )}
 
