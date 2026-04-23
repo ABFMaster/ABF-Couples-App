@@ -5,6 +5,9 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getTodayString } from '@/lib/dates'
 import FlirtSheet from '@/components/FlirtSheet'
+import SparkCard from '@/components/SparkCard'
+import BetCard from '@/components/BetCard'
+import RitualCard from '@/components/RitualCard'
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -85,6 +88,14 @@ export default function Dashboard() {
   const [heroData, setHeroData]                 = useState(null)
   const [heroLoading, setHeroLoading]           = useState(true)
   const [weather, setWeather] = useState(null)
+
+  const [spark, setSpark] = useState(null)
+  const [mine, setMine] = useState(null)
+  const [theirs, setTheirs] = useState(null)
+  const [sparkIntroShown, setSparkIntroShown] = useState(false)
+  const [bet, setBet] = useState(null)
+  const [betMine, setBetMine] = useState(null)
+  const [betTheirs, setBetTheirs] = useState(null)
 
   // Hydrate localStorage on client only
   useEffect(() => {
@@ -392,6 +403,12 @@ export default function Dashboard() {
     initPush()
   }, [])
 
+  useEffect(() => {
+    if (!user?.id || !couple?.id) return
+    if (showSpark) fetchSpark()
+    if (showBet) fetchBet()
+  }, [user, couple])
+
   const handleCopyCode = async () => {
     try {
       await navigator.clipboard.writeText(connectCode)
@@ -403,6 +420,34 @@ export default function Dashboard() {
   const handleDismissInvite = () => {
     localStorage.setItem('abf_invite_dismissed', 'true')
     setInviteDismissed(true)
+  }
+
+  const fetchSpark = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const res = await fetch('/api/spark/today?spark=true', {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      })
+      const data = await res.json()
+      if (data.spark) setSpark(data.spark)
+      if (data.mine) setMine(data.mine)
+      if (data.theirs) setTheirs(data.theirs)
+    } catch {}
+  }
+
+  const fetchBet = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const res = await fetch('/api/bet/today?bet=true', {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      })
+      const data = await res.json()
+      if (data.bet) setBet(data.bet)
+      if (data.mine) setBetMine(data.mine)
+      if (data.theirs) setBetTheirs(data.theirs)
+    } catch {}
   }
 
   if (loading) {
@@ -463,6 +508,14 @@ export default function Dashboard() {
   const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
   const coupleMoment = null
 
+  const todayName = new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long' })
+  const params = typeof window !== 'undefined' ? window.location.search : ''
+  const showSpark = ['Monday', 'Tuesday', 'Thursday'].includes(todayName) || params.includes('spark=true')
+  const showBet = todayName === 'Wednesday' || params.includes('bet=true')
+  const showRitual = todayName === 'Friday' || params.includes('ritual=true')
+  const showGameRoom = todayName === 'Saturday' || params.includes('game=true')
+  const anyScheduled = showSpark || showBet || showRitual || showGameRoom
+
   return (
     <div style={{ minHeight: '100vh', background: '#F7F4EF' }}>
       <div style={{ paddingTop: 52, paddingBottom: 120 }}>
@@ -473,7 +526,7 @@ export default function Dashboard() {
             Good {timeOfDay}, {userName}.
           </p>
           <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: '#C4AA87', margin: 0, marginBottom: coupleMoment ? 10 : 0 }}>
-            {dateStr}{weather?.temp ? ` · ${weather.temp}° ${weather.condition}` : ''}
+            {dateStr}{weather?.temp ? ` · ${weather.temp}° ${weather.condition}` : ''} · {daysTogether} days together
           </p>
           {coupleMoment && (
             <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', padding: 0, cursor: 'pointer', marginTop: 10 }}>
@@ -486,29 +539,53 @@ export default function Dashboard() {
         <div style={{ height: 1, background: '#EDE4D8', margin: '0 20px 20px' }} />
 
         {/* SECTION 2 — TODAY'S FEATURE CARD */}
-        <div style={{ borderRadius: 20, overflow: 'hidden', margin: '0 16px 14px', boxShadow: '0 2px 12px rgba(28,20,16,0.08)' }}>
-          <div style={{ height: 64, background: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #D4956A 100%)', display: 'flex', alignItems: 'flex-end', padding: '0 14px 10px' }}>
-            <span style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 20, padding: '3px 10px', fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.9)', fontFamily: "'DM Sans', sans-serif", letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              Daily Spark
-            </span>
-            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5 }}>
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.4)', display: 'inline-block' }} />
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontFamily: "'DM Sans', sans-serif" }}>Waiting for {partnerName}</span>
-            </div>
+        {showSpark && (
+          <div style={{ margin: '0 16px 14px' }}>
+            <SparkCard
+              spark={spark}
+              mine={mine}
+              theirs={theirs}
+              partnerName={partnerName}
+              sparkIntroShown={sparkIntroShown}
+              onRespond={() => fetchSpark()}
+              onSkip={() => fetchSpark()}
+              onReact={() => fetchSpark()}
+            />
           </div>
-          <div style={{ background: '#fff', padding: 18 }}>
-            <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 18, fontWeight: 400, color: '#1C1410', lineHeight: 1.35, margin: 0, marginBottom: 14 }}>
-              What's something you've been curious about trying but haven't brought up?
-            </p>
-            <div style={{ background: '#FAF6F0', border: '1px solid #EDE4D8', borderRadius: 12, padding: '11px 14px', marginBottom: 14 }}>
-              <p style={{ fontSize: 10, color: '#C4AA87', fontFamily: "'DM Sans', sans-serif", letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0, marginBottom: 5 }}>Your answer</p>
-              <p style={{ fontSize: 13, color: '#C4AA87', fontFamily: "'DM Sans', sans-serif", fontStyle: 'italic', margin: 0 }}>Tap to answer…</p>
-            </div>
-            <button style={{ width: '100%', padding: 13, background: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #D4956A 100%)', color: '#fff', borderRadius: 30, fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", border: 'none', cursor: 'pointer' }}>
-              Answer the Spark
-            </button>
+        )}
+        {showBet && (
+          <div style={{ margin: '0 16px 14px' }}>
+            <BetCard
+              bet={bet}
+              mine={betMine}
+              theirs={betTheirs}
+              partnerId={partnerId}
+              partnerName={partnerName}
+              userId={user?.id}
+              coupleId={couple?.id}
+            />
           </div>
-        </div>
+        )}
+        {showRitual && (
+          <div style={{ margin: '0 16px 14px' }}>
+            <RitualCard
+              userId={user?.id}
+              coupleId={couple?.id}
+              partnerName={partnerName}
+            />
+          </div>
+        )}
+        {showGameRoom && (
+          <div style={{ margin: '0 16px 14px', padding: '20px', background: 'white', borderRadius: '18px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)', textAlign: 'center' }}>
+            <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: '#1C1410', marginBottom: '12px' }}>Saturday — Game Room day</p>
+            <button onClick={() => router.push('/game-room')} style={{ padding: '12px 28px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: 'white', border: 'none', borderRadius: '30px', fontSize: '14px', cursor: 'pointer' }}>Let's play →</button>
+          </div>
+        )}
+        {!anyScheduled && (
+          <div style={{ margin: '0 16px 14px', textAlign: 'center', padding: '24px 0' }}>
+            <p style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic', color: '#C4AA87', fontSize: '18px' }}>Nothing scheduled today. Enjoy the day.</p>
+          </div>
+        )}
 
         {/* SECTION 3 — NORA SECONDARY CARD */}
         <div style={{ background: 'linear-gradient(145deg, #1C1410 0%, #2D3561 100%)', borderRadius: 18, padding: '18px 20px', margin: '0 16px 14px', position: 'relative', overflow: 'hidden' }}>
@@ -532,28 +609,6 @@ export default function Dashboard() {
 
         {/* SECTION 4 — DAYS TOGETHER + MEMORY */}
         <div style={{ padding: '0 16px' }}>
-
-          <div className="bg-white rounded-2xl border border-neutral-200 p-5 flex items-center gap-4 shadow-sm" style={{ marginBottom: 14 }}>
-            <div className="w-12 h-12 rounded-xl bg-neutral-100 flex items-center justify-center text-2xl flex-shrink-0">
-              {mood.emoji}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[16px] text-neutral-900 leading-snug"
-                 style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                {mood.label}
-              </p>
-              <p className="text-[12px] text-neutral-400 mt-0.5">{mood.sub}</p>
-            </div>
-            <div className="text-center pl-4 border-l border-neutral-200 flex-shrink-0">
-              <p className="text-[26px] font-semibold text-[#E8614D] leading-none"
-                 style={{ fontFamily: "'Fraunces', Georgia, serif" }}>
-                {streak > 0 ? streak : daysTogether}
-              </p>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-400 mt-1">
-                {streak > 0 ? <>day<br/>streak</> : <>days<br/>together</>}
-              </p>
-            </div>
-          </div>
 
           {memoryLoading ? (
             <div>
