@@ -97,6 +97,14 @@ export default function Dashboard() {
   const [betMine, setBetMine] = useState(null)
   const [betTheirs, setBetTheirs] = useState(null)
 
+  const todayName = new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long' })
+  const params = typeof window !== 'undefined' ? window.location.search : ''
+  const showSpark = ['Monday', 'Tuesday', 'Thursday'].includes(todayName) || params.includes('spark=true')
+  const showBet = todayName === 'Wednesday' || params.includes('bet=true')
+  const showRitual = todayName === 'Friday' || params.includes('ritual=true')
+  const showGameRoom = todayName === 'Saturday' || params.includes('game=true')
+  const anyScheduled = showSpark || showBet || showRitual || showGameRoom
+
   // Hydrate localStorage on client only
   useEffect(() => {
     setInviteDismissed(localStorage.getItem('abf_invite_dismissed') === 'true')
@@ -507,14 +515,6 @@ export default function Dashboard() {
   const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
   const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
   const coupleMoment = null
-
-  const todayName = new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long' })
-  const params = typeof window !== 'undefined' ? window.location.search : ''
-  const showSpark = ['Monday', 'Tuesday', 'Thursday'].includes(todayName) || params.includes('spark=true')
-  const showBet = todayName === 'Wednesday' || params.includes('bet=true')
-  const showRitual = todayName === 'Friday' || params.includes('ritual=true')
-  const showGameRoom = todayName === 'Saturday' || params.includes('game=true')
-  const anyScheduled = showSpark || showBet || showRitual || showGameRoom
 
   return (
     <div style={{ minHeight: '100vh', background: '#F7F4EF' }}>
