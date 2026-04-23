@@ -5,9 +5,9 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getTodayString } from '@/lib/dates'
 import FlirtSheet from '@/components/FlirtSheet'
-import SparkCard from '@/components/SparkCard'
-import BetCard from '@/components/BetCard'
-import RitualCard from '@/components/RitualCard'
+// import SparkCard from '@/components/SparkCard'
+// import BetCard from '@/components/BetCard'
+// import RitualCard from '@/components/RitualCard'
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -539,46 +539,9 @@ export default function Dashboard() {
         <div style={{ height: 1, background: '#EDE4D8', margin: '0 20px 20px' }} />
 
         {/* SECTION 2 — TODAY'S FEATURE CARD */}
-        {showSpark && (
-          <div style={{ margin: '0 16px 14px' }}>
-            <SparkCard
-              spark={spark}
-              mine={mine}
-              theirs={theirs}
-              partnerName={partnerName}
-              sparkIntroShown={sparkIntroShown}
-              onRespond={() => fetchSpark()}
-              onSkip={() => fetchSpark()}
-              onReact={() => fetchSpark()}
-            />
-          </div>
-        )}
-        {showBet && (
-          <div style={{ margin: '0 16px 14px' }}>
-            <BetCard
-              bet={bet}
-              mine={betMine}
-              theirs={betTheirs}
-              partnerId={partnerId}
-              partnerName={partnerName}
-              userId={user?.id}
-              coupleId={couple?.id}
-            />
-          </div>
-        )}
-        {showRitual && (
-          <div style={{ margin: '0 16px 14px' }}>
-            <RitualCard
-              userId={user?.id}
-              coupleId={couple?.id}
-              partnerName={partnerName}
-            />
-          </div>
-        )}
-        {showGameRoom && (
-          <div style={{ margin: '0 16px 14px', padding: '20px', background: 'white', borderRadius: '18px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)', textAlign: 'center' }}>
-            <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: '#1C1410', marginBottom: '12px' }}>Saturday — Game Room day</p>
-            <button onClick={() => router.push('/game-room')} style={{ padding: '12px 28px', background: 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)', color: 'white', border: 'none', borderRadius: '30px', fontSize: '14px', cursor: 'pointer' }}>Let's play →</button>
+        {anyScheduled && (
+          <div style={{ margin: '0 16px 14px', padding: '20px', background: 'white', borderRadius: '18px', textAlign: 'center' }}>
+            <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#1C1410' }}>Feature loading...</p>
           </div>
         )}
         {!anyScheduled && (
