@@ -539,7 +539,12 @@ export default function Dashboard() {
         <div style={{ height: 1, background: '#EDE4D8', margin: '0 20px 20px' }} />
 
         {/* SECTION 2 — TODAY'S FEATURE CARD */}
-        {showSpark && (
+        {showSpark && !spark && (
+          <div style={{ margin: '0 16px 14px', padding: '20px', background: 'white', borderRadius: '18px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)', textAlign: 'center' }}>
+            <p style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic', color: '#C4AA87', fontSize: '16px' }}>Loading today's Spark...</p>
+          </div>
+        )}
+        {showSpark && spark && (
           <div style={{ margin: '0 16px 14px' }}>
             <SparkCard
               spark={spark}
@@ -547,13 +552,18 @@ export default function Dashboard() {
               theirs={theirs}
               partnerName={partnerName}
               sparkIntroShown={sparkIntroShown}
-              onRespond={() => {}}
-              onSkip={() => {}}
-              onReact={() => {}}
+              onRespond={() => fetchSpark()}
+              onSkip={() => fetchSpark()}
+              onReact={() => fetchSpark()}
             />
           </div>
         )}
-        {showBet && (
+        {showBet && !bet && (
+          <div style={{ margin: '0 16px 14px', padding: '20px', background: 'white', borderRadius: '18px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)', textAlign: 'center' }}>
+            <p style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic', color: '#C4AA87', fontSize: '16px' }}>Loading today's Bet...</p>
+          </div>
+        )}
+        {showBet && bet && (
           <div style={{ margin: '0 16px 14px' }}>
             <BetCard
               bet={bet}
