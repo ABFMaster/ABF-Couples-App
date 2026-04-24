@@ -572,6 +572,22 @@ Removed from app. Reintroduce when content pipeline is robust. Nora can surface 
 
 ---
 
+## BACKLOG ADDITIONS — 2026-04-24 (session notes)
+
+### DATE NIGHT — Agent architecture refactor
+*Added: 2026-04-24*
+Refactor to tool-based system with Nora as orchestrator. Tools: `get_couple_date_preferences`, `suggest_date_options(location, vibe, budget)`, `build_date_itinerary(options, couple_context)`, `save_date_plan(itinerary, coupleId)`. Blocked on Google Places API fix first — current implementation broken at the Places API level. Do not begin agent refactor until Places 503 is resolved.
+
+### PRE-FLIGHT CHECK PROTOCOL
+*Added: 2026-04-24*
+At session start, list the 3 most recent mistakes (from session_handoff self-review entries) and how to avoid them before starting any work. Forces active recall of known failure patterns before touching code.
+
+### NORA THIRD-PERSON PRONOUN VIOLATION — system prompt pass
+*Added: 2026-04-24*
+Third-person pronoun violation observed in Nora chat: "she's someone who reads people." NORA_VOICE rule is non-negotiable — never use she/he/they/her/him for either partner. Requires a targeted system prompt pass to enforce. All Nora routes should be audited for this violation pattern.
+
+---
+
 ## SUCCESS METRICS (pre-launch KPIs)
 
 ## Success Metrics (pre-launch KPIs)

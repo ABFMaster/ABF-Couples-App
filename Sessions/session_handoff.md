@@ -703,6 +703,9 @@ Must be wrapped in Suspense boundary or build will fail.
 - Archive overlay (Us/Been): visual redesign needed — Sprint B
 - Home flirts section: only shows song and prompt, GIF and movie/show cards missing
 - Today page: deleted, redirect in place. Weekly-reflection page: redirect in place.
+- Nora chat: third-person pronoun violation observed in conversation ("she's someone who reads people") — NORA_VOICE rule states never use third-person for either partner. System prompt pass needed.
+- Date Night: agent architecture redesign planned. Current implementation broken at Google Places API level. Tool-based architecture designed: get_couple_date_preferences, suggest_date_options, build_date_itinerary, save_date_plan. Build deferred until Google Places fixed.
+- Claude Code usage tracking: erratic behavior reported 2026-04-24, usage jumping 0-100% in 5 prompts, prepaid extra usage disappeared unexpectedly. Reported to Anthropic support.
 
 ---
 
