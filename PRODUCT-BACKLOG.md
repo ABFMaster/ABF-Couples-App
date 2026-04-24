@@ -509,3 +509,39 @@ Featured + Grid layout. Nora recommends mode based on couple history. Story, Pit
 ### RANK UX — DRAG TO REORDER
 *Added: 2026-04-22*
 No drag-to-reorder on mobile. Arrow buttons functional but less intuitive. UX improvement post-launch.
+
+---
+
+## BACKLOG ADDITIONS — 2026-04-24
+
+### Us PAGE — Ideas/Ahead section: shared_items integration
+*Added: 2026-04-24*
+Build real shared_items integration for Watch/Eat/Listen/Do/Travel buckets in the Ahead tab. Currently shows empty state only. Wire to existing shared_items table — filter by type, display per category bucket, support add/toggle-done from the Ahead view.
+
+### Us PAGE — Been echoes: game session echo mechanic
+*Added: 2026-04-24*
+Game session echo mechanic not yet implemented. Echoes currently only show timeline_events filtered by event_type. The `game_echo` event_type is declared in code but never written to the DB — game sessions don't auto-create echo entries. Design and build the echo write path: after a game session verdict, write a lightweight timeline_event of type `game_echo` with session summary. This populates the Been section without requiring manual saves.
+
+### Us PAGE — Now: wire real Nora mode recommendation
+*Added: 2026-04-24*
+Game Room suggestion in Now tab is hardcoded "Rank It". Wire real Nora mode recommendation based on couple history — most recently played modes, Spark/Bet answer patterns, time of week. Requires `/api/dashboard/hero` or a dedicated recommendation endpoint that reads couple game history.
+
+### Us PAGE — Now: couple moment line in header
+*Added: 2026-04-24*
+`coupleMoment` is a null placeholder in the dashboard header. Wire to next date_plan or trip so the header subtitle shows something meaningful ("Date night Thursday" or "Tokyo in 3 weeks"). Low complexity — read from already-fetched nextDate/nextTrip state.
+
+### SIGNAL REGISTRY — Phase 1 design
+*Added: 2026-04-24*
+Phase 1 design complete, build deferred to 50 real couples + 3 months of data. Shadow mode validation required before surfacing to users. Three signals only: participation symmetry (are both partners engaging equally?), engagement trend (is interaction increasing or declining over 4 weeks?), repair after friction (do they re-engage after a skipped or abandoned session?). No signal surfaces to users in Phase 1 — data collection only. Nora reads the signals internally but doesn't label them for the couple.
+
+### NORA IDENTITY — avatar redesign
+*Added: 2026-04-24*
+Cartoon avatar needs replacing. Nora is not a character — she is a presence. A dedicated design sprint is needed to define what that presence looks like visually: typography treatment, color system, motion, absence of illustration. This is a brand-level decision, not a component tweak. Blocked until there is time to do it correctly.
+
+### CUSTOM NAV ICONS
+*Added: 2026-04-24*
+Backlogged. Currently text labels + placeholder geometric shapes. Custom icons needed for Home, Nora, Us, Game Room, Profile. Design sprint item.
+
+### WORTH READING — deferred removal
+*Added: 2026-04-24*
+Removed from app. Reintroduce when content pipeline is robust. Nora can surface reading contextually in conversation in the meantime — "I came across something that made me think of you two" as a natural Nora touch rather than a dedicated tab.

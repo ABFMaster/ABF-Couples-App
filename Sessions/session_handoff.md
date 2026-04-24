@@ -1,5 +1,5 @@
 # ABF — Developer Handoff Briefing
-# Last Updated: 2026-04-22
+# Last Updated: 2026-04-24
 
 ---
 
@@ -162,6 +162,28 @@ Before writing the session handoff, Claude must answer these four questions hone
 2. What caused that struggle?
 3. What should we change in prompts, structure, or tools?
 4. What should be standardized going forward?
+
+### Self-Review: 2026-04-24
+
+1. **What went wrong this session?**
+The dashboard temporal dead zone bug required two debugging cycles — the production bundler caught a const declaration order issue that dev mode masked. The Us page auth loop was caused by creating a new Supabase client instance instead of importing the shared singleton. Both were diagnosed correctly but required extra cycles that better upfront discipline would have prevented.
+
+2. **What specific protocols were violated?**
+- New file discipline: the Us page rewrite created a new supabase client instead of following the established import pattern used in every other page. Always check how existing pages import shared dependencies before writing new ones.
+- Temporal dead zone: computed variables referenced before their declaration in the same component. In production builds, declaration order matters strictly.
+
+3. **What is the current state?**
+Sprint A complete:
+- Navigation restructured: Today tab retired, Game Room promoted to first-class tab
+- /today → /dashboard redirect in place, today/page.js deleted
+- All /today references updated across codebase (13 files)
+- Dashboard Home redesigned: greeting header with weather/days-together, real Spark/Bet/Ritual/GameRoom routing, Nora secondary card, memory card, flirts section
+- Us page rebuilt: Been/Now/Ahead architecture with real data wired
+- 310 lines of dead code removed from dashboard
+- Timeline test data scrubbed
+
+4. **What must change going forward?**
+Before writing any new page or component, check how existing pages import shared dependencies (supabase, auth) and follow the same pattern. Never create a new client instance in a page component.
 
 ### Self-Review: 2026-04-22
 
@@ -625,21 +647,28 @@ Must be wrapped in Suspense boundary or build will fail.
 
 ## 21. NEXT SESSION PRIORITIES
 
-1. **Game Room redesign sprint** — Featured + Grid layout. Nora mode recommendations based on couple history. Story, Pitch, Rank, Plan, Memory now first-class cards needing visual identity (accent colors, taglines, icons locked in code but layout needs redesign).
+1. **Sprint B — Visual polish pass**
+   a. Game Room landing — mood fields, grain texture, geometric dots replacing emoji
+   b. Nora chat — remove cartoon avatar, warm palette, typography treatment
+   c. Profile — design system applied
+   d. Archive overlay (Been section) — visual redesign
+   e. Home flirts section — add GIF and movie/show cards (currently only song and prompt)
 
-2. **Game data scrub** — clear all test session data before real users touch the app.
+2. **Timeline improvements**
+   a. Delete button on timeline items — P2, pre-launch requirement
+   b. Back button routing — routes to Home instead of previous screen, P3
 
-3. **Cass as real tester** — all verification done solo with two accounts. Need genuine two-person experience to surface real UX issues. Schedule dedicated session with Cass.
+3. **Signal Registry Phase 1** — deferred to 50 real couples + 3 months data. Shadow mode validation required before surfacing to users. Three signals only: participation symmetry, engagement trend, repair after friction.
 
-4. **Push notification re-registration** — Cass's daily notifications not delivering. Stale subscriptions since March.
+4. **Nora onboarding voice** — earned disclosure framing for first conversation with new couple.
 
-5. **Memory Test unlock thresholds** — currently all 0. Raise before wider release.
+5. **Game data scrub** — timeline cleaned. Game session data (hot_take_answers, game_rounds etc) needs full audit and clean before wider release.
 
-6. **Nora voice — next pass** — route-level instructions wired for 9 routes. Next: evaluate verdicts in the wild with real couples and refine from what we see. Living document.
+6. **Cass as real tester** — all verification done solo. Need genuine two-person experience before wider release.
 
-7. **Tension Intelligence Arc Sprint 1** — tier 3 pre-game framing, signal logging, post-session soft CTA. Ready to design.
+7. **Push notification re-registration** — Cass's daily notifications not delivering.
 
-8. **Bet 401 on Today page** — pre-existing auth issue, non-blocking.
+8. **Memory Test unlock thresholds** — currently all 0, raise before wider release.
 
 ---
 
@@ -667,6 +696,11 @@ Must be wrapped in Suspense boundary or build will fail.
 - Orphaned session cleanup — full audit needed pre-launch
 - Codebase quality audit — pre-wider-release requirement
 - Game Room redesign — Featured + Grid layout, Nora mode recommendations
+- Timeline: delete button missing on timeline items
+- Timeline: back button routes to Home instead of previous screen
+- Archive overlay (Us/Been): visual redesign needed — Sprint B
+- Home flirts section: only shows song and prompt, GIF and movie/show cards missing
+- Today page: deleted, redirect in place. Weekly-reflection page: redirect in place.
 
 ---
 
