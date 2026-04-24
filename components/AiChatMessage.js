@@ -66,14 +66,16 @@ export default function AiChatMessage({ message, isTyping = false }) {
     return (
       <div className="flex items-start gap-3 mb-4">
         {/* AI Avatar */}
-        <img src="/nora-avatar.svg" alt="Nora" className="w-10 h-10 rounded-full flex-shrink-0 shadow-md" />
+        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(145deg, #1C1410, #2D3561)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C9A84C' }} />
+        </div>
 
         {/* Typing bubble */}
         <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-md max-w-[80%]">
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C4AA87', animation: 'bounce 1s infinite', animationDelay: '0ms' }}></div>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C4AA87', animation: 'bounce 1s infinite', animationDelay: '150ms' }}></div>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C4AA87', animation: 'bounce 1s infinite', animationDelay: '300ms' }}></div>
           </div>
         </div>
       </div>
@@ -84,17 +86,38 @@ export default function AiChatMessage({ message, isTyping = false }) {
     <div className={`flex items-start gap-3 mb-4 ${isUser ? 'flex-row-reverse' : ''}`}>
       {/* Avatar */}
       {!isUser && (
-        <img src="/nora-avatar.svg" alt="Nora" className="w-10 h-10 rounded-full flex-shrink-0 shadow-md" />
+        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(145deg, #1C1410, #2D3561)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C9A84C' }} />
+        </div>
       )}
 
       {/* Message bubble */}
       <div className={`max-w-[80%] ${isUser ? 'items-end' : 'items-start'}`}>
         <div
-          className={`rounded-2xl px-4 py-3 shadow-md ${
-            isUser
-              ? 'bg-gradient-to-r from-coral-500 to-coral-400 text-white rounded-tr-sm'
-              : 'bg-white text-gray-800 rounded-tl-sm'
-          }`}
+          style={isUser ? {
+            background: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 100%)',
+            borderRadius: '18px',
+            borderTopRightRadius: '4px',
+            padding: '12px 16px',
+            boxShadow: '0 1px 4px rgba(28,20,16,0.06)',
+            maxWidth: '85%',
+            fontFamily: 'DM Sans, sans-serif',
+            fontSize: '15px',
+            color: 'white',
+            lineHeight: 1.6,
+          } : {
+            background: 'white',
+            border: '1px solid #EDE4D8',
+            borderRadius: '18px',
+            borderTopLeftRadius: '4px',
+            padding: '12px 16px',
+            boxShadow: '0 1px 4px rgba(28,20,16,0.06)',
+            maxWidth: '85%',
+            fontFamily: 'DM Sans, sans-serif',
+            fontSize: '15px',
+            color: '#1C1410',
+            lineHeight: 1.6,
+          }}
         >
           {isUser ? (
             <p className="whitespace-pre-wrap">{message.content}</p>
