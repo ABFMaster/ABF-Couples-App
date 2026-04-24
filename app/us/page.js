@@ -1,547 +1,428 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@supabase/supabase-js'
 
-const TABS = {
-  all:        { label: 'All' },
-  movie:      { label: 'Movies' },
-  show:       { label: 'Shows' },
-  song:       { label: 'Songs' },
-  restaurant: { label: 'Restaurants' },
-  date_idea:  { label: 'Ideas' },
-}
-
-const TYPE_ICONS = {
-  movie:      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>,
-  show:       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>,
-  song:       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>,
-  restaurant: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>,
-  date_idea:  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
-}
-
-function relativeTime(dateStr) {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const days = Math.floor(diff / 86400000)
-  const hours = Math.floor(diff / 3600000)
-  const minutes = Math.floor(diff / 60000)
-  if (days > 6) return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  if (days > 0) return `${days}d ago`
-  if (hours > 0) return `${hours}h ago`
-  if (minutes > 0) return `${minutes}m ago`
-  return 'just now'
-}
-
-function ItemCard({ item, userId, userName, onToggleDone, onDelete }) {
-  const isOwner = item.user_id === userId
-  const icon = TYPE_ICONS[item.type]
-
-  return (
-    <div className={`bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden transition-opacity ${item.completed ? 'opacity-50' : ''}`}>
-      <div className="flex items-start gap-4 p-5">
-        {item.poster_url ? (
-          <img src={item.poster_url} alt={item.title} className="w-12 h-16 object-cover rounded-xl flex-shrink-0" />
-        ) : item.artwork_url ? (
-          <img src={item.artwork_url} alt={item.title} className="w-12 h-12 object-cover rounded-xl flex-shrink-0 mt-0.5" />
-        ) : (
-          <div className="w-12 h-12 rounded-xl bg-neutral-100 flex items-center justify-center flex-shrink-0 text-neutral-400">
-            {icon}
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <p className={`text-[15px] font-semibold text-neutral-900 leading-snug ${item.completed ? 'line-through text-neutral-400' : ''}`}>
-            {item.title}
-          </p>
-          {item.artist && <p className="text-[12px] text-neutral-400 mt-0.5 truncate">{item.artist}</p>}
-          {(item.year || item.rating) && (
-            <p className="text-[12px] text-neutral-400 mt-0.5">
-              {item.year}{item.year && item.rating ? ' · ' : ''}{item.rating ? `★ ${item.rating}/10` : ''}
-            </p>
-          )}
-          {item.streaming_url && (
-            <a href={item.streaming_url} target="_blank" rel="noopener noreferrer"
-               className="text-[12px] font-medium flex items-center gap-1 mt-1.5"
-               style={{ color: '#1DB954' }}
-               onClick={e => e.stopPropagation()}>
-              ▶ Spotify
-            </a>
-          )}
-          {item.note ? (
-            <p className="text-[12px] text-neutral-400 mt-1.5 italic">"{item.note}"</p>
-          ) : item.plot ? (
-            <p className="text-[12px] text-neutral-400 mt-1.5 leading-relaxed line-clamp-2">{item.plot}</p>
-          ) : null}
-          <p className="text-[11px] text-neutral-300 mt-2">{userName} · {relativeTime(item.created_at)}</p>
-        </div>
-        {isOwner && (
-          <button onClick={() => onDelete(item)} className="text-neutral-200 hover:text-red-400 transition-colors flex-shrink-0 p-1">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
-            </svg>
-          </button>
-        )}
-      </div>
-      <div className="border-t border-neutral-100">
-        {!item.completed ? (
-          <button onClick={() => onToggleDone(item)}
-            className="w-full py-3 text-[13px] font-medium text-neutral-400 hover:text-green-600 hover:bg-green-50 transition-all flex items-center justify-center gap-2">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            Mark as done
-          </button>
-        ) : (
-          <button onClick={() => onToggleDone(item)}
-            className="w-full py-3 text-[12px] text-neutral-300 hover:text-[#E8614D] transition-colors">
-            Undo
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function FeatureCard({ icon, title, status, action, href, router }) {
-  return (
-    <button
-      onClick={() => router.push(href)}
-      className="w-full bg-white rounded-2xl border border-neutral-200 shadow-sm p-5 flex items-center gap-4 active:scale-[0.99] transition-transform text-left"
-    >
-      <div className="w-11 h-11 rounded-xl bg-neutral-100 flex items-center justify-center flex-shrink-0 text-neutral-500">
-        {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[15px] font-semibold text-neutral-900 leading-snug">{title}</p>
-        <p className="text-[12px] text-neutral-400 mt-0.5 leading-snug">{status}</p>
-      </div>
-      <div className="flex items-center gap-1 flex-shrink-0">
-        <span className="text-[13px] font-semibold text-[#E8614D]">{action}</span>
-        <span className="text-[#E8614D] text-base leading-none">›</span>
-      </div>
-    </button>
-  )
-}
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+)
 
 export default function UsPage() {
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
   const [user, setUser] = useState(null)
-  const [items, setItems] = useState([])
-  const [tab, setTab] = useState('all')
-  const [userNames, setUserNames] = useState({})
+  const [couple, setCouple] = useState(null)
+  const [userName, setUserName] = useState('')
+  const [partnerName, setPartnerName] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [activeSection, setActiveSection] = useState('now')
 
-  // Feature hub state
+  // Been data
+  const [timelineEvents, setTimelineEvents] = useState([])
+  const [timelineLoading, setTimelineLoading] = useState(true)
+
+  // Now data
+  const [ritual, setRitual] = useState(null)
+  const [lastReflectionDays, setLastReflectionDays] = useState(null)
+  const [heroData, setHeroData] = useState(null)
+
+  // Ahead data
   const [nextDate, setNextDate] = useState(null)
   const [nextTrip, setNextTrip] = useState(null)
-  const [memoryCount, setMemoryCount] = useState(null)
-  const [lastReflectionDays, setLastReflectionDays] = useState(undefined) // undefined = not loaded, null = never
-  const [ritual, setRitual] = useState(undefined) // undefined=loading, null=none
-  const [userId2, setUserId2] = useState(null)
-  const [partnerName2, setPartnerName2] = useState('your partner')
 
-  const fetchData = useCallback(async () => {
-    try {
-      const { data: { user }, error } = await supabase.auth.getUser()
-      if (error || !user) { router.push('/login'); return }
-      setUser(user)
+  // Archive overlay
+  const [showArchive, setShowArchive] = useState(false)
+
+  useEffect(() => {
+    async function fetchAll() {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) { router.push('/login'); return }
+      setUser(authUser)
 
       const { data: coupleData } = await supabase
         .from('couples')
         .select('*')
-        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-        .maybeSingle()
+        .or(`user1_id.eq.${authUser.id},user2_id.eq.${authUser.id}`)
+        .single()
       if (!coupleData) { router.push('/connect'); return }
+      setCouple(coupleData)
 
-      const userIds = [coupleData.user1_id, coupleData.user2_id].filter(Boolean)
-      const partnerId2 = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id
-      setUserId2(user.id)
+      const partnerId = coupleData.user1_id === authUser.id ? coupleData.user2_id : coupleData.user1_id
+
       const { data: profiles } = await supabase
         .from('user_profiles')
         .select('user_id, display_name')
-        .in('user_id', userIds)
-      const nameMap = {}
-      for (const p of profiles || []) nameMap[p.user_id] = p.display_name || 'You'
-      setUserNames(nameMap)
+        .in('user_id', [authUser.id, partnerId])
+      if (profiles) {
+        const me = profiles.find(p => p.user_id === authUser.id)
+        const partner = profiles.find(p => p.user_id === partnerId)
+        if (me) setUserName(me.display_name || 'You')
+        if (partner) setPartnerName(partner.display_name || 'Your partner')
+      }
 
-      const now = new Date().toISOString()
       const cid = coupleData.id
 
-      await Promise.allSettled([
+      // Timeline events for Been
+      setTimelineLoading(true)
+      const { data: events } = await supabase
+        .from('timeline_events')
+        .select('id, title, description, event_date, event_type, created_at, created_by')
+        .eq('couple_id', cid)
+        .order('event_date', { ascending: false })
+        .limit(20)
+      setTimelineEvents(events || [])
+      setTimelineLoading(false)
 
-        // Shared items
-        (async () => {
-          const { data: itemsData } = await supabase
-            .from('shared_items')
-            .select('*')
-            .eq('couple_id', cid)
-            .order('created_at', { ascending: false })
-          setItems(itemsData || [])
-        })(),
+      // Ritual for Now
+      const { data: ritualData } = await supabase
+        .from('rituals')
+        .select('id, title, status, streak, proposed_by, partner_confirmed, needs_discussion')
+        .eq('couple_id', cid)
+        .neq('status', 'retired')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+      setRitual(ritualData || null)
 
-        // Next date (date_plans + custom_dates)
-        (async () => {
-          try {
-            const [{ data: planDates }, { data: customDates }] = await Promise.all([
-              supabase
-                .from('date_plans')
-                .select('id, title, date_time')
-                .eq('couple_id', cid)
-                .in('status', ['planned', 'approved'])
-                .gte('date_time', now)
-                .order('date_time', { ascending: true })
-                .limit(1),
-              supabase
-                .from('custom_dates')
-                .select('id, title, date_time')
-                .eq('couple_id', cid)
-                .in('status', ['planned', 'approved'])
-                .gte('date_time', now)
-                .order('date_time', { ascending: true })
-                .limit(1),
-            ])
-            const all = [
-              ...(planDates || []),
-              ...(customDates || []),
-            ].sort((a, b) => new Date(a.date_time) - new Date(b.date_time))
-            setNextDate(all[0] || null)
-          } catch { /* ignore */ }
-        })(),
+      // Last reflection for Now
+      const { data: reflections } = await supabase
+        .from('weekly_reflections')
+        .select('created_at')
+        .eq('couple_id', cid)
+        .order('created_at', { ascending: false })
+        .limit(1)
+      if (reflections?.[0]) {
+        const days = Math.floor((Date.now() - new Date(reflections[0].created_at).getTime()) / 86400000)
+        setLastReflectionDays(days)
+      }
 
-        // Next trip
-        (async () => {
-          try {
-            const { data } = await supabase
-              .from('trips')
-              .select('destination, start_date')
-              .eq('couple_id', cid)
-              .gte('start_date', now)
-              .order('start_date', { ascending: true })
-              .limit(1)
-              .maybeSingle()
-            setNextTrip(data || null)
-          } catch { /* ignore */ }
-        })(),
+      // Next date for Ahead
+      const { data: datePlans } = await supabase
+        .from('date_plans')
+        .select('id, title, date_time')
+        .eq('couple_id', cid)
+        .in('status', ['planned', 'approved'])
+        .gte('date_time', new Date().toISOString())
+        .order('date_time', { ascending: true })
+        .limit(1)
+      const { data: customDates } = await supabase
+        .from('custom_dates')
+        .select('id, title, date_time')
+        .eq('couple_id', cid)
+        .in('status', ['planned', 'approved'])
+        .gte('date_time', new Date().toISOString())
+        .order('date_time', { ascending: true })
+        .limit(1)
+      const allDates = [...(datePlans || []), ...(customDates || [])]
+        .sort((a, b) => new Date(a.date_time) - new Date(b.date_time))
+      setNextDate(allDates[0] || null)
 
-        // Memory count
-        (async () => {
-          try {
-            const { count } = await supabase
-              .from('timeline_events')
-              .select('id', { count: 'exact', head: true })
-              .eq('couple_id', cid)
-            setMemoryCount(count || 0)
-          } catch { /* ignore */ }
-        })(),
+      // Next trip for Ahead
+      const { data: trips } = await supabase
+        .from('trips')
+        .select('destination, start_date')
+        .eq('couple_id', cid)
+        .gte('start_date', new Date().toISOString())
+        .order('start_date', { ascending: true })
+        .limit(1)
+      setNextTrip(trips?.[0] || null)
 
-        // Ritual
-        (async () => {
-          try {
-            const { data } = await supabase
-              .from('rituals')
-              .select('id, title, status, streak, proposed_by, partner_confirmed, needs_discussion')
-              .eq('couple_id', cid)
-              .neq('status', 'retired')
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle()
-            setRitual(data || null)
-            if (data) {
-              const pid = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id
-              const { data: pProfile } = await supabase
-                .from('user_profiles')
-                .select('display_name')
-                .eq('user_id', pid)
-                .maybeSingle()
-              if (pProfile?.display_name) setPartnerName2(pProfile.display_name)
-            }
-          } catch {
-            setRitual(null)
-          }
-        })(),
+      // Nora weekly read for Now
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          const res = await fetch(`/api/dashboard/hero?userId=${authUser.id}&coupleId=${cid}&userName=${encodeURIComponent(userName || '')}&partnerName=${encodeURIComponent(partnerName || '')}`)
+          const data = await res.json()
+          if (data.message) setHeroData(data)
+        }
+      } catch {}
 
-        // Last weekly reflection
-        (async () => {
-          try {
-            const { data } = await supabase
-              .from('weekly_reflections')
-              .select('created_at')
-              .eq('couple_id', cid)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .maybeSingle()
-            if (data?.created_at) {
-              const days = Math.floor((Date.now() - new Date(data.created_at).getTime()) / 86400000)
-              setLastReflectionDays(days)
-            } else {
-              setLastReflectionDays(null)
-            }
-          } catch {
-            setLastReflectionDays(null)
-          }
-        })(),
-
-      ])
-
-      setLoading(false)
-    } catch (err) {
-      console.error('Us page error:', err)
       setLoading(false)
     }
-  }, [router])
+    fetchAll()
+  }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  if (loading) return (
+    <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#C4AA87', fontStyle: 'italic' }}>Loading...</p>
+    </div>
+  )
 
-  const handleToggleDone = async (item) => {
-    const newCompleted = !item.completed
-    const { data } = await supabase
-      .from('shared_items')
-      .update({ completed: newCompleted, completed_at: newCompleted ? new Date().toISOString() : null })
-      .eq('id', item.id)
-      .select()
-      .maybeSingle()
-    if (data) setItems(prev => prev.map(i => i.id === item.id ? data : i))
+  const todayName = new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long' })
+
+  // Been — separate permanent stones vs echoes
+  const permanentStones = timelineEvents.filter(e => e.event_type !== 'game_echo')
+  const echoes = timelineEvents.filter(e => e.event_type === 'game_echo')
+
+  // Mood colors per event type
+  const moodColors = {
+    'rabbit-hole': 'linear-gradient(135deg, #1C1B3A 0%, #2D3561 60%, #3D4878 100%)',
+    'hot-take': 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #D4956A 100%)',
+    'game': 'linear-gradient(135deg, #2D3561 0%, #4A3570 60%, #6B5B8A 100%)',
+    'custom': 'linear-gradient(135deg, #4A6B5A 0%, #7A8C7E 50%, #9BAA9E 100%)',
+    'default': 'linear-gradient(135deg, #6B5020 0%, #C9A84C 50%, #D4BA7A 100%)',
   }
 
-  const handleDelete = async (item) => {
-    await supabase.from('shared_items').delete().eq('id', item.id)
-    setItems(prev => prev.filter(i => i.id !== item.id))
-  }
-
-  const filtered = tab === 'all' ? items : items.filter(i => i.type === tab)
-  const active = filtered.filter(i => !i.completed)
-  const done = filtered.filter(i => i.completed)
-
-  // Feature hub status lines
-  const dateStatus = nextDate
-    ? `Next: ${nextDate.title}${nextDate.date_time ? ' on ' + new Date(nextDate.date_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}`
-    : 'No date planned yet'
-
-  const tripStatus = nextTrip
-    ? `${nextTrip.destination} coming up`
-    : 'No trips planned yet'
-
-  const timelineStatus = memoryCount === null
-    ? 'Loading…'
-    : memoryCount > 0
-      ? `${memoryCount} ${memoryCount === 1 ? 'memory' : 'memories'} together`
-      : 'No memories yet'
-
-  const ritualStatus = !ritual
-    ? (ritual === null ? 'Start your first ritual' : 'Loading…')
-    : ritual.needs_discussion
-      ? 'You flagged this for a conversation'
-      : ritual.status === 'pending' && ritual.proposed_by === userId2
-        ? `Waiting for ${partnerName2} to confirm`
-        : ritual.status === 'pending'
-          ? `${partnerName2} proposed a ritual`
-          : ritual.streak > 0
-            ? `${ritual.title} · ${ritual.streak} week${ritual.streak === 1 ? '' : 's'}`
-            : ritual.title || 'Active ritual'
-
-  const ritualAction = !ritual || ritual === undefined
-    ? 'Propose one'
-    : ritual.status === 'pending' && ritual.proposed_by !== userId2
-      ? 'Review'
-      : 'See ritual'
-
-  const reflectionStatus = lastReflectionDays === undefined
-    ? 'Loading…'
-    : lastReflectionDays === null
-      ? 'Never reflected together'
-      : lastReflectionDays === 0
-        ? 'Reflected today'
-        : `Last reflected ${lastReflectionDays} ${lastReflectionDays === 1 ? 'day' : 'days'} ago`
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F7F4EF] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-[#E8614D] border-t-transparent" />
-      </div>
-    )
+  const getMoodColor = (eventType) => moodColors[eventType] || moodColors.default
+  const getMoodLabel = (eventType) => {
+    const labels = { 'rabbit-hole': 'Rabbit Hole', 'hot-take': 'Hot Take', 'game': 'Game Room', 'custom': 'Your Timeline' }
+    return labels[eventType] || 'Memory'
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F4EF]">
+    <div style={{ minHeight: '100vh', background: '#FAF6F0', paddingBottom: '100px', fontFamily: 'DM Sans, sans-serif' }}>
 
-      {/* Header */}
-      <div className="px-6 pt-10 pb-2">
-        <p className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-1">Your shared life</p>
-        <div className="flex items-center justify-between">
-          <h1 className="text-[28px] text-neutral-900 leading-tight"
-              style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-            Us
-          </h1>
-          <button
-            onClick={() => router.push('/shared/add')}
-            className="min-h-[44px] px-4 bg-[#E8614D] text-white rounded-xl font-semibold text-[14px] flex items-center gap-2 active:scale-[0.98] transition-transform">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Add
-          </button>
+      {/* HEADER */}
+      <div style={{ padding: '48px 24px 0' }}>
+        <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.18em', color: '#8B7355', textTransform: 'uppercase', marginBottom: '3px' }}>Your Shared Life</div>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '44px', fontWeight: 300, color: '#1C1410', letterSpacing: '-0.02em', lineHeight: 1 }}>Us</div>
+          <button onClick={() => router.push('/shared/add')} style={{ fontSize: '11px', fontWeight: 500, color: '#8B7355', background: 'none', border: '1px solid #D9CBBA', padding: '6px 14px', borderRadius: '20px', cursor: 'pointer', letterSpacing: '0.06em' }}>+ Add</button>
         </div>
       </div>
 
-      {/* Feature hub — Do together */}
-      <div className="px-6 pt-5 pb-2">
-        <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
-          Do together
-        </div>
-        <div className="space-y-2">
-
-          <FeatureCard
-            router={router}
-            href="/dates"
-            title="Date Night"
-            status={dateStatus}
-            action="Plan a date"
-            icon={
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                <line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/>
-                <line x1="3" y1="10" x2="21" y2="10"/>
-              </svg>
-            }
-          />
-
-          <FeatureCard
-            router={router}
-            href="/trips"
-            title="Trips"
-            status={tripStatus}
-            action="Plan a trip"
-            icon={
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 11.9a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 5.37 5.37l.97-.97a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
-              </svg>
-            }
-          />
-
-          <FeatureCard
-            router={router}
-            href="/timeline"
-            title="Timeline"
-            status={timelineStatus}
-            action="Add a memory"
-            icon={
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5"/>
-                <polyline points="21 15 16 10 5 21"/>
-              </svg>
-            }
-          />
-
-          <FeatureCard
-            router={router}
-            href="/weekly-reflection"
-            title="Weekly Reflection"
-            status={reflectionStatus}
-            action="Reflect together"
-            icon={
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 20h9"/>
-                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-              </svg>
-            }
-          />
-
-          <FeatureCard
-            router={router}
-            href="/ritual"
-            title="The Ritual"
-            status={ritualStatus}
-            action={ritualAction}
-            icon={
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
-                <path d="M12 6v6l4 2"/>
-              </svg>
-            }
-          />
-
-          <FeatureCard
-            router={router}
-            href="/game-room"
-            title="The Game Room"
-            status="Saturday · Play together"
-            action="Let's play"
-            icon={
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="7" width="20" height="15" rx="2" ry="2"/>
-                <polyline points="17 2 12 7 7 2"/>
-                <circle cx="9" cy="14" r="1" fill="currentColor"/>
-                <circle cx="15" cy="14" r="1" fill="currentColor"/>
-              </svg>
-            }
-          />
-
-        </div>
-      </div>
-
-      {/* Your list section label */}
-      <div className="px-6 pt-6 pb-1">
-        <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 px-1">
-          Your list
-        </div>
-      </div>
-
-      {/* Filter tabs */}
-      <div className="sticky top-0 z-30 bg-[#F7F4EF] px-6 py-3">
-        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
-          {Object.entries(TABS).map(([key, { label }]) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`flex-shrink-0 px-4 py-2 rounded-full text-[13px] font-semibold transition-all whitespace-nowrap ${
-                tab === key
-                  ? 'bg-neutral-900 text-white'
-                  : 'bg-white border border-neutral-200 text-neutral-500'
-              }`}>
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="px-6 pb-32 space-y-3 mt-2">
-        {active.length === 0 && done.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-10 text-center mt-4">
-            <p className="text-[18px] text-neutral-900 mb-2"
-               style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-              Nothing here yet
-            </p>
-            <p className="text-[13px] text-neutral-400 mb-6 max-w-xs mx-auto leading-relaxed">
-              Add movies, shows, songs, restaurants, and date ideas you both want to try.
-            </p>
-            <button
-              onClick={() => router.push('/shared/add')}
-              className="min-h-[44px] px-6 bg-[#E8614D] text-white rounded-xl font-semibold text-[14px] active:scale-[0.98] transition-transform">
-              Add something →
-            </button>
+      {/* NAV */}
+      <div style={{ display: 'flex', alignItems: 'center', padding: '20px 24px 0', borderBottom: '1px solid #EDE4D8', gap: 0 }}>
+        {['been', 'now', 'ahead'].map((section, i) => (
+          <div key={section} style={{ flex: 1, paddingBottom: '12px', textAlign: 'center', fontSize: '11px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: activeSection === section ? '#1C1410' : '#C4AA87', cursor: 'pointer', position: 'relative', transition: 'color 0.25s' }}
+            onClick={() => setActiveSection(section)}>
+            {section === 'been' ? '← Been' : section === 'now' ? 'Now' : 'Ahead →'}
+            {activeSection === section && (
+              <div style={{ position: 'absolute', bottom: '-1px', left: '15%', right: '15%', height: '2px', background: '#1C1410' }} />
+            )}
           </div>
-        ) : (
-          <>
-            {active.map(item => (
-              <ItemCard key={item.id} item={item} userId={user?.id}
-                userName={userNames[item.user_id] || 'You'}
-                onToggleDone={handleToggleDone} onDelete={handleDelete} />
-            ))}
-            {done.length > 0 && (
-              <div className="pt-4">
-                <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
-                  Done
+        ))}
+      </div>
+
+      {/* BEEN SECTION */}
+      {activeSection === 'been' && (
+        <div style={{ padding: '24px 20px' }}>
+
+          {/* Nora callback — placeholder for now */}
+          <div style={{ borderRadius: '18px', overflow: 'hidden', marginBottom: '12px' }}>
+            <div style={{ height: '72px', background: 'linear-gradient(135deg, #6B5020 0%, #C9A84C 50%, #D4BA7A 100%)', position: 'relative', display: 'flex', alignItems: 'flex-end', padding: '12px 16px' }}>
+              <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>Nora is thinking about you</div>
+            </div>
+            <div style={{ background: 'white', padding: '16px 18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '6px' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C9A84C' }} />
+                <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C9A84C' }}>Nora surfaced this</div>
+              </div>
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#1C1410', lineHeight: 1.3, marginBottom: '5px' }}>Your shared life is being written</div>
+              <div style={{ fontSize: '12px', fontStyle: 'italic', color: '#8B7355', lineHeight: 1.55 }}>Every answer, every game, every moment you save — Nora is paying attention. This is where it lives.</div>
+            </div>
+          </div>
+
+          {/* Permanent stones */}
+          {timelineLoading ? (
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+              <p style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic', color: '#C4AA87', fontSize: '16px' }}>Loading your timeline...</p>
+            </div>
+          ) : permanentStones.length === 0 ? (
+            <div style={{ background: 'white', borderRadius: '18px', padding: '24px 20px', textAlign: 'center', marginBottom: '12px', border: '1px solid #EDE4D8' }}>
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: '#1C1410', marginBottom: '8px' }}>Nothing saved yet</div>
+              <div style={{ fontSize: '13px', color: '#8B7355', marginBottom: '16px' }}>Your first memories are waiting to be made.</div>
+              <button onClick={() => router.push('/timeline')} style={{ fontSize: '12px', color: '#8B7355', background: 'none', border: '1px solid #D9CBBA', padding: '8px 18px', borderRadius: '20px', cursor: 'pointer' }}>Add a memory →</button>
+            </div>
+          ) : (
+            permanentStones.slice(0, 3).map(event => (
+              <div key={event.id} style={{ borderRadius: '18px', overflow: 'hidden', marginBottom: '12px', boxShadow: '0 2px 12px rgba(28,20,16,0.08)' }} onClick={() => router.push('/timeline')}>
+                <div style={{ height: '80px', background: getMoodColor(event.event_type), position: 'relative', display: 'flex', alignItems: 'flex-end', padding: '12px 16px', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.12)', padding: '3px 9px', borderRadius: '20px' }}>{getMoodLabel(event.event_type)}</div>
+                  <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.9)', background: 'rgba(255,255,255,0.15)', padding: '3px 9px', borderRadius: '20px' }}>Saved ✦</div>
                 </div>
-                <div className="space-y-3">
-                  {done.map(item => (
-                    <ItemCard key={item.id} item={item} userId={user?.id}
-                      userName={userNames[item.user_id] || 'You'}
-                      onToggleDone={handleToggleDone} onDelete={handleDelete} />
-                  ))}
+                <div style={{ background: 'white', padding: '16px 18px' }}>
+                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 400, color: '#1C1410', lineHeight: 1.2, marginBottom: '6px' }}>{event.title}</div>
+                  {event.description && <div style={{ fontSize: '12px', fontStyle: 'italic', color: '#8B7355', lineHeight: 1.55, marginBottom: '6px' }}>{event.description.slice(0, 120)}{event.description.length > 120 ? '...' : ''}</div>}
+                  <div style={{ fontSize: '10px', color: '#C4AA87' }}>{event.event_date ? new Date(event.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}</div>
                 </div>
               </div>
+            ))
+          )}
+
+          {/* Divider */}
+          {permanentStones.length > 3 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '8px 0 16px' }}>
+              <div style={{ flex: 1, height: '1px', background: '#EDE4D8' }} />
+              <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87' }}>Still breathing</div>
+              <div style={{ flex: 1, height: '1px', background: '#EDE4D8' }} />
+            </div>
+          )}
+
+          {/* Archive link */}
+          <div onClick={() => setShowArchive(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px', fontSize: '12px', color: '#8B7355', cursor: 'pointer', border: '1px solid #EDE4D8', borderRadius: '14px', marginTop: '4px' }}>
+            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#D9CBBA' }} />
+            <span>Everything you've built together →</span>
+          </div>
+        </div>
+      )}
+
+      {/* NOW SECTION */}
+      {activeSection === 'now' && (
+        <div style={{ padding: '24px 20px' }}>
+
+          {/* Nora weekly read */}
+          <div style={{ background: 'linear-gradient(145deg, #1C1410 0%, #2D3561 100%)', borderRadius: '20px', padding: '26px 22px', marginBottom: '14px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(201,168,76,0.07)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C9A84C' }} />
+              <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C9A84C' }}>Nora · This week</div>
+            </div>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, fontStyle: 'italic', color: 'white', lineHeight: 1.5 }}>
+              {heroData?.message || 'Nora is thinking about you two. Check back soon.'}
+            </div>
+          </div>
+
+          {/* Ritual card */}
+          <div style={{ background: 'white', borderRadius: '14px', padding: '16px', marginBottom: '10px', boxShadow: '0 1px 4px rgba(28,20,16,0.05)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} onClick={() => router.push('/ritual')}>
+            <div>
+              <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '3px' }}>
+                {todayName === 'Friday' ? 'Today' : 'Friday'} · The Ritual
+              </div>
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#1C1410' }}>
+                {ritual?.title || 'No ritual set yet'}
+              </div>
+              {ritual?.streak > 0 && (
+                <div style={{ fontSize: '11px', color: '#7A8C7E', marginTop: '2px' }}>{ritual.streak} week streak</div>
+              )}
+            </div>
+            <div style={{ fontSize: '11px', fontWeight: 500, color: '#2D3561', border: '1px solid #2D3561', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+              {todayName === 'Friday' ? 'Do it →' : 'See ritual'}
+            </div>
+          </div>
+
+          {/* Weekly reflection */}
+          <div style={{ background: 'white', borderRadius: '14px', padding: '14px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(28,20,16,0.05)', cursor: 'pointer' }} onClick={() => router.push('/weekly-reflection')}>
+            <div>
+              <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '2px' }}>Sunday · Weekly Reflection</div>
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: '#1C1410' }}>
+                {lastReflectionDays === null ? 'Not started yet' : lastReflectionDays < 7 ? `${lastReflectionDays} days ago` : 'Ready for a new one'}
+              </div>
+            </div>
+            <div style={{ fontSize: '11px', fontWeight: 500, color: '#2D3561', border: '1px solid #2D3561', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap' }}>Reflect →</div>
+          </div>
+
+          {/* Game Room suggestion */}
+          <div style={{ background: 'white', borderRadius: '14px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(28,20,16,0.05)', cursor: 'pointer' }} onClick={() => router.push('/game-room')}>
+            <div>
+              <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '2px' }}>Saturday · Game Room</div>
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: '#1C1410' }}>Nora suggests: Rank It</div>
+            </div>
+            <div style={{ fontSize: '11px', fontWeight: 500, color: '#2D3561', border: '1px solid #2D3561', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap' }}>Let's play</div>
+          </div>
+        </div>
+      )}
+
+      {/* AHEAD SECTION */}
+      {activeSection === 'ahead' && (
+        <div style={{ padding: '24px 20px' }}>
+
+          {/* Date Night featured card */}
+          <div style={{ background: 'white', borderRadius: '18px', overflow: 'hidden', marginBottom: '14px', boxShadow: '0 2px 10px rgba(28,20,16,0.07)' }}>
+            <div style={{ height: '60px', background: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 100%)', display: 'flex', alignItems: 'flex-end', padding: '10px 16px' }}>
+              <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.8)' }}>Date Night</div>
+            </div>
+            <div style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: '#1C1410', marginBottom: '4px' }}>
+                  {nextDate ? nextDate.title : 'Plan your next date'}
+                </div>
+                <div style={{ fontSize: '12px', color: '#8B7355' }}>
+                  {nextDate ? new Date(nextDate.date_time).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) : 'Nothing planned yet'}
+                </div>
+              </div>
+              <button onClick={() => router.push('/dates')} style={{ fontSize: '11px', fontWeight: 500, color: '#2D3561', border: '1px solid #2D3561', padding: '8px 16px', borderRadius: '20px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                {nextDate ? 'See plan →' : 'Plan one →'}
+              </button>
+            </div>
+          </div>
+
+          {/* Divider — Building */}
+          <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '12px', display: 'block' }}>Building</div>
+
+          {/* Trip if exists */}
+          {nextTrip ? (
+            <div style={{ background: 'white', borderRadius: '18px', padding: '20px', marginBottom: '12px', boxShadow: '0 2px 10px rgba(28,20,16,0.07)', borderLeft: '3px solid #C4714A' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '9px', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '20px', marginBottom: '10px', background: 'rgba(196,113,74,0.08)', color: '#C4714A' }}>
+                <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'currentColor' }} />
+                Building · Travel
+              </div>
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', color: '#1C1410', marginBottom: '5px' }}>{nextTrip.destination}</div>
+              <div style={{ fontSize: '12px', color: '#8B7355' }}>{new Date(nextTrip.start_date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
+            </div>
+          ) : (
+            <div style={{ background: 'rgba(250,246,240,0.7)', border: '1px dashed #D9CBBA', borderRadius: '18px', padding: '20px', marginBottom: '12px', textAlign: 'center', cursor: 'pointer' }} onClick={() => router.push('/trips')}>
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#C4AA87', marginBottom: '6px' }}>Start a project together</div>
+              <div style={{ fontSize: '12px', color: '#C4AA87' }}>A trip, a goal, something to build toward →</div>
+            </div>
+          )}
+
+          {/* Divider — Ideas */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '8px 0 16px' }}>
+            <div style={{ flex: 1, height: '1px', background: '#EDE4D8' }} />
+            <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', whiteSpace: 'nowrap' }}>Ideas — no commitment yet</div>
+            <div style={{ flex: 1, height: '1px', background: '#EDE4D8' }} />
+          </div>
+
+          {/* Category buckets */}
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', marginBottom: '16px' }}>
+            {[
+              { label: 'Travel', color: '#C4714A' },
+              { label: 'Watch', color: '#5A6B8A' },
+              { label: 'Eat', color: '#C9A84C' },
+              { label: 'Listen', color: '#7A8C7E' },
+              { label: 'Do', color: '#6B5B8A' },
+            ].map(cat => (
+              <div key={cat.label} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '11px', fontWeight: 500, color: '#8B7355', background: 'white', border: '1px solid #D9CBBA', padding: '7px 14px', borderRadius: '20px', whiteSpace: 'nowrap', cursor: 'pointer', boxShadow: '0 1px 3px rgba(28,20,16,0.04)' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: cat.color, flexShrink: 0 }} />
+                {cat.label}
+              </div>
+            ))}
+          </div>
+
+          {/* Empty ideas state */}
+          <div style={{ background: 'rgba(250,246,240,0.7)', border: '1px dashed #D9CBBA', borderRadius: '14px', padding: '20px', textAlign: 'center', marginBottom: '14px' }}>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#C4AA87', marginBottom: '6px' }}>No ideas yet</div>
+            <div style={{ fontSize: '12px', color: '#C4AA87' }}>Add movies, restaurants, trips, and more</div>
+          </div>
+
+          <button onClick={() => router.push('/shared/add')} style={{ width: '100%', padding: '13px', background: 'none', border: '1px dashed #D9CBBA', borderRadius: '14px', fontSize: '12px', color: '#8B7355', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+            + Add an idea
+          </button>
+        </div>
+      )}
+
+      {/* ARCHIVE OVERLAY */}
+      {showArchive && (
+        <div style={{ position: 'fixed', inset: 0, background: '#FAF6F0', zIndex: 100, overflowY: 'auto', maxWidth: '430px', margin: '0 auto' }}>
+          <div style={{ padding: '52px 24px 16px', borderBottom: '1px solid #EDE4D8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300 }}>Everything</div>
+            <button onClick={() => setShowArchive(false)} style={{ fontSize: '12px', color: '#8B7355', background: 'none', border: '1px solid #D9CBBA', padding: '6px 14px', borderRadius: '20px', cursor: 'pointer' }}>← Back</button>
+          </div>
+          <div style={{ padding: '20px 24px 40px' }}>
+            {timelineEvents.map(event => (
+              <div key={event.id} style={{ display: 'flex', gap: '12px', padding: '14px 0', borderBottom: '1px solid #EDE4D8', alignItems: 'flex-start' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: getMoodColor(event.event_type), flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '2px' }}>{getMoodLabel(event.event_type)}</div>
+                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: '#1C1410', marginBottom: '2px', lineHeight: 1.2 }}>{event.title}</div>
+                  {event.description && <div style={{ fontSize: '11px', color: '#8B7355', fontStyle: 'italic', lineHeight: 1.5 }}>{event.description.slice(0, 80)}{event.description.length > 80 ? '...' : ''}</div>}
+                </div>
+                <div style={{ fontSize: '10px', color: '#C4AA87', flexShrink: 0, paddingTop: '2px' }}>
+                  {event.event_date ? new Date(event.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
+                </div>
+              </div>
+            ))}
+            {timelineEvents.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                <p style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic', color: '#C4AA87', fontSize: '18px' }}>Nothing saved yet. Your story is just beginning.</p>
+              </div>
             )}
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
