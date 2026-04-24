@@ -143,7 +143,7 @@ function NotificationRow({ label, value, onChange }) {
       <span className="text-[13px] text-neutral-500 font-medium">{label}</span>
       <button
         onClick={() => onChange(!value)}
-        className={`w-11 h-6 rounded-full transition-colors relative ${value ? 'bg-[#E8614D]' : 'bg-neutral-200'}`}
+        className={`w-11 h-6 rounded-full transition-colors relative ${value ? 'bg-[#C4714A]' : 'bg-neutral-200'}`}
       >
         <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${value ? 'translate-x-5' : 'translate-x-0.5'}`} />
       </button>
@@ -342,21 +342,21 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F7F4EF] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-[#E8614D] border-t-transparent" />
+      <div className="min-h-screen bg-[#FAF6F0] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-[#C4714A] border-t-transparent" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F4EF]">
+    <div className="min-h-screen bg-[#FAF6F0]">
       <div className="px-6 pt-10 pb-32 space-y-8">
 
         {/* Header */}
         <div>
-          <p className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-1">Your account</p>
+          <p className="font-bold mb-1" style={{ color: '#8B7355', letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: '10px', fontFamily: 'DM Sans, sans-serif' }}>Your account</p>
           <h1 className="text-[28px] text-neutral-900 leading-tight"
-              style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
+              style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 400 }}>
             {displayName || 'Profile'}
           </h1>
           {daysTogether > 0 && (
@@ -367,7 +367,7 @@ export default function ProfilePage() {
         {/* SECTION 1 — YOUR INFO */}
         <section>
           <SectionLabel>You</SectionLabel>
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm px-5">
+          <div className="bg-white rounded-2xl shadow-sm px-5" style={{ border: '1px solid #EDE4D8' }}>
             <InfoRow label="Name" value={displayName} placeholder="Your name" onChange={setDisplayName} />
             <InfoRow label="Birthday" value={birthday} type="date" placeholder="mm/dd/yyyy" onChange={setBirthday} />
             <InfoRow label="Anniversary" value={anniversary} type="date" placeholder="mm/dd/yyyy" onChange={setAnniversary} />
@@ -376,7 +376,7 @@ export default function ProfilePage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full mt-3 min-h-[48px] bg-[#E8614D] text-white rounded-xl font-semibold text-[15px] active:scale-[0.98] transition-transform disabled:opacity-50"
+            className="w-full mt-3 min-h-[48px] bg-[#C4714A] text-white rounded-xl font-semibold text-[15px] active:scale-[0.98] transition-transform disabled:opacity-50"
           >
             {saved ? 'Saved ✓' : saving ? 'Saving…' : 'Save changes'}
           </button>
@@ -385,7 +385,7 @@ export default function ProfilePage() {
         {/* SECTION 2 — WHO YOU ARE */}
         <section>
           <SectionLabel>Who you are</SectionLabel>
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm px-5">
+          <div className="bg-white rounded-2xl shadow-sm px-5" style={{ border: '1px solid #EDE4D8' }}>
             <StylePill label="Attachment style" value={ATTACHMENT_LABELS[attachmentStyle] || attachmentStyle} />
             <StylePill label="Conflict style" value={CONFLICT_STYLE_LABELS[conflictStyle] || conflictStyle} />
             <StylePill label="Love language" value={LOVE_LANGUAGE_LABELS[loveLanguage] || loveLanguage} />
@@ -393,7 +393,7 @@ export default function ProfilePage() {
               <div className="py-3.5">
                 <button
                   onClick={() => router.push('/profile/assessment')}
-                  className="text-[13px] font-semibold text-[#E8614D]"
+                  className="text-[13px] font-semibold text-[#C4714A]"
                 >
                   Complete your assessment →
                 </button>
@@ -415,7 +415,7 @@ export default function ProfilePage() {
         {partnerName && (
           <section>
             <SectionLabel>{partnerName}</SectionLabel>
-            <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm px-5">
+            <div className="bg-white rounded-2xl shadow-sm px-5" style={{ border: '1px solid #EDE4D8' }}>
               <StylePill label="Attachment style" value={ATTACHMENT_LABELS[partnerAttachment] || partnerAttachment} />
               <StylePill label="Conflict style" value={CONFLICT_STYLE_LABELS[partnerConflict] || partnerConflict} />
               <StylePill label="Love language" value={LOVE_LANGUAGE_LABELS[partnerLoveLanguage] || partnerLoveLanguage} />
@@ -435,7 +435,7 @@ export default function ProfilePage() {
           <SectionLabel>Your preferences</SectionLabel>
 
           {/* Check-in time */}
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm px-5 mb-3">
+          <div className="bg-white rounded-2xl shadow-sm px-5 mb-3" style={{ border: '1px solid #EDE4D8' }}>
             <div className="py-3.5 border-b border-neutral-100">
               <p className="text-[13px] text-neutral-500 font-medium mb-3">Best time to check in</p>
               <div className="flex gap-2 flex-wrap">
@@ -507,7 +507,7 @@ export default function ProfilePage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full mt-1 min-h-[48px] bg-[#E8614D] text-white rounded-xl font-semibold text-[15px] active:scale-[0.98] transition-transform disabled:opacity-50"
+            className="w-full mt-1 min-h-[48px] bg-[#C4714A] text-white rounded-xl font-semibold text-[15px] active:scale-[0.98] transition-transform disabled:opacity-50"
           >
             {saved ? 'Saved ✓' : saving ? 'Saving…' : 'Save changes'}
           </button>
@@ -516,7 +516,7 @@ export default function ProfilePage() {
         {/* SECTION 5 — NOTIFICATIONS */}
         <section>
           <SectionLabel>Notifications</SectionLabel>
-          <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm px-5">
+          <div className="bg-white rounded-2xl shadow-sm px-5" style={{ border: '1px solid #EDE4D8' }}>
             <NotificationRow
               label="Check-in reminder"
               value={notifications.checkin_reminder}
@@ -544,7 +544,8 @@ export default function ProfilePage() {
         <section>
           <button
             onClick={handleSignOut}
-            className="w-full min-h-[48px] bg-white border border-neutral-200 rounded-xl font-semibold text-[15px] text-neutral-500 active:scale-[0.98] transition-transform shadow-sm"
+            className="w-full min-h-[48px] bg-white rounded-xl font-semibold text-[15px] text-neutral-500 active:scale-[0.98] transition-transform shadow-sm"
+            style={{ border: '1px solid #EDE4D8' }}
           >
             Sign out
           </button>
