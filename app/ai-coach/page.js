@@ -324,47 +324,18 @@ function AiCoachContent() {
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-cream-50 to-purple-50">
       {/* Header */}
-      <div className="bg-white shadow-sm z-10 flex-shrink-0">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-coral-600 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-
-          <div className="flex items-center gap-2">
-            <img src="/nora-avatar.svg" alt="Nora" className="w-8 h-8 rounded-full flex-shrink-0" />
-            <div>
-              <h1 className="text-lg font-bold text-gray-800">Nora</h1>
-              {isPremium ? (
-                <p className="text-xs text-indigo-500 font-medium flex items-center gap-1">
-                  ✨ Premium — unlimited messages
-                </p>
-              ) : messagesRemaining <= 5 ? (
-                <p className="text-xs text-amber-600 font-medium">
-                  {messagesRemaining} {messagesRemaining === 1 ? 'message' : 'messages'} left this week
-                </p>
-              ) : (
-                <p className="text-xs text-gray-500">
-                  {messagesRemaining} messages left this week
-                </p>
-              )}
-            </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', background: '#FAF6F0', borderBottom: '1px solid #EDE4D8' }}>
+        <button onClick={() => router.push('/dashboard')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: '#8B7355', fontSize: '20px' }}>‹</button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#C9A84C' }} />
+            <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 300, color: '#1C1410', letterSpacing: '-0.01em' }}>Nora</span>
           </div>
-
-          <button
-            onClick={startNewConversation}
-            className="w-10 h-10 flex items-center justify-center text-gray-600 hover:text-coral-600 transition-colors"
-            title="New conversation"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
+          <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '10px', color: '#C4AA87', letterSpacing: '0.06em' }}>
+            {isPremium ? 'Unlimited messages' : `${messagesRemaining} messages left this week`}
+          </span>
         </div>
+        <button onClick={startNewConversation} style={{ background: 'none', border: '1px solid #D9CBBA', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: '#8B7355', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
       </div>
 
       {/* Messages Area */}
@@ -379,7 +350,7 @@ function AiCoachContent() {
                   <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-white/40">Nora</span>
                 </div>
                 <p className="text-white text-[17px] leading-[1.5] mb-5"
-                   style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
+                   style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 400 }}>
                   I've read both your profiles. I know what comes naturally to you two — and where it gets hard. Ready to talk about what I found?
                 </p>
                 <button
@@ -408,24 +379,17 @@ function AiCoachContent() {
 
           {/* Empty state / Welcome message */}
           {messages.length === 0 && (
-            <div className="text-center py-12">
-              <img src="/nora-avatar.svg" alt="Nora" className="w-20 h-20 rounded-full mx-auto mb-6 shadow-lg" />
-              <h2 className="text-2xl font-bold text-gray-800 mb-3">Hi, I'm Nora</h2>
-              <p className="text-gray-600 max-w-sm mx-auto mb-6">
-                I'm your relationship coach on ABF. Whether you want to talk through something, work on your connection, or just think out loud — I'm here.
+            <div style={{ textAlign: 'center', padding: '48px 24px 24px' }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'linear-gradient(145deg, #1C1410 0%, #2D3561 100%)', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#C9A84C' }} />
+              </div>
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300, color: '#1C1410', marginBottom: '10px' }}>Hi, I'm Nora.</div>
+              <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '14px', color: '#8B7355', maxWidth: '280px', margin: '0 auto 24px', lineHeight: 1.6 }}>
+                Your relationship coach on ABF. Talk through something, work on your connection, or just think out loud.
               </p>
-              <div className="flex flex-wrap justify-center gap-2 max-w-md mx-auto">
-                {[
-                  'How can I show appreciation?',
-                  'We had a disagreement...',
-                  'Date night ideas',
-                  'Communication tips',
-                ].map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    onClick={() => setInputMessage(suggestion)}
-                    className="px-4 py-2 bg-white rounded-full text-sm text-gray-700 hover:bg-cream-50 hover:text-coral-600 transition-colors shadow-sm"
-                  >
+              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px', maxWidth: '360px', margin: '0 auto' }}>
+                {['How can I show appreciation?', 'We had a disagreement...', 'Date night ideas', 'Communication tips'].map(suggestion => (
+                  <button key={suggestion} onClick={() => setInputMessage(suggestion)} style={{ padding: '8px 16px', background: 'white', border: '1px solid #EDE4D8', borderRadius: '20px', fontSize: '13px', color: '#8B7355', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
                     {suggestion}
                   </button>
                 ))}
@@ -437,8 +401,8 @@ function AiCoachContent() {
           {proactivePrompt && !dismissedProactivePrompt && messages.length === 0 && (
             <div className="mb-6 bg-gradient-to-r from-cream-50 to-purple-50 rounded-2xl p-4 border border-coral-100 shadow-sm">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0">
-                  <span className="text-lg">💡</span>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(145deg, #1C1410, #2D3561)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#C9A84C' }} />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-800 mb-1">Based on your recent check-ins...</p>
