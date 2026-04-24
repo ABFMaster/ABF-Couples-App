@@ -465,7 +465,7 @@ function AiCoachContent() {
       )}
 
       {/* Input Area */}
-      <div className="bg-white border-t border-gray-200 px-4 py-3 flex-shrink-0">
+      <div className="flex-shrink-0" style={{ background: '#FAF6F0', borderTop: '1px solid #EDE4D8', padding: '12px 16px' }}>
         <div className="max-w-2xl mx-auto">
           <div className="flex items-end gap-2">
             <div className="flex-1 relative">
@@ -477,14 +477,15 @@ function AiCoachContent() {
                 placeholder={!isPremium && limitReached ? 'Weekly limit reached...' : 'Message Nora...'}
                 disabled={sending || (!isPremium && limitReached)}
                 rows={1}
-                className="w-full px-4 py-3 pr-12 border-2 border-coral-100 rounded-2xl focus:border-coral-400 focus:outline-none resize-none disabled:bg-gray-50 disabled:text-gray-400"
-                style={{ minHeight: '48px', maxHeight: '120px' }}
+                className="w-full px-4 py-3 pr-14 rounded-2xl resize-none disabled:text-gray-400 focus:outline-none"
+                style={{ minHeight: '48px', maxHeight: '120px', background: 'white', border: '1px solid #EDE4D8', fontFamily: 'DM Sans, sans-serif', fontSize: '15px', color: '#1C1410' }}
               />
             </div>
             <button
               onClick={handleSend}
               disabled={!inputMessage.trim() || sending || (!isPremium && limitReached)}
-              className="w-12 h-12 bg-gradient-to-r from-coral-400 to-indigo-400 text-white rounded-full flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:from-coral-500 hover:to-indigo-600 transition-all shadow-md"
+              className="flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(145deg, #1C1410 0%, #2D3561 100%)', color: 'white', border: 'none', cursor: 'pointer', flexShrink: 0 }}
             >
               {sending ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
