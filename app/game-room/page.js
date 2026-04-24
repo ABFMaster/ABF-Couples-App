@@ -35,40 +35,40 @@ const MODES = [
     id: 'story',
     name: 'Write a Story',
     tagline: 'Build a story together, one blind sentence at a time.',
-    accent: '#D97706',
-    accentLight: '#FFFBEB',
+    accent: '#7A8C7E',
+    accentLight: '#F0F4F1',
     available: true,
   },
   {
     id: 'pitch',
     name: 'The Pitch',
     tagline: 'Pitch an idea. Nora challenges it. Defend it.',
-    accent: '#D97706',
-    accentLight: '#FFFBEB',
+    accent: '#2D3561',
+    accentLight: '#EEEEF6',
     available: true,
   },
   {
     id: 'rank',
     name: 'Rank It',
     tagline: 'Rank independently. Reconcile together. See where you land.',
-    accent: '#D97706',
-    accentLight: '#FFFBEB',
+    accent: '#C9A84C',
+    accentLight: '#FBF6EC',
     available: true,
   },
   {
     id: 'plan',
     name: 'Make a Plan',
     tagline: 'Nora gives you something to plan. You build it together.',
-    accent: '#D97706',
-    accentLight: '#FFFBEB',
+    accent: '#C4714A',
+    accentLight: '#FBF0EB',
     available: true,
   },
   {
     id: 'memory',
     name: 'Memory Test',
     tagline: 'How well do you actually know each other?',
-    accent: '#D97706',
-    accentLight: '#FFFBEB',
+    accent: '#8B7355',
+    accentLight: '#F5F0EA',
     available: false,
   },
   {
@@ -85,8 +85,8 @@ const MODES = [
     name: 'The Hunt',
     tagline: 'Nora gives you a mission. You go do it.',
     description: 'Nora picks a mission built for you two — go somewhere, find something, make something happen. Leave the app. Come back with a story.',
-    accent: '#7C3AED',
-    accentLight: '#F5F3FF',
+    accent: '#4A6B8A',
+    accentLight: '#EEF2F6',
     available: true,
   },
 ]
@@ -148,7 +148,7 @@ export default function GameRoomPage() {
               The Game Room
             </h1>
             <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '15px', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', margin: 0 }}>
-              What kind of Saturday is it?
+              {`What kind of ${new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long' })} is it?`}
             </p>
           </div>
         </div>
