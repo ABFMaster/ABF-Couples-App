@@ -647,6 +647,8 @@ Must be wrapped in Suspense boundary or build will fail.
 
 ## 21. NEXT SESSION PRIORITIES
 
+> **SPRINT B IS THE ACTIVE SPRINT. Start next session by reading `app/game-room/page.js` in full — it is the first target file.**
+
 1. **Sprint B — Visual polish pass**
    a. Game Room landing — mood fields, grain texture, geometric dots replacing emoji
    b. Nora chat — remove cartoon avatar, warm palette, typography treatment

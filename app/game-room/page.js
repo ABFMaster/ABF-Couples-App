@@ -11,7 +11,6 @@ const MODES = [
     description: 'Nora sends you both down separate threads of the same topic. You find things, drop them, compare. She brings it to a payoff neither of you saw coming.',
     accent: '#4338CA',
     accentLight: '#EEF2FF',
-    icon: '🕳️',
     available: true,
   },
   {
@@ -21,7 +20,6 @@ const MODES = [
     description: 'Nora reads the room and fires opinions at both of you. See where you land.',
     accent: '#0D9488',
     accentLight: '#F0FDFA',
-    icon: '🔥',
     available: true,
   },
   {
@@ -31,7 +29,6 @@ const MODES = [
     description: 'Nora puts one of you in the hot seat. The other predicts what you\'d do. Five rounds. The gap is the game.',
     accent: '#0369A1',
     accentLight: '#E0F2FE',
-    icon: '📞',
     available: true,
   },
   {
@@ -40,7 +37,6 @@ const MODES = [
     tagline: 'Build a story together, one blind sentence at a time.',
     accent: '#D97706',
     accentLight: '#FFFBEB',
-    icon: '✍️',
     available: true,
   },
   {
@@ -49,7 +45,6 @@ const MODES = [
     tagline: 'Pitch an idea. Nora challenges it. Defend it.',
     accent: '#D97706',
     accentLight: '#FFFBEB',
-    icon: '💡',
     available: true,
   },
   {
@@ -58,7 +53,6 @@ const MODES = [
     tagline: 'Rank independently. Reconcile together. See where you land.',
     accent: '#D97706',
     accentLight: '#FFFBEB',
-    icon: '🏆',
     available: true,
   },
   {
@@ -67,7 +61,6 @@ const MODES = [
     tagline: 'Nora gives you something to plan. You build it together.',
     accent: '#D97706',
     accentLight: '#FFFBEB',
-    icon: '🗺️',
     available: true,
   },
   {
@@ -76,7 +69,6 @@ const MODES = [
     tagline: 'How well do you actually know each other?',
     accent: '#D97706',
     accentLight: '#FFFBEB',
-    icon: '🔒',
     available: false,
   },
   {
@@ -86,7 +78,6 @@ const MODES = [
     description: 'Nora picks a moment from your relationship history. You stage it again.',
     accent: '#E11D48',
     accentLight: '#FFF1F2',
-    icon: '🎬',
     available: false,
   },
   {
@@ -96,7 +87,6 @@ const MODES = [
     description: 'Nora picks a mission built for you two — go somewhere, find something, make something happen. Leave the app. Come back with a story.',
     accent: '#7C3AED',
     accentLight: '#F5F3FF',
-    icon: '🗺️',
     available: true,
   },
 ]
@@ -153,11 +143,11 @@ export default function GameRoomPage() {
           <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
           <div style={{ position: 'absolute', bottom: '-30px', left: '30px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
           <div style={{ position: 'relative' }}>
-            <p style={{ fontSize: '11px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', margin: '0 0 8px' }}>Saturday</p>
-            <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '32px', fontWeight: 400, color: '#FFFFFF', margin: '0 0 8px', lineHeight: 1.2 }}>
+            <p style={{ fontSize: '11px', letterSpacing: '0.2em', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', margin: '0 0 8px' }}>{new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long' })}</p>
+            <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '32px', fontWeight: 400, color: '#FFFFFF', margin: '0 0 8px', lineHeight: 1.2 }}>
               The Game Room
             </h1>
-            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', margin: 0 }}>
+            <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '15px', color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', margin: 0 }}>
               What kind of Saturday is it?
             </p>
           </div>
@@ -184,24 +174,14 @@ export default function GameRoomPage() {
               }}
             >
               {/* Icon */}
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '14px',
-                background: mode.accentLight,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '22px',
-                flexShrink: 0,
-              }}>
-                {mode.icon}
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: mode.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 18, height: 18, borderRadius: 4, background: mode.accent, opacity: 0.85 }} />
               </div>
 
               {/* Content */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '18px', fontWeight: 400, color: '#1A1A1A', margin: 0 }}>
+                  <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '18px', fontWeight: 400, color: '#1A1A1A', margin: 0 }}>
                     {mode.name}
                   </p>
                   {!mode.available && (
