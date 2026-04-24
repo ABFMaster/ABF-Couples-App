@@ -545,3 +545,40 @@ Backlogged. Currently text labels + placeholder geometric shapes. Custom icons n
 ### WORTH READING — deferred removal
 *Added: 2026-04-24*
 Removed from app. Reintroduce when content pipeline is robust. Nora can surface reading contextually in conversation in the meantime — "I came across something that made me think of you two" as a natural Nora touch rather than a dedicated tab.
+
+---
+
+## BACKLOG ADDITIONS — 2026-04-24 (merged from legacy docs)
+
+## Pre-Launch Requirements (not yet in active backlog)
+- Security audit — external, required before beta launch
+- Privacy Policy — lawyer review, GDPR/CCPA compliance required before wider release
+- Google Maps API migration — deprecated API in use, was flagged March 2025, needs resolution
+- individual_profiles table — redundant table, 5 files, 9 references. Needs migration sprint before drop.
+
+## Monetization (documented for future sprint)
+- Premium Tier 1 — $9.99/mo (features TBD)
+- Premium Tier 2 — $14.99/mo (features TBD)
+- Spotify Affiliate — $7.35/signup via sovrn.com
+- Apple Music Affiliate — 7% commission
+
+## Analytics (decision pending)
+- Analytics platform decision — PostHog, Plausible, or Mixpanel. Not yet chosen or implemented.
+
+## Active Bugs (not yet in session_handoff Known Issues)
+- Giphy API — beta key in use, needs upgrade to production key before wider release
+- Conflict style schema mismatch — DB allows talk_immediately/need_space/write_it_out/avoid, profile data uses validator/avoider. Needs reconciliation.
+- PWA icon-192.png — missing, harmless 404 but should be fixed before wider release
+
+---
+
+## SUCCESS METRICS (pre-launch KPIs)
+
+## Success Metrics (pre-launch KPIs)
+- Weekly active couples (primary engagement metric)
+- Check-in completion rate (Spark + Bet)
+- Flirts sent per couple per week
+- Timeline events added per couple
+- Date nights planned per couple
+- 4-week retention rate
+- 12-week retention rate
