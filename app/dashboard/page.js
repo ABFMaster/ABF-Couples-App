@@ -3,99 +3,39 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { getTodayString } from '@/lib/dates'
 import FlirtSheet from '@/components/FlirtSheet'
 import SparkCard from '@/components/SparkCard'
 import BetCard from '@/components/BetCard'
 import RitualCard from '@/components/RitualCard'
-
-// ── CONSTANTS ────────────────────────────────────────────────────────────────
-
-const ITEM_TYPES = {
-  movie:      { emoji: '🎬', label: 'Movie' },
-  show:       { emoji: '📺', label: 'Show' },
-  song:       { emoji: '🎵', label: 'Song' },
-  restaurant: { emoji: '🍽️', label: 'Restaurant' },
-  date_idea:  { emoji: '💡', label: 'Date Idea' },
-}
-
-// ── HELPERS ──────────────────────────────────────────────────────────────────
-
-function getGreetingWord() {
-  const h = new Date().getHours()
-  if (h < 12) return 'morning'
-  if (h < 17) return 'afternoon'
-  return 'evening'
-}
-
-function getDaysUntil(dateStr) {
-  if (!dateStr) return null
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const target = new Date(dateStr)
-  target.setHours(0, 0, 0, 0)
-  const diff = Math.round((target - today) / 86400000)
-  return diff
-}
-
-function getDateHype(daysUntil, title, hypeLine) {
-  const emoji = daysUntil === 0 ? '🔥' : daysUntil === 1 ? '😍' : daysUntil <= 3 ? '🎉' : '💕'
-  if (hypeLine) return { emoji, text: hypeLine }
-  if (daysUntil === 0) return { emoji: '🔥', text: `Tonight is the night — ${title}!` }
-  if (daysUntil === 1) return { emoji: '😍', text: `Tomorrow! ${title} is almost here` }
-  if (daysUntil <= 3)  return { emoji: '🎉', text: `${title} in ${daysUntil} days — get excited!` }
-  if (daysUntil <= 7)  return { emoji: '💕', text: `${title} coming up in ${daysUntil} days` }
-  return { emoji: '🗓️', text: `Something to look forward to — ${title}` }
-}
 
 // ── MAIN DASHBOARD ───────────────────────────────────────────────────────────
 
 export default function Dashboard() {
   const router = useRouter()
 
-  const [loading, setLoading]                   = useState(true)
-  const [user, setUser]                         = useState(null)
-  const [userName, setUserName]                 = useState('there')
-  const [couple, setCouple]                     = useState(null)
-  const [partnerName, setPartnerName]           = useState('your partner')
-  const [showCouplesDebrief, setShowCouplesDebrief] = useState(false)
+  const [loading, setLoading]         = useState(true)
+  const [user, setUser]               = useState(null)
+  const [userName, setUserName]       = useState('there')
+  const [couple, setCouple]           = useState(null)
+  const [partnerName, setPartnerName] = useState('your partner')
   const [flirtSheetOpen, setFlirtSheetOpen] = useState(false)
-  const [partnerId, setPartnerId] = useState(null)
-  const [hasPartner, setHasPartner]             = useState(false)
-  const [connectCode, setConnectCode]           = useState(null)
-  const [inviteDismissed, setInviteDismissed]   = useState(true)
-  const [codeCopied, setCodeCopied]             = useState(false)
+  const [partnerId, setPartnerId]     = useState(null)
+  const [daysTogether, setDaysTogether] = useState(0)
 
-  const [healthScore, setHealthScore]           = useState(null)
-  const [streak, setStreak]                     = useState(0)
-  const [flirtsThisWeek, setFlirtsThisWeek]     = useState(0)
-  const [daysTogether, setDaysTogether]         = useState(0)
-  const [todayCheckinDone, setTodayCheckinDone] = useState(false)
-  const [nextDate, setNextDate]                 = useState(null)
-  const [upcomingDates, setUpcomingDates]       = useState([])
-  const [lastFlirtDaysAgo, setLastFlirtDaysAgo] = useState(null)
-  const [memoryCount, setMemoryCount]           = useState(0)
-  const [activeTrip]                            = useState(null)
+  const [memoryCard, setMemoryCard]   = useState(null)
+  const [memoryLoading, setMemoryLoading] = useState(true)
 
-  const [sharedPreview, setSharedPreview]       = useState([])
-  const [pendingDate, setPendingDate]           = useState(null)
-  const [upcomingTrip, setUpcomingTrip]         = useState(null)
-  const [todaysRead, setTodaysRead]             = useState(null)
+  const [heroData, setHeroData]       = useState(null)
+  const [heroLoading, setHeroLoading] = useState(true)
+  const [weather, setWeather]         = useState(null)
 
-  const [memoryCard, setMemoryCard]             = useState(null)
-  const [memoryLoading, setMemoryLoading]       = useState(true)
-
-  const [heroData, setHeroData]                 = useState(null)
-  const [heroLoading, setHeroLoading]           = useState(true)
-  const [weather, setWeather] = useState(null)
-
-  const [spark, setSpark] = useState(null)
-  const [mine, setMine] = useState(null)
-  const [theirs, setTheirs] = useState(null)
+  const [spark, setSpark]             = useState(null)
+  const [mine, setMine]               = useState(null)
+  const [theirs, setTheirs]           = useState(null)
   const [sparkIntroShown, setSparkIntroShown] = useState(false)
-  const [bet, setBet] = useState(null)
-  const [betMine, setBetMine] = useState(null)
-  const [betTheirs, setBetTheirs] = useState(null)
+  const [bet, setBet]                 = useState(null)
+  const [betMine, setBetMine]         = useState(null)
+  const [betTheirs, setBetTheirs]     = useState(null)
 
   const todayName = new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long' })
   const params = typeof window !== 'undefined' ? window.location.search : ''
@@ -104,19 +44,6 @@ export default function Dashboard() {
   const showRitual = todayName === 'Friday' || params.includes('ritual=true')
   const showGameRoom = todayName === 'Saturday' || params.includes('game=true')
   const anyScheduled = showSpark || showBet || showRitual || showGameRoom
-
-  // Hydrate localStorage on client only
-  useEffect(() => {
-    setInviteDismissed(localStorage.getItem('abf_invite_dismissed') === 'true')
-  }, [])
-
-  // Fetch Today's Read (non-blocking)
-  useEffect(() => {
-    fetch('/api/learn/feed')
-      .then(r => r.json())
-      .then(d => { if (d.articles?.[0]) setTodaysRead(d.articles[0]) })
-      .catch(() => {})
-  }, [])
 
   const fetchAll = useCallback(async () => {
     try {
@@ -135,8 +62,6 @@ export default function Dashboard() {
 
       const partnerId = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id
       setPartnerId(partnerId)
-      setHasPartner(!!partnerId)
-      setConnectCode(coupleData.connect_code || null)
       setDaysTogether(Math.floor((Date.now() - new Date(coupleData.created_at).getTime()) / 86400000))
 
       await Promise.allSettled([
@@ -161,187 +86,7 @@ export default function Dashboard() {
           if (data?.display_name) setPartnerName(data.display_name)
         })() : Promise.resolve(),
 
-        // Relationship health score
-        (async () => {
-          const { data } = await supabase
-            .from('relationship_health')
-            .select('overall_score')
-            .eq('couple_id', coupleData.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-          if (data) setHealthScore(data.overall_score ?? null)
-        })(),
-
-        // Check-in streak + today status
-        (async () => {
-          const today = getTodayString()
-          const { data } = await supabase
-            .from('daily_checkins')
-            .select('check_date')
-            .eq('user_id', user.id)
-            .eq('couple_id', coupleData.id)
-            .not('question_response', 'is', null)
-            .order('check_date', { ascending: false })
-            .limit(60)
-          if (!data?.length) return
-          setTodayCheckinDone(data[0].check_date === today)
-          let count = 0
-          const cursor = new Date(today)
-          for (const row of data) {
-            if (row.check_date === cursor.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })) {
-              count++
-              cursor.setDate(cursor.getDate() - 1)
-            } else break
-          }
-          setStreak(count)
-        })(),
-
-        // Flirts this week
-        (async () => {
-          const weekStart = new Date()
-          weekStart.setDate(weekStart.getDate() - weekStart.getDay())
-          weekStart.setHours(0, 0, 0, 0)
-          const { data } = await supabase
-            .from('flirts')
-            .select('sender_id, created_at')
-            .eq('couple_id', coupleData.id)
-            .gte('created_at', new Date(weekStart.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }) + 'T00:00:00-08:00').toISOString())
-            .order('created_at', { ascending: false })
-          const mine = (data || []).filter(f => f.sender_id === user.id)
-          setFlirtsThisWeek(mine.length)
-          if (mine.length > 0) {
-            setLastFlirtDaysAgo(Math.floor((Date.now() - new Date(mine[0].created_at).getTime()) / 86400000))
-          }
-        })(),
-
-        // Next upcoming dates (check both date_plans and custom_dates)
-        (async () => {
-          const now = new Date().toISOString()
-          const cid = coupleData.id
-          const { data: planDates } = await supabase
-            .from('date_plans')
-            .select('id, title, date_time, stops, status')
-            .eq('couple_id', cid)
-            .in('status', ['planned', 'approved'])
-            .gte('date_time', now)
-            .order('date_time', { ascending: true })
-            .limit(5)
-
-          const { data: customDates } = await supabase
-            .from('custom_dates')
-            .select('id, title, date_time, stops, status, hype_line')
-            .eq('couple_id', cid)
-            .in('status', ['planned', 'approved'])
-            .gte('date_time', now)
-            .order('date_time', { ascending: true })
-            .limit(5)
-
-          const allUpcoming = [
-            ...(planDates || []).map(d => ({ ...d, source: 'plan' })),
-            ...(customDates || []).map(d => ({ ...d, source: 'custom' }))
-          ].sort((a, b) => new Date(a.date_time) - new Date(b.date_time)).slice(0, 5)
-
-          setUpcomingDates(allUpcoming)
-          setNextDate(allUpcoming[0] || null)
-        })(),
-
-        // Timeline memory count
-        (async () => {
-          const { count } = await supabase
-            .from('timeline_events')
-            .select('id', { count: 'exact', head: true })
-            .eq('couple_id', coupleData.id)
-          setMemoryCount(count || 0)
-        })(),
-
-        // Shared items preview
-        (async () => {
-          try {
-            const { data } = await supabase
-              .from('shared_items')
-              .select('id, type, title')
-              .eq('couple_id', coupleData.id)
-              .eq('completed', false)
-              .order('created_at', { ascending: false })
-              .limit(5)
-            setSharedPreview(data || [])
-          } catch { /* table may not exist yet */ }
-        })(),
-
-        // Pending date plans shared with me
-        (async () => {
-          try {
-            const { data } = await supabase
-              .from('custom_dates')
-              .select('id, title, stops, date_time')
-              .eq('shared_with', user.id)
-              .eq('status', 'planned')
-              .or('date_time.is.null,date_time.gte.' + new Date().toISOString())
-              .order('created_at', { ascending: false })
-              .limit(1)
-            if (data?.[0]) setPendingDate(data[0])
-          } catch { /* ignore */ }
-        })(),
-
-        // Upcoming trip (for hero card upcoming line)
-        (async () => {
-          try {
-            const { data } = await supabase
-              .from('trips')
-              .select('destination, start_date, trip_type')
-              .eq('couple_id', coupleData.id)
-              .gte('start_date', new Date().toISOString())
-              .order('start_date', { ascending: true })
-              .limit(1)
-              .maybeSingle()
-            if (data) setUpcomingTrip(data)
-          } catch { /* ignore */ }
-        })(),
-
       ])
-
-      // Check if both partners have completed the new-format assessment
-      try {
-        const [myAssessment, partnerAssessment, myProfile] = await Promise.all([
-          supabase
-            .from('relationship_assessments')
-            .select('id, results')
-            .eq('user_id', user.id)
-            .not('completed_at', 'is', null)
-            .order('completed_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-            .then(({ data }) => data),
-          supabase
-            .from('relationship_assessments')
-            .select('id, results')
-            .eq('user_id', partnerId)
-            .not('completed_at', 'is', null)
-            .order('completed_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-            .then(({ data }) => data),
-          supabase
-            .from('user_profiles')
-            .select('couples_debrief_dismissed')
-            .eq('user_id', user.id)
-            .maybeSingle()
-            .then(({ data }) => data),
-        ])
-        const myModules = myAssessment?.results?.modules
-        const partnerModules = partnerAssessment?.results?.modules
-        const bothHaveNewFormat =
-          Array.isArray(myModules) && myModules[0]?.moduleId === 'processing_style' &&
-          Array.isArray(partnerModules) && partnerModules[0]?.moduleId === 'processing_style'
-        const dismissed = myProfile?.couples_debrief_dismissed === true
-          || localStorage.getItem('abf_couples_debrief_dismissed') === 'true'
-        if (bothHaveNewFormat && !dismissed) {
-          setShowCouplesDebrief(true)
-        }
-      } catch (err) {
-        console.error('Couples debrief check error:', err)
-      }
 
       setLoading(false)
     } catch (err) {
@@ -417,19 +162,6 @@ export default function Dashboard() {
     if (showBet) fetchBet()
   }, [user, couple])
 
-  const handleCopyCode = async () => {
-    try {
-      await navigator.clipboard.writeText(connectCode)
-      setCodeCopied(true)
-      setTimeout(() => setCodeCopied(false), 2000)
-    } catch { /* clipboard unavailable */ }
-  }
-
-  const handleDismissInvite = () => {
-    localStorage.setItem('abf_invite_dismissed', 'true')
-    setInviteDismissed(true)
-  }
-
   const fetchSpark = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -468,48 +200,6 @@ export default function Dashboard() {
       </div>
     )
   }
-
-  const pendingDateAction = pendingDate
-  const checkinDone = todayCheckinDone
-
-  // Mood vibe from health + streak
-  const getMoodVibe = () => {
-    if (streak >= 7) return { emoji: '🔥', label: 'On fire this week', sub: `${streak} day streak` }
-    if (streak >= 3) return { emoji: '🌿', label: 'You two are in a good rhythm', sub: `${streak} days going strong` }
-    if (streak === 0 && healthScore < 50) return { emoji: '🌫️', label: 'A little quiet lately', sub: 'A check-in goes a long way' }
-    if (daysTogether > 365) return { emoji: '💛', label: `${Math.floor(daysTogether / 365)} year${daysTogether >= 730 ? 's' : ''} and counting`, sub: 'Something worth celebrating' }
-    return { emoji: '💕', label: 'Showing up for each other', sub: `${daysTogether} days together` }
-  }
-  const mood = getMoodVibe()
-
-  // Upcoming event line
-  const getUpcomingEvent = () => {
-    if (pendingDateAction) return {
-      icon: '💌',
-      text: `${partnerName} planned something for you`,
-      strong: 'View the plan →',
-      href: `/dates/${pendingDateAction.id}`,
-    }
-    if (nextDate) {
-      const days = getDaysUntil(nextDate.date_time)
-      const when = days === 0 ? 'Tonight' : days === 1 ? 'Tomorrow' : `in ${days} days`
-      return { icon: '📅', text: `${nextDate.title} — ${when}`, strong: null, href: '/dates' }
-    }
-    if (upcomingTrip) {
-      const days = Math.ceil((new Date(upcomingTrip.start_date) - new Date()) / 86400000)
-      return { icon: '✈️', text: `${upcomingTrip.destination} in ${days} days`, strong: null, href: '/trips' }
-    }
-    return null
-  }
-  const upcomingEvent = getUpcomingEvent()
-
-  // Primary CTA
-  const getPrimaryCTA = () => {
-    if (pendingDateAction) return { label: `See what ${partnerName} planned →`, href: `/dates/${pendingDateAction.id}` }
-    if (!hasPartner) return { label: `Invite ${partnerName} to ABF →`, href: '/connect' }
-    return { label: 'Talk to Nora →', href: '/ai-coach?new=true' }
-  }
-  const primaryCTA = getPrimaryCTA()
 
   const hour = new Date().getHours()
   const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening'
@@ -571,16 +261,16 @@ export default function Dashboard() {
               theirs={betTheirs}
               partnerId={partnerId}
               partnerName={partnerName}
-              userId={userId}
-              coupleId={coupleId}
+              userId={user?.id}
+              coupleId={couple?.id}
             />
           </div>
         )}
-        {showRitual && userId && coupleId && (
+        {showRitual && user?.id && couple?.id && (
           <div style={{ margin: '0 16px 14px' }}>
             <RitualCard
-              userId={userId}
-              coupleId={coupleId}
+              userId={user?.id}
+              coupleId={couple?.id}
               partnerName={partnerName}
             />
           </div>
