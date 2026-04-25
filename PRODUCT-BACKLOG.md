@@ -588,6 +588,32 @@ Third-person pronoun violation observed in Nora chat: "she's someone who reads p
 
 ---
 
+## BACKLOG ADDITIONS — 2026-04-24 (Sprint B complete)
+
+### Sprint C — Ahead/Ideas Artwork System
+- Ideas card design: artwork-first, poster/album art dominant, title below, type pill top-left, attribution (Matt/Cass/Nora) bottom, completion overlay state
+- Watch add flow: OMDB search, auto-populates poster + title + year, Movie vs Show toggle
+- Listen add flow: Spotify search (already wired), album art auto-populated, fallback gradient if not connected
+- Eat/Travel/Do: text entry + optional note, warm gradient placeholder with category color + first letter
+- Completion state: semi-transparent cream overlay on artwork, gold Done pill, Nora acknowledgment fires
+- Done → Been: one tap saves completed item as timeline memory, Nora writes memory note
+- Completion rate tracking: feeds Nora memory and eventual Signal Registry
+
+### Flirts — Product Redesign Needed
+- Feature feels flimsy, lacks weight and intention
+- Song flirt and shared song list are two different things — separated architecturally
+- Album artwork carries over for both song flirts and shared Listen list
+- Full product discussion needed: what makes a flirt feel like a moment, not a feature
+- Nora connection to flirts not yet designed
+
+### Design System — Ongoing
+- Custom nav icons: backlogged, text labels for now
+- Nora identity/presence: gold dot is placeholder, dedicated design sprint needed
+- Archive overlay (Been): functional, visual redesign in Sprint C
+- Home flirts section: two cards (song + prompt), GIF and movie/show to be added in Flirts redesign sprint
+
+---
+
 ## SUCCESS METRICS (pre-launch KPIs)
 
 ## Success Metrics (pre-launch KPIs)

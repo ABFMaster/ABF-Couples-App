@@ -163,6 +163,27 @@ Before writing the session handoff, Claude must answer these four questions hone
 3. What should we change in prompts, structure, or tools?
 4. What should be standardized going forward?
 
+### Self-Review: 2026-04-24 (Sprint B)
+
+1. **What went wrong this session?**
+Nothing broke during Sprint B. The visual pass was clean and surgical. The biggest risk was the Nora chat page using Tailwind throughout while the rest of the app uses inline styles — managed correctly by converting to inline styles without breaking functionality.
+
+2. **What specific protocols were followed well?**
+- Read before write on every file
+- One change at a time, commit after each verified change
+- Design decisions made before code written (Ahead/Ideas artwork discussion before touching add page)
+- Product decisions documented in backlog before building
+
+3. **What is the current state?**
+Sprint B complete:
+- Game Room landing: Cormorant Garamond, geometric dots, grain texture, dynamic day, distinct mode colors per mode
+- Nora chat: header redesigned, cartoon avatar replaced with gold dot presence marker, message bubbles warm palette, input area redesigned
+- Profile: design system applied throughout
+- Add an idea page: renamed from "Add to Our Space", emoji tabs replaced with geometric color squares
+
+4. **What must change going forward?**
+Sprint C is Ahead/Ideas with artwork. Design the card first, then build the add flow around what the card needs. Never build the input flow before the display is designed.
+
 ### Self-Review: 2026-04-24
 
 1. **What went wrong this session?**
@@ -647,30 +668,28 @@ Must be wrapped in Suspense boundary or build will fail.
 
 ## 21. NEXT SESSION PRIORITIES
 
-> **SPRINT B IS THE ACTIVE SPRINT. Start next session by reading `app/game-room/page.js` in full — it is the first target file.**
+1. **Flirts product redesign** — feature feels flimsy. Full product discussion needed before any build. Questions: what is a flirt actually for, what makes it feel like a moment not a feature, how does artwork elevate it, how does Nora connect to it.
 
-1. **Sprint B — Visual polish pass**
-   a. Game Room landing — mood fields, grain texture, geometric dots replacing emoji
-   b. Nora chat — remove cartoon avatar, warm palette, typography treatment
-   c. Profile — design system applied
-   d. Archive overlay (Been section) — visual redesign
-   e. Home flirts section — add GIF and movie/show cards (currently only song and prompt)
+2. **Sprint C — Ahead/Ideas with artwork**
+   - Design artwork-first Ideas card (poster, album art, gradient placeholders)
+   - Movie vs Show type pill on Watch cards
+   - OMDB search wired for Watch add flow
+   - Spotify search wired for Listen add flow (already built, needs UI)
+   - Completion state: warm overlay + gold Done pill + Nora acknowledgment
+   - Done events write to Nora memory layer
+   - Save to Been: completion promotes item to timeline memory
 
-2. **Timeline improvements**
-   a. Delete button on timeline items — P2, pre-launch requirement
-   b. Back button routing — routes to Home instead of previous screen, P3
+3. **Date Night sprint** — agent architecture with tool-based design. Blocked on Google Places API fix. Tools designed: get_couple_date_preferences, suggest_date_options, build_date_itinerary, save_date_plan.
 
-3. **Signal Registry Phase 1** — deferred to 50 real couples + 3 months data. Shadow mode validation required before surfacing to users. Three signals only: participation symmetry, engagement trend, repair after friction.
+4. **Signal Registry Phase 1** — deferred to 50 real couples. Three signals: participation symmetry, engagement trend, repair after friction. Shadow mode required before surfacing.
 
-4. **Nora onboarding voice** — earned disclosure framing for first conversation with new couple.
+5. **Nora onboarding voice** — earned disclosure framing. First conversation sets expectation that Nora watches and deepens over time.
 
-5. **Game data scrub** — timeline cleaned. Game session data (hot_take_answers, game_rounds etc) needs full audit and clean before wider release.
+6. **Cass as real tester** — schedule dedicated session. All verification solo so far.
 
-6. **Cass as real tester** — all verification done solo. Need genuine two-person experience before wider release.
+7. **Timeline improvements** — delete button on items (P2), back button routing fix (P3).
 
-7. **Push notification re-registration** — Cass's daily notifications not delivering.
-
-8. **Memory Test unlock thresholds** — currently all 0, raise before wider release.
+8. **Push notification re-registration** — Cass daily notifications not delivering.
 
 ---
 
