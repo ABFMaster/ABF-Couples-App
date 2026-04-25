@@ -13,6 +13,14 @@ const ITEM_TYPES = {
   date_idea:  { emoji: '💡', label: 'Date Idea' },
 }
 
+const TAB_COLORS = {
+  movie:      '#5A6B8A',
+  show:       '#5A6B8A',
+  song:       '#7A8C7E',
+  restaurant: '#C9A84C',
+  date_idea:  '#6B5B8A',
+}
+
 // Types that use OMDB search
 const OMDB_TYPES = ['movie', 'show']
 // Types that use Spotify search
@@ -208,7 +216,7 @@ export default function AddSharedItemPage() {
       : !!title.trim()
 
   return (
-    <div className="min-h-screen bg-[#F8F6F3] flex flex-col">
+    <div className="min-h-screen bg-[#FAF6F0] flex flex-col">
 
       {/* Header */}
       <header className="bg-white border-b border-gray-100 px-4 pt-14 pb-4">
@@ -219,7 +227,7 @@ export default function AddSharedItemPage() {
           >
             ← Back
           </button>
-          <h1 className="text-2xl font-bold text-[#2D3648]">Add to Our Space</h1>
+          <h1 className="text-2xl font-bold text-[#2D3648]">Add an idea</h1>
         </div>
       </header>
 
@@ -228,7 +236,7 @@ export default function AddSharedItemPage() {
 
         {/* Type selector */}
         <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
-          {Object.entries(ITEM_TYPES).map(([key, { emoji, label }]) => (
+          {Object.entries(ITEM_TYPES).map(([key, { label }]) => (
             <button
               key={key}
               onClick={() => setType(key)}
@@ -236,7 +244,8 @@ export default function AddSharedItemPage() {
                 type === key ? 'bg-[#E8614D] text-white' : 'bg-white text-[#6B7280] border border-gray-200'
               }`}
             >
-              <span>{emoji}</span><span>{label}</span>
+              <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: TAB_COLORS[key], flexShrink: 0 }} />
+              <span>{label}</span>
             </button>
           ))}
         </div>
@@ -475,7 +484,7 @@ export default function AddSharedItemPage() {
             disabled={!canSave || saving || !coupleId}
             className="w-full py-4 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white rounded-2xl font-bold text-lg disabled:opacity-50 transition-opacity"
           >
-            {saving ? 'Saving…' : 'Add to Our Space'}
+            {saving ? 'Saving…' : 'Add an idea'}
           </button>
         </div>
       </div>
