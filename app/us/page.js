@@ -167,13 +167,8 @@ export default function UsPage() {
     : sharedItems.filter(item => (CATEGORY_MAP[activeCategory] || []).includes(item.type))
 
   async function handleComplete(item) {
-    const isRich = ['place', 'restaurant', 'idea', 'do', 'travel'].includes(item.type)
     setCompletingItem(item)
-    if (isRich) {
-      setCaptureSheet(true)
-    } else {
-      await submitComplete(item, null)
-    }
+    setCaptureSheet(true)
   }
 
   async function submitComplete(item, note) {
