@@ -57,7 +57,6 @@ Write only the sentence. Nothing else.`
 
     return Response.json({ line })
   } catch (err) {
-    console.error('ahead/nora-line error:', err)
     return Response.json({ error: 'Server error' }, { status: 500 })
   }
 }

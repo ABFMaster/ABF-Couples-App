@@ -84,7 +84,6 @@ export async function POST(request) {
 
     return Response.json({ success: true })
   } catch (err) {
-    console.error('ahead/complete error:', err)
     return Response.json({ error: 'Server error' }, { status: 500 })
   }
 }
