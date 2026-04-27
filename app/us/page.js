@@ -68,7 +68,7 @@ export default function UsPage() {
       setTimelineLoading(true)
       const { data: events } = await supabase
         .from('timeline_events')
-        .select('id, title, description, event_date, event_type, created_at, created_by')
+        .select('id, title, description, event_date, event_type, created_at, created_by, image_url, item_subtype, artist')
         .eq('couple_id', cid)
         .order('event_date', { ascending: false })
         .limit(20)
@@ -277,16 +277,37 @@ export default function UsPage() {
             </div>
           ) : (
             permanentStones.slice(0, 3).map(event => (
-              <div key={event.id} style={{ borderRadius: '18px', overflow: 'hidden', marginBottom: '12px', boxShadow: '0 2px 12px rgba(28,20,16,0.08)' }} onClick={() => router.push('/timeline')}>
-                <div style={{ height: '80px', background: getMoodColor(event.event_type), position: 'relative', display: 'flex', alignItems: 'flex-end', padding: '12px 16px', justifyContent: 'space-between' }}>
-                  <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.12)', padding: '3px 9px', borderRadius: '20px' }}>{getMoodLabel(event.event_type)}</div>
-                  <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.9)', background: 'rgba(255,255,255,0.15)', padding: '3px 9px', borderRadius: '20px' }}>Saved ✦</div>
-                </div>
-                <div style={{ background: 'white', padding: '16px 18px' }}>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 400, color: '#1C1410', lineHeight: 1.2, marginBottom: '6px' }}>{event.title}</div>
-                  {event.description && <div style={{ fontSize: '12px', fontStyle: 'italic', color: '#8B7355', lineHeight: 1.55, marginBottom: '6px' }}>{event.description.slice(0, 120)}{event.description.length > 120 ? '...' : ''}</div>}
-                  <div style={{ fontSize: '10px', color: '#C4AA87' }}>{event.event_date ? new Date(event.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}</div>
-                </div>
+              <div key={event.id} style={{ marginBottom: '12px' }}>
+                {event.event_type === 'shared_item' ? (
+                  <SharedItemCard
+                    item={{
+                      id: event.id,
+                      title: event.title,
+                      type: event.item_subtype,
+                      poster_url: event.image_url,
+                      artwork_url: event.image_url,
+                      artist: event.artist,
+                      note: event.description,
+                      description: event.description,
+                      event_date: event.event_date,
+                      completed: true,
+                    }}
+                    mode="been"
+                    cardHeight={220}
+                  />
+                ) : (
+                  <div style={{ borderRadius: '18px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(28,20,16,0.08)' }} onClick={() => router.push('/timeline')}>
+                    <div style={{ height: '80px', background: getMoodColor(event.event_type), position: 'relative', display: 'flex', alignItems: 'flex-end', padding: '12px 16px', justifyContent: 'space-between' }}>
+                      <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.12)', padding: '3px 9px', borderRadius: '20px' }}>{getMoodLabel(event.event_type)}</div>
+                      <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.9)', background: 'rgba(255,255,255,0.15)', padding: '3px 9px', borderRadius: '20px' }}>Saved ✦</div>
+                    </div>
+                    <div style={{ background: 'white', padding: '16px 18px' }}>
+                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 400, color: '#1C1410', lineHeight: 1.2, marginBottom: '6px' }}>{event.title}</div>
+                      {event.description && <div style={{ fontSize: '12px', fontStyle: 'italic', color: '#8B7355', lineHeight: 1.55, marginBottom: '6px' }}>{event.description.slice(0, 120)}{event.description.length > 120 ? '...' : ''}</div>}
+                      <div style={{ fontSize: '10px', color: '#C4AA87' }}>{event.event_date ? new Date(event.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}</div>
+                    </div>
+                  </div>
+                )}
               </div>
             ))
           )}
