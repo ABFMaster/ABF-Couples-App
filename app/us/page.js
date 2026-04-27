@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import SharedItemCard from '@/components/SharedItemCard'
 export default function UsPage() {
   const router = useRouter()
   const [user, setUser] = useState(null)
@@ -27,6 +28,12 @@ export default function UsPage() {
 
   // Archive overlay
   const [showArchive, setShowArchive] = useState(false)
+  const [sharedItems, setSharedItems] = useState([])
+  const [sharedItemsLoading, setSharedItemsLoading] = useState(true)
+  const [activeCategory, setActiveCategory] = useState('All')
+  const [completingItem, setCompletingItem] = useState(null)
+  const [captureSheet, setCaptureSheet] = useState(false)
+  const [captureNote, setCaptureNote] = useState('')
 
   useEffect(() => {
     async function fetchAll() {
@@ -122,6 +129,16 @@ export default function UsPage() {
         .limit(1)
       setNextTrip(trips?.[0] || null)
 
+      // Shared items for Ahead
+      const { data: items } = await supabase
+        .from('shared_items')
+        .select('*')
+        .eq('couple_id', cid)
+        .eq('completed', false)
+        .order('created_at', { ascending: false })
+      setSharedItems(items || [])
+      setSharedItemsLoading(false)
+
       // Nora weekly read for Now
       try {
         const { data: { session } } = await supabase.auth.getSession()
@@ -136,6 +153,50 @@ export default function UsPage() {
     }
     fetchAll()
   }, [])
+
+  const CATEGORY_MAP = {
+    'All': null,
+    'Watch': ['movie', 'show'],
+    'Listen': ['song'],
+    'Places': ['place', 'restaurant'],
+    'Ideas': ['idea', 'do', 'travel'],
+  }
+
+  const filteredItems = activeCategory === 'All'
+    ? sharedItems
+    : sharedItems.filter(item => (CATEGORY_MAP[activeCategory] || []).includes(item.type))
+
+  async function handleComplete(item) {
+    const isRich = ['place', 'restaurant', 'idea', 'do', 'travel'].includes(item.type)
+    setCompletingItem(item)
+    if (isRich) {
+      setCaptureSheet(true)
+    } else {
+      await submitComplete(item, null)
+    }
+  }
+
+  async function submitComplete(item, note) {
+    try {
+      const res = await fetch('/api/ahead/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId: item.id, completionNote: note || null }),
+      })
+      if (res.ok) {
+        setSharedItems(prev => prev.filter(i => i.id !== item.id))
+        setCompletingItem(null)
+        setCaptureSheet(false)
+        setCaptureNote('')
+        // Fetch Nora line async — fire and forget
+        fetch('/api/ahead/nora-line', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ itemId: item.id, itemTitle: item.title, itemType: item.type, coupleId: couple.id }),
+        }).catch(() => {})
+      }
+    } catch {}
+  }
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -332,12 +393,9 @@ export default function UsPage() {
             </div>
           </div>
 
-          {/* Divider — Building */}
-          <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '12px', display: 'block' }}>Building</div>
-
           {/* Trip if exists */}
           {nextTrip ? (
-            <div style={{ background: 'white', borderRadius: '18px', padding: '20px', marginBottom: '12px', boxShadow: '0 2px 10px rgba(28,20,16,0.07)', borderLeft: '3px solid #C4714A' }}>
+            <div style={{ background: 'white', borderRadius: '18px', padding: '20px', marginBottom: '16px', boxShadow: '0 2px 10px rgba(28,20,16,0.07)', borderLeft: '3px solid #C4714A' }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '9px', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '20px', marginBottom: '10px', background: 'rgba(196,113,74,0.08)', color: '#C4714A' }}>
                 <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'currentColor' }} />
                 Building · Travel
@@ -345,41 +403,39 @@ export default function UsPage() {
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', color: '#1C1410', marginBottom: '5px' }}>{nextTrip.destination}</div>
               <div style={{ fontSize: '12px', color: '#8B7355' }}>{new Date(nextTrip.start_date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</div>
             </div>
-          ) : (
-            <div style={{ background: 'rgba(250,246,240,0.7)', border: '1px dashed #D9CBBA', borderRadius: '18px', padding: '20px', marginBottom: '12px', textAlign: 'center', cursor: 'pointer' }} onClick={() => router.push('/trips')}>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#C4AA87', marginBottom: '6px' }}>Start a project together</div>
-              <div style={{ fontSize: '12px', color: '#C4AA87' }}>A trip, a goal, something to build toward →</div>
-            </div>
-          )}
+          ) : null}
 
-          {/* Divider — Ideas */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '8px 0 16px' }}>
-            <div style={{ flex: 1, height: '1px', background: '#EDE4D8' }} />
-            <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', whiteSpace: 'nowrap' }}>Ideas — no commitment yet</div>
-            <div style={{ flex: 1, height: '1px', background: '#EDE4D8' }} />
-          </div>
-
-          {/* Category buckets */}
+          {/* Category chips */}
           <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px', marginBottom: '16px' }}>
-            {[
-              { label: 'Travel', color: '#C4714A' },
-              { label: 'Watch', color: '#5A6B8A' },
-              { label: 'Eat', color: '#C9A84C' },
-              { label: 'Listen', color: '#7A8C7E' },
-              { label: 'Do', color: '#6B5B8A' },
-            ].map(cat => (
-              <div key={cat.label} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '11px', fontWeight: 500, color: '#8B7355', background: 'white', border: '1px solid #D9CBBA', padding: '7px 14px', borderRadius: '20px', whiteSpace: 'nowrap', cursor: 'pointer', boxShadow: '0 1px 3px rgba(28,20,16,0.04)' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: cat.color, flexShrink: 0 }} />
-                {cat.label}
+            {['All', 'Watch', 'Listen', 'Places', 'Ideas'].map(cat => (
+              <div key={cat} onClick={() => setActiveCategory(cat)} style={{ fontSize: '11px', fontWeight: 500, color: activeCategory === cat ? '#1C1410' : '#8B7355', background: activeCategory === cat ? '#EDE4D8' : 'white', border: `1px solid ${activeCategory === cat ? '#C4AA87' : '#D9CBBA'}`, padding: '7px 14px', borderRadius: '20px', whiteSpace: 'nowrap', cursor: 'pointer', transition: 'all 0.15s' }}>
+                {cat}
               </div>
             ))}
           </div>
 
-          {/* Empty ideas state */}
-          <div style={{ background: 'rgba(250,246,240,0.7)', border: '1px dashed #D9CBBA', borderRadius: '14px', padding: '20px', textAlign: 'center', marginBottom: '14px' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#C4AA87', marginBottom: '6px' }}>No ideas yet</div>
-            <div style={{ fontSize: '12px', color: '#C4AA87' }}>Add movies, restaurants, trips, and more</div>
-          </div>
+          {/* Ideas divider */}
+          <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '12px' }}>Ideas — no commitment yet</div>
+
+          {/* Card grid */}
+          {sharedItemsLoading ? (
+            <div style={{ textAlign: 'center', padding: '32px 0' }}>
+              <p style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic', color: '#C4AA87', fontSize: '16px' }}>Loading...</p>
+            </div>
+          ) : filteredItems.length === 0 ? (
+            <div style={{ background: 'rgba(250,246,240,0.7)', border: '1px dashed #D9CBBA', borderRadius: '14px', padding: '28px 20px', textAlign: 'center', marginBottom: '14px' }}>
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#C4AA87', marginBottom: '6px' }}>
+                {activeCategory === 'All' ? 'No ideas yet' : `No ${activeCategory.toLowerCase()} yet`}
+              </div>
+              <div style={{ fontSize: '12px', color: '#C4AA87' }}>Add movies, restaurants, trips, and more</div>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px', marginBottom: '16px' }}>
+              {filteredItems.map(item => (
+                <SharedItemCard key={item.id} item={item} mode="ahead" onComplete={handleComplete} cardHeight={200} />
+              ))}
+            </div>
+          )}
 
           <button onClick={() => router.push('/shared/add')} style={{ width: '100%', padding: '13px', background: 'none', border: '1px dashed #D9CBBA', borderRadius: '14px', fontSize: '12px', color: '#8B7355', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
             + Add an idea
@@ -413,6 +469,32 @@ export default function UsPage() {
                 <p style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic', color: '#C4AA87', fontSize: '18px' }}>Nothing saved yet. Your story is just beginning.</p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {captureSheet && completingItem && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(28,20,16,0.6)', zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <div style={{ background: '#FAF6F0', borderRadius: '24px 24px 0 0', padding: '28px 24px 48px', width: '100%', maxWidth: '430px' }}>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', color: '#1C1410', marginBottom: '6px' }}>You did it</div>
+            <div style={{ fontSize: '13px', color: '#8B7355', marginBottom: '24px' }}>{completingItem.title}</div>
+            <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '8px' }}>One thing about it</div>
+            <textarea
+              value={captureNote}
+              onChange={e => setCaptureNote(e.target.value)}
+              placeholder="A line, a memory, anything that brings you back..."
+              style={{ width: '100%', minHeight: '80px', border: '1px solid #D9CBBA', borderRadius: '12px', padding: '12px 14px', fontSize: '14px', fontFamily: 'DM Sans, sans-serif', color: '#1C1410', background: 'white', resize: 'none', outline: 'none', boxSizing: 'border-box' }}
+            />
+            <button
+              onClick={() => submitComplete(completingItem, captureNote)}
+              style={{ width: '100%', marginTop: '16px', padding: '14px', background: '#1C1410', color: 'white', border: 'none', borderRadius: '14px', fontSize: '14px', fontWeight: 500, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+              Save to Been
+            </button>
+            <button
+              onClick={() => { setCaptureSheet(false); setCompletingItem(null); setCaptureNote('') }}
+              style={{ width: '100%', marginTop: '10px', padding: '12px', background: 'none', color: '#8B7355', border: 'none', fontSize: '13px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+              Cancel
+            </button>
           </div>
         </div>
       )}
