@@ -1,14 +1,11 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@supabase/supabase-js'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 
 export async function POST(request) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
-    const { itemId, completionNote, photoUrl } = await request.json()
+    const { itemId, completionNote, photoUrl, userId } = await request.json()
     if (!itemId) return Response.json({ error: 'itemId required' }, { status: 400 })
 
     // Fetch the shared item
@@ -28,7 +25,7 @@ export async function POST(request) {
     const { data: couple } = await supabase
       .from('couples')
       .select('id, user1_id, user2_id')
-      .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+      .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
       .single()
     if (!couple) return Response.json({ error: 'Couple not found' }, { status: 404 })
 
@@ -64,7 +61,7 @@ export async function POST(request) {
         description: completionNote || null,
         event_date: today,
         photo_urls: photoUrls,
-        created_by: user.id,
+        created_by: userId || null,
         source_id: item.id,
         image_url: imageUrl,
         artist: item.artist || null,
@@ -75,13 +72,13 @@ export async function POST(request) {
     // Fire Nora memory update — fire and forget
     updateNoraMemory({
       coupleId: couple.id,
-      userId: user.id,
+      userId: userId || null,
       signalType: SIGNAL_TYPES.SHARED_ITEM_COMPLETED,
       inputData: {
         title: item.title,
         type: item.type,
         completionNote: completionNote || null,
-        completedBy: user.id,
+        completedBy: userId,
       }
     }).catch(() => {})
 

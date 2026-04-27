@@ -181,7 +181,7 @@ export default function UsPage() {
       const res = await fetch('/api/ahead/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemId: item.id, completionNote: note || null }),
+        body: JSON.stringify({ itemId: item.id, completionNote: note || null, userId: user.id }),
       })
       if (res.ok) {
         setSharedItems(prev => prev.filter(i => i.id !== item.id))

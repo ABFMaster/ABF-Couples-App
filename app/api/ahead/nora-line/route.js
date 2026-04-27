@@ -1,13 +1,10 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createClient } from '@supabase/supabase-js'
 import { getNoraMemory } from '@/lib/nora-memory'
 import { noraSignal } from '@/lib/nora.js'
 
 export async function POST(request) {
   try {
-    const supabase = createRouteHandlerClient({ cookies })
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 
     const { itemId, itemTitle, itemType, coupleId, completionNote } = await request.json()
     if (!itemId || !itemTitle || !coupleId) return Response.json({ error: 'Missing required fields' }, { status: 400 })
