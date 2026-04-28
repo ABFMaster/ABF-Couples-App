@@ -34,6 +34,8 @@ export default function UsPage() {
   const [completingItem, setCompletingItem] = useState(null)
   const [captureSheet, setCaptureSheet] = useState(false)
   const [captureNote, setCaptureNote] = useState('')
+  const [showBeenDetail, setShowBeenDetail] = useState(false)
+  const [beenDetailItem, setBeenDetailItem] = useState(null)
 
   useEffect(() => {
     async function fetchAll() {
@@ -68,7 +70,7 @@ export default function UsPage() {
       setTimelineLoading(true)
       const { data: events } = await supabase
         .from('timeline_events')
-        .select('id, title, description, event_date, event_type, created_at, created_by, image_url, item_subtype, artist')
+        .select('id, title, description, event_date, event_type, created_at, created_by, image_url, item_subtype, artist, source_id')
         .eq('couple_id', cid)
         .order('event_date', { ascending: false })
         .limit(20)
@@ -193,6 +195,31 @@ export default function UsPage() {
     } catch {}
   }
 
+  async function openBeenDetail(event, isSharedItem = false) {
+    let detail = { ...event, isSharedItem }
+    if (isSharedItem && event.source_id) {
+      const { data: sourceItem } = await supabase
+        .from('shared_items')
+        .select('completion_nora_line, completion_note, completion_photo_url, poster_url, artwork_url, type')
+        .eq('id', event.source_id)
+        .single()
+      if (sourceItem) {
+        detail.completion_nora_line = sourceItem.completion_nora_line || null
+        detail.description = detail.description || sourceItem.completion_note || null
+        detail.completion_photo_url = sourceItem.completion_photo_url || null
+        detail.source_type = sourceItem.type || null
+        const isMediaType = ['movie', 'show', 'song'].includes(sourceItem.type)
+        if (isMediaType) {
+          detail.hero_image = detail.image_url || sourceItem.poster_url || sourceItem.artwork_url || null
+        } else {
+          detail.hero_image = sourceItem.completion_photo_url || null
+        }
+      }
+    }
+    setBeenDetailItem(detail)
+    setShowBeenDetail(true)
+  }
+
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#C4AA87', fontStyle: 'italic' }}>Loading...</p>
@@ -277,8 +304,8 @@ export default function UsPage() {
             </div>
           ) : (
             permanentStones.slice(0, 3).map(event => (
-              <div key={event.id} style={{ marginBottom: '12px' }}>
-                {event.event_type === 'shared_item' ? (
+              event.event_type === 'shared_item' ? (
+                <div key={event.id} style={{ marginBottom: '12px', cursor: 'pointer' }} onClick={() => openBeenDetail(event, true)}>
                   <SharedItemCard
                     item={{
                       id: event.id,
@@ -295,8 +322,10 @@ export default function UsPage() {
                     mode="been"
                     cardHeight={220}
                   />
-                ) : (
-                  <div style={{ borderRadius: '18px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(28,20,16,0.08)' }} onClick={() => router.push('/timeline')}>
+                </div>
+              ) : (
+                <div key={event.id} style={{ marginBottom: '12px' }}>
+                  <div style={{ borderRadius: '18px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(28,20,16,0.08)' }} onClick={() => openBeenDetail(event, false)}>
                     <div style={{ height: '80px', background: getMoodColor(event.event_type), position: 'relative', display: 'flex', alignItems: 'flex-end', padding: '12px 16px', justifyContent: 'space-between' }}>
                       <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.12)', padding: '3px 9px', borderRadius: '20px' }}>{getMoodLabel(event.event_type)}</div>
                       <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.9)', background: 'rgba(255,255,255,0.15)', padding: '3px 9px', borderRadius: '20px' }}>Saved ✦</div>
@@ -307,8 +336,8 @@ export default function UsPage() {
                       <div style={{ fontSize: '10px', color: '#C4AA87' }}>{event.event_date ? new Date(event.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}</div>
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )
             ))
           )}
 
@@ -494,6 +523,19 @@ export default function UsPage() {
           <div style={{ background: '#FAF6F0', borderRadius: '24px 24px 0 0', padding: '28px 24px 48px', width: '100%', maxWidth: '430px' }}>
             <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', color: '#1C1410', marginBottom: '6px' }}>You did it</div>
             <div style={{ fontSize: '13px', color: '#8B7355', marginBottom: '24px' }}>{completingItem.title}</div>
+            {completingItem && !['movie','show','song'].includes(completingItem.type) && (
+              <div style={{ width: '100%', height: '110px', borderRadius: '12px', border: '1px dashed #D9CBBA', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '20px', background: 'rgba(250,246,240,0.7)' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#EDE4D8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <rect x="1" y="3" width="14" height="10" rx="2" stroke="#C4AA87" strokeWidth="1.5"/>
+                    <circle cx="8" cy="8" r="2.5" stroke="#C4AA87" strokeWidth="1.5"/>
+                    <path d="M5 3 L5.5 1.5 L10.5 1.5 L11 3" stroke="#C4AA87" strokeWidth="1.5" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <div style={{ fontSize: '11px', color: '#C4AA87', fontWeight: 500 }}>Add a photo</div>
+                <div style={{ fontSize: '10px', color: '#D9CBBA' }}>Coming with native app</div>
+              </div>
+            )}
             <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '8px' }}>One thing about it</div>
             <textarea
               value={captureNote}
@@ -511,6 +553,87 @@ export default function UsPage() {
               style={{ width: '100%', marginTop: '10px', padding: '12px', background: 'none', color: '#8B7355', border: 'none', fontSize: '13px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {showBeenDetail && beenDetailItem && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(28,20,16,0.6)', zIndex: 300, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+          onClick={() => setShowBeenDetail(false)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: '#FAF6F0', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: '430px', maxHeight: '88vh', overflowY: 'auto' }}
+          >
+            {/* Hero — photo-aware */}
+            {beenDetailItem.isSharedItem ? (
+              <div style={{ height: '260px', position: 'relative', borderRadius: '24px 24px 0 0', overflow: 'hidden', flexShrink: 0 }}>
+                {beenDetailItem.hero_image ? (
+                  <img
+                    src={beenDetailItem.hero_image}
+                    alt={beenDetailItem.title}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
+                  />
+                ) : (
+                  <div style={{ position: 'absolute', inset: 0, background: beenDetailItem.source_type === 'movie' || beenDetailItem.source_type === 'show' ? 'linear-gradient(160deg, #0a1f2e 0%, #0f3460 100%)' : beenDetailItem.source_type === 'song' ? 'linear-gradient(160deg, #0d2137 0%, #1a4a3a 100%)' : 'linear-gradient(160deg, #5C2A0E 0%, #A0522D 100%)' }} />
+                )}
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.45) 0%, transparent 60%)' }} />
+                <div style={{ position: 'absolute', top: '14px', left: '14px', fontSize: '10px', fontWeight: 500, letterSpacing: '0.06em', padding: '3px 8px', borderRadius: '20px', textTransform: 'uppercase', background: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.9)' }}>
+                  {beenDetailItem.item_subtype || beenDetailItem.source_type || 'Memory'}
+                </div>
+                {beenDetailItem.isSharedItem && !['movie','show','song'].includes(beenDetailItem.source_type) && !beenDetailItem.hero_image && (
+                  <div style={{ position: 'absolute', bottom: '14px', right: '14px', fontSize: '10px', fontWeight: 500, color: 'rgba(255,255,255,0.6)', background: 'rgba(0,0,0,0.3)', padding: '4px 10px', borderRadius: '20px', letterSpacing: '0.04em' }}>
+                    + Add photo
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div style={{ height: '130px', background: getMoodColor(beenDetailItem.event_type), borderRadius: '24px 24px 0 0', position: 'relative', flexShrink: 0 }}>
+                <div style={{ position: 'absolute', top: '14px', left: '14px', fontSize: '10px', fontWeight: 500, letterSpacing: '0.06em', padding: '3px 8px', borderRadius: '20px', textTransform: 'uppercase', background: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.9)' }}>
+                  {getMoodLabel(beenDetailItem.event_type)}
+                </div>
+              </div>
+            )}
+
+            {/* Content */}
+            <div style={{ padding: '24px 24px 48px' }}>
+
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '30px', fontWeight: 400, color: '#1C1410', lineHeight: 1.2, marginBottom: '6px' }}>
+                {beenDetailItem.title}
+              </div>
+
+              <div style={{ fontSize: '12px', color: '#C4AA87', marginBottom: '20px' }}>
+                {beenDetailItem.event_date
+                  ? new Date(beenDetailItem.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                  : ''}
+              </div>
+
+              {beenDetailItem.description && (
+                <div style={{ fontSize: '15px', fontStyle: 'italic', color: '#8B7355', lineHeight: 1.65, marginBottom: '20px', borderLeft: '2px solid #D9CBBA', paddingLeft: '14px' }}>
+                  "{beenDetailItem.description}"
+                </div>
+              )}
+
+              {beenDetailItem.isSharedItem && beenDetailItem.completion_nora_line && (
+                <div style={{ background: 'white', borderRadius: '14px', padding: '14px 16px', border: '1px solid #EDE4D8', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C9A84C' }} />
+                    <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C9A84C' }}>Nora</div>
+                  </div>
+                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: '#1C1410', lineHeight: 1.55, fontStyle: 'italic' }}>
+                    {beenDetailItem.completion_nora_line}
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={() => setShowBeenDetail(false)}
+                style={{ width: '100%', padding: '13px', background: 'none', border: '1px solid #D9CBBA', borderRadius: '14px', fontSize: '13px', color: '#8B7355', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

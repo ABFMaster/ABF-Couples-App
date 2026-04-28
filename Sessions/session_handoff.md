@@ -735,3 +735,37 @@ git add -u          # existing files only
 git commit -m "descriptive message"
 git push            # Vercel auto-deploys on push to main
 ```
+
+---
+## Self-Review 2026-04-27
+
+### Sprint C — Ahead/Been card visual + completion mechanic
+
+**What was built:**
+- SharedItemCard: full bleed portrait, scrim, type pill, ghost icon fallback, Done pill
+- Ahead section wired to shared_items — live data, category chip filtering, 2-col grid
+- Capture sheet fires for all types before promotion — is the UX feedback moment
+- app/api/ahead/complete/route.js — dual write to shared_items + timeline_events
+- app/api/ahead/nora-line/route.js — haiku call, one sentence, correct tone
+- Been section renders SharedItemCard for shared_item event_type
+- RLS on shared_items confirmed
+- Both Matt and Cass confirmed identical Been view
+
+**Mistakes caught:**
+- createRouteHandlerClient wrong pattern — caught at deploy, fixed to createClient service role
+- userId not passed in POST body after removing auth session — caught by Claude Code review
+- Direct Anthropic import violation in nora-line route — caught before commit, fixed to noraSignal
+- timeline_events select missing image_url, item_subtype, artist — caught by Claude Code, fixed before deploy
+- Missing labeled code blocks and deployment prompts mid-session — process failure, corrected
+
+**Known issues open:**
+- P2: Back button inside Been card navigates to Homepage instead of staying in Us
+- P2: Nora completion lines generating correctly in DB but not surfaced in UI — design decision needed
+- P3: #E8614D brand color still in shared/add tab active state and submit button
+
+**Product decisions locked:**
+- Flirts redesign brief complete — parked, not this sprint
+- Unified card language: Option A full bleed, gradient + ghost icon fallback
+- Been architecture: timeline_events single source of truth (Option A)
+- Completion mechanic: capture sheet for all types, note is optional
+- Nora line: haiku model, one sentence, no affirmations, specific to title

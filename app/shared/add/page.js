@@ -241,7 +241,7 @@ export default function AddSharedItemPage() {
               key={key}
               onClick={() => setType(key)}
               className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium transition-all ${
-                type === key ? 'bg-[#E8614D] text-white' : 'bg-white text-[#6B7280] border border-gray-200'
+                type === key ? 'bg-[#C4714A] text-white' : 'bg-white text-[#6B7280] border border-gray-200'
               }`}
             >
               <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: TAB_COLORS[key], flexShrink: 0 }} />
@@ -281,7 +281,7 @@ export default function AddSharedItemPage() {
                 </div>
                 <button
                   onClick={() => setSelected(null)}
-                  className="w-full py-2.5 border-t border-gray-100 text-sm text-[#E8614D] font-medium hover:bg-gray-50 transition-colors"
+                  className="w-full py-2.5 border-t border-gray-100 text-sm text-[#C4714A] font-medium hover:bg-gray-50 transition-colors"
                 >
                   Change
                 </button>
@@ -295,13 +295,13 @@ export default function AddSharedItemPage() {
                     value={query}
                     onChange={e => setQuery(e.target.value)}
                     placeholder={`Search for a ${ITEM_TYPES[type].label.toLowerCase()}…`}
-                    className="w-full px-4 py-3.5 rounded-2xl border-2 border-gray-100 focus:border-[#E8614D] focus:outline-none text-[#2D3648] bg-white text-base"
+                    className="w-full px-4 py-3.5 rounded-2xl border-2 border-gray-100 focus:border-[#C4714A] focus:outline-none text-[#2D3648] bg-white text-base"
                     autoFocus
                     disabled={loadingDetail}
                   />
                   {(searching || loadingDetail) && (
                     <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                      <div className="w-4 h-4 border-2 border-[#E8614D] border-t-transparent rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-[#C4714A] border-t-transparent rounded-full animate-spin" />
                     </div>
                   )}
                 </div>
@@ -342,7 +342,7 @@ export default function AddSharedItemPage() {
             {spotifyConnected === null ? (
               /* Loading */
               <div className="flex items-center justify-center py-10">
-                <div className="w-6 h-6 border-2 border-[#E8614D] border-t-transparent rounded-full animate-spin" />
+                <div className="w-6 h-6 border-2 border-[#C4714A] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : spotifyConnected ? (
               /* Connected — search UI */
@@ -370,7 +370,7 @@ export default function AddSharedItemPage() {
                     </div>
                     <button
                       onClick={() => setSpotifySelected(null)}
-                      className="w-full py-2.5 border-t border-gray-100 text-sm text-[#E8614D] font-medium hover:bg-gray-50 transition-colors"
+                      className="w-full py-2.5 border-t border-gray-100 text-sm text-[#C4714A] font-medium hover:bg-gray-50 transition-colors"
                     >
                       Change
                     </button>
@@ -440,7 +440,7 @@ export default function AddSharedItemPage() {
                   onChange={e => setTitle(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSave()}
                   placeholder="🎵 Song title…"
-                  className="w-full px-4 py-3.5 rounded-2xl border-2 border-gray-100 focus:border-[#E8614D] focus:outline-none text-[#2D3648] bg-white mb-3 text-base"
+                  className="w-full px-4 py-3.5 rounded-2xl border-2 border-gray-100 focus:border-[#C4714A] focus:outline-none text-[#2D3648] bg-white mb-3 text-base"
                   autoFocus
                 />
               </>
@@ -454,7 +454,7 @@ export default function AddSharedItemPage() {
             onChange={e => setTitle(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSave()}
             placeholder={`${ITEM_TYPES[type].emoji} ${ITEM_TYPES[type].label} title…`}
-            className="w-full px-4 py-3.5 rounded-2xl border-2 border-gray-100 focus:border-[#E8614D] focus:outline-none text-[#2D3648] bg-white mb-3 text-base"
+            className="w-full px-4 py-3.5 rounded-2xl border-2 border-gray-100 focus:border-[#C4714A] focus:outline-none text-[#2D3648] bg-white mb-3 text-base"
             autoFocus
           />
         )}
@@ -464,7 +464,7 @@ export default function AddSharedItemPage() {
           value={note}
           onChange={e => setNote(e.target.value)}
           placeholder="Add a note (optional)"
-          className="w-full px-4 py-3.5 rounded-2xl border-2 border-gray-100 focus:border-[#E8614D] focus:outline-none text-[#2D3648] bg-white mb-4 text-base"
+          className="w-full px-4 py-3.5 rounded-2xl border-2 border-gray-100 focus:border-[#C4714A] focus:outline-none text-[#2D3648] bg-white mb-4 text-base"
         />
 
         {error && (
@@ -482,7 +482,7 @@ export default function AddSharedItemPage() {
           <button
             onClick={handleSave}
             disabled={!canSave || saving || !coupleId}
-            className="w-full py-4 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white rounded-2xl font-bold text-lg disabled:opacity-50 transition-opacity"
+            className="w-full py-4 bg-gradient-to-r from-[#C4714A] to-[#A0522D] text-white rounded-2xl font-bold text-lg disabled:opacity-50 transition-opacity"
           >
             {saving ? 'Saving…' : 'Add an idea'}
           </button>
