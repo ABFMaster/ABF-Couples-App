@@ -580,7 +580,11 @@ export default function UsPage() {
                 )}
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.45) 0%, transparent 60%)' }} />
                 <div style={{ position: 'absolute', top: '14px', left: '14px', fontSize: '10px', fontWeight: 500, letterSpacing: '0.06em', padding: '3px 8px', borderRadius: '20px', textTransform: 'uppercase', background: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.9)' }}>
-                  {beenDetailItem.item_subtype || beenDetailItem.source_type || 'Memory'}
+                  {(() => {
+                    const t = beenDetailItem.item_subtype || beenDetailItem.source_type || ''
+                    const labels = { movie: 'Film', show: 'Show', song: 'Album', place: 'Place', restaurant: 'Place', date_idea: 'Date Idea', idea: 'Idea' }
+                    return labels[t] || t.charAt(0).toUpperCase() + t.slice(1).replace(/_/g, ' ') || 'Memory'
+                  })()}
                 </div>
                 {beenDetailItem.isSharedItem && !['movie','show','song'].includes(beenDetailItem.source_type) && !beenDetailItem.hero_image && (
                   <div style={{ position: 'absolute', bottom: '14px', right: '14px', fontSize: '10px', fontWeight: 500, color: 'rgba(255,255,255,0.6)', background: 'rgba(0,0,0,0.3)', padding: '4px 10px', borderRadius: '20px', letterSpacing: '0.04em' }}>
@@ -611,7 +615,7 @@ export default function UsPage() {
 
               {beenDetailItem.description && (
                 <div style={{ fontSize: '15px', fontStyle: 'italic', color: '#8B7355', lineHeight: 1.65, marginBottom: '20px', borderLeft: '2px solid #D9CBBA', paddingLeft: '14px' }}>
-                  "{beenDetailItem.description}"
+                  "{beenDetailItem.description?.trim()}"
                 </div>
               )}
 
