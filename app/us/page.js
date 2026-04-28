@@ -34,6 +34,8 @@ export default function UsPage() {
   const [completingItem, setCompletingItem] = useState(null)
   const [captureSheet, setCaptureSheet] = useState(false)
   const [captureNote, setCaptureNote] = useState('')
+  const [capturePhotoFile, setCapturePhotoFile] = useState(null)
+  const [capturePhotoPreview, setCapturePhotoPreview] = useState(null)
   const [showBeenDetail, setShowBeenDetail] = useState(false)
   const [beenDetailItem, setBeenDetailItem] = useState(null)
 
@@ -175,17 +177,30 @@ export default function UsPage() {
 
   async function submitComplete(item, note) {
     try {
+      let photoUrl = null
+      if (capturePhotoFile) {
+        const ext = capturePhotoFile.name.split('.').pop()
+        const filename = `completions/${item.id}-${Date.now()}.${ext}`
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('photos')
+          .upload(filename, capturePhotoFile, { upsert: true })
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('photos').getPublicUrl(filename)
+          photoUrl = urlData?.publicUrl || null
+        }
+      }
       const res = await fetch('/api/ahead/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemId: item.id, completionNote: note || null, userId: user.id }),
+        body: JSON.stringify({ itemId: item.id, completionNote: note || null, userId: user.id, photoUrl }),
       })
       if (res.ok) {
         setSharedItems(prev => prev.filter(i => i.id !== item.id))
         setCompletingItem(null)
         setCaptureSheet(false)
         setCaptureNote('')
-        // Fetch Nora line async — fire and forget
+        setCapturePhotoFile(null)
+        setCapturePhotoPreview(null)
         fetch('/api/ahead/nora-line', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -541,18 +556,42 @@ export default function UsPage() {
           <div style={{ background: '#FAF6F0', borderRadius: '24px 24px 0 0', padding: '28px 24px 48px', width: '100%', maxWidth: '430px' }}>
             <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', color: '#1C1410', marginBottom: '6px' }}>You did it</div>
             <div style={{ fontSize: '13px', color: '#8B7355', marginBottom: '24px' }}>{completingItem.title}</div>
-            {completingItem && !['movie','show','song'].includes(completingItem.type) && (
-              <div style={{ width: '100%', height: '110px', borderRadius: '12px', border: '1px dashed #D9CBBA', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '20px', background: 'rgba(250,246,240,0.7)' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#EDE4D8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <rect x="1" y="3" width="14" height="10" rx="2" stroke="#C4AA87" strokeWidth="1.5"/>
-                    <circle cx="8" cy="8" r="2.5" stroke="#C4AA87" strokeWidth="1.5"/>
-                    <path d="M5 3 L5.5 1.5 L10.5 1.5 L11 3" stroke="#C4AA87" strokeWidth="1.5" strokeLinejoin="round"/>
-                  </svg>
+            {completingItem && !['movie', 'show', 'song'].includes(completingItem.type) && (
+            <div style={{ width: '100%', marginBottom: '20px' }}>
+              {capturePhotoPreview ? (
+                <div style={{ position: 'relative', width: '100%', height: '160px', borderRadius: '12px', overflow: 'hidden' }}>
+                  <img src={capturePhotoPreview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button
+                    onClick={() => { setCapturePhotoPreview(null); setCapturePhotoFile(null) }}
+                    style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.5)', color: 'white', border: 'none', borderRadius: '50%', width: '28px', height: '28px', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    ×
+                  </button>
                 </div>
-                <div style={{ fontSize: '11px', color: '#C4AA87', fontWeight: 500 }}>Add a photo</div>
-                <div style={{ fontSize: '10px', color: '#D9CBBA' }}>Coming with native app</div>
-              </div>
+              ) : (
+                <label style={{ display: 'block', width: '100%', height: '110px', borderRadius: '12px', border: '1px dashed #D9CBBA', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', background: 'rgba(250,246,240,0.7)', cursor: 'pointer' }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={e => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        setCapturePhotoFile(file)
+                        setCapturePhotoPreview(URL.createObjectURL(file))
+                      }
+                    }}
+                  />
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#EDE4D8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <rect x="1" y="3" width="14" height="10" rx="2" stroke="#C4AA87" strokeWidth="1.5"/>
+                      <circle cx="8" cy="8" r="2.5" stroke="#C4AA87" strokeWidth="1.5"/>
+                      <path d="M5 3 L5.5 1.5 L10.5 1.5 L11 3" stroke="#C4AA87" strokeWidth="1.5" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#C4AA87', fontWeight: 500 }}>Add a photo</div>
+                </label>
+              )}
+            </div>
             )}
             <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '8px' }}>One thing about it</div>
             <textarea
