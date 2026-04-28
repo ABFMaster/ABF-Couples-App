@@ -247,6 +247,23 @@ export default function UsPage() {
     return labels[eventType] || 'Memory'
   }
 
+  const GAME_ROTATION = [
+    { mode: 'hot-take', label: 'Hot Take', route: '/game-room' },
+    { mode: 'rabbit-hole', label: 'Rabbit Hole', route: '/game-room' },
+    { mode: 'rank', label: 'Rank It', route: '/game-room' },
+    { mode: 'the-call', label: 'The Call', route: '/game-room' },
+    { mode: 'memory', label: 'Memory', route: '/game-room' },
+    { mode: 'story', label: 'Story', route: '/game-room' },
+    { mode: 'pitch', label: 'Pitch', route: '/game-room' },
+  ]
+  function getSuggestedGame(coupleCreatedAt) {
+    const origin = coupleCreatedAt ? new Date(coupleCreatedAt).getTime() : 0
+    const weeksSinceStart = Math.floor((Date.now() - origin) / (7 * 24 * 60 * 60 * 1000))
+    return GAME_ROTATION[weeksSinceStart % GAME_ROTATION.length]
+  }
+
+  const suggestedGame = couple ? getSuggestedGame(couple.created_at) : GAME_ROTATION[0]
+
   return (
     <div style={{ minHeight: '100vh', background: '#FAF6F0', paddingBottom: '100px', fontFamily: 'DM Sans, sans-serif' }}>
 
@@ -407,7 +424,8 @@ export default function UsPage() {
           <div style={{ background: 'white', borderRadius: '14px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(28,20,16,0.05)', cursor: 'pointer' }} onClick={() => router.push('/game-room')}>
             <div>
               <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '2px' }}>Saturday · Game Room</div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: '#1C1410' }}>Nora suggests: Rank It</div>
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: '#1C1410' }}>This week: {suggestedGame.label}</div>
+              <div style={{ fontSize: '11px', color: '#8B7355', marginTop: '2px' }}>Nora will guide the game</div>
             </div>
             <div style={{ fontSize: '11px', fontWeight: 500, color: '#2D3561', border: '1px solid #2D3561', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap' }}>Let's play</div>
           </div>
