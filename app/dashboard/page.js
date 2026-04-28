@@ -363,12 +363,12 @@ export default function Dashboard() {
                 From Your Timeline
               </div>
               <div
-                onClick={() => router.push('/us')}
+                onClick={() => router.push('/us?section=been')}
                 style={{ borderRadius: '18px', overflow: 'hidden', marginBottom: '12px', boxShadow: '0 2px 12px rgba(28,20,16,0.08)', cursor: 'pointer', position: 'relative', height: '260px' }}
               >
-                {memoryCard.photo_url ? (
+                {memoryCard.photo_urls?.[0] ? (
                   <img
-                    src={memoryCard.photo_url}
+                    src={memoryCard.photo_urls?.[0]}
                     alt={memoryCard.title}
                     style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
                   />
@@ -387,7 +387,7 @@ export default function Dashboard() {
                     {memoryCard.title}
                   </div>
                   <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
-                    {memoryCard.date ? new Date(memoryCard.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}
+                    {memoryCard.event_date ? new Date(memoryCard.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}
                   </div>
                 </div>
               </div>

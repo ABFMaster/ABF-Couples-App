@@ -156,6 +156,11 @@ export default function UsPage() {
       setLoading(false)
     }
     fetchAll()
+    const params = new URLSearchParams(window.location.search)
+    const section = params.get('section')
+    if (section === 'been' || section === 'now' || section === 'ahead') {
+      setActiveSection(section)
+    }
   }, [])
 
   const CATEGORY_MAP = {
