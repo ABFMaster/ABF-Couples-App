@@ -198,7 +198,7 @@ export default function AddSharedItemPage() {
       }
       const { error: err } = await supabase.from('shared_items').insert(payload)
       if (err) { setError(err.message); return }
-      router.push('/shared')
+      router.push('/us')
     } catch (e) {
       setError('Something went wrong. Please try again.')
       console.error(e)
