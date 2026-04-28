@@ -194,7 +194,7 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-[#F7F4EF] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-2 border-[#E8614D] border-t-transparent mx-auto mb-4" />
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-[#C4714A] border-t-transparent mx-auto mb-4" />
           <p className="text-neutral-400 text-sm">Loading…</p>
         </div>
       </div>
@@ -344,14 +344,14 @@ export default function Dashboard() {
               <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-5">
                 <div className="flex items-center gap-1.5 mb-3">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#F2A090]" />
-                  <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-[#E8614D]">Nora</span>
+                  <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-[#C4714A]">Nora</span>
                 </div>
                 <p className="text-[14px] text-neutral-600 leading-relaxed mb-3">
                   Every relationship has a story. Add your first memory — your first date, a trip, anything that matters.
                 </p>
                 <button
                   onClick={() => router.push('/timeline')}
-                  className="text-[14px] font-semibold text-[#E8614D]"
+                  className="text-[14px] font-semibold text-[#C4714A]"
                 >
                   Add a memory →
                 </button>
@@ -362,34 +362,35 @@ export default function Dashboard() {
               <div className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
                 From Your Timeline
               </div>
-              <button
-                onClick={() => router.push('/timeline')}
-                className="w-full bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden text-left active:scale-[0.99] transition-transform"
+              <div
+                onClick={() => router.push('/us')}
+                style={{ borderRadius: '18px', overflow: 'hidden', marginBottom: '12px', boxShadow: '0 2px 12px rgba(28,20,16,0.08)', cursor: 'pointer', position: 'relative', height: '260px' }}
               >
-                {memoryCard.photo_urls?.[0] && (
+                {memoryCard.photo_url ? (
                   <img
-                    src={memoryCard.photo_urls[0]}
+                    src={memoryCard.photo_url}
                     alt={memoryCard.title}
-                    className="w-full h-36 object-cover"
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
                   />
+                ) : (
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #6B5020 0%, #C9A84C 50%, #D4BA7A 100%)' }} />
                 )}
-                <div className="p-5">
-                  {memoryCard.event_type && (
-                    <p className="text-[10px] font-bold tracking-[0.1em] uppercase text-neutral-400 mb-1">
-                      {({ custom: 'Memory', trip: 'Trip', milestone: 'Milestone', anniversary: 'Anniversary', first: 'First', other: 'Moment' }[memoryCard.event_type] ?? memoryCard.event_type.charAt(0).toUpperCase() + memoryCard.event_type.slice(1))}
-                    </p>
-                  )}
-                  <p className="text-[18px] text-neutral-900 leading-snug mb-1"
-                     style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                    {memoryCard.title}
-                  </p>
-                  {memoryCard.event_date && (
-                    <p className="text-[12px] text-neutral-400">
-                      {new Date(memoryCard.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                    </p>
-                  )}
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.08) 55%, transparent 100%)' }} />
+                <div style={{ position: 'absolute', top: '12px', left: '12px', fontSize: '10px', fontWeight: 500, letterSpacing: '0.06em', padding: '3px 8px', borderRadius: '20px', textTransform: 'uppercase', background: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.9)' }}>
+                  {(() => {
+                    const labels = { custom: 'Memory', trip: 'Trip', milestone: 'Milestone', anniversary: 'Anniversary', first: 'First', shared_item: 'Memory', other: 'Memory' }
+                    return labels[memoryCard.event_type] || 'Memory'
+                  })()}
                 </div>
-              </button>
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '14px 16px' }}>
+                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', fontWeight: 400, color: '#fff', lineHeight: 1.2, marginBottom: '4px' }}>
+                    {memoryCard.title}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
+                    {memoryCard.date ? new Date(memoryCard.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}
+                  </div>
+                </div>
+              </div>
             </div>
           ) : null}
 
