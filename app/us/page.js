@@ -571,11 +571,31 @@ export default function UsPage() {
                 <label style={{ display: 'block', width: '100%', height: '110px', borderRadius: '12px', border: '1px dashed #D9CBBA', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', background: 'rgba(250,246,240,0.7)', cursor: 'pointer' }}>
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
                     style={{ display: 'none' }}
                     onChange={e => {
                       const file = e.target.files?.[0]
                       if (file) {
+                        const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || file.name.toLowerCase().endsWith('.heic')
+                        if (isHeic) {
+                          const reader = new FileReader()
+                          reader.onload = (ev) => {
+                            const img = new Image()
+                            img.onload = () => {
+                              const canvas = document.createElement('canvas')
+                              canvas.width = img.width
+                              canvas.height = img.height
+                              canvas.getContext('2d').drawImage(img, 0, 0)
+                              canvas.toBlob((blob) => {
+                                setCapturePhotoFile(blob)
+                                setCapturePhotoPreview(URL.createObjectURL(blob))
+                              }, 'image/jpeg', 0.9)
+                            }
+                            img.src = ev.target.result
+                          }
+                          reader.readAsDataURL(file)
+                          return
+                        }
                         setCapturePhotoFile(file)
                         setCapturePhotoPreview(URL.createObjectURL(file))
                       }
