@@ -32,15 +32,14 @@ export default function DateHistoryPage() {
     const now = new Date().toISOString()
 
     const [{ data: customDates }, { data: datePlans }] = await Promise.all([
-      supabase.from('custom_dates').select('id, title, date_time, created_at, status, user1_rating, user2_rating, stops, notes').eq('couple_id', cid).order('created_at', { ascending: false }).limit(50),
-      supabase.from('date_plans').select('id, title, date_time, status, rating, notes, address').eq('couple_id', cid).order('date_time', { ascending: false }).limit(50),
+      supabase.from('custom_dates').select('id, title, date_time, created_at, status, user1_rating, user2_rating, stops').eq('couple_id', cid).order('created_at', { ascending: false }).limit(50),
+      supabase.from('date_plans').select('id, title, date_time, status, rating').eq('couple_id', cid).order('date_time', { ascending: false }).limit(50),
     ])
 
     const normalizedCustom = (customDates ?? []).map(c => ({
       id: c.id, source: 'custom', title: c.title,
       date_time: c.date_time || c.created_at,
       rating: c.user1_rating || c.user2_rating || null,
-      notes: c.notes || null,
       photo_url: c.stops?.find(s => s.photo_url && !s.photo_url.includes('places.googleapis.com/v1'))?.photo_url || null,
       stop_count: c.stops?.length ?? 0,
       status: c.status,
@@ -50,7 +49,6 @@ export default function DateHistoryPage() {
       id: p.id, source: 'plan', title: p.title,
       date_time: p.date_time,
       rating: p.rating || null,
-      notes: p.notes || null,
       photo_url: null,
       stop_count: 0,
       status: p.status,
@@ -155,12 +153,7 @@ export default function DateHistoryPage() {
                 {/* Title + meta */}
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 14px' }}>
                   <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 400, color: '#fff', lineHeight: 1.2, marginBottom: '4px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{date.title}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.65)' }}>{fmtDate(date.date_time)}</div>
-                    {date.notes && (
-                      <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontStyle: 'italic', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', maxWidth: '60%', textAlign: 'right' }}>"{date.notes}"</div>
-                    )}
-                  </div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.65)' }}>{fmtDate(date.date_time)}</div>
                 </div>
               </div>
             ))}
