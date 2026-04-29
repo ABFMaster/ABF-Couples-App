@@ -769,3 +769,47 @@ git push            # Vercel auto-deploys on push to main
 - Been architecture: timeline_events single source of truth (Option A)
 - Completion mechanic: capture sheet for all types, note is optional
 - Nora line: haiku model, one sentence, no affirmations, specific to title
+
+---
+## Self-Review 2026-04-28
+
+### Sprints C, D, E — Ahead/Been card visual, completion mechanic, Been detail sheet, Sprint E fixes
+
+**What was built:**
+- SharedItemCard: full bleed portrait, scrim, type pill, ghost icon fallback, Done pill — unified card language across Ahead, Been, Home
+- Ahead section wired to shared_items — live data, category chip filtering, 2-col grid
+- Capture sheet fires for all types — photo picker (JPEG + HEIC canvas conversion), note field, Save to Been
+- Photo upload to Supabase storage photos bucket — completion_photo_url populated, renders as hero in Been detail sheet
+- app/api/ahead/complete/route.js — idempotency guard, dual write to shared_items + timeline_events
+- app/api/ahead/nora-line/route.js — haiku model, one sentence, prompt tightened
+- Been detail sheet — full-bleed hero, photo-aware (media = API art, rich = user photo), type pill display labels, completion note, Nora line, Close + scrim dismiss
+- Home memory card — full bleed, photo_urls[0] fix, event_date fix, Cormorant font, #E8614D → #C4714A, routes to /us?section=been
+- shared/add routes to /us after save — was hitting 404
+- Game mode weekly rotation in Now tab
+- RLS on shared_items confirmed
+- Both Matt and Cass confirmed identical Been view
+
+**Mistakes caught:**
+- createRouteHandlerClient wrong pattern — caught at deploy
+- userId not in POST body — caught by review
+- Direct Anthropic import violation — caught before commit
+- timeline_events select missing source_id, image_url, item_subtype, artist — caught by audit
+- HEIC preview broken — caught during testing, fixed with canvas transcoding
+- photo_url vs photo_urls field mismatch on home card — caught by audit
+- event_date vs date field mismatch on home card — caught by audit
+- Labeled code blocks and deployment steps dropped mid-session — process failure, corrected
+
+**Known issues open:**
+- P2: Nora completion lines — tone needs work, wrapping into Sprint H Nora voice pass
+- P2: Photo crop objectPosition fine-tuning — Sprint H papercut
+- P2: Been tab refresh delay after completion — timeline_events re-fetch added to submitComplete, confirm working
+- P2: Push notifications cron broken since DST — Sprint F
+- P3: DATE_IDEA raw string still showing in some detail sheet type pills
+- P3: Game Room day label hardcoded Saturday
+
+**Next session priorities:**
+1. Sprint F — Push notifications audit and fix
+2. Sprint G — Date Night redesign
+3. Sprint H — Nora verdict + voice system prompt pass
+4. Sprint I — Papercut pass
+5. Sprint J — Code debt + hygiene
