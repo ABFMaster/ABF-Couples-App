@@ -125,20 +125,15 @@ export default function DateDetailPage({ params }) {
   }
 
   // ── States ────────────────────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#FAF6F0] flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl mb-3">💕</div>
-          <p className="text-gray-400 text-sm animate-pulse">Loading…</p>
-        </div>
-      </div>
-    )
-  }
+  if (loading) return (
+    <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#C4AA87', fontStyle: 'italic' }}>Loading...</p>
+    </div>
+  )
 
   if (notFound) {
     return (
-      <div className="min-h-screen bg-[#FAF6F0] flex items-center justify-center px-5">
+      <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="text-center">
           <div className="text-4xl mb-3">🔍</div>
           <p className="font-semibold text-gray-800 mb-1">Date not found</p>
@@ -161,6 +156,7 @@ export default function DateDetailPage({ params }) {
   const mapUrl = isCustom
     ? multiStopMapUrl(date.stops)
     : staticMapUrl(date.latitude, date.longitude)
+  const heroPhoto = date.stops?.find(s => s.photo_url)?.photo_url || null
 
   const dateStr = fmtDate(isPlan ? date.date_time : (date.date_time || date.created_at))
   const timeStr = date.date_time ? fmtTime(date.date_time) : null
@@ -169,6 +165,8 @@ export default function DateDetailPage({ params }) {
   const dateTimeValue = date.date_time ? new Date(date.date_time) : null
   const isUpcoming = (date.status === 'planned' || date.status === 'approved') && dateTimeValue && dateTimeValue > now
   const isPast = (date.status === 'planned' || date.status === 'approved') && dateTimeValue && dateTimeValue <= now
+  const canEdit = isCustom && !isCompleted && (currentUserId === date.user_id || date.shared_with === currentUserId)
+  const statusLabel = isCompleted ? '✓ Done' : isUpcoming ? 'Upcoming' : isPast ? 'Awaiting Review' : 'Planned'
 
   const handleComplete = async () => {
     if (!myRating || submittingComplete) return
@@ -311,51 +309,39 @@ export default function DateDetailPage({ params }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF6F0] pb-24">
+    <div style={{ minHeight: '100vh', background: '#FAF6F0', paddingBottom: '100px', fontFamily: 'DM Sans, sans-serif' }}>
 
-      {/* ── Sticky header ─────────────────────────────────────── */}
-      <div className="bg-white border-b border-gray-100 px-5 py-4 flex items-center gap-3 sticky top-0 z-10">
-        <button
-          onClick={() => router.push('/dates')}
-          className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 flex-shrink-0"
-        >←</button>
-        <h1 className="font-bold text-gray-900 flex-1 truncate">{date.title}</h1>
-        {isCustom && !isCompleted && (currentUserId === date.user_id || date.shared_with === currentUserId) && (
-          <button
-            onClick={() => router.push(`/dates/${id}/edit`)}
-            className="flex-shrink-0 text-xs text-gray-400 hover:text-[#C4714A] transition-colors px-2 py-1"
-          >
-            ✏️ Edit
-          </button>
-        )}
-        {isCompleted && (
-          <span className="flex-shrink-0 text-xs bg-green-100 text-green-700 px-2.5 py-1 rounded-full font-semibold">✓ Done</span>
-        )}
-        {isUpcoming && (
-          <span className="flex-shrink-0 text-xs bg-cream-100 text-coral-700 px-2.5 py-1 rounded-full font-semibold">Upcoming</span>
-        )}
-        {isPast && !isCompleted && (
-          <span className="flex-shrink-0 text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full font-semibold">Awaiting Review</span>
-        )}
+      <div style={{ background: 'linear-gradient(145deg, #1C1410 0%, #2D3561 100%)', padding: '52px 24px 32px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '140px', height: '140px', borderRadius: '50%', background: 'rgba(201,168,76,0.06)' }} />
+        <button onClick={() => router.back()} style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '20px', padding: 0, fontFamily: 'DM Sans, sans-serif' }}>← Back</button>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', fontWeight: 300, color: 'white', lineHeight: 1.2, flex: 1 }}>{date.title}</div>
+          <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+            {canEdit && (
+              <button onClick={() => router.push(`/dates/${date.id}/edit`)} style={{ fontSize: '11px', fontWeight: 500, color: 'rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 14px', borderRadius: '20px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Edit</button>
+            )}
+            <div style={{ fontSize: '11px', fontWeight: 500, color: 'rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 14px', borderRadius: '20px' }}>{statusLabel}</div>
+          </div>
+        </div>
       </div>
 
       {/* ── Map banner ────────────────────────────────────────── */}
-      {mapUrl && (
+      {(heroPhoto || mapUrl) && (
         <div className="h-52 overflow-hidden">
-          <img src={mapUrl} alt="Map" className="w-full h-full object-cover" />
+          <img src={heroPhoto || mapUrl} alt="Map" className="w-full h-full object-cover" />
         </div>
       )}
 
-      {!mapUrl && (
+      {!heroPhoto && !mapUrl && (
         <div className="h-24 bg-gradient-to-br from-coral-400 to-indigo-400" />
       )}
 
-      <div className="px-5 py-5 space-y-4 max-w-2xl mx-auto">
+      <div style={{ padding: '20px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
         {/* ── Date / time ───────────────────────────────────── */}
         {dateStr && (
-          <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+          <div style={{ background: 'white', borderRadius: '16px', padding: '16px 18px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
+            <p style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '6px' }}>
               {date.date_time ? 'Scheduled for' : 'Created'}
             </p>
             <p className="font-semibold text-gray-900">
@@ -367,8 +353,8 @@ export default function DateDetailPage({ params }) {
 
         {/* ── Location (date_plans) ─────────────────────────── */}
         {isPlan && date.address && (
-          <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Location</p>
+          <div style={{ background: 'white', borderRadius: '16px', padding: '16px 18px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
+            <p style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '6px' }}>Location</p>
             <p className="text-gray-900 text-sm">{date.address}</p>
             {date.latitude && date.longitude && (
               <a
@@ -385,8 +371,8 @@ export default function DateDetailPage({ params }) {
 
         {/* ── Stops (custom_dates) ──────────────────────────── */}
         {isCustom && date.stops?.length > 0 && (
-          <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+          <div style={{ background: 'white', borderRadius: '16px', padding: '16px 18px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
+            <p style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '6px' }}>
               Stops · {date.stops.length}
             </p>
             <div className="space-y-4">
@@ -422,21 +408,21 @@ export default function DateDetailPage({ params }) {
 
         {/* ── Notes (date_plans) ────────────────────────────── */}
         {isPlan && date.description && (
-          <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Notes</p>
+          <div style={{ background: 'white', borderRadius: '16px', padding: '16px 18px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
+            <p style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '6px' }}>Notes</p>
             <p className="text-gray-700 text-sm leading-relaxed">{date.description}</p>
           </div>
         )}
 
         {/* ── Conversation Starters ─────────────────────────── */}
         {(isCustom || isPlan) && date.conversation_starters && (
-          <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
+          <div style={{ background: 'white', borderRadius: '16px', padding: '16px 18px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
             <button
               onClick={() => setShowStarters(!showStarters)}
               className="w-full flex items-center justify-between"
             >
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">✨ Conversation Starters</p>
+                <p style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '6px' }}>✨ Conversation Starters</p>
                 <p className="text-gray-600 text-sm mt-0.5">
                   {showStarters ? 'Tap to hide' : 'Things to talk about tonight'}
                 </p>
@@ -475,8 +461,8 @@ export default function DateDetailPage({ params }) {
 
         {/* ── Reflection (completed date_plans) ────────────── */}
         {isPlan && isCompleted && (date.rating || date.reflection_notes) && (
-          <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">How it went</p>
+          <div style={{ background: 'white', borderRadius: '16px', padding: '16px 18px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
+            <p style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '6px' }}>How it went</p>
             {date.rating > 0 && (
               <p className="text-xl mb-2">{'⭐'.repeat(date.rating)}</p>
             )}
@@ -488,8 +474,8 @@ export default function DateDetailPage({ params }) {
 
         {/* ── Reviews (completed custom_dates) ─────────────── */}
         {isCustom && isCompleted && (
-          <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">How it went</p>
+          <div style={{ background: 'white', borderRadius: '16px', padding: '16px 18px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
+            <p style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '6px' }}>How it went</p>
             {[
               { rating: date.user1_rating, review: date.user1_review, label: date.user_id === currentUserId ? 'You' : partnerName },
               { rating: date.user2_rating, review: date.user2_review, label: date.user_id === currentUserId ? partnerName : 'You' }
@@ -506,12 +492,12 @@ export default function DateDetailPage({ params }) {
 
         {/* ── Date Status (unified) ──────────────────────────── */}
         {isCustom && !isCompleted && (currentUserId === date.user_id || date.shared_with === currentUserId) && (
-          <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
+          <div style={{ background: 'white', borderRadius: '16px', padding: '16px 18px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
 
             {/* State 1: Not yet shared — only creator sees this */}
             {!date.shared_with && currentUserId === date.user_id && (
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Ready to share?</p>
+                <p style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '6px' }}>Ready to share?</p>
                 <p className="text-gray-500 text-sm mb-3">Send this to {partnerName} so they can review, edit, and approve it.</p>
                 <button
                   onClick={sendToPartner}
@@ -526,7 +512,7 @@ export default function DateDetailPage({ params }) {
             {/* State 2: Shared, neither approved */}
             {date.shared_with && !date.user1_approved_at && !date.user2_approved_at && (
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Date Plan</p>
+                <p style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '6px' }}>Date Plan</p>
                 <div className="flex items-center gap-3 mb-4">
                   <span className="text-2xl">💌</span>
                   <p className="text-gray-600 text-sm">Shared with {partnerName} — waiting for approval</p>
@@ -548,7 +534,7 @@ export default function DateDetailPage({ params }) {
             {date.shared_with && (date.user1_approved_at || date.user2_approved_at) &&
              !(date.user1_approved_at && date.user2_approved_at) && (
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Date Plan</p>
+                <p style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '6px' }}>Date Plan</p>
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center gap-3">
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -613,7 +599,7 @@ export default function DateDetailPage({ params }) {
         {/* ── Plan again CTA ────────────────────────────────── */}
         <button
           onClick={() => router.push('/dates/custom')}
-          className="w-full py-4 bg-gradient-to-r from-coral-500 to-indigo-500 text-white font-bold rounded-2xl shadow-md hover:shadow-lg transition-shadow text-sm flex items-center justify-center gap-2"
+          style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg, #8B4A2A 0%, #2D3561 100%)', color: 'white', border: 'none', borderRadius: '14px', fontSize: '14px', fontWeight: 500, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
         >
           <span>✨</span> Plan Another Date
         </button>
@@ -642,7 +628,7 @@ export default function DateDetailPage({ params }) {
             </div>
 
             <div className="mb-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+              <p style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '6px' }}>
                 Add a photo? (optional)
               </p>
               <input

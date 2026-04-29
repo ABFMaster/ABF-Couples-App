@@ -15,187 +15,157 @@ export default function DateHistoryPage() {
   const [loading, setLoading] = useState(true)
   const [dates, setDates] = useState([])
   const [search, setSearch] = useState('')
-  const [sortBy, setSortBy] = useState('newest') // 'newest' | 'top'
+  const [sortBy, setSortBy] = useState('newest')
 
   const fetchData = useCallback(async () => {
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError || !user) { router.push('/login'); return }
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { router.push('/login'); return }
 
-      const { data: coupleData } = await supabase
-        .from('couples')
-        .select('id')
-        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-        .maybeSingle()
+    const { data: coupleData } = await supabase
+      .from('couples')
+      .select('id')
+      .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+      .maybeSingle()
 
-      if (!coupleData) { router.push('/dates'); return }
+    if (!coupleData) { setLoading(false); return }
+    const cid = coupleData.id
+    const now = new Date().toISOString()
 
-      const { data: completedDates } = await supabase
-        .from('custom_dates')
-        .select('id, title, date_time, created_at, status, user1_rating, user2_rating, user1_review, user2_review, stops')
-        .eq('couple_id', coupleData.id)
-        .eq('status', 'completed')
-        .order('created_at', { ascending: false })
+    const [{ data: customDates }, { data: datePlans }] = await Promise.all([
+      supabase.from('custom_dates').select('id, title, date_time, created_at, status, user1_rating, user2_rating, stops, notes').eq('couple_id', cid).order('created_at', { ascending: false }).limit(50),
+      supabase.from('date_plans').select('id, title, date_time, status, rating, notes, address').eq('couple_id', cid).neq('status', 'cancelled').or(`status.eq.completed,date_time.lt.${now}`).order('date_time', { ascending: false }).limit(50),
+    ])
 
-      const { data: completedPlans } = await supabase
-        .from('date_plans')
-        .select('id, title, date_time, created_at, status, rating, reflection_notes, address, latitude, longitude')
-        .eq('couple_id', coupleData.id)
-        .eq('status', 'completed')
-        .order('date_time', { ascending: false })
+    const normalizedCustom = (customDates ?? []).map(c => ({
+      id: c.id, source: 'custom', title: c.title,
+      date_time: c.date_time || c.created_at,
+      rating: c.user1_rating || c.user2_rating || null,
+      notes: c.notes || null,
+      photo_url: c.stops?.[0]?.photo_url || null,
+      stop_count: c.stops?.length ?? 0,
+      status: c.status,
+    }))
 
-      const normalizedCustom = (completedDates || []).map(d => ({
-        id: d.id,
-        source: 'custom',
-        title: d.title,
-        date_time: d.date_time || d.created_at,
-        created_at: d.created_at,
-        user1_rating: d.user1_rating,
-        user2_rating: d.user2_rating,
-        user1_review: d.user1_review,
-        user2_review: d.user2_review,
-        stops: d.stops,
-        avgRating: d.user1_rating && d.user2_rating
-          ? (d.user1_rating + d.user2_rating) / 2
-          : d.user1_rating || d.user2_rating || 0
-      }))
+    const normalizedPlans = (datePlans ?? []).map(p => ({
+      id: p.id, source: 'plan', title: p.title,
+      date_time: p.date_time,
+      rating: p.rating || null,
+      notes: p.notes || null,
+      photo_url: null,
+      stop_count: 0,
+      status: p.status,
+    }))
 
-      const normalizedPlans = (completedPlans || []).map(p => ({
-        id: p.id,
-        source: 'plan',
-        title: p.title,
-        date_time: p.date_time || p.created_at,
-        created_at: p.created_at,
-        user1_rating: p.rating,
-        user2_rating: null,
-        user1_review: p.reflection_notes,
-        user2_review: null,
-        stops: p.address ? [{ name: p.address }] : [],
-        avgRating: p.rating || 0
-      }))
+    const allDates = [...normalizedCustom, ...normalizedPlans]
+      .sort((a, b) => new Date(b.date_time) - new Date(a.date_time))
 
-      const allDates = [...normalizedCustom, ...normalizedPlans]
-        .sort((a, b) => new Date(b.date_time) - new Date(a.date_time))
-
-      setDates(allDates)
-      setLoading(false)
-    } catch (err) {
-      console.error('History fetch error:', err)
-      setLoading(false)
-    }
+    setDates(allDates)
+    setLoading(false)
   }, [router])
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const filtered = dates
-    .filter(d => d.title.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => {
-      if (sortBy === 'top') return b.avgRating - a.avgRating
-      return new Date(b.date_time) - new Date(a.date_time)
-    })
+  const filtered = dates.filter(d => d.title?.toLowerCase().includes(search.toLowerCase()))
+  const sorted = sortBy === 'top'
+    ? [...filtered].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
+    : filtered
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#FDF6EF] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#C4714A] border-t-transparent" />
-      </div>
-    )
-  }
+  if (loading) return (
+    <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#C4AA87', fontStyle: 'italic' }}>Loading...</p>
+    </div>
+  )
 
   return (
-    <div className="min-h-screen bg-[#FDF6EF] pb-24">
+    <div style={{ minHeight: '100vh', background: '#FAF6F0', paddingBottom: '100px', fontFamily: 'DM Sans, sans-serif' }}>
 
-      {/* Header */}
-      <header className="bg-white border-b border-gray-100 px-4 pt-14 pb-4">
-        <div className="max-w-2xl mx-auto">
-          <button
-            onClick={() => router.push('/dates')}
-            className="text-[#9CA3AF] hover:text-[#2D3648] text-sm mb-3 flex items-center gap-1 transition-colors"
-          >
-            ← Back
-          </button>
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-[#2D3648]">Date History</h1>
-            <img src="/logo-wordmark.png" alt="ABF" className="h-8 w-auto" />
-          </div>
-          <p className="text-[#9CA3AF] text-sm mt-1">Every date you've completed together</p>
-        </div>
-      </header>
+      {/* HEADER */}
+      <div style={{ background: 'linear-gradient(145deg, #1C1410 0%, #2D3561 100%)', padding: '52px 24px 32px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '140px', height: '140px', borderRadius: '50%', background: 'rgba(201,168,76,0.06)' }} />
+        <button onClick={() => router.back()} style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '20px', padding: 0, fontFamily: 'DM Sans, sans-serif' }}>← Back</button>
+        <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.18em', color: '#C9A84C', textTransform: 'uppercase', marginBottom: '4px' }}>Your Shared Life</div>
+        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '44px', fontWeight: 300, color: 'white', letterSpacing: '-0.02em', lineHeight: 1 }}>Date History</div>
+      </div>
 
-      {/* Search + Sort */}
-      <div className="max-w-2xl mx-auto px-4 py-4 space-y-3">
+      <div style={{ padding: '20px 20px 0' }}>
+
+        {/* SEARCH */}
         <input
           type="text"
+          placeholder="Search dates..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search dates…"
-          className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20"
+          style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', border: '1px solid #D9CBBA', background: 'white', fontSize: '14px', fontFamily: 'DM Sans, sans-serif', color: '#1C1410', outline: 'none', boxSizing: 'border-box', marginBottom: '12px' }}
         />
-        <div className="flex gap-2">
+
+        {/* SORT */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
           {['newest', 'top'].map(s => (
             <button
               key={s}
               onClick={() => setSortBy(s)}
-              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all ${
-                sortBy === s
-                  ? 'bg-[#C4714A] text-white'
-                  : 'bg-white text-gray-500 border border-gray-200'
-              }`}
-            >
+              style={{ fontSize: '11px', fontWeight: 500, padding: '7px 16px', borderRadius: '20px', border: `1px solid ${sortBy === s ? '#C4714A' : '#D9CBBA'}`, background: sortBy === s ? '#C4714A' : 'white', color: sortBy === s ? 'white' : '#8B7355', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', textTransform: 'capitalize' }}>
               {s === 'newest' ? 'Newest' : 'Top Rated'}
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Dates list */}
-      <div className="max-w-2xl mx-auto px-4 space-y-3 pb-4">
-        {filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl p-10 text-center shadow-sm mt-4">
-            <p className="text-5xl mb-4">💕</p>
-            <p className="text-[#2D3648] font-semibold text-lg mb-2">No completed dates yet</p>
-            <p className="text-[#9CA3AF] text-sm max-w-xs mx-auto">
-              Complete your first date to start your history 💕
-            </p>
+        {/* DATE CARDS */}
+        {sorted.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '48px 0' }}>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: '#C4AA87', marginBottom: '8px' }}>No dates found</div>
+            <div style={{ fontSize: '13px', color: '#C4AA87' }}>Try a different search</div>
           </div>
         ) : (
-          filtered.map(date => {
-            const firstStop = date.stops?.[0]?.name || null
-            const firstReview = date.user1_review || date.user2_review || ''
-            const snippet = firstReview.length > 80 ? firstReview.slice(0, 80) + '…' : firstReview
-
-            return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {sorted.map(date => (
               <div
-                key={date.id}
-                className="bg-white rounded-2xl shadow-sm p-5 cursor-pointer hover:shadow-md transition-shadow"
+                key={`${date.source}-${date.id}`}
                 onClick={() => router.push(`/dates/${date.id}`)}
+                style={{ borderRadius: '16px', overflow: 'hidden', position: 'relative', height: '160px', cursor: 'pointer', boxShadow: '0 2px 12px rgba(28,20,16,0.08)' }}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-bold text-gray-900 text-base truncate">{date.title}</h3>
-                    <p className="text-xs text-gray-400 mt-0.5">{fmtDate(date.date_time)}</p>
-                    {firstStop && (
-                      <p className="text-xs text-gray-500 mt-1">📍 {firstStop}</p>
-                    )}
-                    {snippet && (
-                      <p className="text-gray-500 text-xs mt-2 italic">"{snippet}"</p>
+                {/* Hero image or gradient */}
+                {date.photo_url ? (
+                  <img src={date.photo_url} alt={date.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+                ) : (
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #6B5020 0%, #C9A84C 50%, #D4BA7A 100%)' }} />
+                )}
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.08) 55%, transparent 100%)' }} />
+
+                {/* Stop count pill */}
+                {date.stop_count > 0 && (
+                  <div style={{ position: 'absolute', top: '10px', left: '10px', fontSize: '9px', fontWeight: 500, padding: '2px 8px', borderRadius: '20px', background: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.9)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {date.stop_count} {date.stop_count === 1 ? 'stop' : 'stops'}
+                  </div>
+                )}
+
+                {/* Done pill */}
+                {date.status === 'completed' && (
+                  <div style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '9px', fontWeight: 500, padding: '2px 8px', borderRadius: '20px', background: '#C8952A', color: '#fff' }}>Done</div>
+                )}
+
+                {/* Rating */}
+                {date.rating > 0 && (
+                  <div style={{ position: 'absolute', top: '10px', right: date.status === 'completed' ? '60px' : '10px', fontSize: '11px' }}>
+                    {'⭐'.repeat(Math.min(date.rating, 5))}
+                  </div>
+                )}
+
+                {/* Title + meta */}
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 14px' }}>
+                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 400, color: '#fff', lineHeight: 1.2, marginBottom: '4px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{date.title}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.65)' }}>{fmtDate(date.date_time)}</div>
+                    {date.notes && (
+                      <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontStyle: 'italic', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', maxWidth: '60%', textAlign: 'right' }}>"{date.notes}"</div>
                     )}
                   </div>
-                  {date.avgRating > 0 && (
-                    <div className="flex-shrink-0 text-right">
-                      <p className="text-base">{'⭐'.repeat(Math.round(date.avgRating))}</p>
-                      {date.avgRating % 1 !== 0 && (
-                        <p className="text-xs text-gray-400">{date.avgRating.toFixed(1)}</p>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
-            )
-          })
+            ))}
+          </div>
         )}
       </div>
-
       <BottomNav />
     </div>
   )
