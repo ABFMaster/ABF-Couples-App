@@ -326,15 +326,17 @@ export default function DateDetailPage({ params }) {
       </div>
 
       {/* ── Map banner ────────────────────────────────────────── */}
-      {(heroPhoto || mapUrl) && (
-        <div className="h-52 overflow-hidden">
-          <img src={heroPhoto || mapUrl} alt="Map" className="w-full h-full object-cover" />
-        </div>
-      )}
-
-      {!heroPhoto && !mapUrl && (
-        <div className="h-24 bg-gradient-to-br from-coral-400 to-indigo-400" />
-      )}
+      <div style={{ position: 'relative', width: '100%', height: '240px', overflow: 'hidden' }}>
+        {heroPhoto ? (
+          <img
+            src={heroPhoto}
+            alt={date.title}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
+          />
+        ) : (
+          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #2D3561 100%)' }} />
+        )}
+      </div>
 
       <div style={{ padding: '20px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
