@@ -491,8 +491,8 @@ export default function DateDetailPage({ params }) {
           <div className="bg-white rounded-2xl px-5 py-4 shadow-sm">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">How it went</p>
             {[
-              { rating: date.user1_rating, review: date.user1_review, label: date.user_id === userId ? 'You' : partnerName },
-              { rating: date.user2_rating, review: date.user2_review, label: date.user_id === userId ? partnerName : 'You' }
+              { rating: date.user1_rating, review: date.user1_review, label: date.user_id === currentUserId ? 'You' : partnerName },
+              { rating: date.user2_rating, review: date.user2_review, label: date.user_id === currentUserId ? partnerName : 'You' }
             ].filter(r => r.rating).map((r, i) => (
               <div key={i} className={i > 0 ? 'mt-3 pt-3 border-t border-gray-100' : ''}>
                 <p className="text-lg mb-1">{'⭐'.repeat(r.rating)}</p>

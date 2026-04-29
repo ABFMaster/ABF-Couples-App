@@ -148,7 +148,7 @@ export default function Dashboard() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
         const { registerPushSubscription } = await import('@/lib/push-notifications')
-        await registerPushSubscription(supabase, user.id)
+        await registerPushSubscription(user.id)
       } catch (err) {
         console.error('Push init error:', err)
       }
