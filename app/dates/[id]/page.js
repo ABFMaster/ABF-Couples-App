@@ -337,15 +337,15 @@ export default function DateDetailPage({ params }) {
 
       {/* ── Map banner ────────────────────────────────────────── */}
       <div style={{ position: 'relative', width: '100%', height: '240px', overflow: 'hidden' }}>
-        {heroPhoto ? (
-          <img
-            src={heroPhoto}
-            alt=""
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
-            onError={e => { e.currentTarget.style.display = 'none' }}
-          />
-        ) : null}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #2D3561 100%)', zIndex: heroPhoto ? -1 : 0 }} />
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: heroPhoto
+              ? `url("${heroPhoto}") center/cover no-repeat, linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #2D3561 100%)`
+              : 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #2D3561 100%)'
+          }}
+        />
       </div>
 
       <div style={{ padding: '20px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>

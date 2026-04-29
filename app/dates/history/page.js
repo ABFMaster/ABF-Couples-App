@@ -134,15 +134,15 @@ export default function DateHistoryPage() {
                 style={{ borderRadius: '16px', overflow: 'hidden', position: 'relative', height: '160px', cursor: 'pointer', boxShadow: '0 2px 12px rgba(28,20,16,0.08)' }}
               >
                 {/* Hero image or gradient */}
-                {date.photo_url ? (
-                  <img
-                    src={date.photo_url}
-                    alt=""
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
-                    onError={e => { e.currentTarget.style.display = 'none' }}
-                  />
-                ) : null}
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #6B5020 0%, #C9A84C 50%, #D4BA7A 100%)', zIndex: date.photo_url ? -1 : 0 }} />
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: date.photo_url
+                      ? `url("${date.photo_url}") center/cover no-repeat, linear-gradient(135deg, #6B5020 0%, #C9A84C 50%, #D4BA7A 100%)`
+                      : 'linear-gradient(135deg, #6B5020 0%, #C9A84C 50%, #D4BA7A 100%)'
+                  }}
+                />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.08) 55%, transparent 100%)' }} />
 
                 {/* Stop count pill */}
