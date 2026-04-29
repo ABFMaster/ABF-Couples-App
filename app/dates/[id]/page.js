@@ -156,7 +156,7 @@ export default function DateDetailPage({ params }) {
   const mapUrl = isCustom
     ? multiStopMapUrl(date.stops)
     : staticMapUrl(date.latitude, date.longitude)
-  const heroPhoto = date.stops?.find(s => s.photo_url && !s.photo_url.includes('places.googleapis.com/v1'))?.photo_url || null
+  const heroPhoto = date.stops?.find(s => s.photo_url)?.photo_url || null
 
   const dateStr = fmtDate(isPlan ? date.date_time : (date.date_time || date.created_at))
   const timeStr = date.date_time ? fmtTime(date.date_time) : null

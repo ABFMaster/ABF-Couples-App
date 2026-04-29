@@ -82,7 +82,7 @@ export default function DatesPage() {
       ...(customDates ?? []).map(c => ({
         id: c.id, source: 'custom', title: c.title, date: c.date_time || c.created_at,
         stops: c.stops, status: c.status, rating: c.user1_rating || c.user2_rating || null,
-        photo_url: c.stops?.find(s => s.photo_url && !s.photo_url.includes('places.googleapis.com/v1'))?.photo_url || null,
+        photo_url: c.stops?.find(s => s.photo_url)?.photo_url || null,
       })),
     ].sort((a, b) => new Date(b.date ?? 0) - new Date(a.date ?? 0))
 

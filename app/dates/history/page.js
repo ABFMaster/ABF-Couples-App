@@ -40,7 +40,7 @@ export default function DateHistoryPage() {
       id: c.id, source: 'custom', title: c.title,
       date_time: c.date_time || c.created_at,
       rating: c.user1_rating || c.user2_rating || null,
-      photo_url: c.stops?.find(s => s.photo_url && !s.photo_url.includes('places.googleapis.com/v1'))?.photo_url || null,
+      photo_url: c.stops?.find(s => s.photo_url)?.photo_url || null,
       stop_count: c.stops?.length ?? 0,
       status: c.status,
     }))
