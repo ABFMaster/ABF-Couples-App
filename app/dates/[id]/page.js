@@ -40,6 +40,16 @@ function fmtTime(iso) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
+function getHeroPhoto(stops, id) {
+  if (!stops?.length) return null
+  const locationPhotos = stops.filter(s => s.photo_url && s.place_id && !s.place_id.startsWith('custom-')).map(s => s.photo_url)
+  const otherPhotos = stops.filter(s => s.photo_url && (!s.place_id || s.place_id.startsWith('custom-'))).map(s => s.photo_url)
+  const allPhotos = [...locationPhotos, ...otherPhotos]
+  if (!allPhotos.length) return null
+  const seed = id ? id.charCodeAt(0) + id.charCodeAt(id.length - 1) : 0
+  return allPhotos[seed % allPhotos.length]
+}
+
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function DateDetailPage({ params }) {
   const { id } = use(params)
@@ -156,7 +166,7 @@ export default function DateDetailPage({ params }) {
   const mapUrl = isCustom
     ? multiStopMapUrl(date.stops)
     : staticMapUrl(date.latitude, date.longitude)
-  const heroPhoto = date.stops?.find(s => s.photo_url)?.photo_url || null
+  const heroPhoto = getHeroPhoto(date.stops, date.id)
 
   const dateStr = fmtDate(isPlan ? date.date_time : (date.date_time || date.created_at))
   const timeStr = date.date_time ? fmtTime(date.date_time) : null

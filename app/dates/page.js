@@ -14,6 +14,16 @@ function fmtTime(iso) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
+function getHeroPhoto(stops, id) {
+  if (!stops?.length) return null
+  const locationPhotos = stops.filter(s => s.photo_url && s.place_id && !s.place_id.startsWith('custom-')).map(s => s.photo_url)
+  const otherPhotos = stops.filter(s => s.photo_url && (!s.place_id || s.place_id.startsWith('custom-'))).map(s => s.photo_url)
+  const allPhotos = [...locationPhotos, ...otherPhotos]
+  if (!allPhotos.length) return null
+  const seed = id ? id.charCodeAt(0) + id.charCodeAt(id.length - 1) : 0
+  return allPhotos[seed % allPhotos.length]
+}
+
 const CURATED_IDEAS = [
   { id: 'quality-time', title: 'Something Slow', tag: 'Quality Time', gradient: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 100%)' },
   { id: 'adventure', title: 'Something New', tag: 'Adventure', gradient: 'linear-gradient(135deg, #2D3561 0%, #4A3570 100%)' },
@@ -82,7 +92,7 @@ export default function DatesPage() {
       ...(customDates ?? []).map(c => ({
         id: c.id, source: 'custom', title: c.title, date: c.date_time || c.created_at,
         stops: c.stops, status: c.status, rating: c.user1_rating || c.user2_rating || null,
-        photo_url: c.stops?.find(s => s.photo_url)?.photo_url || null,
+        photo_url: getHeroPhoto(c.stops, c.id),
       })),
     ].sort((a, b) => new Date(b.date ?? 0) - new Date(a.date ?? 0))
 
