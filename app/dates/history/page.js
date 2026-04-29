@@ -97,7 +97,7 @@ export default function DateHistoryPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#FDF6EF] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent" />
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#C4714A] border-t-transparent" />
       </div>
     )
   }
@@ -129,7 +129,7 @@ export default function DateHistoryPage() {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search dates…"
-          className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E8614D]/20"
+          className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#C4714A]/20"
         />
         <div className="flex gap-2">
           {['newest', 'top'].map(s => (
@@ -138,7 +138,7 @@ export default function DateHistoryPage() {
               onClick={() => setSortBy(s)}
               className={`px-4 py-2 rounded-full text-xs font-semibold transition-all ${
                 sortBy === s
-                  ? 'bg-[#E8614D] text-white'
+                  ? 'bg-[#C4714A] text-white'
                   : 'bg-white text-gray-500 border border-gray-200'
               }`}
             >

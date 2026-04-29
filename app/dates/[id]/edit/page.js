@@ -272,7 +272,7 @@ export default function EditDatePage({ params }) {
     mapInstance.current = map
     dirRenderer.current = new window.google.maps.DirectionsRenderer({
       suppressMarkers: true,
-      polylineOptions: { strokeColor: '#E8614D', strokeWeight: 4, strokeOpacity: 0.75 },
+      polylineOptions: { strokeColor: '#C4714A', strokeWeight: 4, strokeOpacity: 0.75 },
     })
     dirRenderer.current.setMap(map)
     dirService.current = new window.google.maps.DirectionsService()
@@ -316,7 +316,7 @@ export default function EditDatePage({ params }) {
         icon: {
           path: window.google.maps.SymbolPath.CIRCLE,
           scale: 14,
-          fillColor: i === 0 ? '#E8614D' : '#5D55A0',
+          fillColor: i === 0 ? '#C4714A' : '#5D55A0',
           fillOpacity: 1,
           strokeColor: 'white',
           strokeWeight: 2,
@@ -603,15 +603,15 @@ export default function EditDatePage({ params }) {
   // ── Loading / not found states ───────────────────────────────────
   if (initialLoading) {
     return (
-      <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent" />
+      <div className="min-h-screen bg-[#FAF6F0] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#C4714A] border-t-transparent" />
       </div>
     )
   }
 
   if (notFound) {
     return (
-      <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center px-5">
+      <div className="min-h-screen bg-[#FAF6F0] flex items-center justify-center px-5">
         <div className="text-center">
           <p className="text-4xl mb-3">🔍</p>
           <p className="font-semibold text-gray-800 mb-4">Date not found</p>
@@ -688,14 +688,14 @@ export default function EditDatePage({ params }) {
               <div className="flex gap-3 flex-wrap">
                 <button
                   onClick={() => setShowCustomStop(true)}
-                  className="text-xs text-gray-400 hover:text-[#E8614D] transition-colors flex items-center gap-1"
+                  className="text-xs text-gray-400 hover:text-[#C4714A] transition-colors flex items-center gap-1"
                 >
                   <span>＋</span> Custom stop
                 </button>
                 <span className="text-gray-200 text-xs self-center">·</span>
                 <button
                   onClick={() => setShowMediaSearch(true)}
-                  className="text-xs text-gray-400 hover:text-[#E8614D] transition-colors flex items-center gap-1"
+                  className="text-xs text-gray-400 hover:text-[#C4714A] transition-colors flex items-center gap-1"
                 >
                   <span>🎬</span> Add a movie or show
                 </button>
@@ -716,7 +716,7 @@ export default function EditDatePage({ params }) {
                 <button
                   onClick={addCustomStop}
                   disabled={!customStopName.trim()}
-                  className="px-4 py-2.5 bg-[#E8614D] text-white rounded-2xl text-sm font-semibold disabled:opacity-40"
+                  className="px-4 py-2.5 bg-[#C4714A] text-white rounded-2xl text-sm font-semibold disabled:opacity-40"
                 >Add</button>
                 <button
                   onClick={() => { setShowCustomStop(false); setCustomStopName('') }}
@@ -733,7 +733,7 @@ export default function EditDatePage({ params }) {
                       key={t}
                       onClick={() => { setMediaType(t); setMediaResults([]) }}
                       className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                        mediaType === t ? 'bg-[#E8614D] text-white' : 'bg-gray-100 text-gray-500'
+                        mediaType === t ? 'bg-[#C4714A] text-white' : 'bg-gray-100 text-gray-500'
                       }`}
                     >
                       {t === 'movie' ? '🎬 Movie' : '📺 Show'}
@@ -769,7 +769,7 @@ export default function EditDatePage({ params }) {
                           onClick={() => addMediaStop(result)}
                           disabled={savedIds.has(`media-${result.imdbID}`)}
                           className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold ${
-                            savedIds.has(`media-${result.imdbID}`) ? 'bg-gray-100 text-gray-400' : 'bg-[#E8614D] text-white'
+                            savedIds.has(`media-${result.imdbID}`) ? 'bg-gray-100 text-gray-400' : 'bg-[#C4714A] text-white'
                           }`}
                         >
                           {savedIds.has(`media-${result.imdbID}`) ? '✓' : '+ Add'}
@@ -921,7 +921,7 @@ export default function EditDatePage({ params }) {
                 type="datetime-local"
                 value={dateTime}
                 onChange={e => setDateTime(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border-2 border-[#E5E2DD] focus:border-[#E8614D] focus:outline-none text-gray-700 bg-white"
+                className="w-full px-4 py-3 rounded-xl border-2 border-[#E5E2DD] focus:border-[#C4714A] focus:outline-none text-gray-700 bg-white"
               />
             </div>
             {saveError && <p className="text-xs text-red-500 text-center">{saveError}</p>}
@@ -929,19 +929,19 @@ export default function EditDatePage({ params }) {
               <button
                 onClick={handleSave}
                 disabled={itinerary.length === 0}
-                className="w-full py-4 bg-gradient-to-r from-[#E8614D] to-[#3D3580] text-white font-bold rounded-2xl shadow-md disabled:opacity-40 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
+                className="w-full py-4 bg-gradient-to-r from-[#C4714A] to-[#3D3580] text-white font-bold rounded-2xl shadow-md disabled:opacity-40 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
               >
                 Save Changes →
               </button>
             )}
             {saveStage === 'saving' && (
-              <div className="w-full py-4 bg-gradient-to-r from-[#E8614D] to-[#3D3580] text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
+              <div className="w-full py-4 bg-gradient-to-r from-[#C4714A] to-[#3D3580] text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 Saving changes…
               </div>
             )}
             {saveStage === 'generating' && (
-              <div className="w-full py-4 bg-gradient-to-r from-[#E8614D] to-[#3D3580] text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
+              <div className="w-full py-4 bg-gradient-to-r from-[#C4714A] to-[#3D3580] text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ✨ Refreshing conversation starters…
               </div>

@@ -127,7 +127,7 @@ export default function DateDetailPage({ params }) {
   // ── States ────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
+      <div className="min-h-screen bg-[#FAF6F0] flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-3">💕</div>
           <p className="text-gray-400 text-sm animate-pulse">Loading…</p>
@@ -138,7 +138,7 @@ export default function DateDetailPage({ params }) {
 
   if (notFound) {
     return (
-      <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center px-5">
+      <div className="min-h-screen bg-[#FAF6F0] flex items-center justify-center px-5">
         <div className="text-center">
           <div className="text-4xl mb-3">🔍</div>
           <p className="font-semibold text-gray-800 mb-1">Date not found</p>
@@ -311,7 +311,7 @@ export default function DateDetailPage({ params }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F6F3] pb-24">
+    <div className="min-h-screen bg-[#FAF6F0] pb-24">
 
       {/* ── Sticky header ─────────────────────────────────────── */}
       <div className="bg-white border-b border-gray-100 px-5 py-4 flex items-center gap-3 sticky top-0 z-10">
@@ -323,7 +323,7 @@ export default function DateDetailPage({ params }) {
         {isCustom && !isCompleted && (currentUserId === date.user_id || date.shared_with === currentUserId) && (
           <button
             onClick={() => router.push(`/dates/${id}/edit`)}
-            className="flex-shrink-0 text-xs text-gray-400 hover:text-[#E8614D] transition-colors px-2 py-1"
+            className="flex-shrink-0 text-xs text-gray-400 hover:text-[#C4714A] transition-colors px-2 py-1"
           >
             ✏️ Edit
           </button>
@@ -453,7 +453,7 @@ export default function DateDetailPage({ params }) {
                       onClick={() => setActiveCategory(cat)}
                       className={`px-3 py-1.5 rounded-full text-xs font-semibold capitalize transition-all ${
                         activeCategory === cat
-                          ? 'bg-[#E8614D] text-white'
+                          ? 'bg-[#C4714A] text-white'
                           : 'bg-gray-100 text-gray-500'
                       }`}
                     >
@@ -536,7 +536,7 @@ export default function DateDetailPage({ params }) {
                   <button
                     onClick={approveDatePlan}
                     disabled={approvingDate}
-                    className="w-full py-3 bg-gradient-to-r from-[#E8614D] to-[#3D3580] text-white font-bold rounded-2xl text-sm disabled:opacity-40"
+                    className="w-full py-3 bg-gradient-to-r from-[#C4714A] to-[#3D3580] text-white font-bold rounded-2xl text-sm disabled:opacity-40"
                   >
                     {approvingDate ? 'Confirming…' : "I'm in! 💕"}
                   </button>
@@ -578,7 +578,7 @@ export default function DateDetailPage({ params }) {
                   <button
                     onClick={approveDatePlan}
                     disabled={approvingDate}
-                    className="w-full py-3 bg-gradient-to-r from-[#E8614D] to-[#3D3580] text-white font-bold rounded-2xl text-sm disabled:opacity-40"
+                    className="w-full py-3 bg-gradient-to-r from-[#C4714A] to-[#3D3580] text-white font-bold rounded-2xl text-sm disabled:opacity-40"
                   >
                     {approvingDate ? 'Confirming…' : "I'm in! 💕"}
                   </button>
@@ -604,7 +604,7 @@ export default function DateDetailPage({ params }) {
         {isCustom && !isCompleted && (isPast || !dateTimeValue) && (
           <button
             onClick={() => setShowCompleteModal(true)}
-            className="w-full py-4 bg-white border-2 border-[#E8614D] text-[#E8614D] font-bold rounded-2xl text-sm"
+            className="w-full py-4 bg-white border-2 border-[#C4714A] text-[#C4714A] font-bold rounded-2xl text-sm"
           >
             ✓ Mark as Done
           </button>
@@ -665,7 +665,7 @@ export default function DateDetailPage({ params }) {
                 }}
                 className="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4
                 file:rounded-full file:border-0 file:text-xs file:font-semibold
-                file:bg-[#E8614D] file:text-white hover:file:bg-[#d4553f]"
+                file:bg-[#C4714A] file:text-white hover:file:bg-[#d4553f]"
               />
               {timelinePhoto && (
                 <img src={timelinePhoto} alt="Preview"
@@ -683,7 +683,7 @@ export default function DateDetailPage({ params }) {
               <button
                 onClick={addToTimeline}
                 disabled={addingToTimeline}
-                className="flex-1 py-3 rounded-xl bg-[#E8614D] text-white font-bold text-sm disabled:opacity-40"
+                className="flex-1 py-3 rounded-xl bg-[#C4714A] text-white font-bold text-sm disabled:opacity-40"
               >
                 {addingToTimeline ? 'Adding…' : 'Add to Timeline 💕'}
               </button>
@@ -725,7 +725,7 @@ export default function DateDetailPage({ params }) {
               value={myReview}
               onChange={e => setMyReview(e.target.value)}
               placeholder="What made it special? (optional)"
-              className="w-full p-4 border-2 border-[#E5E2DD] rounded-xl focus:border-[#E8614D] focus:outline-none resize-none h-24 text-sm mb-4"
+              className="w-full p-4 border-2 border-[#E5E2DD] rounded-xl focus:border-[#C4714A] focus:outline-none resize-none h-24 text-sm mb-4"
             />
 
             {completionError && (
@@ -742,7 +742,7 @@ export default function DateDetailPage({ params }) {
               <button
                 onClick={handleComplete}
                 disabled={!myRating || submittingComplete}
-                className="flex-1 py-3 rounded-xl bg-[#E8614D] text-white font-bold text-sm disabled:opacity-40"
+                className="flex-1 py-3 rounded-xl bg-[#C4714A] text-white font-bold text-sm disabled:opacity-40"
               >
                 {submittingComplete ? 'Saving…' : 'We Did It! 💕'}
               </button>

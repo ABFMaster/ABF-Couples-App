@@ -4,33 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
-function staticMapUrl(lat, lng) {
-  const key = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
-  if (!lat || !lng || !key) return null
-  return (
-    `https://maps.googleapis.com/maps/api/staticmap` +
-    `?center=${lat},${lng}&zoom=14&size=600x300` +
-    `&markers=color:0xec4899%7C${lat},${lng}` +
-    `&key=${key}` +
-    `&style=feature:poi%7Cvisibility:off`
-  )
-}
-
-function multiStopMapUrl(stops) {
-  const key = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
-  if (!key || !stops?.length) return null
-  const valid = stops.filter(s => s.lat && s.lng)
-  if (!valid.length) return null
-  const markers = valid.slice(0, 5)
-    .map((s, i) => `markers=color:0xec4899%7Clabel:${i + 1}%7C${s.lat},${s.lng}`)
-    .join('&')
-  return (
-    `https://maps.googleapis.com/maps/api/staticmap?size=600x300&${markers}` +
-    `&key=${key}&style=feature:poi%7Cvisibility:off`
-  )
-}
-
 function fmtDate(iso) {
   if (!iso) return null
   return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
@@ -41,177 +14,19 @@ function fmtTime(iso) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
-// ── Hardcoded Seattle curated ideas ───────────────────────────────────────────
 const CURATED_IDEAS = [
-  {
-    id: 'golden-hour',
-    title: 'Golden Hour Waterfront',
-    tag: 'Quality Time',
-    tagColor: 'bg-cream-100 text-coral-700',
-    emoji: '🌅',
-    from: 'from-orange-400',
-    to: 'to-coral-500',
-    stops: [
-      { name: 'Pike Place Market', address: 'Pike Place Market, Seattle, WA 98101', lat: 47.6097, lng: -122.3422 },
-      { name: 'Seattle Great Wheel', address: '1301 Alaskan Way, Seattle, WA 98101', lat: 47.6063, lng: -122.3426 },
-      { name: 'Aqua Verde', address: '1303 NE Boat St, Seattle, WA 98105', lat: 47.6499, lng: -122.3234 },
-    ],
-  },
-  {
-    id: 'capitol-hill',
-    title: 'Capitol Hill After Dark',
-    tag: 'Adventure',
-    tagColor: 'bg-cream-100 text-purple-700',
-    emoji: '🌙',
-    from: 'from-indigo-500',
-    to: 'to-indigo-600',
-    stops: [
-      { name: 'Eltana Bagels', address: '1520 15th Ave, Seattle, WA 98122', lat: 47.6150, lng: -122.3130 },
-      { name: 'Oddfellows', address: '915 E Pine St, Seattle, WA 98122', lat: 47.6149, lng: -122.3153 },
-      { name: 'Canon Bar', address: '928 12th Ave, Seattle, WA 98122', lat: 47.6133, lng: -122.3142 },
-    ],
-  },
-  {
-    id: 'sunday-slow-down',
-    title: 'Sunday Slow Down',
-    tag: 'Connection',
-    tagColor: 'bg-teal-100 text-teal-700',
-    emoji: '☀️',
-    from: 'from-teal-400',
-    to: 'to-green-500',
-    stops: [
-      { name: 'Volunteer Park Conservatory', address: '1400 E Galer St, Seattle, WA 98112', lat: 47.6319, lng: -122.3151 },
-      { name: 'Café Presse', address: '1117 12th Ave, Seattle, WA 98122', lat: 47.6142, lng: -122.3153 },
-      { name: 'Elliott Bay Book Co', address: '1521 10th Ave, Seattle, WA 98122', lat: 47.6144, lng: -122.3189 },
-    ],
-  },
+  { id: 'quality-time', title: 'Something Slow', tag: 'Quality Time', gradient: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 100%)' },
+  { id: 'adventure', title: 'Something New', tag: 'Adventure', gradient: 'linear-gradient(135deg, #2D3561 0%, #4A3570 100%)' },
+  { id: 'connection', title: 'Something Just Us', tag: 'Connection', gradient: 'linear-gradient(135deg, #1C3A2A 0%, #4A6B5A 100%)' },
 ]
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
-
-function UpcomingHeroCard({ plan, onClick }) {
-  const mapUrl = plan.stops?.length
-    ? multiStopMapUrl(plan.stops)
-    : staticMapUrl(plan.latitude, plan.longitude)
-  return (
-    <div
-      className="relative rounded-3xl overflow-hidden shadow-lg cursor-pointer"
-      style={{ minHeight: 180 }}
-      onClick={onClick}
-    >
-      {mapUrl
-        ? <img src={mapUrl} alt="Map" className="absolute inset-0 w-full h-full object-cover" />
-        : <div className="absolute inset-0 bg-gradient-to-br from-coral-400 to-indigo-400" />
-      }
-      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
-      <div className="relative px-5 pb-5 pt-24 sm:pt-32 flex items-end justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-white/60 text-xs font-semibold uppercase tracking-wide mb-1">Next Up</p>
-          <h3 className="text-white font-bold text-xl leading-tight truncate">{plan.title}</h3>
-          {plan.date_time && (
-            <p className="text-white/75 text-sm mt-1">📅 {fmtDate(plan.date_time)} · {fmtTime(plan.date_time)}</p>
-          )}
-          {plan.address && (
-            <p className="text-white/60 text-xs mt-0.5 truncate">📍 {plan.address}</p>
-          )}
-          {!plan.address && plan.stops?.length > 0 && (
-            <p className="text-white/60 text-xs mt-0.5 truncate">
-              📍 {plan.stops[0].name}{plan.stops.length > 1 ? ` + ${plan.stops.length - 1} more` : ''}
-            </p>
-          )}
-        </div>
-        <button
-          onClick={e => { e.stopPropagation(); onClick() }}
-          className="flex-shrink-0 bg-white text-gray-900 text-xs font-bold px-4 py-2.5 rounded-full hover:bg-cream-50 transition-colors shadow-sm"
-        >
-          View Details
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function PastDateCard({ date, onClick }) {
-  const mapUrl = date.source === 'custom'
-    ? multiStopMapUrl(date.stops)
-    : staticMapUrl(date.lat, date.lng)
-  const stopCount = date.stops?.length ?? 0
-
-  return (
-    <div
-      className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-      onClick={onClick}
-    >
-      <div className="relative h-28 bg-gradient-to-br from-cream-100 to-indigo-100 overflow-hidden">
-        {mapUrl && <img src={mapUrl} alt="Map" className="w-full h-full object-cover" />}
-        {date.source === 'custom' && stopCount > 0 && (
-          <div className="absolute top-2 left-2 bg-white/90 text-xs font-medium text-purple-700 px-2 py-0.5 rounded-full">
-            {stopCount} stops
-          </div>
-        )}
-        {date.status === 'completed' && (
-          <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
-            ✓
-          </div>
-        )}
-        {date.rating > 0 && (
-          <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
-            {'⭐'.repeat(date.rating)}
-          </div>
-        )}
-      </div>
-      <div className="p-3">
-        <h4 className="font-semibold text-gray-900 text-sm line-clamp-1">{date.title}</h4>
-        <p className="text-xs text-gray-400 mt-0.5">{fmtDate(date.date)}</p>
-      </div>
-    </div>
-  )
-}
-
-function IdeaCard({ idea, onBuild }) {
-  return (
-    <div className="bg-white rounded-2xl overflow-hidden shadow-sm flex flex-col">
-      <div className={`bg-gradient-to-br ${idea.from} ${idea.to} px-4 pt-4 pb-5 relative`}>
-        <span className="absolute top-3 right-4 text-3xl opacity-75">{idea.emoji}</span>
-        <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full mb-2 ${idea.tagColor}`}>
-          {idea.tag}
-        </span>
-        <h3 className="font-bold text-white text-base leading-tight">{idea.title}</h3>
-      </div>
-      <div className="px-4 pt-3 pb-2 flex-1">
-        <div className="space-y-2">
-          {idea.stops.map((stop, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-gradient-to-br from-coral-400 to-purple-400 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                {i + 1}
-              </span>
-              <p className="text-xs text-gray-700 truncate">{stop.name}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="px-4 pb-4">
-        <button
-          onClick={() => onBuild(idea)}
-          className="w-full py-2.5 bg-gradient-to-r from-coral-500 to-indigo-500 text-white text-sm font-semibold rounded-xl hover:shadow-md hover:from-coral-600 hover:to-indigo-600 transition-all active:scale-95"
-        >
-          Build This Date →
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ── Main Page ──────────────────────────────────────────────────────────────────
 export default function DatesPage() {
   const router = useRouter()
-  const [loading, setLoading]           = useState(true)
+  const [loading, setLoading] = useState(true)
   const [upcomingDate, setUpcomingDate] = useState(null)
-  const [pastDates, setPastDates]       = useState([])
+  const [pastDates, setPastDates] = useState([])
 
-  useEffect(() => {
-    init()
-  }, [])
+  useEffect(() => { init() }, [])
 
   const init = async () => {
     const { data: { user }, error } = await supabase.auth.getUser()
@@ -224,39 +39,18 @@ export default function DatesPage() {
       .maybeSingle()
 
     const cid = coupleData?.id ?? null
-
     if (!cid) { setLoading(false); return }
 
     const now = new Date().toISOString()
 
-    // Upcoming: next planned date (date_plans or custom_dates)
     const [{ data: upcoming }, { data: upcomingCustom }] = await Promise.all([
-      supabase
-        .from('date_plans')
-        .select('*')
-        .eq('couple_id', cid)
-        .eq('status', 'planned')
-        .gt('date_time', now)
-        .order('date_time', { ascending: true })
-        .limit(1)
-        .maybeSingle(),
-      supabase
-        .from('custom_dates')
-        .select('*')
-        .eq('couple_id', cid)
-        .eq('status', 'planned')
-        .gt('date_time', now)
-        .order('date_time', { ascending: true })
-        .limit(1)
-        .maybeSingle(),
+      supabase.from('date_plans').select('*').eq('couple_id', cid).eq('status', 'planned').gt('date_time', now).order('date_time', { ascending: true }).limit(1).maybeSingle(),
+      supabase.from('custom_dates').select('*').eq('couple_id', cid).eq('status', 'planned').gt('date_time', now).order('date_time', { ascending: true }).limit(1).maybeSingle(),
     ])
 
-    // Show whichever upcoming date is sooner
     let upcomingToShow = null
     if (upcoming && upcomingCustom) {
-      upcomingToShow = new Date(upcoming.date_time) <= new Date(upcomingCustom.date_time)
-        ? upcoming
-        : upcomingCustom
+      upcomingToShow = new Date(upcoming.date_time) <= new Date(upcomingCustom.date_time) ? upcoming : upcomingCustom
     } else if (upcoming) {
       upcomingToShow = upcoming
     } else if (upcomingCustom) {
@@ -264,7 +58,6 @@ export default function DatesPage() {
     }
     setUpcomingDate(upcomingToShow)
 
-    // Past date_plans
     const { data: pastPlans } = await supabase
       .from('date_plans')
       .select('*')
@@ -274,7 +67,6 @@ export default function DatesPage() {
       .order('date_time', { ascending: false })
       .limit(10)
 
-    // Custom dates (excluding upcoming ones with future date_time)
     const { data: customDates } = await supabase
       .from('custom_dates')
       .select('id, title, date_time, created_at, status, user1_rating, user2_rating, stops')
@@ -282,135 +74,119 @@ export default function DatesPage() {
       .order('created_at', { ascending: false })
       .limit(6)
 
-    // Normalize to a common shape
     const normalized = [
       ...(pastPlans ?? []).map(p => ({
-        id:     p.id,
-        source: 'plan',
-        title:  p.title,
-        date:   p.date_time,
-        lat:    p.latitude,
-        lng:    p.longitude,
-        stops:  null,
-        status: p.status,
-        rating: p.rating,
+        id: p.id, source: 'plan', title: p.title, date: p.date_time,
+        stops: null, status: p.status, rating: p.rating,
       })),
       ...(customDates ?? []).map(c => ({
-        id:     c.id,
-        source: 'custom',
-        title:  c.title,
-        date:   c.date_time || c.created_at,
-        lat:    c.stops?.[0]?.lat ?? null,
-        lng:    c.stops?.[0]?.lng ?? null,
-        stops:  c.stops,
-        status: c.status,
-        rating: c.user1_rating || c.user2_rating || null,
+        id: c.id, source: 'custom', title: c.title, date: c.date_time || c.created_at,
+        stops: c.stops, status: c.status, rating: c.user1_rating || c.user2_rating || null,
       })),
-    ].sort((a, b) => new Date(a.date ?? 0) - new Date(b.date ?? 0))
+    ].sort((a, b) => new Date(b.date ?? 0) - new Date(a.date ?? 0))
 
     setPastDates(normalized)
     setLoading(false)
   }
 
-  const handleBuildIdea = (idea) => {
-    sessionStorage.setItem('customDateItinerary', JSON.stringify(idea.stops))
-    router.push('/dates/custom')
-  }
+  const handleBuildIdea = () => { router.push('/dates/custom') }
 
-  // ── Render ────────────────────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl mb-3">💕</div>
-          <p className="text-gray-400 text-sm animate-pulse">Loading…</p>
-        </div>
-      </div>
-    )
-  }
+  if (loading) return (
+    <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#C4AA87', fontStyle: 'italic' }}>Loading...</p>
+    </div>
+  )
 
   return (
-    <div className="min-h-screen bg-[#F8F6F3] pb-24">
+    <div style={{ minHeight: '100vh', background: '#FAF6F0', paddingBottom: '100px', fontFamily: 'DM Sans, sans-serif' }}>
 
-      {/* ── Header ──────────────────────────────────────────────── */}
-      <div className="bg-gradient-to-br from-coral-500 via-coral-500 to-indigo-500 px-5 pt-14 pb-8">
-        <button
-          onClick={() => router.back()}
-          className="text-white/70 text-sm mb-5 flex items-center gap-1 hover:text-white transition-colors"
-        >← Back</button>
-        <div className="flex items-end justify-between gap-4">
+      {/* HEADER */}
+      <div style={{ background: 'linear-gradient(145deg, #1C1410 0%, #2D3561 100%)', padding: '52px 24px 32px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '140px', height: '140px', borderRadius: '50%', background: 'rgba(201,168,76,0.06)' }} />
+        <button onClick={() => router.back()} style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '20px', padding: 0, fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.04em' }}>← Back</button>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '16px' }}>
           <div>
-            <h1 className="text-3xl font-bold text-white">Date Night</h1>
-            <p className="text-coral-200 text-sm mt-1">Plan something special</p>
+            <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.18em', color: '#C9A84C', textTransform: 'uppercase', marginBottom: '4px' }}>Your Shared Life</div>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '44px', fontWeight: 300, color: 'white', letterSpacing: '-0.02em', lineHeight: 1 }}>Date Night</div>
           </div>
-          <button
-            onClick={() => router.push('/dates/custom')}
-            className="flex-shrink-0 bg-white text-coral-600 font-bold text-sm px-4 py-3 rounded-2xl shadow-lg hover:bg-cream-50 transition-colors flex items-center gap-1.5"
-          >
-            <span>✨</span><span>Plan a Date</span>
+          <button onClick={() => router.push('/dates/custom')} style={{ fontSize: '12px', fontWeight: 500, color: '#C9A84C', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', padding: '10px 18px', borderRadius: '24px', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.04em' }}>
+            + Plan a Date
           </button>
         </div>
       </div>
 
-      <div className="px-5 space-y-8 mt-6">
+      <div style={{ padding: '24px 20px' }}>
 
-        {/* ── Upcoming Date ────────────────────────────────────── */}
-        <section>
-          <h2 className="font-bold text-gray-900 text-base mb-3">Next Up</h2>
-          {upcomingDate ? (
-            <UpcomingHeroCard
-              plan={upcomingDate}
-              onClick={() => router.push(`/dates/${upcomingDate.id}`)}
-            />
-          ) : (
-            <div className="bg-white rounded-3xl p-8 text-center shadow-sm border border-gray-100">
-              <div className="text-4xl mb-3">📅</div>
-              <p className="font-semibold text-gray-800 mb-1">No dates planned yet</p>
-              <p className="text-gray-400 text-sm mb-5">Let's change that — plan something special</p>
-              <button
-                onClick={() => router.push('/dates/custom')}
-                className="bg-gradient-to-r from-coral-500 to-indigo-500 text-white font-semibold px-6 py-3 rounded-2xl text-sm shadow-md hover:shadow-lg transition-shadow"
-              >
-                {upcomingDate || pastDates.length > 0 ? 'Plan Another Date' : 'Plan Your First Date'}
-              </button>
-            </div>
-          )}
-        </section>
+        {/* NEXT UP */}
+        <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '12px' }}>Next Up</div>
 
-        {/* ── Date History ─────────────────────────────────────── */}
-        {pastDates.length > 0 && (
-          <section>
-            <h2 className="font-bold text-gray-900 text-base mb-3">Date History</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {pastDates.map(date => (
-                <PastDateCard
-                  key={`${date.source}-${date.id}`}
-                  date={date}
-                  onClick={() => router.push(`/dates/${date.id}`)}
-                />
-              ))}
+        {upcomingDate ? (
+          <div onClick={() => router.push(`/dates/${upcomingDate.id}`)} style={{ borderRadius: '18px', overflow: 'hidden', marginBottom: '24px', boxShadow: '0 2px 16px rgba(28,20,16,0.10)', cursor: 'pointer', position: 'relative', height: '200px' }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #2D3561 100%)' }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.08) 55%, transparent 100%)' }} />
+            <div style={{ position: 'absolute', top: '12px', left: '12px', fontSize: '10px', fontWeight: 500, letterSpacing: '0.06em', padding: '3px 8px', borderRadius: '20px', textTransform: 'uppercase', background: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.9)' }}>Date Night</div>
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '14px 16px' }}>
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '24px', fontWeight: 400, color: '#fff', lineHeight: 1.2, marginBottom: '4px' }}>{upcomingDate.title}</div>
+              {upcomingDate.date_time && (
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.65)' }}>{fmtDate(upcomingDate.date_time)} · {fmtTime(upcomingDate.date_time)}</div>
+              )}
             </div>
-            <div className="text-center mt-4">
-              <button
-                onClick={() => router.push('/dates/history')}
-                className="text-[#E8614D] text-sm font-semibold hover:underline"
-              >
-                View Date History →
-              </button>
-            </div>
-          </section>
+          </div>
+        ) : (
+          <div style={{ background: 'rgba(250,246,240,0.7)', border: '1px dashed #D9CBBA', borderRadius: '18px', padding: '32px 20px', textAlign: 'center', marginBottom: '24px' }}>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', color: '#C4AA87', marginBottom: '8px' }}>Nothing planned yet</div>
+            <div style={{ fontSize: '13px', color: '#C4AA87', marginBottom: '20px' }}>Your next date is waiting to be made.</div>
+            <button onClick={() => router.push('/dates/custom')} style={{ fontSize: '12px', fontWeight: 500, color: '#8B7355', background: 'none', border: '1px solid #D9CBBA', padding: '10px 24px', borderRadius: '24px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+              Plan one →
+            </button>
+          </div>
         )}
 
-        {/* ── Ideas for You Two ─────────────────────────────────── */}
-        <section>
-          <h2 className="font-bold text-gray-900 text-base mb-0.5">💡 Ideas for You Two</h2>
-          <p className="text-gray-400 text-sm mb-4">Based on your relationship</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {CURATED_IDEAS.map(idea => (
-              <IdeaCard key={idea.id} idea={idea} onBuild={handleBuildIdea} />
-            ))}
-          </div>
-        </section>
+        {/* DATE HISTORY */}
+        {pastDates.length > 0 && (
+          <>
+            <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '12px' }}>Date History</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px', marginBottom: '12px' }}>
+              {pastDates.slice(0, 6).map(date => (
+                <div key={`${date.source}-${date.id}`} onClick={() => router.push(`/dates/${date.id}`)} style={{ borderRadius: '14px', overflow: 'hidden', position: 'relative', height: '160px', cursor: 'pointer', boxShadow: '0 2px 10px rgba(28,20,16,0.08)' }}>
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #6B5020 0%, #C9A84C 50%, #D4BA7A 100%)' }} />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.08) 55%, transparent 100%)' }} />
+                  {date.stops?.length > 0 && (
+                    <div style={{ position: 'absolute', top: '8px', left: '8px', fontSize: '9px', fontWeight: 500, padding: '2px 7px', borderRadius: '20px', background: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.9)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{date.stops.length} stops</div>
+                  )}
+                  {date.status === 'completed' && (
+                    <div style={{ position: 'absolute', top: '8px', right: '8px', fontSize: '9px', fontWeight: 500, padding: '2px 8px', borderRadius: '20px', background: '#C8952A', color: '#fff' }}>Done</div>
+                  )}
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '10px 12px' }}>
+                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', fontWeight: 400, color: '#fff', lineHeight: 1.2, marginBottom: '3px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{date.title}</div>
+                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)' }}>{fmtDate(date.date)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {pastDates.length > 6 && (
+              <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                <button onClick={() => router.push('/dates/history')} style={{ fontSize: '12px', fontWeight: 500, color: '#8B7355', background: 'none', border: '1px solid #D9CBBA', padding: '8px 20px', borderRadius: '20px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>See all dates →</button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* IDEAS PLACEHOLDER */}
+        <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '4px' }}>Ideas for You Two</div>
+        <div style={{ fontSize: '12px', fontStyle: 'italic', color: '#C4AA87', marginBottom: '16px' }}>Nora is building something for you</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {CURATED_IDEAS.map(idea => (
+            <div key={idea.id} onClick={() => handleBuildIdea(idea)} style={{ borderRadius: '16px', overflow: 'hidden', position: 'relative', height: '110px', cursor: 'pointer' }}>
+              <div style={{ position: 'absolute', inset: 0, background: idea.gradient }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 70%)' }} />
+              <div style={{ position: 'absolute', top: '12px', left: '12px', fontSize: '10px', fontWeight: 500, letterSpacing: '0.06em', padding: '3px 8px', borderRadius: '20px', textTransform: 'uppercase', background: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.9)' }}>{idea.tag}</div>
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 14px' }}>
+                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 400, color: '#fff', lineHeight: 1.2 }}>{idea.title}</div>
+              </div>
+            </div>
+          ))}
+        </div>
 
       </div>
     </div>
