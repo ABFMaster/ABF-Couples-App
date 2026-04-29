@@ -41,7 +41,7 @@ export default function DateHistoryPage() {
       date_time: c.date_time || c.created_at,
       rating: c.user1_rating || c.user2_rating || null,
       notes: c.notes || null,
-      photo_url: c.stops?.[0]?.photo_url || null,
+      photo_url: c.stops?.find(s => s.photo_url && !s.photo_url.includes('places.googleapis.com/v1'))?.photo_url || null,
       stop_count: c.stops?.length ?? 0,
       status: c.status,
     }))
@@ -57,8 +57,9 @@ export default function DateHistoryPage() {
     }))
 
     const allDates = [...normalizedCustom, ...normalizedPlans]
-      .sort((a, b) => new Date(b.date_time) - new Date(a.date_time))
+      .sort((a, b) => new Date(b.date_time || b.created_at || 0) - new Date(a.date_time || a.created_at || 0))
 
+    console.log('allDates', allDates.length)
     setDates(allDates)
     setLoading(false)
   }, [router])

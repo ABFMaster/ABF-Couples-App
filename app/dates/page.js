@@ -82,6 +82,7 @@ export default function DatesPage() {
       ...(customDates ?? []).map(c => ({
         id: c.id, source: 'custom', title: c.title, date: c.date_time || c.created_at,
         stops: c.stops, status: c.status, rating: c.user1_rating || c.user2_rating || null,
+        photo_url: c.stops?.find(s => s.photo_url && !s.photo_url.includes('places.googleapis.com/v1'))?.photo_url || null,
       })),
     ].sort((a, b) => new Date(b.date ?? 0) - new Date(a.date ?? 0))
 
@@ -149,7 +150,11 @@ export default function DatesPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px', marginBottom: '12px' }}>
               {pastDates.slice(0, 6).map(date => (
                 <div key={`${date.source}-${date.id}`} onClick={() => router.push(`/dates/${date.id}`)} style={{ borderRadius: '14px', overflow: 'hidden', position: 'relative', height: '160px', cursor: 'pointer', boxShadow: '0 2px 10px rgba(28,20,16,0.08)' }}>
-                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #6B5020 0%, #C9A84C 50%, #D4BA7A 100%)' }} />
+                  {date.photo_url ? (
+                    <img src={date.photo_url} alt={date.title} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+                  ) : (
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #6B5020 0%, #C9A84C 50%, #D4BA7A 100%)' }} />
+                  )}
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.08) 55%, transparent 100%)' }} />
                   {date.stops?.length > 0 && (
                     <div style={{ position: 'absolute', top: '8px', left: '8px', fontSize: '9px', fontWeight: 500, padding: '2px 7px', borderRadius: '20px', background: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.9)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{date.stops.length} stops</div>
