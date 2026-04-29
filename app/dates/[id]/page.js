@@ -340,12 +340,12 @@ export default function DateDetailPage({ params }) {
         {heroPhoto ? (
           <img
             src={heroPhoto}
-            alt={date.title}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
+            alt=""
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
+            onError={e => { e.currentTarget.style.display = 'none' }}
           />
-        ) : (
-          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #2D3561 100%)' }} />
-        )}
+        ) : null}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #2D3561 100%)', zIndex: heroPhoto ? -1 : 0 }} />
       </div>
 
       <div style={{ padding: '20px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
