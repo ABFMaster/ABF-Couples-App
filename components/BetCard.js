@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Heart, Smile, Zap, HeartHandshake, Flame, Waves } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 const REACTIONS = [
   { icon: Heart, key: 'heart', label: 'Loved it' },
@@ -102,7 +103,11 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
 
   const poll = useCallback(async () => {
     try {
-      const res = await fetch(`/api/bet/today?userId=${userId}&bet=true`)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+      const res = await fetch(`/api/bet/today?userId=${userId}&bet=true`, {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      })
       const data = await res.json()
       if (data.theirs) setLocalTheirs(data.theirs)
       if (data.mine) setLocalMine(prev => ({ ...prev, ...data.mine }))

@@ -49,8 +49,12 @@ export default function NavBadges() {
       }
 
       // Check Bet badge
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
       try {
-        const res = await fetch(`/api/bet/today?userId=${user.id}&coupleId=${couple.id}`)
+        const res = await fetch(`/api/bet/today?userId=${user.id}&coupleId=${couple.id}`, {
+          headers: { 'Authorization': `Bearer ${session.access_token}` },
+        })
         const betData = await res.json()
         if (betData.betDay) {
           const { mine, theirs } = betData
