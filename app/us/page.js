@@ -39,6 +39,18 @@ export default function UsPage() {
   const [showBeenDetail, setShowBeenDetail] = useState(false)
   const [beenDetailItem, setBeenDetailItem] = useState(null)
 
+  async function fetchTimelineEvents(coupleId) {
+    setTimelineLoading(true)
+    const { data: events } = await supabase
+      .from('timeline_events')
+      .select('id, title, description, event_date, event_type, created_at, created_by, image_url, item_subtype, artist, source_id')
+      .eq('couple_id', coupleId)
+      .order('event_date', { ascending: false })
+      .limit(20)
+    setTimelineEvents(events || [])
+    setTimelineLoading(false)
+  }
+
   useEffect(() => {
     async function fetchAll() {
       const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -69,15 +81,7 @@ export default function UsPage() {
       const cid = coupleData.id
 
       // Timeline events for Been
-      setTimelineLoading(true)
-      const { data: events } = await supabase
-        .from('timeline_events')
-        .select('id, title, description, event_date, event_type, created_at, created_by, image_url, item_subtype, artist, source_id')
-        .eq('couple_id', cid)
-        .order('event_date', { ascending: false })
-        .limit(20)
-      setTimelineEvents(events || [])
-      setTimelineLoading(false)
+      await fetchTimelineEvents(cid)
 
       // Ritual for Now
       const { data: ritualData } = await supabase
@@ -206,6 +210,7 @@ export default function UsPage() {
         setCaptureNote('')
         setCapturePhotoFile(null)
         setCapturePhotoPreview(null)
+        fetchTimelineEvents(couple.id)
         fetch('/api/ahead/nora-line', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -664,7 +669,7 @@ export default function UsPage() {
                 <div style={{ position: 'absolute', top: '14px', left: '14px', fontSize: '10px', fontWeight: 500, letterSpacing: '0.06em', padding: '3px 8px', borderRadius: '20px', textTransform: 'uppercase', background: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.9)' }}>
                   {(() => {
                     const t = beenDetailItem.item_subtype || beenDetailItem.source_type || ''
-                    const labels = { movie: 'Film', show: 'Show', song: 'Album', place: 'Place', restaurant: 'Place', date_idea: 'Date Idea', idea: 'Idea' }
+                    const labels = { movie: 'Film', show: 'Show', song: 'Album', place: 'Place', restaurant: 'Place', date_idea: 'Date Idea', idea: 'Idea', travel: 'Travel', book: 'Book', MOVIE: 'Film', SHOW: 'Show', SONG: 'Album', PLACE: 'Place', RESTAURANT: 'Place', DATE_IDEA: 'Date Idea', IDEA: 'Idea', TRAVEL: 'Travel', BOOK: 'Book' }
                     return labels[t] || t.charAt(0).toUpperCase() + t.slice(1).replace(/_/g, ' ') || 'Memory'
                   })()}
                 </div>
