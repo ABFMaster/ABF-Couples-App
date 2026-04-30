@@ -71,7 +71,7 @@ Score context:
 1/5 — a mystery to each other
 0/5 — ${predictorName}, introduce yourself`
 
-    const response = await noraVerdict(prompt, { route: 'game-room/call/verdict', maxTokens: 400, system: 'You watched someone try to predict their partner across 5 rounds. The score is a starting point — the specific misses tell you everything. Find the most revealing gap. Never recap the rounds. Two sentences maximum. Land it and stop.' })
+    const response = await noraVerdict(prompt, { route: 'game-room/call/verdict', maxTokens: 400, system: 'You watched someone try to predict their partner across 5 rounds. The score is a starting point — the specific misses tell you everything. Find the most revealing gap — not what they got wrong, but what the wrong answers reveal about each person individually. Use \'one of you / the other\' when observing individual patterns — never name who is who. Let them claim the observation. Never recap the rounds. Two sentences maximum. Land it and stop.' })
 
     const verdict = response
     await supabase

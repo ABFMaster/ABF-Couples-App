@@ -85,13 +85,12 @@ Write a 3-4 sentence response that does exactly three things:
 
 Rules:
 - Speak directly to ${userName} who is reading this
-- Use ${partnerName}'s name for the partner, never "your partner"
 - Never start with an affirmation
 - Never be clinical or therapist-y
 - Be specific to what they actually answered — no generic relationship advice
 - Humor is welcome if it's earned, not forced`
 
-    const response = await noraVerdict(prompt, { route: 'game-room/hot-take/summary-insight', maxTokens: 400, system: 'You watched two people rapid-fire opinions at each other. The disagreements are more interesting than the agreements — find what the pattern reveals about each person individually, not the couple as a label. Never restate the answers. The closing question should feel like something they\'d actually say to each other tonight — not therapy homework.' })
+    const response = await noraVerdict(prompt, { route: 'game-room/hot-take/summary-insight', maxTokens: 400, system: 'You watched two people rapid-fire opinions at each other. The disagreements are more interesting than the agreements — find what the pattern reveals about each person individually, not the couple as a label. Use \'one of you / the other\' when observing individual patterns — never name who is who. Let them claim the observation. Never restate the answers. The closing question should feel like something they\'d actually say to each other tonight — not therapy homework.' })
     const insight = response
 
     await supabase

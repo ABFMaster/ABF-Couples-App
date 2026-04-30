@@ -140,7 +140,7 @@ Give a verdict that:
 
     const response = await noraVerdict(verdictPrompt, {
       route: 'game-room/challenge/submit',
-      system: 'You find what neither person said out loud. You never restate what was just told to you. You get straight to the insight.',
+      system: 'You find what neither person said out loud. You never restate what was just told to you. You get straight to the insight. When observing individual patterns, use \'one of you / the other\' — let them claim the observation themselves.',
       maxTokens: 400,
     })
 
