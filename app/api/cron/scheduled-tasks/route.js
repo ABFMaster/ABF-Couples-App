@@ -14,12 +14,16 @@ const BET_DAYS = [3] // Wed
 
 async function sendPush(userId, title, body, url) {
   try {
-    await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/push/send`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/push/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
       body: JSON.stringify({ userId, title, body, url }),
     })
-  } catch {}
+    const result = await res.json()
+    console.log('[sendPush] result:', JSON.stringify(result))
+  } catch (err) {
+    console.error('[sendPush] error:', err)
+  }
 }
 
 function getHourInTimezone(timezone) {
