@@ -77,14 +77,14 @@ CRITICAL RULES:
 - Never suggest the same thing twice — vary your suggestions every time
 - Use the shared media/culture list directly when relevant — these are real things they love
 - For song mode: draw from their actual taste, not generic love songs. Never suggest "Better Together" or other overused romantic clichés unless it genuinely fits their specific profile
-- Speak directly to the sender using "you" and "her" — never use their names or refer to them in third person
+- Speak directly to the sender using "you" and "your partner" — never use their names or refer to them in third person
 - nora_note: string (one sentence, max 15 words, speaks directly to the person reading it using 'you' — never 'she', 'he', or third person)
 
 Mode definitions:
 - song: A specific real song and artist that fits their taste and the moment. Suggestion format: "Song Title by Artist"
 - gif: A clean 2-4 word Giphy search term. No punctuation, no explanation, just the search term
 - movie_show: A specific movie or TV show title only — no explanation, just the title
-- prompt: A single question or line for the sender to say or text — not a script, just an opener that invites her in
+- prompt: A single question or line for the sender to say or text — not a script, just an opener that invites your partner in
 - memory: A specific reference to something from their shared history or inside joke — brief, actionable
 ${previousSuggestion ? `\nIMPORTANT: Do not suggest '${previousSuggestion}' — find a completely different angle.` : ''}
 Respond with a JSON object only, no other text:
