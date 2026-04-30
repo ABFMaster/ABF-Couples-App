@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraGenerate } from '@/lib/nora'
+import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 
 const EXTRACTION_PROMPT = `Read this conversation and extract the following as a JSON object with no other text:
 {
@@ -57,6 +58,16 @@ export async function POST(request) {
         inside_joke: profile.inside_joke ?? null,
         flirt_profile_completed: true,
       }, { onConflict: 'user_id' })
+
+    const { data: couple } = await supabase
+      .from('couples')
+      .select('id')
+      .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
+      .maybeSingle()
+
+    if (couple) {
+      updateNoraMemory({ coupleId: couple.id, userId, signalType: SIGNAL_TYPES.FLIRT_SENT, inputData: { profile, conversation: messages } }).catch(() => {})
+    }
 
     return NextResponse.json({ success: true })
   } catch (err) {
