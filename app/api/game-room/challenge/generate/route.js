@@ -245,8 +245,8 @@ Respond in this exact JSON format with no other text:
     const response = await noraGenerate(userPrompt, { route: 'game-room/challenge/generate', system: systemPrompt, maxTokens: 600 })
 
     let parsed
+    const raw = response.replace(/```json|```/g, '').trim()
     try {
-      const raw = response.replace(/```json|```/g, '').trim()
       parsed = JSON.parse(raw)
       // Validate: question must be about answerHolderName, not guesserName
       // If Nora wrote about the wrong person, fall back to the library prompt
@@ -262,10 +262,9 @@ Respond in this exact JSON format with no other text:
           parsed.hint_3 = ''
         }
       }
-    } catch {
-      parsed = challengeType === 'memory'
-        ? { memory_question: personalizedPrompt, memory_answer: '', hint_1: '', hint_2: '', hint_3: '', guesser_user_id: guesserUserId }
-        : { prompt: basePrompt.prompt }
+    } catch (e) {
+      console.error('[game-room/challenge/generate] JSON parse failed:', raw)
+      return Response.json({ error: 'Failed to parse Nora response' }, { status: 500 })
     }
 
     const finalPrompt = challengeType === 'rank'

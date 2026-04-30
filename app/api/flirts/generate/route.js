@@ -101,7 +101,12 @@ Respond with a JSON object only, no other text:
 
       const raw = response
       const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
-      flirtData = JSON.parse(cleaned)
+      try {
+        flirtData = JSON.parse(cleaned)
+      } catch (e) {
+        console.error('[flirts/generate] JSON parse failed:', raw)
+        return NextResponse.json({ error: 'Failed to parse Nora response' }, { status: 500 })
+      }
     } catch (err) {
       console.error('[FlirtGenerate] Extraction failed:', err)
       return NextResponse.json({ error: 'generation failed' }, { status: 500 })

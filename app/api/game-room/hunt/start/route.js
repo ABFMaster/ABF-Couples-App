@@ -124,12 +124,13 @@ Respond in this exact JSON format with no other text:
     const response = await noraGenerate(userPrompt, { route: 'game-room/hunt/start', system: systemPrompt, maxTokens: 100 })
 
     let selectedKey
+    const raw = response.replace(/```json|```/g, '').trim()
     try {
-      const raw = response.replace(/```json|```/g, '').trim()
       const parsed = JSON.parse(raw)
       selectedKey = parsed.selected_key
-    } catch {
-      selectedKey = pool[Math.floor(Math.random() * pool.length)].key
+    } catch (e) {
+      console.error('[game-room/hunt/start] JSON parse failed:', raw)
+      return Response.json({ error: 'Failed to parse Nora response' }, { status: 500 })
     }
 
     const mission = pool.find(m => m.key === selectedKey) || pool[0]

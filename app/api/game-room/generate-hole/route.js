@@ -196,9 +196,9 @@ Respond ONLY with JSON, no markdown:
     let generated
     try {
       generated = JSON.parse(cleaned)
-    } catch (err) {
-      console.error('[generate-hole] Parse error:', err, raw)
-      return NextResponse.json({ error: 'Failed to parse response' }, { status: 500 })
+    } catch (e) {
+      console.error('[game-room/generate-hole] JSON parse failed:', raw)
+      return NextResponse.json({ error: 'Failed to parse Nora response' }, { status: 500 })
     }
 
     // For round 1 — save topic/entry/close/truth to session

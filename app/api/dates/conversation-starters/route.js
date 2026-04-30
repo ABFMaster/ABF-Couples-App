@@ -103,7 +103,13 @@ Examples:
     const response = await noraGenerate(prompt, { route: 'dates/conversation-starters', maxTokens: 600 })
 
     const raw = response
-    const starters = JSON.parse(raw)
+    let starters
+    try {
+      starters = JSON.parse(raw)
+    } catch (e) {
+      console.error('[conversation-starters] JSON parse failed:', raw)
+      return NextResponse.json({ error: 'Failed to parse suggestions' }, { status: 500 })
+    }
 
     if (dateId) {
       await supabase

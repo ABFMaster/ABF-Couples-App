@@ -14,6 +14,18 @@ export async function POST(request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     )
 
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      const token = authHeader.replace('Bearer ', '')
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+      if (authError || !user) {
+        return Response.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+    }
+
     const { userId, title, body, url } = await request.json()
     if (!userId || !title) {
       return Response.json({ error: 'userId and title required' }, { status: 400 })

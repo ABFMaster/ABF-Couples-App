@@ -85,8 +85,9 @@ Respond ONLY with valid JSON, no markdown:
     let generated
     try {
       generated = JSON.parse(cleaned)
-    } catch {
-      return NextResponse.json({ error: 'Failed to parse scenario' }, { status: 500 })
+    } catch (e) {
+      console.error('[game-room/call/generate] JSON parse failed:', raw)
+      return NextResponse.json({ error: 'Failed to parse Nora response' }, { status: 500 })
     }
 
     // Save round

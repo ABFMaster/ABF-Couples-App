@@ -36,7 +36,12 @@ export async function POST(request) {
       const raw = response
       // Strip markdown code fences if present
       const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
-      profile = JSON.parse(cleaned)
+      try {
+        profile = JSON.parse(cleaned)
+      } catch (e) {
+        console.error('[flirts/save-profile] JSON parse failed:', raw)
+        return NextResponse.json({ error: 'Failed to parse Nora response' }, { status: 500 })
+      }
     } catch (err) {
       console.error('[FlirtSaveProfile] Extraction failed:', err, err.message)
       return NextResponse.json({ success: false, error: 'extraction failed' })

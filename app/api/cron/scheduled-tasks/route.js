@@ -16,7 +16,7 @@ async function sendPush(userId, title, body, url) {
   try {
     await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/push/send`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
       body: JSON.stringify({ userId, title, body, url }),
     })
   } catch {}
@@ -210,14 +210,12 @@ Respond in this exact JSON format:
       const response = await noraGenerate(prompt, { route: 'cron/scheduled-tasks', system: 'You are closing out a Rabbit Hole investigation that a couple started but never finished. Be the game master who brings it home — find what neither of them said explicitly.', maxTokens: 1000 })
 
       let parsed
+      const raw = response.replace(/```json|```/g, '').trim()
       try {
-        const raw = response.replace(/```json|```/g, '').trim()
         parsed = JSON.parse(raw)
-      } catch {
-        parsed = {
-          factual_close: 'This thread ran its course.',
-          human_truth: 'The fact that you followed it together says something.',
-        }
+      } catch (e) {
+        console.error('[cron/scheduled-tasks] JSON parse failed:', raw)
+        return Response.json({ error: 'Failed to parse Nora response' }, { status: 500 })
       }
 
       await supabase

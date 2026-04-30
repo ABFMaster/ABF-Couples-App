@@ -107,11 +107,12 @@ Respond in this exact JSON format with no other text:
     const response = await noraGenerate(userPrompt, { route: 'game-room/challenge/start', system: systemPrompt, maxTokens: 200 })
 
     let recommendation
+    const raw = response.replace(/```json|```/g, '').trim()
     try {
-      const raw = response.replace(/```json|```/g, '').trim()
       recommendation = JSON.parse(raw)
-    } catch {
-      recommendation = { recommendedType: 'story', reason: 'A good place to start.' }
+    } catch (e) {
+      console.error('[game-room/challenge/start] JSON parse failed:', raw)
+      return Response.json({ error: 'Failed to parse Nora response' }, { status: 500 })
     }
 
     if (!availableTypes.includes(recommendation.recommendedType)) {
