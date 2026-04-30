@@ -181,6 +181,8 @@ Cass's push subscriptions are from March and daily notifications are not deliver
 3. Consider adding a visible "Enable notifications" button in Profile so users can manually re-register
 4. Test end-to-end: send a test push directly to Cass's subscription endpoint and verify delivery
 
+*Root cause fixed 2026-04-29:* push-notifications.js was using an anon Supabase client (createClient with anon key) instead of the authenticated singleton — all upserts were silently failing RLS. Fixed to import the session-authenticated supabase singleton. Both subscriptions re-registered and confirmed. Deeper subscription freshness / re-registration on every PWA open still in Sprint J backlog.
+
 ---
 
 ## TENSION INTELLIGENCE ARC — Nora as Relationship Safety Net
@@ -514,9 +516,9 @@ No drag-to-reorder on mobile. Arrow buttons functional but less intuitive. UX im
 
 ## BACKLOG ADDITIONS — 2026-04-24
 
-### Us PAGE — Ideas/Ahead section: shared_items integration
-*Added: 2026-04-24*
-Build real shared_items integration for Watch/Eat/Listen/Do/Travel buckets in the Ahead tab. Currently shows empty state only. Wire to existing shared_items table — filter by type, display per category bucket, support add/toggle-done from the Ahead view.
+### ✅ Us PAGE — Ideas/Ahead section: shared_items integration
+*Added: 2026-04-24 — Shipped: 2026-04-29*
+Live data wired — category chip filtering, 2-col grid, completion mechanic. Capture sheet fires for all types. HEIC conversion, Supabase photo upload, Nora acknowledgment line. Been detail sheet shipped with photo-aware hero, Nora line, completion note.
 
 ### Us PAGE — Been echoes: game session echo mechanic
 *Added: 2026-04-24*
@@ -574,9 +576,10 @@ Removed from app. Reintroduce when content pipeline is robust. Nora can surface 
 
 ## BACKLOG ADDITIONS — 2026-04-24 (session notes)
 
-### DATE NIGHT — Agent architecture refactor
+### DATE NIGHT — Visual rebuild + Agent architecture refactor
 *Added: 2026-04-24*
-Refactor to tool-based system with Nora as orchestrator. Tools: `get_couple_date_preferences`, `suggest_date_options(location, vibe, budget)`, `build_date_itinerary(options, couple_context)`, `save_date_plan(itinerary, coupleId)`. Blocked on Google Places API fix first — current implementation broken at the Places API level. Do not begin agent refactor until Places 503 is resolved.
+✅ Visual rebuild shipped 2026-04-29 — dates/page.js, dates/history/page.js, dates/[id]/page.js rebuilt to full ABF design language. Dark gradient headers, full-bleed history cards, Places photo heroes, CSS background layering, getHeroPhoto deterministic selection, gradient fallback.
+Agent refactor (tool-based Nora orchestration) still pending — blocked on Google Places API fix first. Tools designed: `get_couple_date_preferences`, `suggest_date_options(location, vibe, budget)`, `build_date_itinerary(options, couple_context)`, `save_date_plan(itinerary, coupleId)`. Do not begin agent refactor until Places 503 is resolved.
 
 ### PRE-FLIGHT CHECK PROTOCOL
 *Added: 2026-04-24*
@@ -591,12 +594,12 @@ Third-person pronoun violation observed in Nora chat: "she's someone who reads p
 ## BACKLOG ADDITIONS — 2026-04-24 (Sprint B complete)
 
 ### Sprint C — Ahead/Ideas Artwork System
-- Ideas card design: artwork-first, poster/album art dominant, title below, type pill top-left, attribution (Matt/Cass/Nora) bottom, completion overlay state
+- ✅ SharedItemCard: full bleed portrait, scrim, type pill, ghost icon fallback, Done pill — shipped 2026-04-29
 - Watch add flow: OMDB search, auto-populates poster + title + year, Movie vs Show toggle
 - Listen add flow: Spotify search (already wired), album art auto-populated, fallback gradient if not connected
 - Eat/Travel/Do: text entry + optional note, warm gradient placeholder with category color + first letter
-- Completion state: semi-transparent cream overlay on artwork, gold Done pill, Nora acknowledgment fires
-- Done → Been: one tap saves completed item as timeline memory, Nora writes memory note
+- ✅ Completion state: capture sheet fires for all types — photo picker, HEIC canvas conversion, note field, Nora acknowledgment line — shipped 2026-04-29
+- ✅ Done → Been: dual write to shared_items + timeline_events, Been detail sheet with photo-aware hero, Nora line, completion note — shipped 2026-04-29
 - Completion rate tracking: feeds Nora memory and eventual Signal Registry
 
 ### Flirts — Product Redesign Needed
@@ -611,6 +614,55 @@ Third-person pronoun violation observed in Nora chat: "she's someone who reads p
 - Nora identity/presence: gold dot is placeholder, dedicated design sprint needed
 - Archive overlay (Been): functional, visual redesign in Sprint C
 - Home flirts section: two cards (song + prompt), GIF and movie/show to be added in Flirts redesign sprint
+
+---
+
+---
+
+## BACKLOG ADDITIONS — 2026-04-29
+
+### ✅ COMPLETED — Sprints C–G (shipped 2026-04-29)
+- ✅ SharedItemCard component — full bleed portrait card language, scrim, type pill, ghost icon fallback, Done pill
+- ✅ Ahead section data wiring — live data, category chips, completion mechanic, 2-col grid
+- ✅ Been detail sheet — photo-aware hero (media = API art, rich = user photo), Nora line, completion note, bottom sheet
+- ✅ PWA photo upload — capture sheet, HEIC canvas conversion, Supabase storage upload, preview
+- ✅ Home memory card visual fix — full bleed, photo_urls[0] correct, event_date correct, Cormorant font
+- ✅ shared/add 404 fix — now routes to /us after save
+- ✅ Push notification subscription fix — authenticated supabase singleton, both users re-registered
+- ✅ Date Night visual rebuild — dates/page.js, history/page.js, [id]/page.js all on ABF design language
+- ✅ Date History full-bleed cards with location photos — getHeroPhoto, CSS background layering, gradient fallback
+
+### SPRINT K — Date Night (deferred)
+*Added: 2026-04-29*
+- Date Night agent architecture: Nora orchestrates via composable tools (search_restaurants, search_events, build_itinerary, save_date_plan). Blocked on Google Places fix first.
+- Google Places nearbysearch/json deprecated — migrate to Places API (New). Unblocks date suggestions and Hunt discovery missions.
+- Backfill photo_url on custom_dates stops with real place_id but null photo_url — stops exist but photos were never fetched.
+- dates/custom/page.js full visual rebuild — color fixes applied but full inline-style rebuild deferred.
+- Ideas for You Two: real API-powered regional date ideas replacing hardcoded placeholder cards.
+
+### SPRINT J — Code Debt + Hygiene
+*Added: 2026-04-29*
+- api/bet/today 401 — secondary fetch issue. Bet renders correctly but console shows 401. Investigate whether this is the Bet card's own auth or a stale background fetch.
+- push/send route has no auth guard — any caller can trigger a push notification to any user. Add Bearer token verification before shipping to wider audience.
+- Multiple GoTrueClient instances warning in console — likely multiple supabase client instantiations. Audit and consolidate to singleton import.
+- conversation-starters route: unguarded JSON.parse at line 106 — will throw 500 if AI returns malformed JSON. Wrap in try/catch.
+
+### SPRINT H — Nora Voice Pass
+*Added: 2026-04-29*
+- Nora completion line tone — currently too philosophical and abstract. Should be dry, specific, one sentence that names the actual item. "Two years later and you finally watched Aftersun." Not "This was a moment worth savoring."
+- Game verdict quality — verdicts describe the couple as a unit but don't address each individual specifically. Three-layer fix: individual address, pattern connection, something to sit with. See Verdict Quality Pass section above.
+- Nora voice system prompt pass across all routes — third-person pronoun violations, affirmation formula before substance, restating what user said. Full route audit.
+
+### SPRINT I — Papercut Pass
+*Added: 2026-04-29*
+- Photo crop objectPosition fine-tuning — portrait photos sometimes crop to wrong region. Allow per-item objectPosition override or smart face-detection crop.
+- DATE_IDEA raw string showing in some detail sheet type pills — type display label map incomplete.
+- Game Room day label hardcoded "Saturday" — should read the actual current day.
+- Been tab refresh delay after completion — timeline_events re-fetch added to submitComplete but delay still visible. Optimistic UI update or tighter re-fetch.
+
+### DREAM TRIP
+*Added: 2026-04-29 — Status: Parked*
+trips table exists with basic read. No write flow inside ABF. Ahead handles travel ideas via shared_items (Travel bucket) for now. Revisit post-Ahead maturity — once the Ahead/Been cycle is validated with real users, Dream Trip can be a dedicated planning flow that integrates with the trips table and surfaces in the couple moment line header.
 
 ---
 

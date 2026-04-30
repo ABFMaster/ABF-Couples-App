@@ -813,3 +813,81 @@ git push            # Vercel auto-deploys on push to main
 3. Sprint H — Nora verdict + voice system prompt pass
 4. Sprint I — Papercut pass
 5. Sprint J — Code debt + hygiene
+
+---
+## Self-Review 2026-04-29
+
+### Sprints C, D, E, F, G — Ahead/Been, Detail sheets, Photo upload, Push notifications, Date Night
+
+**Sprint C — Ahead/Been card visual + completion mechanic:**
+- SharedItemCard component: full bleed portrait, scrim, type pill, ghost icon fallback, Done pill
+- Ahead section wired to shared_items — live data, category chip filtering, 2-col grid
+- Capture sheet fires for all types — photo picker (JPEG + HEIC canvas conversion), note field, Save to Been
+- Photo upload to Supabase storage photos bucket — completion_photo_url populated
+- app/api/ahead/complete/route.js — idempotency guard, dual write to shared_items + timeline_events
+- app/api/ahead/nora-line/route.js — haiku model, one sentence, prompt tightened
+- SIGNAL_TYPES.SHARED_ITEM_COMPLETED added to lib/nora-memory.js
+- RLS on shared_items confirmed. Both Matt and Cass confirmed identical Been view
+
+**Sprint D — Been detail sheet:**
+- Been detail sheet: bottom sheet, full-bleed hero, photo-aware hero (media = API art, rich = user photo)
+- Type pill display labels — "Film" not "MOVIE", "Date Idea" not "DATE_IDEA"
+- Photo placeholder in capture sheet and detail sheet for rich types
+- Non-shared_item Been cards no longer navigate away to /timeline
+- Brand color fixed in shared/add: #E8614D → #C4714A
+
+**Sprint E — shared/add fix, PWA photo, home card:**
+- shared/add routes to /us after save — was hitting 404
+- PWA photo upload: file input, JPEG preview, HEIC canvas conversion, Supabase storage upload
+- Home memory card: full bleed, photo_urls[0] fix, event_date fix, Cormorant font, routes to /us?section=been
+- Game mode weekly rotation in Now tab — wired for Nora override in Tension Intelligence Arc
+
+**Sprint F — Push notifications:**
+- push-notifications.js fixed to use authenticated supabase singleton — was 401-ing with anon client
+- Both Matt and Cass subscriptions confirmed updated after fix
+- Cron confirmed firing correctly at 10:00 UTC = 3am PDT
+- push/send route security gap (no auth) logged for Sprint J
+
+**Sprint G — Date Night full visual rebuild:**
+- dates/page.js — full ABF rebuild, full-bleed history cards, Places photos, gradient fallback
+- dates/history/page.js — full ABF rebuild, deterministic pseudo-random photo selection, CSS background layering
+- dates/[id]/page.js — ABF dark header, Places photo hero, userId runtime crash fixed
+- dates/[id]/edit/page.js — color fixes applied
+- dates/custom/page.js — color fixes + DEFAULT_CENTER rename (full rebuild deferred Sprint K)
+- Layered CSS background approach: gradient always present, image loads on top, fails gracefully
+- getHeroPhoto function: prioritizes real Places photos, falls back to movie/event posters, then gradient
+
+**Mistakes caught this session:**
+- createRouteHandlerClient wrong pattern — caught at deploy, fixed to createClient service role
+- userId not in POST body after removing auth session — caught by review
+- Direct Anthropic import violation in nora-line — caught before commit
+- timeline_events select missing source_id, image_url, item_subtype, artist — caught by audit
+- HEIC preview broken — caught during testing, fixed with canvas transcoding
+- photo_url vs photo_urls field mismatch on home card — caught by audit
+- history page 400 errors from non-existent notes/address columns — caught by console audit
+- onError DOM sibling manipulation was fragile — replaced with CSS layering
+- Labeled code blocks and deployment steps dropped mid-session — process failure, corrected multiple times
+
+**Known issues open:**
+- P1: api/bet/today 401 errors in console — Bet IS rendering correctly, secondary fetch issue, investigate
+- P2: Nora completion lines tone needs work — wrapping into Sprint H
+- P2: Photo crop objectPosition fine-tuning — Sprint H papercut
+- P2: dates/custom full visual rebuild — Sprint K agent architecture
+- P2: Date history cards with no Places photo or user photo show gold gradient — correct behavior, Sprint K backfill
+- P3: DATE_IDEA raw string still showing in some detail sheet type pills
+- P3: Game Room day label hardcoded Saturday
+- P3: Multiple GoTrueClient instances warning — Sprint J
+
+**Sprint K backlog additions:**
+- Backfill photo_url on custom_dates stops with real place_id but null photo_url
+- dates/custom/page.js full visual rebuild (agent architecture)
+- Date Night agent architecture: Nora orchestrates via composable tools (search_restaurants, search_events, build_itinerary)
+- Ideas for You Two: real API-powered regional date ideas replacing placeholder cards
+- Google Places API fix (nearbysearch/json deprecated)
+
+**Next session priorities:**
+1. Investigate api/bet/today 401 — confirm if actually blocking or cosmetic
+2. Sprint H — Nora verdict + voice system prompt pass (no code changes needed)
+3. Sprint I — Papercut pass (one session, all the sawdust)
+4. Sprint J — Code debt + hygiene (pre-beta cleanup)
+5. User test readiness final assessment
