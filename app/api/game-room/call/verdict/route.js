@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraVerdict } from '@/lib/nora'
+import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 
 export async function POST(request) {
   try {
@@ -78,6 +79,7 @@ Score context:
       .from('call_sessions')
       .update({ nora_verdict: verdict })
       .eq('id', callSessionId)
+    updateNoraMemory({ coupleId, userId: predictorUserId, signalType: SIGNAL_TYPES.GAME_ROOM_DEBRIEF, inputData: { gameType: 'the_call', score, totalRounds, rounds, predictorName, hotSeatName, verdict } }).catch(() => {})
     return NextResponse.json({ verdict, score, totalRounds })
   } catch (err) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

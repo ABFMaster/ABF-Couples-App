@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraVerdict } from '@/lib/nora'
+import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -39,7 +40,7 @@ export async function POST(request) {
     // Determine which user is user1
     const { data: couple } = await supabase
       .from('couples')
-      .select('user1_id, user2_id')
+      .select('id, user1_id, user2_id')
       .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
       .maybeSingle()
     const isUser1 = couple?.user1_id === userId
@@ -98,6 +99,9 @@ Rules:
       .update({ nora_insight: insight })
       .eq('session_id', sessionId)
 
+    if (couple?.id) {
+      updateNoraMemory({ coupleId: couple.id, userId, signalType: SIGNAL_TYPES.GAME_ROOM_DEBRIEF, inputData: { gameType: 'hot_take', allAnswers, disagreements, insight } }).catch(() => {})
+    }
     return NextResponse.json({ insight })
   } catch (err) {
     return NextResponse.json({ error: 'Failed to generate insight' }, { status: 500 })

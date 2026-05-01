@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { noraVerdict } from '@/lib/nora'
+import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -111,6 +112,7 @@ PHILOSOPHY: The mission was the ignition. The conversation that follows is the p
       })
       .eq('session_id', sessionId)
 
+    updateNoraMemory({ coupleId, userId, signalType: SIGNAL_TYPES.GAME_ROOM_DEBRIEF, inputData: { gameType: 'hunt', missionText: huntSession.mission_text, user1Debrief: huntSession.user1_debrief, user2Debrief: huntSession.user2_debrief, verdict } }).catch(() => {})
     return Response.json({ ok: true, verdict })
   } catch (err) {
     return Response.json({ error: 'Internal server error' }, { status: 500 })

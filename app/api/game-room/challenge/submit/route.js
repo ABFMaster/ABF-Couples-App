@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { noraVerdict } from '@/lib/nora'
+import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -162,6 +163,7 @@ Give a verdict that:
       return Response.json({ error: 'Failed to save round' }, { status: 500 })
     }
 
+    updateNoraMemory({ coupleId, userId, signalType: SIGNAL_TYPES.GAME_ROOM_DEBRIEF, inputData: { gameType: 'challenge', challengeType, prompt, coupleResponse, verdictText } }).catch(() => {})
     return Response.json({ round, noraVerdict: verdictText })
   } catch (err) {
     return Response.json({ error: 'Internal server error' }, { status: 500 })

@@ -183,38 +183,22 @@ export default function DateDetailPage({ params }) {
     setSubmittingComplete(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      const isUser1 = date.user_id === user.id
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
 
-      const updateData = isUser1 ? {
-        user1_rating: myRating,
-        user1_review: myReview.trim() || null,
-        user1_completed_at: new Date().toISOString()
-      } : {
-        user2_rating: myRating,
-        user2_review: myReview.trim() || null,
-        user2_completed_at: new Date().toISOString()
-      }
+      const res = await fetch('/api/dates/complete', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ dateId: date.id, userId: user.id, rating: myRating, review: myReview }),
+      })
+      if (!res.ok) throw new Error('Failed to save completion')
 
-      // Check if partner already completed
-      const bothDone = isUser1
-        ? !!date.user2_completed_at
-        : !!date.user1_completed_at
-
-      const { error } = await supabase
-        .from('custom_dates')
-        .update(updateData)
-        .eq('id', date.id)
-
-      if (error) throw error
-
-      if (bothDone) {
-        await supabase
-          .from('custom_dates')
-          .update({ status: 'completed' })
-          .eq('id', date.id)
-      }
+      const result = await res.json()
       setShowCompleteModal(false)
-      setShowTimelinePrompt(true)
+      setShowTimelinePrompt(result.bothDone)
     } catch (err) {
       console.error('Complete error:', err)
       setCompletionError('Failed to save. Try again.')
