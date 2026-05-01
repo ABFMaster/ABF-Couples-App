@@ -370,7 +370,7 @@ export default function Dashboard() {
                   <img
                     src={memoryCard.photo_urls?.[0]}
                     alt={memoryCard.title}
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
                   />
                 ) : (
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #6B5020 0%, #C9A84C 50%, #D4BA7A 100%)' }} />

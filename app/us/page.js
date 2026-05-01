@@ -363,6 +363,7 @@ export default function UsPage() {
                     }}
                     mode="been"
                     cardHeight={220}
+                    objectPosition={event.item_subtype === 'rich' ? 'top center' : 'center'}
                   />
                 </div>
               ) : (
@@ -520,7 +521,7 @@ export default function UsPage() {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px', marginBottom: '16px' }}>
               {filteredItems.map(item => (
-                <SharedItemCard key={item.id} item={item} mode="ahead" onComplete={handleComplete} cardHeight={200} />
+                <SharedItemCard key={item.id} item={item} mode="ahead" onComplete={handleComplete} cardHeight={200} objectPosition={item.type === 'rich' ? 'top center' : 'center'} />
               ))}
             </div>
           )}
@@ -660,7 +661,7 @@ export default function UsPage() {
                   <img
                     src={beenDetailItem.hero_image}
                     alt={beenDetailItem.title}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }}
                   />
                 ) : (
                   <div style={{ position: 'absolute', inset: 0, background: beenDetailItem.source_type === 'movie' || beenDetailItem.source_type === 'show' ? 'linear-gradient(160deg, #0a1f2e 0%, #0f3460 100%)' : beenDetailItem.source_type === 'song' ? 'linear-gradient(160deg, #0d2137 0%, #1a4a3a 100%)' : 'linear-gradient(160deg, #5C2A0E 0%, #A0522D 100%)' }} />

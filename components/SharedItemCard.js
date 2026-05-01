@@ -39,7 +39,7 @@ const GhostIcon = ({ type }) => {
   )
 }
 
-export default function SharedItemCard({ item, mode = 'ahead', onComplete, cardHeight = 220 }) {
+export default function SharedItemCard({ item, mode = 'ahead', onComplete, cardHeight = 220, objectPosition = 'center' }) {
   const config = TYPE_CONFIG[item.type] || TYPE_CONFIG.default
   const imageUrl = item.completion_photo_url || item.poster_url || item.artwork_url || null
   const isDone = item.completed && mode === 'ahead'
@@ -74,7 +74,7 @@ export default function SharedItemCard({ item, mode = 'ahead', onComplete, cardH
         <img
           src={imageUrl}
           alt={item.title}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: objectPosition }}
         />
       ) : (
         <div style={{ position: 'absolute', inset: 0, background: config.gradient }}>
