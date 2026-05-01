@@ -891,3 +891,63 @@ git push            # Vercel auto-deploys on push to main
 3. Sprint I — Papercut pass (one session, all the sawdust)
 4. Sprint J — Code debt + hygiene (pre-beta cleanup)
 5. User test readiness final assessment
+
+---
+
+## Self-Review 2026-04-30
+
+### Sprints H, I, J — Nora voice pass, papercut pass, code hygiene
+
+**Sprint J — Code debt + hygiene (partial):**
+- api/bet/today 401 fixed — NavBadges and BetCard were calling without auth header; race condition on mount; session guard added, no ternary pattern
+- All 10 noraGenerate JSON.parse calls guarded universally — flirts/save-profile, flirts/generate, game-room/hunt/start, game-room/save-interests, game-room/call/generate, game-room/challenge/start, game-room/challenge/generate, game-room/generate-hole, cron/scheduled-tasks, conversation-starters
+- push/send auth guard added — Bearer token required; CRON_SECRET bypass for server-side cron caller; sendPush helper in cron updated to send CRON_SECRET header
+- GoTrueClient multiple instances — parked, Sprint J proper, not a functional bug
+
+**Sprint H — Nora voice pass:**
+- Pass 1: Hard-coded female pronouns fixed in flirts/generate (her → your partner) and reflection/generate (she noticed → Nora noticed)
+- Pass 2: Master NORA_SYSTEM_PROMPT updated — pronoun ban added to VOICE section, one-of-you observation framing added to PHILOSOPHY section
+- Pass 3: Four verdict routes updated with one-of-you framing — call/verdict, hot-take/summary-insight, challenge/submit, weekly-reflection/insight (framing mismatch fixed — system prompt now matches actual data)
+- spark/respond and bet/respond confirmed correct — one-to-one reactions correctly use partner names, not game room pattern
+- hot-take/summary-insight conflicting pronoun rule removed from user message (line 88)
+
+**Sprint I — Papercut pass (complete):**
+- DATE_IDEA raw string fixed — uppercase variants added to type label map in us/page.js
+- Game Room day label — confirmed already correct, non-issue
+- Been tab refresh delay — fetchTimelineEvents extracted as standalone function, called fire-and-forget after submitComplete
+- Photo crop objectPosition — SharedItemCard accepts objectPosition prop (default center), rich/user photos get top center, media API art stays center; dashboard memory card and Been detail hero also updated to top center
+
+**Nora memory audit:**
+- Architecture confirmed working — 11 signals accumulated, memory output is specific and predictive
+- flirts/save-profile now wired to updateNoraMemory — richest profile data now feeds Nora on FLIRT_SENT signal
+- user1_notes has Matt labeled Partner 2 — display label bug, not data bug, flagged
+- Push notification debugging — sendPush logging added to cron, check tomorrow 3am logs
+
+**Mistakes caught this session:**
+- BetCard and NavBadges missing auth headers — race condition on mount, not a missing fix
+- File duplication artifact in cat output — confirmed actual file was correct
+- Weekly-reflection prompt claiming week-long observation with only two data points — framing mismatch corrected
+
+**Known issues open:**
+- P1: Push notifications not delivering — cron fires 200, subscriptions exist, logging added, check 3am logs tomorrow
+- P2: GoTrueClient multiple instances warning — Sprint J proper
+- P2: user1_notes displaying Matt as Partner 2 — display label bug in nora_memory
+- P3: dates/custom full visual rebuild — Sprint K
+- P3: DATE_IDEA raw string still possible in other surfaces not audited
+
+**Nora memory data gaps (Always Be Feeding backlog):**
+- Date completion (ratings + reviews) — client-side only, needs /api/dates/complete route
+- Manual timeline events (AddEventModal, date night write, Rabbit Hole convergence) — all client-side
+- Individual flirt sends — FLIRT_SENT signal exists but only fires on profile save, not each send
+- Game room sessions (Hot Take, Challenge, The Call, Hunt) — GAME_ROOM_DEBRIEF only wired to Rabbit Hole debrief
+
+**Parking lot additions:**
+- Nora named address unlock — post beta feature; Nora earns right to address individuals by name as couple history deepens; grounded in Terry Real framework; Option C design (boolean flag Nora sets herself in nora_memory when confident enough in her read)
+- Nora memory data flow audit — verify weekly-reflection data quality; currently only two cherry-picked moments feed the weekly signal despite system prompt claiming week-long observation
+
+**Next session priorities:**
+1. Check 3am cron logs — confirm push notifications delivering or diagnose failure
+2. Sprint J remainder — GoTrueClient singleton audit
+3. User test readiness assessment — Matt and Cass real-world test
+4. Nora memory data gaps — wire date completion and game room debriefs to updateNoraMemory
+5. Sprint K — Date Night agent architecture (blocked on Google Places fix)
