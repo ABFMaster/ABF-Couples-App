@@ -85,18 +85,21 @@ function RabbitHoleDebriefContent() {
 
   const handleSaveToTimeline = async () => {
     try {
-      await supabase
-        .from('timeline_events')
-        .insert({
-          couple_id: coupleId,
-          event_type: 'custom',
-          title: `Rabbit Hole: ${session?.hole_topic}`,
-          description: session?.convergence,
-          event_date: new Date().toISOString().split('T')[0],
-          created_by: userId,
-        })
+      const { data: { session: authSession } } = await supabase.auth.getSession()
+      if (!authSession) return
+
+      await fetch('/api/timeline/event', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authSession.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ coupleId, userId, eventType: 'custom', title: `Rabbit Hole: ${session?.hole_topic}`, description: session?.convergence, eventDate: new Date().toISOString(), photoUrls: [] }),
+      })
       setSavedToTimeline(true)
-    } catch {}
+    } catch (err) {
+      console.error('[rabbit-hole/save-timeline]', err)
+    }
   }
 
   if (loading) {

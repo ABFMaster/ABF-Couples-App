@@ -249,17 +249,17 @@ export default function DateDetailPage({ params }) {
       const reviews = [date.user1_review, date.user2_review].filter(Boolean).join(' · ')
       const description = [stopNames, reviews].filter(Boolean).join('\n')
 
-      await supabase
-        .from('timeline_events')
-        .insert({
-          couple_id: date.couple_id,
-          created_by: currentUserId,
-          event_type: 'date_night',
-          title: date.title,
-          description: description || null,
-          event_date: date.date_time || date.created_at,
-          photo_urls: timelinePhoto ? [timelinePhoto] : [],
-        })
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+
+      await fetch('/api/timeline/event', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ coupleId: date.couple_id, userId: currentUserId, eventType: 'date_night', title: date.title, description: description || null, eventDate: date.date_time || date.created_at, photoUrls: timelinePhoto ? [timelinePhoto] : [] }),
+      })
 
       setAddedToTimeline(true)
       setTimeout(() => {

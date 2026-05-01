@@ -108,6 +108,8 @@ export default function AddEventModal({ isOpen, onClose, coupleId, onEventAdded 
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
 
       // Upload photos first (if any)
       let photoUrls = []
@@ -115,43 +117,16 @@ export default function AddEventModal({ isOpen, onClose, coupleId, onEventAdded 
         photoUrls = await uploadPhotos()
       }
 
-      // Debug logging before insert
-      console.log('=== Timeline Event Insert Debug ===')
-      console.log('coupleId:', coupleId)
-      console.log('user.id:', user.id)
-      console.log('Data being inserted:', {
-        couple_id: coupleId,
-        created_by: user.id,
-        event_type: eventType,
-        title: title.trim(),
-        description: description.trim() || null,
-        event_date: eventDate,
-        photo_urls: photoUrls,
+      const res = await fetch('/api/timeline/event', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ coupleId, userId: user.id, eventType, title: title.trim(), description: description.trim() || null, eventDate, photoUrls }),
       })
 
-      // Create the event
-      const { data, error: insertError } = await supabase
-        .from('timeline_events')
-        .insert({
-          couple_id: coupleId,
-          created_by: user.id,
-          event_type: eventType,
-          title: title.trim(),
-          description: description.trim() || null,
-          event_date: eventDate,
-          photo_urls: photoUrls,
-        })
-        .select()
-        .maybeSingle()
-
-      // Debug logging after insert
-      console.log('Insert result:', { data, error: insertError })
-      if (insertError) {
-        console.log('Error details:', JSON.stringify(insertError, null, 2))
-      }
-
-      if (insertError) {
-        console.error('Error creating event:', insertError)
+      if (!res.ok) {
         setError('Failed to create event. Please try again.')
         setSaving(false)
         return
