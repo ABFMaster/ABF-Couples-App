@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { fetchDateSuggestions } from '@/lib/date-suggestions'
 
 function fmtDate(iso) {
   if (!iso) return null
@@ -35,8 +36,19 @@ export default function DatesPage() {
   const [loading, setLoading] = useState(true)
   const [upcomingDate, setUpcomingDate] = useState(null)
   const [pastDates, setPastDates] = useState([])
+  const [userLocation, setUserLocation] = useState({ lat: 47.6062, lng: -122.3321 })
+  const [coupleId, setCoupleId] = useState(null)
+  const [loadingIdea, setLoadingIdea] = useState(null)
 
   useEffect(() => { init() }, [])
+
+  useEffect(() => {
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      (position) => { setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude }) },
+      () => {}
+    )
+  }, [])
 
   const init = async () => {
     const { data: { user }, error } = await supabase.auth.getUser()
@@ -50,6 +62,7 @@ export default function DatesPage() {
 
     const cid = coupleData?.id ?? null
     if (!cid) { setLoading(false); return }
+    setCoupleId(cid)
 
     const now = new Date().toISOString()
 
@@ -100,7 +113,27 @@ export default function DatesPage() {
     setLoading(false)
   }
 
-  const handleBuildIdea = () => { router.push('/dates/custom') }
+  const IDEA_TO_CATEGORY = {
+    'quality-time': 'romantic_dinner',
+    'adventure': 'adventure',
+    'connection': 'relaxation',
+  }
+
+  const handleBuildIdea = async (idea) => {
+    setLoadingIdea(idea.id)
+    try {
+      const category = IDEA_TO_CATEGORY[idea.id]
+      const places = await fetchDateSuggestions({ location: userLocation, category })
+      sessionStorage.setItem('date_suggestions', JSON.stringify(places))
+      sessionStorage.setItem('date_suggestion_vibe', idea.title)
+      router.push('/dates/custom')
+    } catch (err) {
+      console.error('[handleBuildIdea]', err)
+      router.push('/dates/custom')
+    } finally {
+      setLoadingIdea(null)
+    }
+  }
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -193,18 +226,21 @@ export default function DatesPage() {
 
         {/* IDEAS PLACEHOLDER */}
         <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '4px' }}>Ideas for You Two</div>
-        <div style={{ fontSize: '12px', fontStyle: 'italic', color: '#C4AA87', marginBottom: '16px' }}>Nora is building something for you</div>
+        <div style={{ fontSize: '12px', fontStyle: 'italic', color: '#C4AA87', marginBottom: '16px' }}>Based on where you are and who you are</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {CURATED_IDEAS.map(idea => (
-            <div key={idea.id} onClick={() => handleBuildIdea(idea)} style={{ borderRadius: '16px', overflow: 'hidden', position: 'relative', height: '110px', cursor: 'pointer' }}>
-              <div style={{ position: 'absolute', inset: 0, background: idea.gradient }} />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 70%)' }} />
-              <div style={{ position: 'absolute', top: '12px', left: '12px', fontSize: '10px', fontWeight: 500, letterSpacing: '0.06em', padding: '3px 8px', borderRadius: '20px', textTransform: 'uppercase', background: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.9)' }}>{idea.tag}</div>
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 14px' }}>
-                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 400, color: '#fff', lineHeight: 1.2 }}>{idea.title}</div>
+          {CURATED_IDEAS.map(idea => {
+            const isLoading = loadingIdea === idea.id
+            return (
+              <div key={idea.id} onClick={() => !loadingIdea && handleBuildIdea(idea)} style={{ borderRadius: '16px', overflow: 'hidden', position: 'relative', height: '110px', cursor: loadingIdea ? 'default' : 'pointer', opacity: isLoading ? 0.7 : 1, transition: 'opacity 0.2s' }}>
+                <div style={{ position: 'absolute', inset: 0, background: idea.gradient }} />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 70%)' }} />
+                <div style={{ position: 'absolute', top: '12px', left: '12px', fontSize: '10px', fontWeight: 500, letterSpacing: '0.06em', padding: '3px 8px', borderRadius: '20px', textTransform: 'uppercase', background: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.9)' }}>{idea.tag}</div>
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 14px' }}>
+                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 400, color: '#fff', lineHeight: 1.2 }}>{isLoading ? 'Finding ideas…' : idea.title}</div>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
       </div>

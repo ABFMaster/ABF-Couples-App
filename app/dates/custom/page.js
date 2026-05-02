@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { searchMovies, searchShows, getDetails } from '@/lib/omdb'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-const DEFAULT_CENTER = { lat: 47.6062, lng: -122.3321 } // TODO Sprint K: replace with couple's actual location from profile
+const DEFAULT_CENTER = { lat: 47.6062, lng: -122.3321 }
 
 const CATEGORY_CHIPS = [
   { label: 'Dinner',     type: 'restaurant',    emoji: '🍽️' },
@@ -196,6 +196,10 @@ export default function CustomDateBuilderPage() {
   const [saveStage, setSaveStage] = useState(null)
   const [saveError, setSaveError] = useState(null)
 
+  // Preloaded suggestions from Ideas for You Two
+  const [preloadedSuggestions, setPreloadedSuggestions] = useState(null)
+  const [suggestionVibe, setSuggestionVibe] = useState(null)
+
   // Refs
   const mapDivRef       = useRef(null)
   const mapInstance     = useRef(null)
@@ -205,8 +209,33 @@ export default function CustomDateBuilderPage() {
   const debounceRef     = useRef(null)
   const inputRef        = useRef(null)
 
+  useEffect(() => {
+    const raw = sessionStorage.getItem('date_suggestions')
+    const vibe = sessionStorage.getItem('date_suggestion_vibe')
+    if (raw) {
+      try { setPreloadedSuggestions(JSON.parse(raw)) } catch {}
+      sessionStorage.removeItem('date_suggestions')
+    }
+    if (vibe) {
+      setSuggestionVibe(vibe)
+      sessionStorage.removeItem('date_suggestion_vibe')
+    }
+  }, [])
+
   // ── Load Google Maps JS API ──────────────────────────────────────
   // Use &callback= (not script.onload) — Maps fires the callback only after
+  useEffect(() => {
+    if (!navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude })
+      },
+      () => {
+        setUserLocation(DEFAULT_CENTER)
+      }
+    )
+  }, [])
+
   // window.google.maps and all services are fully initialized.
   // script.onload fires when the script downloads, which can be before Maps
   // is ready, causing "google is not defined" or silent service failures.
@@ -923,6 +952,34 @@ export default function CustomDateBuilderPage() {
                     )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Preloaded suggestions panel */}
+            {preloadedSuggestions && preloadedSuggestions.length > 0 && (
+              <div style={{ padding: '16px 20px', borderBottom: '0.5px solid #F0EBE3', background: '#FDFAF7' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#7C3AED', margin: 0 }}>
+                    Nora's picks for {suggestionVibe}
+                  </p>
+                  <button
+                    onClick={() => setPreloadedSuggestions(null)}
+                    style={{ fontSize: '12px', color: '#9CA3AF', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+                <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '4px', WebkitOverflowScrolling: 'touch' }}>
+                  {preloadedSuggestions.map(suggestion => (
+                    <NearbyCard
+                      key={suggestion.place_id}
+                      place={suggestion}
+                      onAdd={addToItinerary}
+                      alreadyAdded={itinerary.some(s => s.place_id === suggestion.place_id)}
+                      userLocation={userLocation}
+                    />
+                  ))}
+                </div>
               </div>
             )}
 
