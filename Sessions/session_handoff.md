@@ -951,3 +951,38 @@ git push            # Vercel auto-deploys on push to main
 3. User test readiness assessment — Matt and Cass real-world test
 4. Nora memory data gaps — wire date completion and game room debriefs to updateNoraMemory
 5. Sprint K — Date Night agent architecture (blocked on Google Places fix)
+
+### Continued Work — 2026-05-02
+
+**Sprint K1 — Date Night Foundation:**
+- Google Places server-side key issue identified and fixed — referrer-restricted key was blocking server-side API calls; new GOOGLE_PLACES_SERVER_KEY created (unrestricted) and wired into dates/suggestions/route.js and lib/date-suggestions.js
+- Location fix — dates/custom/page.js now uses navigator.geolocation on mount, falls back to Seattle default; confirmed working on mobile
+- Ideas for You Two wired to real suggestions — handleBuildIdea now fetches real places via fetchDateSuggestions, stores in sessionStorage, routes to builder with Nora's picks pre-loaded
+- Nora's picks panel added to date builder — renders preloaded suggestions as horizontal NearbyCard scroll with vibe label and dismiss button
+- formatPlaceForDisplay field mismatch fixed — added name, lat, lng aliases to match NearbyCard expected shape
+- Conversation starters prompt fix — love languages, hobbies, date_preferences now injected into prompt (were fetched but never used); user_id added to profiles select; user1Name/user2Name derived before prompt construction
+- Ticketmaster Discovery API and Eventbrite API keys acquired and added to .env.local and Vercel (TICKETMASTER_API_KEY, EVENTBRITE_API_KEY)
+
+**Always Be Feeding — completed:**
+- Game room debriefs wired: hot-take/summary-insight, challenge/submit, call/verdict, hunt/debrief all now call updateNoraMemory with GAME_ROOM_DEBRIEF signal
+- Date completion wired: new /api/dates/complete route handles Supabase writes + updateNoraMemory; dates/[id]/page.js handleComplete updated to call route instead of direct Supabase write
+- Timeline events wired: new /api/timeline/event route handles insert + updateNoraMemory; AddEventModal, addToTimeline in dates/[id], handleSaveToTimeline in rabbit-hole/debrief all updated to call route
+- All 10 SIGNAL_TYPES now have active call sites
+
+**Push notifications — still unresolved:**
+- VAPID keys confirmed correct in both .env.local and Vercel
+- CRON_SECRET confirmed present and matching
+- sendPush logging added to cron — check 3am logs tomorrow
+- Eventbrite lat/lng search deprecated — address-based only, needs evaluation before building
+
+**Sprint K2 — Next session priorities:**
+1. Build /api/events/ticketmaster route — Discovery API v2, latlong param, normalize response to shared event shape
+2. Evaluate Eventbrite address-based search — test before investing
+3. Wire event results into Ideas for You Two alongside place suggestions
+4. Nora intelligence layer — select date vibe from couple_notes structured_facts, rank suggestions by couple interests
+
+**Key architectural decisions locked:**
+- Two event sources: Ticketmaster (mainstream) + Eventbrite (community/niche) — pending Eventbrite evaluation
+- Consumer Key = API key for Ticketmaster Discovery API
+- In-date mode: manual "We're here" tap advances stops, fires conversation prompt — geolocation trigger is named upgrade path
+- nearbysearch/json migration to Places API (New) — deferred, works now but on deprecation watchlist
