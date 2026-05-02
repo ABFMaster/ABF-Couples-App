@@ -18,11 +18,12 @@ export async function POST(request) {
       .eq('id', coupleId)
       .maybeSingle()
 
-    const userIds = [coupleRes.data?.user1_id, coupleRes.data?.user2_id].filter(Boolean)
+    const couple = coupleRes.data
+    const userIds = [couple?.user1_id, couple?.user2_id].filter(Boolean)
 
     const { data: profiles } = await supabase
       .from('user_profiles')
-      .select('display_name, love_language_primary, hobbies, date_preferences')
+      .select('user_id, display_name, love_language_primary, hobbies, date_preferences')
       .in('user_id', userIds)
 
     // Fetch assessments
@@ -48,6 +49,9 @@ export async function POST(request) {
       .limit(1)
       .maybeSingle()
 
+    const user1Name = profiles?.find(p => p.user_id === couple?.user1_id)?.display_name || 'Partner 1'
+    const user2Name = profiles?.find(p => p.user_id === couple?.user2_id)?.display_name || 'Partner 2'
+
     const stopNames = (stops || []).map(s => s.name).join(', ')
     const checkinThemes = (checkins || [])
       .map(c => c.question_response)
@@ -66,6 +70,13 @@ Stops: ${stopNames || 'not specified'}
 Recent check-in themes: ${checkinThemes || 'none available'}
 Recent reflection insight: ${reflectionInsight || 'none available'}
 Assessment summary: ${assessmentSummary || 'none available'}
+
+ABOUT THIS COUPLE:
+- ${user1Name}'s love language: ${profiles?.find(p => p.user_id === couple?.user1_id)?.love_language_primary || 'unknown'}
+- ${user2Name}'s love language: ${profiles?.find(p => p.user_id === couple?.user2_id)?.love_language_primary || 'unknown'}
+- ${user1Name}'s interests: ${profiles?.find(p => p.user_id === couple?.user1_id)?.hobbies?.join(', ') || 'not specified'}
+- ${user2Name}'s interests: ${profiles?.find(p => p.user_id === couple?.user2_id)?.hobbies?.join(', ') || 'not specified'}
+- Date preferences: ${profiles?.find(p => p.user_id === couple?.user1_id)?.date_preferences || 'not specified'}
 
 Generate exactly 9 conversation starters in 3 categories, plus a hype_line.
 Return ONLY valid JSON, no markdown, no explanation:
