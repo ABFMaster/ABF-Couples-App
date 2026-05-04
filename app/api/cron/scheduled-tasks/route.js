@@ -248,6 +248,7 @@ export async function GET(request) {
     const { data: couples } = await supabase
       .from('couples')
       .select('id, created_at, user1_id, user2_id')
+      .not('user2_id', 'is', null)
 
     if (!couples?.length) {
       return Response.json({ ok: true, processed: 0 })
