@@ -908,7 +908,7 @@ export default function CustomDateBuilderPage() {
         {/* MAP PANEL — always in DOM, hidden in list mode (preserves map instance) */}
         <div
           className={`relative flex-shrink-0 lg:flex-1 ${mode === 'list' ? 'hidden' : ''}`}
-          style={{ height: '45vh' }}
+          style={{ height: 'min(35vh, 240px)' }}
         >
           <div ref={mapDivRef} className="w-full h-full" />
           {!mapsReady && (
@@ -988,16 +988,19 @@ export default function CustomDateBuilderPage() {
                     Dismiss
                   </button>
                 </div>
-                <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '4px', WebkitOverflowScrolling: 'touch' }}>
-                  {preloadedSuggestions.map(suggestion => (
-                    <NearbyCard
-                      key={suggestion.place_id || suggestion.id}
-                      place={suggestion}
-                      onAdd={addToItinerary}
-                      alreadyAdded={itinerary.some(s => (s.place_id && s.place_id === suggestion.place_id) || (s.id && s.id === suggestion.id))}
-                      userLocation={userLocation}
-                    />
-                  ))}
+                <div style={{ position: 'relative' }}>
+                  <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '4px', paddingRight: '32px', WebkitOverflowScrolling: 'touch' }}>
+                    {preloadedSuggestions.map(suggestion => (
+                      <NearbyCard
+                        key={suggestion.place_id || suggestion.id}
+                        place={suggestion}
+                        onAdd={addToItinerary}
+                        alreadyAdded={itinerary.some(s => (s.place_id && s.place_id === suggestion.place_id) || (s.id && s.id === suggestion.id))}
+                        userLocation={userLocation}
+                      />
+                    ))}
+                  </div>
+                  <div style={{ position: 'absolute', right: 0, top: 0, bottom: 4, width: '48px', background: 'linear-gradient(to left, #FDFAF7, transparent)', pointerEvents: 'none', borderRadius: '0 12px 12px 0' }} />
                 </div>
               </div>
             )}
