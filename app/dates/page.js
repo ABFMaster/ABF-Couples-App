@@ -121,10 +121,17 @@ export default function DatesPage() {
 
   const handleBuildIdea = async (idea) => {
     setLoadingIdea(idea.id)
+    const { data: { session } } = await supabase.auth.getSession()
     try {
       const category = IDEA_TO_CATEGORY[idea.id]
-      const places = await fetchDateSuggestions({ location: userLocation, category })
-      sessionStorage.setItem('date_suggestions', JSON.stringify(places))
+      const [places, events] = await Promise.all([
+        fetchDateSuggestions({ location: userLocation, category }),
+        fetch(`/api/events/ticketmaster?lat=${userLocation.lat}&lng=${userLocation.lng}&radius=50&size=8`, {
+          headers: { Authorization: `Bearer ${session?.access_token}` },
+        }).then(r => r.json()).then(d => d.events || []).catch(() => []),
+      ])
+      const combined = [...places, ...events]
+      sessionStorage.setItem('date_suggestions', JSON.stringify(combined))
       sessionStorage.setItem('date_suggestion_vibe', idea.title)
       router.push('/dates/custom')
     } catch (err) {

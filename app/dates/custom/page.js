@@ -120,31 +120,50 @@ function PreviewCard({ place, onAdd, alreadyAdded }) {
 }
 
 function NearbyCard({ place, onAdd, alreadyAdded, userLocation }) {
-  const dist = place.lat && place.lng && userLocation
+  const isEvent = place.source === 'ticketmaster'
+  const imageUrl = place.photo_url || place.image || null
+  const dist = !isEvent && place.lat && place.lng && userLocation
     ? formatDist(haversineKm(userLocation, { lat: place.lat, lng: place.lng }))
     : null
 
   return (
     <div className="flex-shrink-0 w-40 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      {place.photo_url
-        ? <div className="h-24"><img src={place.photo_url} alt={place.name} className="w-full h-full object-cover" /></div>
+      {imageUrl
+        ? <div className="h-24"><img src={imageUrl} alt={place.name} className="w-full h-full object-cover" /></div>
         : <div className="h-16 bg-gradient-to-br from-cream-100 to-indigo-100" />
       }
       <div className="p-3">
         <p className="font-semibold text-gray-900 text-xs leading-tight line-clamp-2 mb-1">{place.name}</p>
         <div className="flex items-center gap-1.5 mb-2">
-          {place.rating && <span className="text-xs text-gray-400">⭐ {place.rating.toFixed(1)}</span>}
-          {dist && <span className="text-xs text-gray-300">· {dist}</span>}
+          {isEvent ? (
+            <span className="text-xs text-gray-400">{place.date}{place.time ? ' ' + place.time.substring(0, 5) : ''}</span>
+          ) : (
+            <>
+              {place.rating && <span className="text-xs text-gray-400">⭐ {place.rating.toFixed(1)}</span>}
+              {dist && <span className="text-xs text-gray-300">· {dist}</span>}
+            </>
+          )}
         </div>
-        <button
-          onClick={() => onAdd(place)}
-          disabled={alreadyAdded}
-          className={`w-full py-1.5 rounded-xl text-xs font-semibold transition-all ${
-            alreadyAdded ? 'bg-gray-100 text-gray-400' : 'bg-gradient-to-r from-coral-500 to-indigo-500 text-white active:scale-95'
-          }`}
-        >
-          {alreadyAdded ? '✓ Added' : '+ Add'}
-        </button>
+        {isEvent ? (
+          <a
+            href={place.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full py-1.5 rounded-xl text-xs font-semibold text-center bg-gradient-to-r from-coral-500 to-indigo-500 text-white"
+          >
+            Tickets →
+          </a>
+        ) : (
+          <button
+            onClick={() => onAdd(place)}
+            disabled={alreadyAdded}
+            className={`w-full py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              alreadyAdded ? 'bg-gray-100 text-gray-400' : 'bg-gradient-to-r from-coral-500 to-indigo-500 text-white active:scale-95'
+            }`}
+          >
+            {alreadyAdded ? '✓ Added' : '+ Add'}
+          </button>
+        )}
       </div>
     </div>
   )
@@ -972,10 +991,10 @@ export default function CustomDateBuilderPage() {
                 <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '4px', WebkitOverflowScrolling: 'touch' }}>
                   {preloadedSuggestions.map(suggestion => (
                     <NearbyCard
-                      key={suggestion.place_id}
+                      key={suggestion.place_id || suggestion.id}
                       place={suggestion}
                       onAdd={addToItinerary}
-                      alreadyAdded={itinerary.some(s => s.place_id === suggestion.place_id)}
+                      alreadyAdded={itinerary.some(s => (s.place_id && s.place_id === suggestion.place_id) || (s.id && s.id === suggestion.id))}
                       userLocation={userLocation}
                     />
                   ))}
