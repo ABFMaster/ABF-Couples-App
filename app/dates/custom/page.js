@@ -128,16 +128,15 @@ function NearbyCard({ place, onAdd, alreadyAdded, userLocation, onSelect }) {
             : <>{place.rating && `⭐ ${place.rating.toFixed(1)}`}{dist && ` · ${dist}`}</>
           }
         </div>
-        {isEvent
-          ? <a href={place.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ display: 'block', width: '100%', padding: '6px', borderRadius: '10px', background: 'transparent', border: '0.5px solid #C4714A', color: '#C4714A', fontSize: '11px', fontWeight: 500, textAlign: 'center', textDecoration: 'none', boxSizing: 'border-box' }}>Tickets →</a>
-          : <button onClick={e => { e.stopPropagation(); onAdd(place) }} disabled={alreadyAdded} style={{ width: '100%', padding: '6px', borderRadius: '10px', background: alreadyAdded ? '#F0EBE3' : '#C4714A', border: 'none', color: alreadyAdded ? '#A09080' : 'white', fontSize: '11px', fontWeight: 500, cursor: alreadyAdded ? 'not-allowed' : 'pointer' }}>{alreadyAdded ? '✓ Added' : '+ Add'}</button>
-        }
+        {!isEvent && (
+          <button onClick={e => { e.stopPropagation(); onAdd(place) }} disabled={alreadyAdded} style={{ width: '100%', padding: '6px', borderRadius: '10px', background: alreadyAdded ? '#F0EBE3' : '#C4714A', border: 'none', color: alreadyAdded ? '#A09080' : 'white', fontSize: '11px', fontWeight: 500, cursor: alreadyAdded ? 'not-allowed' : 'pointer' }}>{alreadyAdded ? '✓ Added' : '+ Add'}</button>
+        )}
       </div>
     </div>
   )
 }
 
-function PlanStrip({ itinerary, dateName, onDateNameChange, planExpanded, setPlanExpanded, onSave, saveStage, dateTime, onDateTimeChange, onRemoveStop }) {
+function PlanStrip({ itinerary, dateName, onDateNameChange, planExpanded, setPlanExpanded, onSave, saveStage, onRemoveStop }) {
   if (!itinerary.length) return null
   const stopLabel = `${itinerary.length} stop${itinerary.length === 1 ? '' : 's'}`
 
@@ -167,13 +166,7 @@ function PlanStrip({ itinerary, dateName, onDateNameChange, planExpanded, setPla
         value={dateName}
         onChange={e => onDateNameChange(e.target.value)}
         placeholder="Name your date…"
-        style={{ width: '100%', fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '16px', color: '#1C1208', background: 'transparent', border: 'none', borderBottom: '0.5px solid #EDE5D8', outline: 'none', padding: '8px 0', marginBottom: '12px', boxSizing: 'border-box' }}
-      />
-      <input
-        type="datetime-local"
-        value={dateTime}
-        onChange={e => onDateTimeChange(e.target.value)}
-        style={{ width: '100%', fontSize: '13px', color: '#7A6A54', background: 'transparent', border: 'none', borderBottom: '0.5px solid #EDE5D8', outline: 'none', padding: '8px 0', marginBottom: '16px', boxSizing: 'border-box' }}
+        style={{ width: '100%', fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '16px', color: '#1C1208', background: 'transparent', border: 'none', borderBottom: '0.5px solid #EDE5D8', outline: 'none', padding: '8px 0', marginBottom: '8px', boxSizing: 'border-box' }}
       />
       {itinerary.map((stop, i) => (
         <div key={stop.place_id || stop.id || i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: '0.5px solid #EDE5D8' }}>
@@ -917,8 +910,6 @@ export default function CustomDateBuilderPage() {
         setPlanExpanded={setPlanExpanded}
         onSave={handleSave}
         saveStage={saveStage}
-        dateTime={dateTime}
-        onDateTimeChange={setDateTime}
         onRemoveStop={removeStop}
       />
 
