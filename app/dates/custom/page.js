@@ -888,15 +888,6 @@ export default function CustomDateBuilderPage() {
           )}
         </div>
 
-        {/* Preview card */}
-        {(previewPlace || loadingPreview) && (
-          <div style={{ padding: '10px 16px 0' }}>
-            {loadingPreview
-              ? <div style={{ height: '80px', background: '#EDE5D8', borderRadius: '14px', animation: 'pulse 1.5s infinite' }} />
-              : <PreviewCard place={previewPlace} onAdd={addToItinerary} alreadyAdded={savedIds.has(previewPlace.place_id)} />
-            }
-          </div>
-        )}
 
         {/* Map strip — collapsible */}
         <div onClick={() => setMapExpanded(e => !e)} style={{ margin: '12px 16px 0', borderRadius: '14px', overflow: 'hidden', cursor: 'pointer', height: mapExpanded ? '220px' : '88px', transition: 'height 0.3s ease', position: 'relative', flexShrink: 0 }}>
