@@ -132,14 +132,29 @@ Their profiles: ${currentUserName} is ${myContext}. ${partnerName} is ${partnerC
 
 You are speaking directly to ${currentUserName}. React to both answers but speak TO ${currentUserName} — not about them. Be specific to what they actually said.`
 
-      const completion = await noraReact(userPrompt, {
+      const partnerUserPrompt = `The Spark question was: ${sparkRow.question}
+
+${partnerName} answered: ${partnerResponse.response_text}
+${currentUserName} answered: ${responseText}
+
+Their profiles: ${partnerName} is ${partnerContext}. ${currentUserName} is ${myContext}.${memoryLine}
+
+You are speaking directly to ${partnerName}. React to both answers but speak TO ${partnerName} — not about them. Be specific to what they actually said.`
+
+      const noraReactionSettings = {
         route: 'spark/respond',
         system: 'You are speaking directly to the user who is reading this — always use \'you\' for them and their partner\'s actual name for the partner. Never use \'they\', \'them\', \'their\', or any third-person language. Never restate the question. Never start with an affirmation. React to what was actually said — be specific, not conceptual. Notice alignment, surprise, tenderness, or humor in the two answers. Keep your reaction to 1-2 sentences maximum.',
         context: 'daily',
         maxTokens: 300,
-      })
+      }
+
+      const [completion, partnerCompletion] = await Promise.all([
+        noraReact(userPrompt, noraReactionSettings),
+        noraReact(partnerUserPrompt, noraReactionSettings),
+      ])
 
       const noraReaction = completion || ''
+      const partnerReaction = partnerCompletion || ''
 
       // Steps 10e & 10f: Write nora_reaction to both users' spark_responses
       await Promise.all([
@@ -150,7 +165,7 @@ You are speaking directly to ${currentUserName}. React to both answers but speak
           .eq('user_id', user.id),
         supabase
           .from('spark_responses')
-          .update({ nora_reaction: noraReaction })
+          .update({ nora_reaction: partnerReaction })
           .eq('spark_id', sparkId)
           .eq('user_id', partnerId),
       ])

@@ -147,14 +147,30 @@ ${partnerName}'s actual answer: "${theirs.actual_answer}"
 
 You are speaking directly to ${myName}. React to what the predictions and actual answers reveal but speak TO ${myName} — not about them. Be specific to what they actually said.`
 
-        const completion = await noraReact(userPrompt, {
+        const partnerUserPrompt = `The Bet question was: "${betRow.question}"
+
+${partnerName}'s prediction (what they thought ${myName} would say): "${theirs.prediction}"
+${myName}'s prediction (what they thought ${partnerName} would say): "${mine.prediction}"
+
+${partnerName}'s actual answer: "${theirs.actual_answer}"
+${myName}'s actual answer: "${mine.actual_answer}"
+
+You are speaking directly to ${partnerName}. React to what the predictions and actual answers reveal but speak TO ${partnerName} — not about them. Be specific to what they actually said.`
+
+        const betReactionSettings = {
           route: 'bet/respond/reaction',
           system: 'You are speaking directly to the user who is reading this — always use \'you\' for them and their partner\'s actual name for the partner. Never use \'they\', \'them\', \'their\', or any third-person language. Never restate the question. Never start with an affirmation. React to what the predictions and actual answers reveal about how well these two know each other — be specific, warm, and occasionally playful. Keep your reaction to 1-2 sentences maximum.',
           context: 'daily',
           maxTokens: 200,
-        })
+        }
+
+        const [completion, partnerCompletion] = await Promise.all([
+          noraReact(userPrompt, betReactionSettings),
+          noraReact(partnerUserPrompt, betReactionSettings),
+        ])
 
         noraReaction = completion || ''
+        const partnerReaction = partnerCompletion || ''
 
         // Generate Nora pre-reveal intro (short host line shown before cards flip)
         try {
@@ -178,7 +194,7 @@ You are speaking directly to ${myName}. React to what the predictions and actual
             .eq('user_id', userId),
           supabase
             .from('bet_responses')
-            .update({ nora_reaction: noraReaction, nora_intro: noraIntro })
+            .update({ nora_reaction: partnerReaction, nora_intro: noraIntro })
             .eq('bet_id', betId)
             .eq('user_id', partnerId),
         ])
