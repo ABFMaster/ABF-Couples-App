@@ -41,44 +41,44 @@ function formatDist(km) {
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function StopCard({ stop, index, total, travelTime, onMoveUp, onMoveDown, onRemove, onNoteChange }) {
+  const isEvent = stop.source === 'ticketmaster' || stop.place_id?.startsWith('event-')
   return (
-    <div className="px-5 py-4">
-      {/* Travel time connector */}
+    <div style={{ marginBottom: '10px' }}>
       {index > 0 && travelTime && (
-        <div className="flex items-center gap-2 mb-3 pl-4">
-          <div className="w-0.5 h-4 bg-cream-100 ml-3" />
-          <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full ml-1">🚗 {travelTime}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0 8px 28px' }}>
+          <div style={{ width: '1px', height: '12px', background: '#E8DFD0' }} />
+          <span style={{ fontSize: '11px', color: '#A09080', background: '#FAF6EF', padding: '2px 8px', borderRadius: '10px' }}>🚗 {travelTime}</span>
         </div>
       )}
-      <div className="flex items-start gap-3">
-        {/* Badge */}
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-coral-400 to-indigo-400 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 mt-0.5 shadow-sm">
-          {index + 1}
+      <div style={{ background: 'white', borderRadius: '14px', border: '0.5px solid #EDE5D8', display: 'flex', alignItems: 'stretch', overflow: 'hidden' }}>
+        <div style={{ width: '36px', background: isEvent ? '#1C1208' : '#FAF0E6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#C4714A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 500, color: 'white' }}>{index + 1}</div>
         </div>
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-gray-900 text-sm leading-tight">{stop.name}</p>
-          <p className="text-gray-400 text-xs mt-0.5 truncate">{stop.address}</p>
+        {stop.photo_url && (
+          <div style={{ width: '68px', height: '68px', flexShrink: 0, overflow: 'hidden' }}>
+            <img src={stop.photo_url} alt={stop.name} style={{ width: '68px', height: '68px', objectFit: 'cover' }} />
+          </div>
+        )}
+        {!stop.photo_url && (
+          <div style={{ width: '68px', height: '68px', flexShrink: 0, background: isEvent ? 'linear-gradient(160deg,#3A2818,#1C1208)' : 'linear-gradient(160deg,#EDE5D8,#D9CCBA)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {isEvent && <span style={{ fontSize: '18px', opacity: 0.2, color: '#FAF6EF' }}>♪</span>}
+          </div>
+        )}
+        <div style={{ padding: '10px 10px 10px 12px', flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: '13px', fontWeight: 500, color: '#1C1208', margin: '0 0 2px', lineHeight: 1.3 }}>{stop.name}</p>
+          <p style={{ fontSize: '11px', color: isEvent ? '#C4714A' : '#A09080', margin: '0 0 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stop.address}</p>
           <input
             type="text"
             value={stop.note || ''}
             onChange={e => onNoteChange(e.target.value)}
-            placeholder="Add a note… (e.g. make a reservation)"
-            className="mt-2 w-full text-xs bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-gray-700 placeholder-gray-300 focus:outline-none focus:ring-1 focus:ring-coral-100 focus:bg-white transition-colors"
+            placeholder="Add a note…"
+            style={{ width: '100%', fontSize: '11px', color: '#7A6A54', background: '#FAF6EF', border: '0.5px solid #EDE5D8', borderRadius: '8px', padding: '5px 8px', outline: 'none', boxSizing: 'border-box' }}
           />
         </div>
-        {/* Controls */}
-        <div className="flex flex-col gap-1 flex-shrink-0 mt-0.5">
-          <button onClick={onMoveUp} disabled={index === 0}
-            className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed text-xs"
-          >↑</button>
-          <button onClick={onMoveDown} disabled={index === total - 1}
-            className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed text-xs"
-          >↓</button>
-          <button onClick={onRemove}
-            className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-red-400 hover:bg-red-50 text-xs"
-            title="Remove"
-          >✕</button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '8px 8px 8px 0', flexShrink: 0, justifyContent: 'center' }}>
+          <button onClick={onMoveUp} disabled={index === 0} style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#FAF6EF', border: '0.5px solid #EDE5D8', fontSize: '11px', color: '#A09080', cursor: index === 0 ? 'not-allowed' : 'pointer', opacity: index === 0 ? 0.3 : 1 }}>↑</button>
+          <button onClick={onMoveDown} disabled={index === total - 1} style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#FAF6EF', border: '0.5px solid #EDE5D8', fontSize: '11px', color: '#A09080', cursor: index === total-1 ? 'not-allowed' : 'pointer', opacity: index === total-1 ? 0.3 : 1 }}>↓</button>
+          <button onClick={onRemove} style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#FAF6EF', border: '0.5px solid #EDE5D8', fontSize: '11px', color: '#C47A6A', cursor: 'pointer' }}>✕</button>
         </div>
       </div>
     </div>
@@ -125,45 +125,26 @@ function NearbyCard({ place, onAdd, alreadyAdded, userLocation }) {
   const dist = !isEvent && place.lat && place.lng && userLocation
     ? formatDist(haversineKm(userLocation, { lat: place.lat, lng: place.lng }))
     : null
-
   return (
-    <div className="flex-shrink-0 w-40 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div style={{ flexShrink: 0, width: isEvent ? '150px' : '138px', background: isEvent ? '#1C1208' : 'white', borderRadius: '14px', border: isEvent ? 'none' : '0.5px solid #EDE5D8', overflow: 'hidden' }}>
       {imageUrl
-        ? <div className="h-24"><img src={imageUrl} alt={place.name} className="w-full h-full object-cover" /></div>
-        : <div className="h-16 bg-gradient-to-br from-cream-100 to-indigo-100" />
+        ? <div style={{ height: '88px', overflow: 'hidden' }}><img src={imageUrl} alt={place.name} style={{ width: '100%', height: '88px', objectFit: 'cover' }} /></div>
+        : <div style={{ height: '88px', background: isEvent ? 'linear-gradient(160deg,#3A2818,#1C1208)' : 'linear-gradient(160deg,#EDE5D8,#C8B89A)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {isEvent && <span style={{ fontSize: '24px', opacity: 0.2, color: '#FAF6EF' }}>♪</span>}
+          </div>
       }
-      <div className="p-3">
-        <p className="font-semibold text-gray-900 text-xs leading-tight line-clamp-2 mb-1">{place.name}</p>
-        <div className="flex items-center gap-1.5 mb-2">
-          {isEvent ? (
-            <span className="text-xs text-gray-400">{place.date}{place.time ? ' ' + place.time.substring(0, 5) : ''}</span>
-          ) : (
-            <>
-              {place.rating && <span className="text-xs text-gray-400">⭐ {place.rating.toFixed(1)}</span>}
-              {dist && <span className="text-xs text-gray-300">· {dist}</span>}
-            </>
-          )}
+      <div style={{ padding: '8px 10px 10px' }}>
+        <p style={{ fontSize: '12px', fontWeight: 500, color: isEvent ? '#FAF6EF' : '#1C1208', lineHeight: 1.3, margin: '0 0 4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{place.name}</p>
+        <div style={{ fontSize: '10px', color: isEvent ? '#C4714A' : '#A09080', marginBottom: '8px' }}>
+          {isEvent
+            ? `${place.date || ''}${place.time ? ' · ' + place.time.substring(0,5) : ''}`
+            : <>{place.rating && `⭐ ${place.rating.toFixed(1)}`}{dist && ` · ${dist}`}</>
+          }
         </div>
-        {isEvent ? (
-          <a
-            href={place.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full py-1.5 rounded-xl text-xs font-semibold text-center bg-gradient-to-r from-coral-500 to-indigo-500 text-white"
-          >
-            Tickets →
-          </a>
-        ) : (
-          <button
-            onClick={() => onAdd(place)}
-            disabled={alreadyAdded}
-            className={`w-full py-1.5 rounded-xl text-xs font-semibold transition-all ${
-              alreadyAdded ? 'bg-gray-100 text-gray-400' : 'bg-gradient-to-r from-coral-500 to-indigo-500 text-white active:scale-95'
-            }`}
-          >
-            {alreadyAdded ? '✓ Added' : '+ Add'}
-          </button>
-        )}
+        {isEvent
+          ? <a href={place.url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', width: '100%', padding: '6px', borderRadius: '10px', background: 'transparent', border: '0.5px solid #C4714A', color: '#C4714A', fontSize: '11px', fontWeight: 500, textAlign: 'center', textDecoration: 'none', boxSizing: 'border-box' }}>Tickets →</a>
+          : <button onClick={() => onAdd(place)} disabled={alreadyAdded} style={{ width: '100%', padding: '6px', borderRadius: '10px', background: alreadyAdded ? '#F0EBE3' : '#C4714A', border: 'none', color: alreadyAdded ? '#A09080' : 'white', fontSize: '11px', fontWeight: 500, cursor: alreadyAdded ? 'not-allowed' : 'pointer' }}>{alreadyAdded ? '✓ Added' : '+ Add'}</button>
+        }
       </div>
     </div>
   )
@@ -174,7 +155,8 @@ export default function CustomDateBuilderPage() {
   const router = useRouter()
 
   // UI mode
-  const [mode, setMode] = useState('map')
+  const [mode, setMode] = useState('list')
+  const [mapExpanded, setMapExpanded] = useState(false)
 
   // Maps
   const [mapsReady, setMapsReady] = useState(false)
@@ -721,386 +703,222 @@ export default function CustomDateBuilderPage() {
   // RENDER
   // ════════════════════════════════════════════════════════════════
   return (
-    <div className="flex flex-col" style={{ height: '100dvh', minHeight: '100vh' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', minHeight: '100vh', background: '#FAF6EF', fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
 
-      {/* ── Header ──────────────────────────────────────────────── */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3 z-20">
-        <button
-          onClick={() => router.back()}
-          className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 flex-shrink-0"
-        >←</button>
-        <h1 className="font-bold text-gray-900 flex-1 truncate">Build Your Date Night</h1>
-        {/* Map / List toggle */}
-        <div className="flex bg-gray-100 rounded-full p-0.5 flex-shrink-0">
-          {[{ id: 'map', label: '🗺️ Map' }, { id: 'list', label: '📋 List' }].map(m => (
-            <button
-              key={m.id}
-              onClick={() => setMode(m.id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                mode === m.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'
-              }`}
-            >{m.label}</button>
+      {/* Header */}
+      <div style={{ flexShrink: 0, background: '#FAF6EF', borderBottom: '0.5px solid #E8DFD0', padding: '14px 16px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 20 }}>
+        <button onClick={() => router.back()} style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F0E8DC', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '14px', color: '#5A4A36' }}>←</button>
+        <span style={{ fontFamily: 'Georgia, serif', fontSize: '17px', color: '#1C1208', fontWeight: 400, fontStyle: 'italic' }}>Build your date night</span>
+        <div style={{ display: 'flex', gap: '2px', background: '#EDE5D8', borderRadius: '20px', padding: '3px' }}>
+          {[{id:'list',label:'List'},{id:'map',label:'Map'}].map(m => (
+            <button key={m.id} onClick={() => setMode(m.id)} style={{ fontSize: '11px', fontWeight: 500, padding: '4px 10px', borderRadius: '16px', border: 'none', cursor: 'pointer', color: mode === m.id ? '#1C1208' : '#7A6A54', background: mode === m.id ? '#FAF6EF' : 'transparent', transition: 'all 0.15s' }}>{m.label}</button>
           ))}
         </div>
       </div>
 
-      {/* ── Search bar ──────────────────────────────────────────── */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-100 px-4 py-3 z-10" data-search-box>
-        <div className="relative max-w-2xl mx-auto">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-sm">🔍</span>
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={e => handleQueryChange(e.target.value)}
-            onFocus={() => predictions.length > 0 && setShowDropdown(true)}
-            placeholder="Search restaurants, bars, parks…"
-            className="w-full pl-10 pr-8 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-coral-200 focus:bg-white transition-colors"
-          />
-          {searching && (
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 text-xs animate-pulse">●●●</span>
-          )}
-          {/* Autocomplete dropdown */}
+      {/* Scrollable content */}
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+
+        {/* Search bar */}
+        <div style={{ padding: '12px 16px 0', position: 'relative', zIndex: 10 }} data-search-box>
+          <div style={{ background: 'white', border: '0.5px solid #E8DFD0', borderRadius: '24px', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
+            <span style={{ color: '#B5A899', fontSize: '15px' }}>⌕</span>
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={e => handleQueryChange(e.target.value)}
+              onFocus={() => predictions.length > 0 && setShowDropdown(true)}
+              placeholder="Search restaurants, bars, parks…"
+              style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: '14px', color: '#1C1208' }}
+            />
+            {searching && <span style={{ fontSize: '11px', color: '#C4B09A' }}>●●●</span>}
+          </div>
           {showDropdown && predictions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 z-50 mt-1.5 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+            <div style={{ position: 'absolute', top: 'calc(100% - 4px)', left: '16px', right: '16px', zIndex: 50, background: 'white', borderRadius: '16px', boxShadow: '0 4px 24px rgba(28,18,8,0.12)', border: '0.5px solid #EDE5D8', overflow: 'hidden' }}>
               {predictions.map(pred => (
-                <button
-                  key={pred.place_id}
-                  onMouseDown={e => { e.preventDefault(); handleSelectPrediction(pred) }}
-                  className="w-full px-4 py-3 text-left hover:bg-cream-50 flex items-start gap-3 border-b border-gray-50 last:border-0 transition-colors"
-                >
-                  <span className="flex-shrink-0 mt-0.5 text-sm">📍</span>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-gray-900 text-sm truncate">{pred.structured_formatting.main_text}</p>
-                    <p className="text-gray-400 text-xs truncate mt-0.5">{pred.structured_formatting.secondary_text}</p>
+                <button key={pred.place_id} onMouseDown={e => { e.preventDefault(); handleSelectPrediction(pred) }} style={{ width: '100%', padding: '12px 16px', textAlign: 'left', background: 'none', border: 'none', borderBottom: '0.5px solid #F5F0E8', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                  <span style={{ flexShrink: 0, marginTop: '2px', fontSize: '13px' }}>📍</span>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontSize: '13px', fontWeight: 500, color: '#1C1208', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pred.structured_formatting.main_text}</p>
+                    <p style={{ fontSize: '11px', color: '#A09080', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pred.structured_formatting.secondary_text}</p>
                   </div>
                 </button>
               ))}
             </div>
           )}
-          <div className="mt-2">
-            {/* Two-button row when neither panel is open */}
-            {!showCustomStop && !showMediaSearch && (
-              <div className="flex gap-3 flex-wrap">
-                <button
-                  onClick={() => setShowCustomStop(true)}
-                  className="text-xs text-gray-400 hover:text-[#C4714A] transition-colors flex items-center gap-1"
-                >
-                  <span>＋</span> Custom stop
-                </button>
-                <span className="text-gray-200 text-xs self-center">·</span>
-                <button
-                  onClick={() => setShowMediaSearch(true)}
-                  className="text-xs text-gray-400 hover:text-[#C4714A] transition-colors flex items-center gap-1"
-                >
-                  <span>🎬</span> Add a movie or show
-                </button>
-              </div>
-            )}
+        </div>
 
-            {/* Custom stop input */}
-            {showCustomStop && (
-              <div className="flex gap-2 mt-1">
-                <input
-                  autoFocus
-                  type="text"
-                  value={customStopName}
-                  onChange={e => setCustomStopName(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') addCustomStop() }}
-                  placeholder="e.g. Movie at home, Dick's Drive-In run…"
-                  className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-coral-200 focus:bg-white"
-                />
-                <button
-                  onClick={addCustomStop}
-                  disabled={!customStopName.trim()}
-                  className="px-4 py-2.5 bg-[#C4714A] text-white rounded-2xl text-sm font-semibold disabled:opacity-40"
-                >
-                  Add
-                </button>
-                <button
-                  onClick={() => { setShowCustomStop(false); setCustomStopName('') }}
-                  className="px-3 py-2.5 bg-gray-100 text-gray-500 rounded-2xl text-sm"
-                >
-                  ✕
-                </button>
+        {/* Custom stop + media buttons */}
+        <div style={{ display: 'flex', gap: '8px', padding: '10px 16px 0' }}>
+          {!showCustomStop && !showMediaSearch && (
+            <>
+              <button onClick={() => setShowCustomStop(true)} style={{ flex: 1, padding: '8px', borderRadius: '10px', border: '0.5px solid #E8DFD0', background: 'white', fontSize: '12px', color: '#5A4A36', cursor: 'pointer' }}>+ Custom stop</button>
+              <button onClick={() => setShowMediaSearch(true)} style={{ flex: 1, padding: '8px', borderRadius: '10px', border: '0.5px solid #E8DFD0', background: 'white', fontSize: '12px', color: '#5A4A36', cursor: 'pointer' }}>🎬 Movie or show</button>
+            </>
+          )}
+          {showCustomStop && (
+            <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
+              <input autoFocus type="text" value={customStopName} onChange={e => setCustomStopName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addCustomStop() }} placeholder="e.g. Dick's Drive-In run…" style={{ flex: 1, padding: '8px 12px', borderRadius: '10px', border: '0.5px solid #E8DFD0', background: 'white', fontSize: '12px', outline: 'none', color: '#1C1208' }} />
+              <button onClick={addCustomStop} disabled={!customStopName.trim()} style={{ padding: '8px 14px', borderRadius: '10px', background: '#C4714A', border: 'none', color: 'white', fontSize: '12px', cursor: 'pointer' }}>Add</button>
+              <button onClick={() => { setShowCustomStop(false); setCustomStopName('') }} style={{ padding: '8px 10px', borderRadius: '10px', background: '#F0EBE3', border: 'none', color: '#7A6A54', fontSize: '12px', cursor: 'pointer' }}>✕</button>
+            </div>
+          )}
+          {showMediaSearch && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                {['movie','show'].map(t => (
+                  <button key={t} onClick={() => { setMediaType(t); setMediaResults([]) }} style={{ padding: '5px 12px', borderRadius: '20px', border: 'none', fontSize: '11px', fontWeight: 500, cursor: 'pointer', background: mediaType === t ? '#C4714A' : '#F0EBE3', color: mediaType === t ? 'white' : '#7A6A54' }}>{t === 'movie' ? '🎬 Movie' : '📺 Show'}</button>
+                ))}
+                <button onClick={() => { setShowMediaSearch(false); setMediaQuery(''); setMediaResults([]) }} style={{ marginLeft: 'auto', padding: '5px 10px', borderRadius: '20px', background: '#F0EBE3', border: 'none', color: '#7A6A54', fontSize: '11px', cursor: 'pointer' }}>✕</button>
               </div>
-            )}
-
-            {/* Media search panel */}
-            {showMediaSearch && (
-              <div className="mt-1 space-y-2">
-                <div className="flex gap-2 items-center">
-                  {['movie', 'show'].map(t => (
-                    <button
-                      key={t}
-                      onClick={() => { setMediaType(t); setMediaResults([]) }}
-                      className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                        mediaType === t ? 'bg-[#C4714A] text-white' : 'bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      {t === 'movie' ? '🎬 Movie' : '📺 Show'}
-                    </button>
-                  ))}
-                  <button
-                    onClick={() => { setShowMediaSearch(false); setMediaQuery(''); setMediaResults([]) }}
-                    className="ml-auto px-3 py-1.5 bg-gray-100 text-gray-400 rounded-full text-xs"
-                  >✕</button>
-                </div>
-                <input
-                  autoFocus
-                  type="text"
-                  value={mediaQuery}
-                  onChange={e => setMediaQuery(e.target.value)}
-                  placeholder={`Search ${mediaType === 'movie' ? 'movies' : 'shows'}…`}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-coral-200 focus:bg-white"
-                />
-                {mediaSearching && (
-                  <p className="text-xs text-gray-400 animate-pulse">Searching…</p>
-                )}
-                {mediaResults.length > 0 && (
-                  <div className="space-y-1 max-h-52 overflow-y-auto">
-                    {mediaResults.map(result => (
-                      <div key={result.imdbID} className="flex items-center gap-3 bg-white rounded-xl px-3 py-2 border border-gray-100">
-                        {result.Poster !== 'N/A'
-                          ? <img src={result.Poster} alt={result.Title} className="w-9 h-12 object-cover rounded-lg flex-shrink-0" />
-                          : <div className="w-9 h-12 bg-gray-100 rounded-lg flex-shrink-0 flex items-center justify-center text-base">{mediaType === 'movie' ? '🎬' : '📺'}</div>
-                        }
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-gray-900 text-sm truncate">{result.Title}</p>
-                          <p className="text-gray-400 text-xs">{result.Year}</p>
-                        </div>
-                        <button
-                          onClick={() => addMediaStop(result)}
-                          disabled={savedIds.has(`media-${result.imdbID}`)}
-                          className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold ${
-                            savedIds.has(`media-${result.imdbID}`)
-                              ? 'bg-gray-100 text-gray-400'
-                              : 'bg-[#C4714A] text-white'
-                          }`}
-                        >
-                          {savedIds.has(`media-${result.imdbID}`) ? '✓' : '+ Add'}
-                        </button>
+              <input autoFocus type="text" value={mediaQuery} onChange={e => setMediaQuery(e.target.value)} placeholder={`Search ${mediaType === 'movie' ? 'movies' : 'shows'}…`} style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '0.5px solid #E8DFD0', background: 'white', fontSize: '12px', outline: 'none', color: '#1C1208', boxSizing: 'border-box' }} />
+              {mediaSearching && <p style={{ fontSize: '11px', color: '#A09080', margin: 0 }}>Searching…</p>}
+              {mediaResults.length > 0 && (
+                <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {mediaResults.map(result => (
+                    <div key={result.imdbID} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'white', borderRadius: '10px', padding: '8px 10px', border: '0.5px solid #EDE5D8' }}>
+                      {result.Poster !== 'N/A' ? <img src={result.Poster} alt={result.Title} style={{ width: '36px', height: '48px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }} /> : <div style={{ width: '36px', height: '48px', background: '#EDE5D8', borderRadius: '6px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>{mediaType === 'movie' ? '🎬' : '📺'}</div>}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: '13px', fontWeight: 500, color: '#1C1208', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{result.Title}</p>
+                        <p style={{ fontSize: '11px', color: '#A09080', margin: 0 }}>{result.Year}</p>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Preview card ────────────────────────────────────────── */}
-      {(previewPlace || loadingPreview) && (
-        <div className="flex-shrink-0 bg-white border-b border-gray-100 px-4 py-3 z-10">
-          <div className="max-w-2xl mx-auto">
-            {loadingPreview
-              ? <div className="h-20 bg-gray-100 rounded-2xl animate-pulse" />
-              : <PreviewCard place={previewPlace} onAdd={addToItinerary} alreadyAdded={savedIds.has(previewPlace.place_id)} />
-            }
-          </div>
-        </div>
-      )}
-
-      {/* ── Main content ────────────────────────────────────────── */}
-      <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
-
-        {/* MAP PANEL — always in DOM, hidden in list mode (preserves map instance) */}
-        <div
-          className={`relative flex-shrink-0 lg:flex-1 ${mode === 'list' ? 'hidden' : ''}`}
-          style={{ height: 'min(35vh, 240px)' }}
-        >
-          <div ref={mapDivRef} className="w-full h-full" />
-          {!mapsReady && (
-            <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
-              <p className="text-sm text-gray-400 animate-pulse">Loading map…</p>
+                      <button onClick={() => addMediaStop(result)} disabled={savedIds.has(`media-${result.imdbID}`)} style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', fontSize: '11px', fontWeight: 500, cursor: 'pointer', background: savedIds.has(`media-${result.imdbID}`) ? '#F0EBE3' : '#C4714A', color: savedIds.has(`media-${result.imdbID}`) ? '#A09080' : 'white', flexShrink: 0 }}>{savedIds.has(`media-${result.imdbID}`) ? '✓' : '+ Add'}</button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* ITINERARY PANEL */}
-        <div className={`bg-white flex flex-col overflow-hidden ${
-          mode === 'map' ? 'flex-1 lg:flex-none lg:w-96 lg:border-l lg:border-gray-100' : 'flex-1'
-        }`}>
-          {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto">
+        {/* Preview card */}
+        {(previewPlace || loadingPreview) && (
+          <div style={{ padding: '10px 16px 0' }}>
+            {loadingPreview
+              ? <div style={{ height: '80px', background: '#EDE5D8', borderRadius: '14px', animation: 'pulse 1.5s infinite' }} />
+              : <PreviewCard place={previewPlace} onAdd={addToItinerary} alreadyAdded={savedIds.has(previewPlace.place_id)} />
+            }
+          </div>
+        )}
 
-            {/* Category chips (shown when no stops yet) */}
-            {itinerary.length === 0 && (
-              <div className="px-4 pt-4 pb-3 border-b border-gray-50">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Quick add by category</p>
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                  {CATEGORY_CHIPS.map(chip => (
-                    <button
-                      key={chip.label}
-                      onClick={() => handleChipClick(chip)}
-                      className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold border transition-all ${
-                        activeChip === chip.label
-                          ? 'bg-gradient-to-r from-coral-500 to-indigo-500 text-white border-transparent shadow-sm'
-                          : 'bg-white text-gray-600 border-gray-200 hover:border-coral-200'
-                      }`}
-                    >
-                      <span>{chip.emoji}</span>
-                      <span>{chip.label}</span>
-                    </button>
-                  ))}
-                </div>
-                {/* Chip results */}
-                {activeChip && (
-                  <div className="mt-3">
-                    {loadingChip ? (
-                      <div className="flex gap-3 overflow-x-auto pb-1">
-                        {[1, 2, 3].map(i => (
-                          <div key={i} className="flex-shrink-0 w-40 h-40 bg-gray-100 rounded-2xl animate-pulse" />
-                        ))}
-                      </div>
-                    ) : chipResults.length > 0 ? (
-                      <div className="flex gap-3 overflow-x-auto pb-1">
-                        {chipResults.map(place => (
-                          <NearbyCard
-                            key={place.place_id}
-                            place={place}
-                            onAdd={addToItinerary}
-                            alreadyAdded={savedIds.has(place.place_id)}
-                            userLocation={userLocation}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-gray-400 mt-2">No results nearby</p>
-                    )}
-                  </div>
-                )}
+        {/* Map strip — collapsible */}
+        <div onClick={() => setMapExpanded(e => !e)} style={{ margin: '12px 16px 0', borderRadius: '14px', overflow: 'hidden', cursor: 'pointer', height: mapExpanded ? '220px' : '88px', transition: 'height 0.3s ease', position: 'relative', flexShrink: 0 }}>
+          <div ref={mapDivRef} style={{ width: '100%', height: '220px' }} />
+          {!mapsReady && <div style={{ position: 'absolute', inset: 0, background: '#EDE5D8', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '14px' }}><p style={{ fontSize: '13px', color: '#A09080' }}>Loading map…</p></div>}
+          <div style={{ position: 'absolute', bottom: '8px', right: '10px', background: 'rgba(28,18,8,0.55)', color: '#FAF6EF', fontSize: '10px', padding: '3px 8px', borderRadius: '10px', pointerEvents: 'none' }}>{mapExpanded ? 'Tap to collapse' : 'Tap to expand'}</div>
+        </div>
+
+        {/* Category chips */}
+        <div style={{ padding: '12px 16px 0', display: 'flex', gap: '6px', overflowX: 'auto' }}>
+          {CATEGORY_CHIPS.map(chip => (
+            <button key={chip.label} onClick={() => handleChipClick(chip)} style={{ flexShrink: 0, padding: '6px 12px', borderRadius: '20px', border: activeChip === chip.label ? 'none' : '0.5px solid #E8DFD0', background: activeChip === chip.label ? '#C4714A' : 'white', color: activeChip === chip.label ? 'white' : '#5A4A36', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '13px' }}>{chip.emoji}</span> {chip.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Chip results */}
+        {activeChip && (
+          <div style={{ padding: '10px 16px 0' }}>
+            {loadingChip ? (
+              <div style={{ display: 'flex', gap: '10px' }}>
+                {[1,2,3].map(i => <div key={i} style={{ flexShrink: 0, width: '138px', height: '160px', background: '#EDE5D8', borderRadius: '14px' }} />)}
               </div>
-            )}
-
-            {/* Preloaded suggestions panel */}
-            {preloadedSuggestions && preloadedSuggestions.length > 0 && (
-              <div style={{ padding: '16px 20px', borderBottom: '0.5px solid #F0EBE3', background: '#FDFAF7' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#7C3AED', margin: 0 }}>
-                    Nora's picks for {suggestionVibe}
-                  </p>
-                  <button
-                    onClick={() => setPreloadedSuggestions(null)}
-                    style={{ fontSize: '12px', color: '#9CA3AF', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
-                  >
-                    Dismiss
-                  </button>
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '4px', paddingRight: '32px', WebkitOverflowScrolling: 'touch' }}>
-                    {preloadedSuggestions.map(suggestion => (
-                      <NearbyCard
-                        key={suggestion.place_id || suggestion.id}
-                        place={suggestion}
-                        onAdd={addToItinerary}
-                        alreadyAdded={itinerary.some(s => (s.place_id && s.place_id === suggestion.place_id) || (s.id && s.id === suggestion.id))}
-                        userLocation={userLocation}
-                      />
-                    ))}
-                  </div>
-                  <div style={{ position: 'absolute', right: 0, top: 0, bottom: 4, width: '48px', background: 'linear-gradient(to left, #FDFAF7, transparent)', pointerEvents: 'none', borderRadius: '0 12px 12px 0' }} />
-                </div>
-              </div>
-            )}
-
-            {/* Itinerary header */}
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-gray-900">
-                  {mode === 'list' ? 'Date Itinerary' : 'Your Plan'}
-                </h3>
-                {itinerary.length > 0 && (
-                  <p className="text-xs text-gray-400 mt-0.5">{itinerary.length} stop{itinerary.length !== 1 ? 's' : ''}</p>
-                )}
-              </div>
-              {itinerary.length > 0 && (
-                <button onClick={() => setItinerary([])} className="text-xs text-gray-400 hover:text-red-400 transition-colors">
-                  Clear all
-                </button>
-              )}
-            </div>
-
-            {/* Empty state */}
-            {itinerary.length === 0 ? (
-              <div className="px-5 py-12 text-center">
-                <div className="text-4xl mb-3">✨</div>
-                <p className="text-gray-400 text-sm">Search above or tap a category to start building your date</p>
+            ) : chipResults.length > 0 ? (
+              <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
+                {chipResults.map(place => <NearbyCard key={place.place_id} place={place} onAdd={addToItinerary} alreadyAdded={savedIds.has(place.place_id)} userLocation={userLocation} />)}
               </div>
             ) : (
-              <div className="divide-y divide-gray-50">
-                {itinerary.map((stop, index) => (
-                  <StopCard
-                    key={stop.place_id}
-                    stop={stop}
-                    index={index}
-                    total={itinerary.length}
-                    travelTime={travelTimes[index - 1]}
-                    onMoveUp={() => moveStop(index, -1)}
-                    onMoveDown={() => moveStop(index, 1)}
-                    onRemove={() => removeStop(index)}
-                    onNoteChange={note => updateNote(index, note)}
-                  />
-                ))}
-                <div className="px-5 py-3 text-center">
-                  <p className="text-xs text-gray-400">Search above to add another stop</p>
-                </div>
-              </div>
+              <p style={{ fontSize: '12px', color: '#A09080' }}>No results nearby</p>
             )}
           </div>
+        )}
 
-          {/* Save section — pinned to bottom of panel */}
-          {itinerary.length > 0 && (
-            <div className="flex-shrink-0 border-t border-gray-100 px-5 py-4 bg-white space-y-3">
+        {/* Nora's picks */}
+        {preloadedSuggestions && preloadedSuggestions.length > 0 && (
+          <div style={{ margin: '12px 0 0', background: '#FDF3E3', borderTop: '0.5px solid #EDD9B0', borderBottom: '0.5px solid #EDD9B0', padding: '14px 16px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '13px', color: '#A07840' }}>Nora picked these for {suggestionVibe}</span>
+              <button onClick={() => setPreloadedSuggestions(null)} style={{ fontSize: '11px', color: '#C4A882', background: 'none', border: 'none', cursor: 'pointer' }}>Dismiss</button>
+            </div>
+            <div style={{ position: 'relative' }}>
+              <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', paddingRight: '40px', WebkitOverflowScrolling: 'touch' }}>
+                {preloadedSuggestions.map(s => <NearbyCard key={s.place_id || s.id} place={s} onAdd={addToItinerary} alreadyAdded={itinerary.some(i => (i.place_id && i.place_id === s.place_id) || (i.id && i.id === s.id))} userLocation={userLocation} />)}
+              </div>
+              <div style={{ position: 'absolute', right: 0, top: 0, bottom: 4, width: '48px', background: 'linear-gradient(to left, #FDF3E3, transparent)', pointerEvents: 'none' }} />
+            </div>
+          </div>
+        )}
+
+        {/* Your Plan header */}
+        {itinerary.length > 0 && (
+          <div style={{ margin: '14px 16px 0', padding: '14px 16px', background: 'white', borderRadius: '14px', border: '0.5px solid #EDE5D8' }}>
+            <p style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '16px', color: '#1C1208', margin: '0 0 4px' }}>Your plan</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '12px', color: '#A09080' }}>{itinerary.length} {itinerary.length === 1 ? 'stop' : 'stops'} planned</span>
+              <button onClick={() => setItinerary([])} style={{ fontSize: '11px', color: '#C4714A', background: 'none', border: 'none', cursor: 'pointer' }}>Clear all</button>
+            </div>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {itinerary.length === 0 && (
+          <div style={{ padding: '40px 16px', textAlign: 'center' }}>
+            <p style={{ fontSize: '28px', margin: '0 0 10px' }}>✨</p>
+            <p style={{ fontSize: '13px', color: '#A09080', lineHeight: 1.6, margin: 0 }}>Search above or tap a category<br />to start building your date</p>
+          </div>
+        )}
+
+        {/* Stop cards */}
+        {itinerary.length > 0 && (
+          <div style={{ padding: '10px 16px 0' }}>
+            {itinerary.map((stop, i) => (
+              <StopCard
+                key={stop.place_id}
+                stop={stop}
+                index={i}
+                total={itinerary.length}
+                travelTime={travelTimes[i - 1]}
+                onMoveUp={() => moveStop(i, -1)}
+                onMoveDown={() => moveStop(i, 1)}
+                onRemove={() => removeStop(i)}
+                onNoteChange={note => updateNote(i, note)}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Date name + time + save */}
+        {itinerary.length > 0 && (
+          <div style={{ padding: '16px 16px 32px' }}>
+            <div style={{ background: 'white', borderRadius: '14px', border: '0.5px solid #EDE5D8', padding: '16px' }}>
               <input
                 type="text"
                 value={dateName}
                 onChange={e => setDateName(e.target.value)}
                 placeholder="Name your date…"
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-2xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-coral-200 focus:bg-white transition-colors"
+                style={{ width: '100%', fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '16px', color: '#1C1208', background: 'transparent', border: 'none', outline: 'none', marginBottom: '12px', boxSizing: 'border-box' }}
               />
-              <div className="mt-3">
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                  When is this date? <span className="text-gray-300 font-normal normal-case">(optional)</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  value={dateTime}
-                  onChange={e => setDateTime(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-[#E5E2DD] focus:border-[#C4714A] focus:outline-none text-gray-700 bg-white"
-                />
-              </div>
-              {saveError && <p className="text-xs text-red-500 text-center">{saveError}</p>}
-              {saveStage === null && (
-                <button
-                  onClick={handleSave}
-                  disabled={itinerary.length === 0}
-                  className="w-full py-4 bg-gradient-to-r from-[#C4714A] to-[#3D3580] text-white font-bold rounded-2xl shadow-md disabled:opacity-40 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
-                >
-                  Save Date →
-                </button>
-              )}
-              {saveStage === 'saving' && (
-                <div className="w-full py-4 bg-gradient-to-r from-[#C4714A] to-[#3D3580] text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Saving your date…
-                </div>
-              )}
-              {saveStage === 'generating' && (
-                <div className="w-full py-4 bg-gradient-to-r from-[#C4714A] to-[#3D3580] text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ✨ Generating conversation starters…
-                </div>
-              )}
-              {saveStage === 'done' && (
-                <div className="w-full py-4 bg-green-500 text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
-                  ✓ Date saved! Heading there now…
-                </div>
-              )}
+              <div style={{ height: '0.5px', background: '#EDE5D8', marginBottom: '12px' }} />
+              <input
+                type="datetime-local"
+                value={dateTime}
+                onChange={e => setDateTime(e.target.value)}
+                style={{ width: '100%', fontSize: '13px', color: '#7A6A54', background: 'transparent', border: 'none', outline: 'none', marginBottom: '16px', boxSizing: 'border-box' }}
+              />
+              {saveError && <p style={{ fontSize: '12px', color: '#C47A6A', marginBottom: '10px' }}>{saveError}</p>}
+              <button
+                onClick={handleSave}
+                disabled={itinerary.length === 0 || !!saveStage}
+                style={{ width: '100%', padding: '14px', borderRadius: '12px', background: saveStage ? '#EDE5D8' : '#C4714A', border: 'none', color: saveStage ? '#A09080' : 'white', fontSize: '15px', fontWeight: 500, cursor: saveStage ? 'not-allowed' : 'pointer' }}
+              >
+                {saveStage === 'saving' ? 'Saving…' : saveStage === 'generating' ? 'Getting conversation starters…' : saveStage === 'done' ? '✓ Saved' : 'Save date night'}
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
       </div>
     </div>
   )
