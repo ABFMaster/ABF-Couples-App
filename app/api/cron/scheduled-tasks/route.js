@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { createClient } from '@supabase/supabase-js'
 import { getSparkQuestion } from '@/lib/spark-questions'
 import { getBetQuestion } from '@/lib/bet-questions'
@@ -239,6 +241,7 @@ Respond in this exact JSON format:
 }
 
 export async function GET(request) {
+  console.log('[cron] handler started', new Date().toISOString())
   const authHeader = request.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
@@ -249,6 +252,7 @@ export async function GET(request) {
       .from('couples')
       .select('id, created_at, user1_id, user2_id')
       .not('user2_id', 'is', null)
+    console.log('[cron] couples found:', couples?.length)
 
     if (!couples?.length) {
       return Response.json({ ok: true, processed: 0 })
