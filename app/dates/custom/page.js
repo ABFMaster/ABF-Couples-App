@@ -126,7 +126,7 @@ function NearbyCard({ place, onAdd, alreadyAdded, userLocation }) {
     ? formatDist(haversineKm(userLocation, { lat: place.lat, lng: place.lng }))
     : null
   return (
-    <div style={{ flexShrink: 0, width: isEvent ? '150px' : '138px', background: isEvent ? '#1C1208' : 'white', borderRadius: '14px', border: isEvent ? 'none' : '0.5px solid #EDE5D8', overflow: 'hidden' }}>
+    <div style={{ flexShrink: 0, width: '148px', background: isEvent ? '#1C1208' : 'white', borderRadius: '14px', border: isEvent ? 'none' : '0.5px solid #EDE5D8', overflow: 'hidden' }}>
       {imageUrl
         ? <div style={{ height: '88px', overflow: 'hidden' }}><img src={imageUrl} alt={place.name} style={{ width: '100%', height: '88px', objectFit: 'cover' }} /></div>
         : <div style={{ height: '88px', background: isEvent ? 'linear-gradient(160deg,#3A2818,#1C1208)' : 'linear-gradient(160deg,#EDE5D8,#C8B89A)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

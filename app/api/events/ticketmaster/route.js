@@ -42,6 +42,7 @@ export async function GET(request) {
       unit: 'miles',
       size,
       sort: 'date,asc',
+      startDateTime: new Date().toISOString().split('.')[0] + 'Z',
     })
 
     if (date) {
