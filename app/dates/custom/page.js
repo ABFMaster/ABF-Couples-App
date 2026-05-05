@@ -40,50 +40,6 @@ function formatDist(km) {
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-function StopCard({ stop, index, total, travelTime, onMoveUp, onMoveDown, onRemove, onNoteChange }) {
-  const isEvent = stop.source === 'ticketmaster' || stop.place_id?.startsWith('event-')
-  return (
-    <div style={{ marginBottom: '10px' }}>
-      {index > 0 && travelTime && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0 8px 28px' }}>
-          <div style={{ width: '1px', height: '12px', background: '#E8DFD0' }} />
-          <span style={{ fontSize: '11px', color: '#A09080', background: '#FAF6EF', padding: '2px 8px', borderRadius: '10px' }}>🚗 {travelTime}</span>
-        </div>
-      )}
-      <div style={{ background: 'white', borderRadius: '14px', border: '0.5px solid #EDE5D8', display: 'flex', alignItems: 'stretch', overflow: 'hidden' }}>
-        <div style={{ width: '36px', background: isEvent ? '#1C1208' : '#FAF0E6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#C4714A', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 500, color: 'white' }}>{index + 1}</div>
-        </div>
-        {stop.photo_url && (
-          <div style={{ width: '68px', height: '68px', flexShrink: 0, overflow: 'hidden' }}>
-            <img src={stop.photo_url} alt={stop.name} style={{ width: '68px', height: '68px', objectFit: 'cover' }} />
-          </div>
-        )}
-        {!stop.photo_url && (
-          <div style={{ width: '68px', height: '68px', flexShrink: 0, background: isEvent ? 'linear-gradient(160deg,#3A2818,#1C1208)' : 'linear-gradient(160deg,#EDE5D8,#D9CCBA)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {isEvent && <span style={{ fontSize: '18px', opacity: 0.2, color: '#FAF6EF' }}>♪</span>}
-          </div>
-        )}
-        <div style={{ padding: '10px 10px 10px 12px', flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: '13px', fontWeight: 500, color: '#1C1208', margin: '0 0 2px', lineHeight: 1.3 }}>{stop.name}</p>
-          <p style={{ fontSize: '11px', color: isEvent ? '#C4714A' : '#A09080', margin: '0 0 6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stop.address}</p>
-          <input
-            type="text"
-            value={stop.note || ''}
-            onChange={e => onNoteChange(e.target.value)}
-            placeholder="Add a note…"
-            style={{ width: '100%', fontSize: '11px', color: '#7A6A54', background: '#FAF6EF', border: '0.5px solid #EDE5D8', borderRadius: '8px', padding: '5px 8px', outline: 'none', boxSizing: 'border-box' }}
-          />
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '8px 8px 8px 0', flexShrink: 0, justifyContent: 'center' }}>
-          <button onClick={onMoveUp} disabled={index === 0} style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#FAF6EF', border: '0.5px solid #EDE5D8', fontSize: '11px', color: '#A09080', cursor: index === 0 ? 'not-allowed' : 'pointer', opacity: index === 0 ? 0.3 : 1 }}>↑</button>
-          <button onClick={onMoveDown} disabled={index === total - 1} style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#FAF6EF', border: '0.5px solid #EDE5D8', fontSize: '11px', color: '#A09080', cursor: index === total-1 ? 'not-allowed' : 'pointer', opacity: index === total-1 ? 0.3 : 1 }}>↓</button>
-          <button onClick={onRemove} style={{ width: '26px', height: '26px', borderRadius: '50%', background: '#FAF6EF', border: '0.5px solid #EDE5D8', fontSize: '11px', color: '#C47A6A', cursor: 'pointer' }}>✕</button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function BottomSheet({ card, onClose, onAdd, alreadyAdded }) {
   if (!card) return null
@@ -287,13 +243,11 @@ export default function CustomDateBuilderPage() {
 
   // Itinerary
   const [itinerary, setItinerary] = useState([])
-  const [travelTimes, setTravelTimes] = useState([])
 
   // Save
   const [dateName, setDateName] = useState(defaultDateName())
   const [dateTime, setDateTime] = useState('')
   const [saveStage, setSaveStage] = useState(null)
-  const [saveError, setSaveError] = useState(null)
 
   // Preloaded suggestions from Ideas for You Two
   const [preloadedSuggestions, setPreloadedSuggestions] = useState(null)
@@ -437,7 +391,6 @@ export default function CustomDateBuilderPage() {
 
     // Clear route
     if (dirRenderer.current) dirRenderer.current.setDirections({ routes: [] })
-    setTravelTimes([])
 
     if (itinerary.length === 0) return
 
@@ -485,7 +438,6 @@ export default function CustomDateBuilderPage() {
       (result, status) => {
         if (status === 'OK') {
           dirRenderer.current.setDirections(result)
-          setTravelTimes(result.routes[0]?.legs.map(leg => leg.duration?.text) ?? [])
         }
       }
     )
@@ -691,27 +643,15 @@ export default function CustomDateBuilderPage() {
   }, [activeChip, userLocation])
 
   // ── Itinerary helpers ────────────────────────────────────────────
-  const moveStop = (index, dir) => {
-    setItinerary(prev => {
-      const next = [...prev]
-      const t = index + dir
-      if (t < 0 || t >= next.length) return prev
-      ;[next[index], next[t]] = [next[t], next[index]]
-      return next
-    })
-  }
-
-  const removeStop    = index => setItinerary(prev => prev.filter((_, i) => i !== index))
-  const updateNote    = (index, note) => setItinerary(prev => prev.map((s, i) => i === index ? { ...s, note } : s))
+  const removeStop = index => setItinerary(prev => prev.filter((_, i) => i !== index))
 
   // ── Save to Supabase ─────────────────────────────────────────────
   const handleSave = async () => {
     if (itinerary.length === 0) return
-    setSaveError(null)
     setSaveStage('saving')
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setSaveError('Not logged in'); setSaveStage(null); return }
+      if (!user) { setSaveStage(null); return }
 
       const { data: coupleData } = await supabase
         .from('couples')
@@ -767,7 +707,6 @@ export default function CustomDateBuilderPage() {
       setTimeout(() => router.push(`/dates/${newDate.id}`), 800)
     } catch (err) {
       console.error('Save error:', err)
-      setSaveError('Failed to save. Please try again.')
       setSaveStage(null)
     }
   }
@@ -961,7 +900,7 @@ export default function CustomDateBuilderPage() {
         })()}
 
         {/* Empty state */}
-        {itinerary.length === 0 && (
+        {itinerary.length === 0 && !activeChip && (!preloadedSuggestions || preloadedSuggestions.length === 0) && (
           <div style={{ padding: '40px 16px', textAlign: 'center' }}>
             <p style={{ fontSize: '28px', margin: '0 0 10px' }}>✨</p>
             <p style={{ fontSize: '13px', color: '#A09080', lineHeight: 1.6, margin: 0 }}>Search above or tap a category<br />to start building your date</p>
