@@ -85,41 +85,67 @@ function StopCard({ stop, index, total, travelTime, onMoveUp, onMoveDown, onRemo
   )
 }
 
-function PreviewCard({ place, onAdd, alreadyAdded }) {
+function BottomSheet({ card, onClose, onAdd, alreadyAdded }) {
+  if (!card) return null
+  const isEvent = card.source === 'ticketmaster'
+  const imageUrl = card.photo_url || card.image || null
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      {place.photo_url && (
-        <div className="h-28 overflow-hidden relative">
-          <img src={place.photo_url} alt={place.name} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(28,18,8,0.4)', zIndex: 40 }} />
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, background: '#FAF6EF', borderRadius: '24px 24px 0 0', padding: '0 0 32px' }}>
+        <div style={{ width: '40px', height: '4px', background: '#EDE5D8', borderRadius: '2px', margin: '12px auto 16px' }} />
+        {imageUrl
+          ? <img src={imageUrl} alt={card.name} style={{ width: '100%', height: '200px', objectFit: 'cover' }} />
+          : <div style={{ width: '100%', height: '200px', background: isEvent ? 'linear-gradient(160deg,#3A2818,#1C1208)' : 'linear-gradient(160deg,#EDE5D8,#C8B89A)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {isEvent && <span style={{ fontSize: '40px', opacity: 0.15, color: '#FAF6EF' }}>♪</span>}
+            </div>
+        }
+        <div style={{ padding: '16px' }}>
+          <p style={{ fontFamily: 'Georgia, serif', fontSize: '20px', color: '#1C1208', margin: '0 0 6px' }}>{card.name}</p>
+          {!isEvent && (
+            <p style={{ fontSize: '12px', color: '#A09080', margin: '0 0 4px' }}>
+              {card.rating && `⭐ ${card.rating.toFixed(1)}`}{card.rating && card.address && '  ·  '}{card.address}
+            </p>
+          )}
+          {isEvent && (
+            <p style={{ fontSize: '12px', color: '#C4714A', margin: '0 0 4px' }}>
+              {[card.date, card.time ? card.time.substring(0,5) : null, card.venue?.name].filter(Boolean).join(' · ')}
+            </p>
+          )}
+          <div style={{ height: '16px' }} />
+          {!isEvent && (
+            <button
+              onClick={() => { onAdd(card); onClose() }}
+              disabled={alreadyAdded}
+              style={{ width: '100%', padding: '14px', borderRadius: '12px', background: alreadyAdded ? '#EDE5D8' : '#C4714A', border: 'none', color: alreadyAdded ? '#A09080' : 'white', fontSize: '15px', fontWeight: 500, cursor: alreadyAdded ? 'not-allowed' : 'pointer' }}
+            >
+              {alreadyAdded ? '✓ Added' : '+ Add to date'}
+            </button>
+          )}
+          {isEvent && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                onClick={() => { onAdd(card); onClose() }}
+                disabled={alreadyAdded}
+                style={{ width: '100%', padding: '14px', borderRadius: '12px', background: alreadyAdded ? '#EDE5D8' : '#C4714A', border: 'none', color: alreadyAdded ? '#A09080' : 'white', fontSize: '15px', fontWeight: 500, cursor: alreadyAdded ? 'not-allowed' : 'pointer' }}
+              >
+                {alreadyAdded ? '✓ Added' : 'Add to date'}
+              </button>
+              <button
+                onClick={() => card.url && window.open(card.url, '_blank')}
+                style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'transparent', border: '1px solid #C4714A', color: '#C4714A', fontSize: '15px', fontWeight: 500, cursor: 'pointer', boxSizing: 'border-box' }}
+              >
+                Get tickets on Ticketmaster
+              </button>
+            </div>
+          )}
         </div>
-      )}
-      <div className="px-4 py-3 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-semibold text-gray-900 text-sm">{place.name}</p>
-          <p className="text-gray-400 text-xs mt-0.5 line-clamp-1">{place.address}</p>
-          <div className="flex items-center gap-3 mt-1">
-            {place.rating && <span className="text-xs text-gray-500">⭐ {place.rating.toFixed(1)}</span>}
-            {place.price_level && <span className="text-xs text-gray-500">{'$'.repeat(place.price_level)}</span>}
-          </div>
-        </div>
-        <button
-          onClick={() => onAdd(place)}
-          disabled={alreadyAdded}
-          className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-            alreadyAdded
-              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              : 'bg-gradient-to-r from-coral-500 to-indigo-500 text-white hover:shadow-md active:scale-95'
-          }`}
-        >
-          {alreadyAdded ? '✓ Added' : '+ Add'}
-        </button>
       </div>
-    </div>
+    </>
   )
 }
 
-function NearbyCard({ place, onAdd, alreadyAdded, userLocation, onPreview }) {
+function NearbyCard({ place, onAdd, alreadyAdded, userLocation, onSelect }) {
   const isEvent = place.source === 'ticketmaster'
   const imageUrl = place.photo_url || place.image || null
   const dist = !isEvent && place.lat && place.lng && userLocation
@@ -127,7 +153,7 @@ function NearbyCard({ place, onAdd, alreadyAdded, userLocation, onPreview }) {
     : null
   return (
     <div
-      onClick={isEvent ? () => place.url && window.open(place.url, '_blank') : () => onPreview && onPreview(place)}
+      onClick={() => onSelect && onSelect(place)}
       style={{ flexShrink: 0, width: '148px', background: isEvent ? '#1C1208' : 'white', borderRadius: '14px', border: isEvent ? 'none' : '0.5px solid #EDE5D8', overflow: 'hidden', cursor: 'pointer' }}
     >
       {imageUrl
@@ -145,9 +171,76 @@ function NearbyCard({ place, onAdd, alreadyAdded, userLocation, onPreview }) {
           }
         </div>
         {isEvent
-          ? <a href={place.url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', width: '100%', padding: '6px', borderRadius: '10px', background: 'transparent', border: '0.5px solid #C4714A', color: '#C4714A', fontSize: '11px', fontWeight: 500, textAlign: 'center', textDecoration: 'none', boxSizing: 'border-box' }}>Tickets →</a>
-          : <button onClick={() => onAdd(place)} disabled={alreadyAdded} style={{ width: '100%', padding: '6px', borderRadius: '10px', background: alreadyAdded ? '#F0EBE3' : '#C4714A', border: 'none', color: alreadyAdded ? '#A09080' : 'white', fontSize: '11px', fontWeight: 500, cursor: alreadyAdded ? 'not-allowed' : 'pointer' }}>{alreadyAdded ? '✓ Added' : '+ Add'}</button>
+          ? <a href={place.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ display: 'block', width: '100%', padding: '6px', borderRadius: '10px', background: 'transparent', border: '0.5px solid #C4714A', color: '#C4714A', fontSize: '11px', fontWeight: 500, textAlign: 'center', textDecoration: 'none', boxSizing: 'border-box' }}>Tickets →</a>
+          : <button onClick={e => { e.stopPropagation(); onAdd(place) }} disabled={alreadyAdded} style={{ width: '100%', padding: '6px', borderRadius: '10px', background: alreadyAdded ? '#F0EBE3' : '#C4714A', border: 'none', color: alreadyAdded ? '#A09080' : 'white', fontSize: '11px', fontWeight: 500, cursor: alreadyAdded ? 'not-allowed' : 'pointer' }}>{alreadyAdded ? '✓ Added' : '+ Add'}</button>
         }
+      </div>
+    </div>
+  )
+}
+
+function PlanStrip({ itinerary, dateName, onDateNameChange, planExpanded, setPlanExpanded, onSave, saveStage, dateTime, onDateTimeChange, onRemoveStop }) {
+  if (!itinerary.length) return null
+  const stopLabel = `${itinerary.length} stop${itinerary.length === 1 ? '' : 's'}`
+
+  if (!planExpanded) {
+    return (
+      <div style={{ position: 'fixed', bottom: '64px', left: 0, right: 0, zIndex: 30, padding: '0 16px' }}>
+        <div
+          onClick={() => setPlanExpanded(true)}
+          style={{ background: '#1C1208', borderRadius: '20px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+        >
+          <span style={{ fontSize: '13px', fontWeight: 500, color: '#C4714A' }}>{stopLabel}</span>
+          <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '14px', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>{dateName}</span>
+          <span style={{ fontSize: '12px', color: '#C4714A', flexShrink: 0 }}>View plan →</span>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ position: 'fixed', bottom: '64px', left: 0, right: 0, zIndex: 30, background: '#FAF6EF', borderRadius: '20px 20px 0 0', maxHeight: '60vh', overflowY: 'auto', padding: '16px 16px 24px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+        <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '16px', color: '#1C1208' }}>Your plan</span>
+        <button onClick={() => setPlanExpanded(false)} style={{ fontSize: '13px', color: '#C4714A', background: 'none', border: 'none', cursor: 'pointer' }}>Done</button>
+      </div>
+      <input
+        type="text"
+        value={dateName}
+        onChange={e => onDateNameChange(e.target.value)}
+        placeholder="Name your date…"
+        style={{ width: '100%', fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '16px', color: '#1C1208', background: 'transparent', border: 'none', borderBottom: '0.5px solid #EDE5D8', outline: 'none', padding: '8px 0', marginBottom: '12px', boxSizing: 'border-box' }}
+      />
+      <input
+        type="datetime-local"
+        value={dateTime}
+        onChange={e => onDateTimeChange(e.target.value)}
+        style={{ width: '100%', fontSize: '13px', color: '#7A6A54', background: 'transparent', border: 'none', borderBottom: '0.5px solid #EDE5D8', outline: 'none', padding: '8px 0', marginBottom: '16px', boxSizing: 'border-box' }}
+      />
+      {itinerary.map((stop, i) => (
+        <div key={stop.place_id || stop.id || i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: '0.5px solid #EDE5D8' }}>
+          <div style={{ width: '22px', height: '22px', background: '#C4714A', borderRadius: '50%', color: 'white', fontSize: '11px', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</div>
+          {stop.photo_url
+            ? <img src={stop.photo_url} alt={stop.name} style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }} />
+            : <div style={{ width: '44px', height: '44px', background: 'linear-gradient(160deg,#EDE5D8,#C8B89A)', borderRadius: '8px', flexShrink: 0 }} />
+          }
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: '13px', fontWeight: 500, color: '#1C1208', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stop.name}</p>
+            <p style={{ fontSize: '11px', color: '#A09080', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stop.address || stop.venue?.name || ''}</p>
+          </div>
+          <button onClick={() => onRemoveStop(i)} style={{ color: '#C47A6A', background: 'none', border: 'none', fontSize: '13px', cursor: 'pointer', flexShrink: 0 }}>✕</button>
+        </div>
+      ))}
+      <div style={{ height: '12px' }} />
+      <button
+        onClick={onSave}
+        disabled={!!saveStage}
+        style={{ width: '100%', padding: '14px', borderRadius: '12px', background: saveStage ? '#EDE5D8' : '#C4714A', border: 'none', color: saveStage ? '#A09080' : 'white', fontSize: '15px', fontWeight: 500, cursor: saveStage ? 'not-allowed' : 'pointer' }}
+      >
+        {saveStage === 'saving' ? 'Saving…' : saveStage === 'generating' ? 'Getting conversation starters…' : saveStage === 'done' ? '✓ Saved' : 'Save date night'}
+      </button>
+      <div style={{ textAlign: 'center', marginTop: '12px' }}>
+        <button onClick={() => setPlanExpanded(false)} style={{ fontSize: '12px', color: '#A09080', background: 'none', border: 'none', cursor: 'pointer' }}>Add more stops ↑</button>
       </div>
     </div>
   )
@@ -170,8 +263,8 @@ export default function CustomDateBuilderPage() {
   const [predictions, setPredictions] = useState([])
   const [searching, setSearching] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
-  const [previewPlace, setPreviewPlace] = useState(null)
-  const [loadingPreview, setLoadingPreview] = useState(false)
+  const [selectedCard, setSelectedCard] = useState(null)
+  const [planExpanded, setPlanExpanded] = useState(false)
 
   // Category chips
   const [activeChip, setActiveChip] = useState(null)
@@ -720,7 +813,7 @@ export default function CustomDateBuilderPage() {
       </div>
 
       {/* Scrollable content */}
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: '120px' }}>
 
         {/* Search bar */}
         <div style={{ padding: '12px 16px 0', position: 'relative', zIndex: 10 }} data-search-box>
@@ -830,7 +923,7 @@ export default function CustomDateBuilderPage() {
               </div>
             ) : chipResults.length > 0 ? (
               <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
-                {chipResults.map(place => <NearbyCard key={place.place_id} place={place} onAdd={addToItinerary} alreadyAdded={savedIds.has(place.place_id)} userLocation={userLocation} onPreview={setPreviewPlace} />)}
+                {chipResults.map(place => <NearbyCard key={place.place_id} place={place} onAdd={addToItinerary} alreadyAdded={savedIds.has(place.place_id)} userLocation={userLocation} onSelect={setSelectedCard} />)}
               </div>
             ) : (
               <p style={{ fontSize: '12px', color: '#A09080' }}>No results nearby</p>
@@ -853,7 +946,7 @@ export default function CustomDateBuilderPage() {
                   <p style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '11px', color: '#C4A882', margin: '0 0 8px' }}>Events</p>
                   <div style={{ position: 'relative' }}>
                     <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', paddingRight: '40px', WebkitOverflowScrolling: 'touch' }}>
-                      {noraEvents.map(s => <NearbyCard key={s.id} place={s} onAdd={addToItinerary} alreadyAdded={itinerary.some(i => i.id && i.id === s.id)} userLocation={userLocation} onPreview={setPreviewPlace} />)}
+                      {noraEvents.map(s => <NearbyCard key={s.id} place={s} onAdd={addToItinerary} alreadyAdded={itinerary.some(i => i.id && i.id === s.id)} userLocation={userLocation} onSelect={setSelectedCard} />)}
                     </div>
                     <div style={{ position: 'absolute', right: 0, top: 0, bottom: 4, width: '48px', background: 'linear-gradient(to left, #FDF3E3, transparent)', pointerEvents: 'none' }} />
                   </div>
@@ -864,7 +957,7 @@ export default function CustomDateBuilderPage() {
                   <p style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '11px', color: '#C4A882', margin: '0 0 8px' }}>Places</p>
                   <div style={{ position: 'relative' }}>
                     <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', paddingRight: '40px', WebkitOverflowScrolling: 'touch' }}>
-                      {noraPlaces.map(s => <NearbyCard key={s.place_id} place={s} onAdd={addToItinerary} alreadyAdded={itinerary.some(i => i.place_id && i.place_id === s.place_id)} userLocation={userLocation} onPreview={setPreviewPlace} />)}
+                      {noraPlaces.map(s => <NearbyCard key={s.place_id} place={s} onAdd={addToItinerary} alreadyAdded={itinerary.some(i => i.place_id && i.place_id === s.place_id)} userLocation={userLocation} onSelect={setSelectedCard} />)}
                     </div>
                     <div style={{ position: 'absolute', right: 0, top: 0, bottom: 4, width: '48px', background: 'linear-gradient(to left, #FDF3E3, transparent)', pointerEvents: 'none' }} />
                   </div>
@@ -874,17 +967,6 @@ export default function CustomDateBuilderPage() {
           )
         })()}
 
-        {/* Your Plan header */}
-        {itinerary.length > 0 && (
-          <div style={{ margin: '14px 16px 0', padding: '14px 16px', background: 'white', borderRadius: '14px', border: '0.5px solid #EDE5D8' }}>
-            <p style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '16px', color: '#1C1208', margin: '0 0 4px' }}>Your plan</p>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '12px', color: '#A09080' }}>{itinerary.length} {itinerary.length === 1 ? 'stop' : 'stops'} planned</span>
-              <button onClick={() => setItinerary([])} style={{ fontSize: '11px', color: '#C4714A', background: 'none', border: 'none', cursor: 'pointer' }}>Clear all</button>
-            </div>
-          </div>
-        )}
-
         {/* Empty state */}
         {itinerary.length === 0 && (
           <div style={{ padding: '40px 16px', textAlign: 'center' }}>
@@ -893,56 +975,27 @@ export default function CustomDateBuilderPage() {
           </div>
         )}
 
-        {/* Stop cards */}
-        {itinerary.length > 0 && (
-          <div style={{ padding: '10px 16px 0' }}>
-            {itinerary.map((stop, i) => (
-              <StopCard
-                key={stop.place_id}
-                stop={stop}
-                index={i}
-                total={itinerary.length}
-                travelTime={travelTimes[i - 1]}
-                onMoveUp={() => moveStop(i, -1)}
-                onMoveDown={() => moveStop(i, 1)}
-                onRemove={() => removeStop(i)}
-                onNoteChange={note => updateNote(i, note)}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Date name + time + save */}
-        {itinerary.length > 0 && (
-          <div style={{ padding: '16px 16px 32px' }}>
-            <div style={{ background: 'white', borderRadius: '14px', border: '0.5px solid #EDE5D8', padding: '16px' }}>
-              <input
-                type="text"
-                value={dateName}
-                onChange={e => setDateName(e.target.value)}
-                placeholder="Name your date…"
-                style={{ width: '100%', fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '16px', color: '#1C1208', background: 'transparent', border: 'none', outline: 'none', marginBottom: '12px', boxSizing: 'border-box' }}
-              />
-              <div style={{ height: '0.5px', background: '#EDE5D8', marginBottom: '12px' }} />
-              <input
-                type="datetime-local"
-                value={dateTime}
-                onChange={e => setDateTime(e.target.value)}
-                style={{ width: '100%', fontSize: '13px', color: '#7A6A54', background: 'transparent', border: 'none', outline: 'none', marginBottom: '16px', boxSizing: 'border-box' }}
-              />
-              {saveError && <p style={{ fontSize: '12px', color: '#C47A6A', marginBottom: '10px' }}>{saveError}</p>}
-              <button
-                onClick={handleSave}
-                disabled={itinerary.length === 0 || !!saveStage}
-                style={{ width: '100%', padding: '14px', borderRadius: '12px', background: saveStage ? '#EDE5D8' : '#C4714A', border: 'none', color: saveStage ? '#A09080' : 'white', fontSize: '15px', fontWeight: 500, cursor: saveStage ? 'not-allowed' : 'pointer' }}
-              >
-                {saveStage === 'saving' ? 'Saving…' : saveStage === 'generating' ? 'Getting conversation starters…' : saveStage === 'done' ? '✓ Saved' : 'Save date night'}
-              </button>
-            </div>
-          </div>
-        )}
-
       </div>
+
+      <PlanStrip
+        itinerary={itinerary}
+        dateName={dateName}
+        onDateNameChange={setDateName}
+        planExpanded={planExpanded}
+        setPlanExpanded={setPlanExpanded}
+        onSave={handleSave}
+        saveStage={saveStage}
+        dateTime={dateTime}
+        onDateTimeChange={setDateTime}
+        onRemoveStop={removeStop}
+      />
+
+      <BottomSheet
+        card={selectedCard}
+        onClose={() => setSelectedCard(null)}
+        onAdd={addToItinerary}
+        alreadyAdded={selectedCard ? itinerary.some(s => (s.place_id && s.place_id === selectedCard.place_id) || (s.id && s.id === selectedCard.id)) : false}
+      />
     </div>
   )
 }
