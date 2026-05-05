@@ -134,7 +134,7 @@ function NearbyCard({ place, onAdd, alreadyAdded, userLocation }) {
           </div>
       }
       <div style={{ padding: '8px 10px 10px' }}>
-        <p style={{ fontSize: '12px', fontWeight: 500, color: isEvent ? '#FAF6EF' : '#1C1208', lineHeight: 1.3, margin: '0 0 4px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{place.name}</p>
+        <p style={{ fontSize: '12px', fontWeight: 500, color: isEvent ? '#FAF6EF' : '#1C1208', lineHeight: 1.3, margin: '0 0 4px', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{place.name}</p>
         <div style={{ fontSize: '10px', color: isEvent ? '#C4714A' : '#A09080', marginBottom: '8px' }}>
           {isEvent
             ? `${place.date || ''}${place.time ? ' · ' + place.time.substring(0,5) : ''}`
@@ -836,20 +836,40 @@ export default function CustomDateBuilderPage() {
         )}
 
         {/* Nora's picks */}
-        {preloadedSuggestions && preloadedSuggestions.length > 0 && (
-          <div style={{ margin: '12px 0 0', background: '#FDF3E3', borderTop: '0.5px solid #EDD9B0', borderBottom: '0.5px solid #EDD9B0', padding: '14px 16px 16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '13px', color: '#A07840' }}>Nora picked these for {suggestionVibe}</span>
-              <button onClick={() => setPreloadedSuggestions(null)} style={{ fontSize: '11px', color: '#C4A882', background: 'none', border: 'none', cursor: 'pointer' }}>Dismiss</button>
-            </div>
-            <div style={{ position: 'relative' }}>
-              <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', paddingRight: '40px', WebkitOverflowScrolling: 'touch' }}>
-                {preloadedSuggestions.map(s => <NearbyCard key={s.place_id || s.id} place={s} onAdd={addToItinerary} alreadyAdded={itinerary.some(i => (i.place_id && i.place_id === s.place_id) || (i.id && i.id === s.id))} userLocation={userLocation} />)}
+        {preloadedSuggestions && preloadedSuggestions.length > 0 && (() => {
+          const noraEvents = preloadedSuggestions.filter(s => s.source === 'ticketmaster')
+          const noraPlaces = preloadedSuggestions.filter(s => s.source !== 'ticketmaster')
+          return (
+            <div style={{ margin: '12px 0 0', background: '#FDF3E3', borderTop: '0.5px solid #EDD9B0', borderBottom: '0.5px solid #EDD9B0', padding: '14px 16px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '13px', color: '#A07840' }}>Nora picked these for {suggestionVibe}</span>
+                <button onClick={() => setPreloadedSuggestions(null)} style={{ fontSize: '11px', color: '#C4A882', background: 'none', border: 'none', cursor: 'pointer' }}>Dismiss</button>
               </div>
-              <div style={{ position: 'absolute', right: 0, top: 0, bottom: 4, width: '48px', background: 'linear-gradient(to left, #FDF3E3, transparent)', pointerEvents: 'none' }} />
+              {noraEvents.length > 0 && (
+                <div style={{ marginBottom: noraPlaces.length > 0 ? '14px' : 0 }}>
+                  <p style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '11px', color: '#C4A882', margin: '0 0 8px' }}>Events</p>
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', paddingRight: '40px', WebkitOverflowScrolling: 'touch' }}>
+                      {noraEvents.map(s => <NearbyCard key={s.id} place={s} onAdd={addToItinerary} alreadyAdded={itinerary.some(i => i.id && i.id === s.id)} userLocation={userLocation} />)}
+                    </div>
+                    <div style={{ position: 'absolute', right: 0, top: 0, bottom: 4, width: '48px', background: 'linear-gradient(to left, #FDF3E3, transparent)', pointerEvents: 'none' }} />
+                  </div>
+                </div>
+              )}
+              {noraPlaces.length > 0 && (
+                <div>
+                  <p style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '11px', color: '#C4A882', margin: '0 0 8px' }}>Places</p>
+                  <div style={{ position: 'relative' }}>
+                    <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', paddingRight: '40px', WebkitOverflowScrolling: 'touch' }}>
+                      {noraPlaces.map(s => <NearbyCard key={s.place_id} place={s} onAdd={addToItinerary} alreadyAdded={itinerary.some(i => i.place_id && i.place_id === s.place_id)} userLocation={userLocation} />)}
+                    </div>
+                    <div style={{ position: 'absolute', right: 0, top: 0, bottom: 4, width: '48px', background: 'linear-gradient(to left, #FDF3E3, transparent)', pointerEvents: 'none' }} />
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* Your Plan header */}
         {itinerary.length > 0 && (
