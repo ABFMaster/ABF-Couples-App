@@ -91,9 +91,11 @@ function BottomSheet({ card, onClose, onAdd, alreadyAdded }) {
   const imageUrl = card.photo_url || card.image || null
   return (
     <>
-      <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(28,18,8,0.4)', zIndex: 40 }} />
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, background: '#FAF6EF', borderRadius: '24px 24px 0 0', padding: '0 0 32px' }}>
-        <div style={{ width: '40px', height: '4px', background: '#EDE5D8', borderRadius: '2px', margin: '12px auto 16px' }} />
+      <div onClick={() => onClose()} style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', background: 'rgba(28,18,8,0.4)', zIndex: 39 }} />
+      <div style={{ position: 'fixed', bottom: '64px', left: 0, right: 0, zIndex: 50, background: '#FAF6EF', borderRadius: '24px 24px 0 0', padding: '0 0 32px' }}>
+        <div onClick={onClose} style={{ padding: '12px 16px 0', display: 'flex', justifyContent: 'center', cursor: 'pointer' }}>
+          <div style={{ width: '40px', height: '4px', background: '#EDE5D8', borderRadius: '2px' }} />
+        </div>
         {imageUrl
           ? <img src={imageUrl} alt={card.name} style={{ width: '100%', height: '200px', objectFit: 'cover' }} />
           : <div style={{ width: '100%', height: '200px', background: isEvent ? 'linear-gradient(160deg,#3A2818,#1C1208)' : 'linear-gradient(160deg,#EDE5D8,#C8B89A)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
