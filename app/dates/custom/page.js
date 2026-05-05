@@ -136,9 +136,12 @@ function NearbyCard({ place, onAdd, alreadyAdded, userLocation, onSelect }) {
   )
 }
 
-function PlanStrip({ itinerary, dateName, onDateNameChange, planExpanded, setPlanExpanded, onSave, saveStage, onRemoveStop }) {
+function PlanStrip({ itinerary, dateName, onDateNameChange, planExpanded, setPlanExpanded, onSave, saveStage, onRemoveStop, dateTime }) {
   if (!itinerary.length) return null
   const stopLabel = `${itinerary.length} stop${itinerary.length === 1 ? '' : 's'}`
+  const formattedDate = dateTime
+    ? new Date(dateTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' + new Date(dateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    : null
 
   if (!planExpanded) {
     return (
@@ -148,7 +151,7 @@ function PlanStrip({ itinerary, dateName, onDateNameChange, planExpanded, setPla
           style={{ background: '#1C1208', borderRadius: '20px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
         >
           <span style={{ fontSize: '13px', fontWeight: 500, color: '#C4714A' }}>{stopLabel}</span>
-          <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '14px', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>{dateName}</span>
+          <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '14px', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>{formattedDate || dateName}</span>
           <span style={{ fontSize: '12px', color: '#C4714A', flexShrink: 0 }}>View plan →</span>
         </div>
       </div>
@@ -157,10 +160,11 @@ function PlanStrip({ itinerary, dateName, onDateNameChange, planExpanded, setPla
 
   return (
     <div style={{ position: 'fixed', bottom: '64px', left: 0, right: 0, zIndex: 30, background: '#FAF6EF', borderRadius: '20px 20px 0 0', maxHeight: '60vh', overflowY: 'auto', padding: '16px 16px 24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: formattedDate ? '4px' : '12px' }}>
         <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '16px', color: '#1C1208' }}>Your plan</span>
         <button onClick={() => setPlanExpanded(false)} style={{ fontSize: '13px', color: '#C4714A', background: 'none', border: 'none', cursor: 'pointer' }}>Done</button>
       </div>
+      {formattedDate && <p style={{ fontSize: '12px', color: '#A09080', margin: '0 0 12px' }}>{formattedDate}</p>}
       <input
         type="text"
         value={dateName}
@@ -779,6 +783,21 @@ export default function CustomDateBuilderPage() {
           )}
         </div>
 
+        {/* Date/time selector */}
+        <div style={{ position: 'relative', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '14px' }}>📅</span>
+          {dateTime
+            ? <span style={{ fontSize: '13px', color: '#C4714A', fontWeight: 500 }}>{new Date(dateTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' + new Date(dateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+            : <span style={{ fontSize: '13px', color: '#A09080', cursor: 'pointer' }}>When is your date?</span>
+          }
+          <input
+            type="datetime-local"
+            value={dateTime}
+            onChange={e => setDateTime(e.target.value)}
+            style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
+          />
+        </div>
+
         {/* Custom stop + media buttons */}
         <div style={{ display: 'flex', gap: '8px', padding: '10px 16px 0' }}>
           {!showCustomStop && !showMediaSearch && (
@@ -911,6 +930,7 @@ export default function CustomDateBuilderPage() {
         onSave={handleSave}
         saveStage={saveStage}
         onRemoveStop={removeStop}
+        dateTime={dateTime}
       />
 
       <BottomSheet
