@@ -119,14 +119,17 @@ function PreviewCard({ place, onAdd, alreadyAdded }) {
   )
 }
 
-function NearbyCard({ place, onAdd, alreadyAdded, userLocation }) {
+function NearbyCard({ place, onAdd, alreadyAdded, userLocation, onPreview }) {
   const isEvent = place.source === 'ticketmaster'
   const imageUrl = place.photo_url || place.image || null
   const dist = !isEvent && place.lat && place.lng && userLocation
     ? formatDist(haversineKm(userLocation, { lat: place.lat, lng: place.lng }))
     : null
   return (
-    <div style={{ flexShrink: 0, width: '148px', background: isEvent ? '#1C1208' : 'white', borderRadius: '14px', border: isEvent ? 'none' : '0.5px solid #EDE5D8', overflow: 'hidden' }}>
+    <div
+      onClick={isEvent ? () => place.url && window.open(place.url, '_blank') : () => onPreview && onPreview(place)}
+      style={{ flexShrink: 0, width: '148px', background: isEvent ? '#1C1208' : 'white', borderRadius: '14px', border: isEvent ? 'none' : '0.5px solid #EDE5D8', overflow: 'hidden', cursor: 'pointer' }}
+    >
       {imageUrl
         ? <div style={{ height: '88px', overflow: 'hidden' }}><img src={imageUrl} alt={place.name} style={{ width: '100%', height: '88px', objectFit: 'cover' }} /></div>
         : <div style={{ height: '88px', background: isEvent ? 'linear-gradient(160deg,#3A2818,#1C1208)' : 'linear-gradient(160deg,#EDE5D8,#C8B89A)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -827,7 +830,7 @@ export default function CustomDateBuilderPage() {
               </div>
             ) : chipResults.length > 0 ? (
               <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
-                {chipResults.map(place => <NearbyCard key={place.place_id} place={place} onAdd={addToItinerary} alreadyAdded={savedIds.has(place.place_id)} userLocation={userLocation} />)}
+                {chipResults.map(place => <NearbyCard key={place.place_id} place={place} onAdd={addToItinerary} alreadyAdded={savedIds.has(place.place_id)} userLocation={userLocation} onPreview={setPreviewPlace} />)}
               </div>
             ) : (
               <p style={{ fontSize: '12px', color: '#A09080' }}>No results nearby</p>
@@ -850,7 +853,7 @@ export default function CustomDateBuilderPage() {
                   <p style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '11px', color: '#C4A882', margin: '0 0 8px' }}>Events</p>
                   <div style={{ position: 'relative' }}>
                     <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', paddingRight: '40px', WebkitOverflowScrolling: 'touch' }}>
-                      {noraEvents.map(s => <NearbyCard key={s.id} place={s} onAdd={addToItinerary} alreadyAdded={itinerary.some(i => i.id && i.id === s.id)} userLocation={userLocation} />)}
+                      {noraEvents.map(s => <NearbyCard key={s.id} place={s} onAdd={addToItinerary} alreadyAdded={itinerary.some(i => i.id && i.id === s.id)} userLocation={userLocation} onPreview={setPreviewPlace} />)}
                     </div>
                     <div style={{ position: 'absolute', right: 0, top: 0, bottom: 4, width: '48px', background: 'linear-gradient(to left, #FDF3E3, transparent)', pointerEvents: 'none' }} />
                   </div>
@@ -861,7 +864,7 @@ export default function CustomDateBuilderPage() {
                   <p style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '11px', color: '#C4A882', margin: '0 0 8px' }}>Places</p>
                   <div style={{ position: 'relative' }}>
                     <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', paddingRight: '40px', WebkitOverflowScrolling: 'touch' }}>
-                      {noraPlaces.map(s => <NearbyCard key={s.place_id} place={s} onAdd={addToItinerary} alreadyAdded={itinerary.some(i => i.place_id && i.place_id === s.place_id)} userLocation={userLocation} />)}
+                      {noraPlaces.map(s => <NearbyCard key={s.place_id} place={s} onAdd={addToItinerary} alreadyAdded={itinerary.some(i => i.place_id && i.place_id === s.place_id)} userLocation={userLocation} onPreview={setPreviewPlace} />)}
                     </div>
                     <div style={{ position: 'absolute', right: 0, top: 0, bottom: 4, width: '48px', background: 'linear-gradient(to left, #FDF3E3, transparent)', pointerEvents: 'none' }} />
                   </div>
