@@ -114,7 +114,7 @@ export async function POST(request) {
 
     await fetch(`${appBase}/api/push/send`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
       body: JSON.stringify({
         userId: partnerId,
         title: 'The Bet',

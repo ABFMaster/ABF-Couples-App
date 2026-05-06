@@ -234,7 +234,7 @@ Return only the JSON object. No markdown, no explanation, no wrapper text.`
         await Promise.all([
           fetch(`${appBase}/api/push/send`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
             body: JSON.stringify({
               userId: couple.user1_id,
               title: 'Weekly Reflection',
@@ -244,7 +244,7 @@ Return only the JSON object. No markdown, no explanation, no wrapper text.`
           }).catch(() => {}),
           fetch(`${appBase}/api/push/send`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
             body: JSON.stringify({
               userId: couple.user2_id,
               title: 'Weekly Reflection',

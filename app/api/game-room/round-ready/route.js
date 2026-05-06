@@ -64,7 +64,7 @@ export async function POST(request) {
         await Promise.all([
           fetch(`${appBase}/api/push/send`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
             body: JSON.stringify({
               userId: couple.user1_id,
               title: 'The Rabbit Hole',
@@ -74,7 +74,7 @@ export async function POST(request) {
           }).catch(() => {}),
           fetch(`${appBase}/api/push/send`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
             body: JSON.stringify({
               userId: couple.user2_id,
               title: 'The Rabbit Hole',
