@@ -200,7 +200,7 @@ export default function SparkCard({
           <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#2C1810', lineHeight: 1.55 }}>{mine?.response_text}</p>
         </div>
         <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#B8A898', fontStyle: 'italic', marginTop: '16px' }}>
-          {partnerName} hasn't answered yet…
+          Your answer is in. Nora is holding it.
         </p>
       </div>
     )

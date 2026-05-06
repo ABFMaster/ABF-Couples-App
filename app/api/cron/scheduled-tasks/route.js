@@ -115,8 +115,8 @@ async function processDailyContent(couple, user1, user2) {
     })
 
     console.log('[cron] sending spark push to:', user1.user_id, user2.user_id)
-    await sendPush(user1.user_id, 'The Spark', 'A new Spark is waiting for you.', '/dashboard')
-    await sendPush(user2.user_id, 'The Spark', 'A new Spark is waiting for you.', '/dashboard')
+    await sendPush(user1.user_id, 'The Spark', 'The Spark is ready.', '/dashboard')
+    await sendPush(user2.user_id, 'The Spark', 'The Spark is ready.', '/dashboard')
     console.log('[cron] push sent')
   }
 

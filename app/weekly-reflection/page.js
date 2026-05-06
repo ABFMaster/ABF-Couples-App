@@ -29,8 +29,6 @@ export default function WeeklyReflection() {
 
   // Enhancement state (Parts 2, 3, 4)
   const [healthDelta, setHealthDelta] = useState(null)
-  const [nudgeSent, setNudgeSent] = useState(false)
-  const [nudgeError, setNudgeError] = useState(null)
   const [aiInsight, setAiInsight] = useState(null)
 
   // Check if within reflection window (Friday-Sunday)
@@ -169,35 +167,6 @@ export default function WeeklyReflection() {
       const data = await res.json()
       if (data.insight) setAiInsight(data.insight)
     } catch (err) {
-    }
-  }
-
-  // Part 3 — nudge partner via flirt
-  const sendNudge = async () => {
-    if (nudgeSent) return
-    const partnerId = couple ? (isUser1 ? couple.user2_id : couple.user1_id) : null
-    if (!couple?.id || !user?.id || !partnerId) {
-      setNudgeError('Missing data: ' + JSON.stringify({ couple: !!couple, user: !!user, partnerId }))
-      return
-    }
-    try {
-      const { data, error } = await supabase
-        .from('flirts')
-        .insert({
-          couple_id: couple.id,
-          sender_id: user.id,
-          receiver_id: partnerId,
-          message: 'I finished my weekly reflection — your turn! 👀💕',
-          type: 'text',
-        })
-        .select()
-      if (error) {
-        setNudgeError(error.message)
-        return
-      }
-      setNudgeSent(true)
-    } catch (err) {
-      setNudgeError(err.message)
     }
   }
 
@@ -568,25 +537,6 @@ export default function WeeklyReflection() {
                 <div className="w-2 h-2 bg-coral-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
               </div>
 
-              {/* Part 3 — Nudge button */}
-              <div className="mt-6 text-center">
-                <p className="text-gray-400 text-sm mb-3">
-                  Want to give {partnerName} a nudge?
-                </p>
-                <button
-                  onClick={sendNudge}
-                  disabled={nudgeSent}
-                  className="bg-[#E8614D] text-white px-6 py-2 rounded-full text-sm font-medium disabled:opacity-50"
-                >
-                  {nudgeSent ? 'Nudge sent ✓' : `Nudge ${partnerName}`}
-                </button>
-                {nudgeError && (
-                  <p className="text-red-500 text-xs mt-2">{nudgeError}</p>
-                )}
-                <p className="text-gray-300 text-xs mt-2">
-                  Or tell them in person — even better 💕
-                </p>
-              </div>
             </div>
 
             {/* Show what I picked */}
