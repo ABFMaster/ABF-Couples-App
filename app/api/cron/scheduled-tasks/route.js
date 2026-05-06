@@ -155,8 +155,8 @@ async function processDailyContent(couple, user1, user2) {
     })
 
     console.log('[cron] sending bet push to:', user1.user_id, user2.user_id)
-    await sendPush(user1.user_id, 'The Bet', "Today's Bet is ready. Make your prediction.", '/dashboard')
-    await sendPush(user2.user_id, 'The Bet', "Today's Bet is ready. Make your prediction.", '/dashboard')
+    await sendPush(user1.user_id, 'The Bet', "The Bet is ready. Do you know them?", '/dashboard')
+    await sendPush(user2.user_id, 'The Bet', "The Bet is ready. Do you know them?", '/dashboard')
     console.log('[cron] push sent')
   }
 
@@ -279,8 +279,8 @@ Respond in this exact JSON format:
         })
         .eq('id', session.id)
 
-      await sendPush(coupleData.user1_id, 'Nora closed the loop', 'Your Rabbit Hole has a ending. Come see what she found.', `/game-room/rabbit-hole/debrief?sessionId=${session.id}`)
-      await sendPush(coupleData.user2_id, 'Nora closed the loop', 'Your Rabbit Hole has a ending. Come see what she found.', `/game-room/rabbit-hole/debrief?sessionId=${session.id}`)
+      await sendPush(coupleData.user1_id, 'Nora closed the loop', 'Nora found something. Your Rabbit Hole has an ending.', `/game-room/rabbit-hole/debrief?sessionId=${session.id}`)
+      await sendPush(coupleData.user2_id, 'Nora closed the loop', 'Nora found something. Your Rabbit Hole has an ending.', `/game-room/rabbit-hole/debrief?sessionId=${session.id}`)
 
     } catch {}
   }
