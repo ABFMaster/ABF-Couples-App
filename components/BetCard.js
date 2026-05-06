@@ -96,8 +96,8 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
     if (!allFlipped) return
     if (revealAnimFired.current) return
     revealAnimFired.current = true
-    const t1 = setTimeout(() => setNoraReactionShown(true), 500)
-    const t2 = setTimeout(() => setPillsShown(true), 800)
+    const t1 = setTimeout(() => setNoraReactionShown(true), 1500)
+    const t2 = setTimeout(() => setPillsShown(true), 3500)
     return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [allFlipped])
 
@@ -182,10 +182,10 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
     }).catch(() => {})
   }
 
-  const fadeStyle = (shown, duration = 500) => ({
+  const fadeStyle = (shown, duration = 800) => ({
     opacity: shown ? 1 : 0,
-    transform: shown ? 'translateY(0)' : 'translateY(8px)',
-    transition: `opacity ${duration}ms ease-out, transform ${duration}ms ease-out`,
+    transform: shown ? 'translateY(0)' : 'translateY(16px)',
+    transition: `opacity ${duration}ms cubic-bezier(0.22, 1, 0.36, 1), transform ${duration}ms cubic-bezier(0.22, 1, 0.36, 1)`,
   })
 
   const textareaStyle = (focused) => ({
