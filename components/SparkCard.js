@@ -256,109 +256,116 @@ export default function SparkCard({
   return (
     <div style={wrapperStyle}>
       {sparkLabel}
-      <div style={{ marginBottom: '20px' }}>{questionMuted}</div>
+      <div style={{ marginBottom: '24px' }}>{questionMuted}</div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {/* Partner's answer first — moment of drama */}
-        <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '14px', padding: '18px 20px', ...revealStyle(partnerCardShown) }}>
-          <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#A0522D', textTransform: 'uppercase', marginBottom: '8px' }}>{partnerName}</p>
-          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#2C1810', lineHeight: 1.55 }}>{theirs?.response_text}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+        {/* Partner's answer — the reveal, most visual weight */}
+        <div style={{
+          background: '#FFF8F4',
+          borderRadius: '16px',
+          padding: '22px 22px 20px',
+          ...revealStyle(partnerCardShown)
+        }}>
+          <p style={{ fontSize: '10px', letterSpacing: '0.16em', color: '#C1440E', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>{partnerName}</p>
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '18px', color: '#2C1810', lineHeight: 1.6, margin: 0 }}>{theirs?.response_text}</p>
         </div>
-        {/* Your answer second */}
-        <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderLeft: '3px solid #C1440E', borderRadius: '0 14px 14px 0', padding: '18px 20px', ...revealStyle(myCardShown) }}>
-          <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#A0522D', textTransform: 'uppercase', marginBottom: '8px' }}>You</p>
-          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#2C1810', lineHeight: 1.55 }}>{mine?.response_text}</p>
+
+        {/* Visual connector between the two answers */}
+        <div style={{ display: 'flex', alignItems: 'center', padding: '6px 22px', ...revealStyle(myCardShown) }}>
+          <div style={{ width: '1px', height: '20px', background: '#E8DDD0', marginLeft: '2px' }} />
+        </div>
+
+        {/* Your answer — contrast to partner's */}
+        <div style={{
+          background: '#FFFFFF',
+          border: '0.5px solid #E8DDD0',
+          borderLeft: '3px solid #C1440E',
+          borderRadius: '0 14px 14px 0',
+          padding: '18px 20px',
+          ...revealStyle(myCardShown)
+        }}>
+          <p style={{ fontSize: '10px', letterSpacing: '0.16em', color: '#A0522D', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>You</p>
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#2C1810', lineHeight: 1.6, margin: 0 }}>{mine?.response_text}</p>
         </div>
       </div>
 
-      {/* Nora block — always in DOM, fades in 200ms after partner card */}
-      <div style={{ marginTop: '16px', ...revealStyle(noraShown) }}>
-        <div style={{ background: '#FFF8F4', border: '0.5px solid #E8C8B8', borderRadius: '14px', padding: '18px 20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C1440E', flexShrink: 0 }} />
-            <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#A0522D', textTransform: 'uppercase' }}>Nora</p>
-          </div>
-          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#5C3D2E', lineHeight: 1.65, fontStyle: 'italic' }}>
-            {mine?.nora_reaction}
-          </p>
+      {/* Nora — no card, just presence */}
+      <div style={{ marginTop: '28px', paddingLeft: '4px', ...revealStyle(noraShown) }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C1440E', flexShrink: 0 }} />
+          <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#A0522D', textTransform: 'uppercase', margin: 0 }}>Nora</p>
         </div>
+        <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#5C3D2E', lineHeight: 1.7, fontStyle: 'italic', margin: 0 }}>
+          {mine?.nora_reaction}
+        </p>
       </div>
 
-      <div style={{ height: '0.5px', background: '#E8DDD0', margin: '20px 0 4px', ...revealStyle(pillsShown) }} />
+      {/* Separator */}
+      <div style={{ height: '0.5px', background: '#E8DDD0', margin: '24px 0 0', ...revealStyle(pillsShown) }} />
 
-      {/* Pills — always in DOM, fades in 400ms after partner card */}
-      <div style={revealStyle(pillsShown)}>
-        <div style={{ marginTop: '20px' }}>
-          <p style={{ fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#B8A898', marginBottom: '10px', fontWeight: 600 }}>
-            How did their answer land?
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {REACTIONS.map(({ icon: Icon, key, label }) => {
-              const isActive = activeReaction === key
-              const scale = pulsingDown === key ? 0.97 : pulsingUp === key ? 1.02 : 1
-              return (
-                <button
-                  key={key}
-                  onClick={() => handleReaction(key)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    width: '100%',
-                    padding: '10px 16px',
-                    background: '#FFFFFF',
-                    border: `0.5px solid ${isActive ? '#C1440E' : '#E8DDD0'}`,
-                    borderRadius: '30px',
-                    color: '#5C3D2E',
-                    cursor: 'pointer',
-                    transform: `scale(${scale})`,
-                    transition: 'transform 75ms ease-out, border-color 150ms',
-                  }}
-                >
-                  <span style={{ color: '#C1440E' }}><Icon size={16} strokeWidth={1.75} /></span>
-                  <span style={{ fontSize: '13px', fontWeight: 500 }}>{label}</span>
-                </button>
-              )
-            })}
-          </div>
+      {/* Reactions — no section labels */}
+      <div style={{ ...revealStyle(pillsShown), marginTop: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {REACTIONS.map(({ icon: Icon, key, label }) => {
+            const isActive = activeReaction === key
+            const scale = pulsingDown === key ? 0.97 : pulsingUp === key ? 1.02 : 1
+            return (
+              <button
+                key={key}
+                onClick={() => handleReaction(key)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  width: '100%',
+                  padding: '12px 18px',
+                  background: isActive ? '#FFF8F4' : '#FFFFFF',
+                  border: `0.5px solid ${isActive ? '#C1440E' : '#E8DDD0'}`,
+                  borderRadius: '30px',
+                  color: '#5C3D2E',
+                  cursor: 'pointer',
+                  transform: `scale(${scale})`,
+                  transition: 'transform 75ms ease-out, border-color 150ms, background 150ms',
+                }}
+              >
+                <span style={{ color: '#C1440E' }}><Icon size={16} strokeWidth={1.75} /></span>
+                <span style={{ fontSize: '13px', fontWeight: 500 }}>{label}</span>
+              </button>
+            )
+          })}
         </div>
 
-        <div style={{ marginTop: '12px' }}>
-          <p style={{ fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#B8A898', marginBottom: '10px', fontWeight: 600 }}>
-            Was this the right depth?
-          </p>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {RATINGS.map(({ icon: Icon, key, label }) => {
-              const isActive = activeRating === key
-              const scale = pulsingDown === key ? 0.97 : pulsingUp === key ? 1.02 : 1
-              return (
-                <button
-                  key={key}
-                  onClick={() => handleRating(key)}
-                  style={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    padding: '10px',
-                    background: '#FFFFFF',
-                    border: `0.5px solid ${isActive ? '#C1440E' : '#E8DDD0'}`,
-                    borderRadius: '30px',
-                    color: '#5C3D2E',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    transform: `scale(${scale})`,
-                    transition: 'transform 75ms ease-out, border-color 150ms',
-                  }}
-                >
-                  <span style={{ color: '#C1440E' }}><Icon size={14} strokeWidth={1.75} /></span>
-                  {label}
-                </button>
-              )
-            })}
-          </div>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+          {RATINGS.map(({ icon: Icon, key, label }) => {
+            const isActive = activeRating === key
+            const scale = pulsingDown === key ? 0.97 : pulsingUp === key ? 1.02 : 1
+            return (
+              <button
+                key={key}
+                onClick={() => handleRating(key)}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  padding: '11px',
+                  background: isActive ? '#FFF8F4' : '#FFFFFF',
+                  border: `0.5px solid ${isActive ? '#C1440E' : '#E8DDD0'}`,
+                  borderRadius: '30px',
+                  color: '#5C3D2E',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  transform: `scale(${scale})`,
+                  transition: 'transform 75ms ease-out, border-color 150ms, background 150ms',
+                }}
+              >
+                <span style={{ color: '#C1440E' }}><Icon size={14} strokeWidth={1.75} /></span>
+                {label}
+              </button>
+            )
+          })}
         </div>
       </div>
     </div>
