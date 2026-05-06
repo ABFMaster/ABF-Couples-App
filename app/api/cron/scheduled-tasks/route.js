@@ -79,6 +79,7 @@ async function processDailyContent(couple, user1, user2) {
   const todayStr = getTodayInTimezone(timezone)
 
   if (hour !== 3) return
+  console.log('[cron] processing couple, hour:', hour, 'day:', day, 'timezone:', timezone)
   if (!todayStr) return
 
   const coupleAgeDays = couple.created_at
@@ -113,8 +114,10 @@ async function processDailyContent(couple, user1, user2) {
       spark_date: todayStr,
     })
 
-    await sendPush(user1.id, 'The Spark', 'A new Spark is waiting for you.', '/dashboard')
-    await sendPush(user2.id, 'The Spark', 'A new Spark is waiting for you.', '/dashboard')
+    console.log('[cron] sending spark push to:', user1.user_id, user2.user_id)
+    await sendPush(user1.user_id, 'The Spark', 'A new Spark is waiting for you.', '/dashboard')
+    await sendPush(user2.user_id, 'The Spark', 'A new Spark is waiting for you.', '/dashboard')
+    console.log('[cron] push sent')
   }
 
   if (BET_DAYS.includes(day)) {
@@ -145,8 +148,10 @@ async function processDailyContent(couple, user1, user2) {
       bet_date: todayStr,
     })
 
-    await sendPush(user1.id, 'The Bet', "Today's Bet is ready. Make your prediction.", '/dashboard')
-    await sendPush(user2.id, 'The Bet', "Today's Bet is ready. Make your prediction.", '/dashboard')
+    console.log('[cron] sending bet push to:', user1.user_id, user2.user_id)
+    await sendPush(user1.user_id, 'The Bet', "Today's Bet is ready. Make your prediction.", '/dashboard')
+    await sendPush(user2.user_id, 'The Bet', "Today's Bet is ready. Make your prediction.", '/dashboard')
+    console.log('[cron] push sent')
   }
 }
 
