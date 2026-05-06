@@ -58,46 +58,28 @@ export async function GET(request) {
       );
     }
 
-    // Build Nearby Search URL
-    const googleParams = new URLSearchParams({
-      location: `${lat},${lng}`,
-      radius: String(radius),
-      key: apiKey,
-    });
+    const placesRes = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.priceLevel,places.photos,places.types'
+      },
+      body: JSON.stringify({
+        includedTypes: category && CATEGORY_TO_GOOGLE_TYPE[category] ? [CATEGORY_TO_GOOGLE_TYPE[category]] : undefined,
+        maxResultCount: limit || 20,
+        locationRestriction: {
+          circle: {
+            center: { latitude: lat, longitude: lng },
+            radius: Number(radius) || 5000
+          }
+        }
+      })
+    })
+    const googleData = await placesRes.json()
+    const rawPlaces = googleData.places || []
 
-    // Map our category to a Google type filter
-    if (category && CATEGORY_TO_GOOGLE_TYPE[category]) {
-      googleParams.set('type', CATEGORY_TO_GOOGLE_TYPE[category]);
-    }
-
-    if (priceLevel) {
-      // Google uses maxprice (0-4 scale; their 0 = free, 1-4 = $ to $$$$)
-      // Our price_level is 1-4, so subtract 1 to align
-      googleParams.set('maxprice', String(priceLevel - 1));
-    }
-
-    const placesUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?${googleParams.toString()}`;
-
-    const googleRes = await fetch(placesUrl);
-    if (!googleRes.ok) {
-      console.error('Google Places API HTTP error:', googleRes.status);
-      return NextResponse.json(
-        { error: 'Failed to fetch from Google Places' },
-        { status: 502 }
-      );
-    }
-
-    const googleData = await googleRes.json();
-
-    if (googleData.status !== 'OK' && googleData.status !== 'ZERO_RESULTS') {
-      console.error('Google Places API error status:', googleData.status, googleData.error_message);
-      return NextResponse.json(
-        { error: `Google Places error: ${googleData.status}` },
-        { status: 502 }
-      );
-    }
-
-    const places = (googleData.results || []).slice(0, limit);
+    const places = rawPlaces.slice(0, limit);
 
     // Format and optionally filter by category (when no type filter was sent)
     const suggestions = places
@@ -174,41 +156,35 @@ export async function POST(request) {
     const seenPlaceIds = new Set();
 
     for (const placeType of placeTypes) {
-      const googleParams = new URLSearchParams({
-        location: `${location.lat},${location.lng}`,
-        radius: String(radius),
-        type: placeType,
-        key: apiKey,
-      });
-
-      // Attach a single keyword hint (first one) if provided
-      if (keywords.length > 0) {
-        googleParams.set('keyword', keywords[0]);
-      }
-
-      if (maxPrice) {
-        // Our maxPrice is 1-4; Google uses 0-4 (0 = free)
-        googleParams.set('maxprice', String(maxPrice - 1));
-      }
-
-      const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?${googleParams.toString()}`;
-      const res = await fetch(url);
+      const res = await fetch('https://places.googleapis.com/v1/places:searchNearby', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': apiKey,
+          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.priceLevel,places.photos,places.types'
+        },
+        body: JSON.stringify({
+          includedTypes: [placeType],
+          maxResultCount: 20,
+          locationRestriction: {
+            circle: {
+              center: { latitude: location.lat, longitude: location.lng },
+              radius: radius
+            }
+          }
+        })
+      })
+      const data = await res.json()
+      const rawPlaces = data.places || []
 
       if (!res.ok) {
         console.error(`Google Places HTTP error for type ${placeType}:`, res.status);
         continue;
       }
 
-      const data = await res.json();
-
-      if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-        console.error(`Google Places error for type ${placeType}:`, data.status, data.error_message);
-        continue;
-      }
-
-      for (const place of data.results || []) {
-        if (!seenPlaceIds.has(place.place_id) && !avoidSet.has(place.place_id)) {
-          seenPlaceIds.add(place.place_id);
+      for (const place of rawPlaces) {
+        if (!seenPlaceIds.has(place.id) && !avoidSet.has(place.id)) {
+          seenPlaceIds.add(place.id);
           allResults.push(place);
         }
       }
