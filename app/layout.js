@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import OnboardingGuard from "@/components/OnboardingGuard";
 import NavBadges from "@/components/NavBadges";
+import FeedbackButton from "@/components/FeedbackButton";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -39,6 +40,7 @@ export default function RootLayout({ children }) {
             </div>
           </div>
           <NavBadges />
+          <FeedbackButton />
         </OnboardingGuard>
       </body>
     </html>
