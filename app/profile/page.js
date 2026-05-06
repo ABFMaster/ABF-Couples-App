@@ -157,6 +157,8 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [user, setUser] = useState(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   // Editable fields
   const [displayName, setDisplayName] = useState('')
@@ -338,6 +340,23 @@ export default function ProfilePage() {
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     router.push('/login')
+  }
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      if (!res.ok) throw new Error('Failed')
+      await supabase.auth.signOut()
+      router.push('/login')
+    } catch {
+      alert('Failed to delete account. Please try again.')
+      setDeleting(false)
+    }
   }
 
   if (loading) {
@@ -551,7 +570,46 @@ export default function ProfilePage() {
           </button>
         </section>
 
+        {/* Danger zone */}
+        <section>
+          <div style={{ height: '0.5px', background: '#EDE5D8', margin: '32px 0' }} />
+          <p style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.09em', color: '#C47A6A' }}>Danger zone</p>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'transparent', border: '1px solid #C47A6A', color: '#C47A6A', fontSize: '14px', fontWeight: 500, marginTop: '12px', cursor: 'pointer' }}
+          >
+            Delete my account
+          </button>
+        </section>
+
       </div>
+
+      {/* Delete confirmation sheet */}
+      {showDeleteConfirm && (
+        <>
+          <div onClick={() => setShowDeleteConfirm(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(28,18,8,0.4)', zIndex: 50 }} />
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 60, background: '#FAF6EF', borderRadius: '24px 24px 0 0', padding: '24px 20px 48px' }}>
+            <div style={{ width: '40px', height: '4px', background: '#EDE5D8', borderRadius: '2px', margin: '0 auto 0' }} />
+            <p style={{ fontFamily: 'Georgia, serif', fontSize: '18px', color: '#1C1208', textAlign: 'center', margin: '16px 0 8px' }}>Delete your account?</p>
+            <p style={{ fontSize: '13px', color: '#7A6A54', textAlign: 'center', lineHeight: 1.6, margin: '0 0 24px' }}>
+              This permanently deletes your profile, relationship history, and all of Nora's memory about you and your partner. This cannot be undone.
+            </p>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              style={{ width: '100%', padding: '14px', borderRadius: '12px', background: '#C47A6A', color: 'white', fontSize: '14px', fontWeight: 500, marginBottom: '10px', border: 'none', cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.7 : 1 }}
+            >
+              {deleting ? 'Deleting…' : 'Yes, delete everything'}
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              style={{ width: '100%', padding: '14px', borderRadius: '12px', background: '#F0EBE3', color: '#7A6A54', fontSize: '14px', border: 'none', cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
