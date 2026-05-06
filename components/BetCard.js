@@ -419,10 +419,10 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
       {allFlipped && (
         <div style={{ marginTop: '20px', ...fadeStyle(noraReactionShown, 500) }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-            <div className="animate-pulse" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D4A853', flexShrink: 0, marginTop: '4px' }} />
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D4A853', flexShrink: 0, marginTop: '4px' }} />
             <div>
               <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#D4A853', textTransform: 'uppercase', marginBottom: '4px' }}>Nora</p>
-              <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '13px', color: '#C4B49A', fontStyle: 'italic', lineHeight: 1.5 }}>
+              <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#E8D5B7', fontStyle: 'italic', lineHeight: 1.5 }}>
                 {noraReaction}
               </p>
             </div>
@@ -450,9 +450,6 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
         ) : (
           <>
             <div style={{ marginTop: '20px' }}>
-              <p style={{ fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#5A4A38', marginBottom: '10px', fontWeight: 600 }}>
-                How did this land?
-              </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {REACTIONS.map(({ icon: Icon, key, label }) => {
                   const isActive = activeReaction === key
@@ -485,9 +482,6 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
             </div>
 
             <div style={{ marginTop: '12px' }}>
-              <p style={{ fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#5A4A38', marginBottom: '10px', fontWeight: 600 }}>
-                Was this the right depth?
-              </p>
               <div style={{ display: 'flex', gap: '8px' }}>
                 {RATINGS.map(({ icon: Icon, key, label }) => {
                   const isActive = activeRating === key
