@@ -53,10 +53,10 @@ export default function SparkCard({
 
   useEffect(() => {
     if (state !== 'C') return
-    const t1 = setTimeout(() => setPartnerCardShown(true), 0)
-    const t2 = setTimeout(() => setMyCardShown(true), 150)
-    const t3 = setTimeout(() => setNoraShown(true), 200)
-    const t4 = setTimeout(() => setPillsShown(true), 400)
+    const t1 = setTimeout(() => setPartnerCardShown(true), 300)
+    const t2 = setTimeout(() => setMyCardShown(true), 1800)
+    const t3 = setTimeout(() => setNoraShown(true), 3200)
+    const t4 = setTimeout(() => setPillsShown(true), 5000)
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4) }
   }, [state])
 
@@ -85,8 +85,8 @@ export default function SparkCard({
 
   const revealStyle = (shown) => ({
     opacity: shown ? 1 : 0,
-    transform: shown ? 'translateY(0)' : 'translateY(40px)',
-    transition: 'opacity 700ms cubic-bezier(0.22, 1, 0.36, 1), transform 700ms cubic-bezier(0.22, 1, 0.36, 1)',
+    transform: shown ? 'translateY(0)' : 'translateY(24px)',
+    transition: 'opacity 900ms cubic-bezier(0.22, 1, 0.36, 1), transform 900ms cubic-bezier(0.22, 1, 0.36, 1)',
   })
 
   const wrapperStyle = {
@@ -283,6 +283,8 @@ export default function SparkCard({
           </p>
         </div>
       </div>
+
+      <div style={{ height: '0.5px', background: '#E8DDD0', margin: '20px 0 4px', ...revealStyle(pillsShown) }} />
 
       {/* Pills — always in DOM, fades in 400ms after partner card */}
       <div style={revealStyle(pillsShown)}>
