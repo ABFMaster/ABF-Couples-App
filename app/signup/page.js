@@ -9,6 +9,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
+  const [inviteCode, setInviteCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -16,6 +17,12 @@ export default function SignupPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
+
+    if (inviteCode.trim().toUpperCase() !== process.env.NEXT_PUBLIC_BETA_INVITE_CODE?.toUpperCase()) {
+      setError('Invalid invite code. ABF is currently invite-only.')
+      setLoading(false)
+      return
+    }
 
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -62,6 +69,22 @@ export default function SignupPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Your first name"
+              required
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent outline-none"
+            />
+          </div>
+
+          {/* Invite Code Input */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Invite Code
+            </label>
+            <input
+              type="text"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              placeholder="Enter your invite code"
+              autoCapitalize="characters"
               required
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent outline-none"
             />
