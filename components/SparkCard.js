@@ -24,8 +24,10 @@ export default function SparkCard({
   onRespond,
   onSkip,
   onReact,
+  onInvite,
 }) {
   const [answerText, setAnswerText] = useState('')
+  const [inviteSent, setInviteSent] = useState(false)
   const [selectedReaction, setSelectedReaction] = useState(mine?.reaction_icon ?? null)
   const [selectedRating, setSelectedRating] = useState(mine?.question_rating ?? null)
 
@@ -202,6 +204,15 @@ export default function SparkCard({
         <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#B8A898', fontStyle: 'italic', marginTop: '16px' }}>
           Your answer is in. Nora is holding it.
         </p>
+        {onInvite && (
+          <button
+            onClick={async () => { await onInvite(); setInviteSent(true) }}
+            disabled={inviteSent}
+            style={{ background: 'none', border: 'none', fontSize: '13px', color: inviteSent ? '#B8A898' : '#C1440E', cursor: inviteSent ? 'default' : 'pointer', marginTop: '12px', padding: 0, fontWeight: 500 }}
+          >
+            {inviteSent ? '✓ Invited' : `Invite ${partnerName}`}
+          </button>
+        )}
       </div>
     )
   }

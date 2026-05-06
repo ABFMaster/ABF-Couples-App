@@ -162,6 +162,21 @@ export default function Dashboard() {
     if (showBet) fetchBet()
   }, [user, couple])
 
+  const handleSparkInvite = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    await fetch('/api/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify({
+        userId: partnerId,
+        title: 'The Spark',
+        body: `${userName} wants to know what you think.`,
+        url: '/dashboard',
+      }),
+    }).catch(() => {})
+  }
+
   const fetchSpark = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -260,6 +275,7 @@ export default function Dashboard() {
               onRespond={handleSparkRespond}
               onSkip={() => fetchSpark()}
               onReact={() => fetchSpark()}
+              onInvite={handleSparkInvite}
             />
           </div>
         )}
