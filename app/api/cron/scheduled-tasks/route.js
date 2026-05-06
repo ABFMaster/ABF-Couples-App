@@ -82,6 +82,12 @@ async function processDailyContent(couple, user1, user2) {
   console.log('[cron] processing couple, hour:', hour, 'day:', day, 'timezone:', timezone)
   if (!todayStr) return
 
+  const { data: noraMemory } = await supabase
+    .from('nora_memory')
+    .select('couple_notes, conversation_count')
+    .eq('couple_id', couple.id)
+    .maybeSingle()
+
   const coupleAgeDays = couple.created_at
     ? Math.floor((Date.now() - new Date(couple.created_at).getTime()) / (1000 * 60 * 60 * 24))
     : 0
@@ -152,6 +158,41 @@ async function processDailyContent(couple, user1, user2) {
     await sendPush(user1.user_id, 'The Bet', "Today's Bet is ready. Make your prediction.", '/dashboard')
     await sendPush(user2.user_id, 'The Bet', "Today's Bet is ready. Make your prediction.", '/dashboard')
     console.log('[cron] push sent')
+  }
+
+  // Re-engagement push — only on days with no other push (Fri, Sat, Sun)
+  if (![1, 2, 3, 4].includes(day)) {
+    await sendReengagementPush(couple, user1, user2, noraMemory)
+  }
+}
+
+async function sendReengagementPush(couple, user1, user2, noraMemory) {
+  const { data: lastSession } = await supabase
+    .from('game_sessions')
+    .select('created_at, mode')
+    .eq('couple_id', couple.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (lastSession) {
+    const daysSince = (Date.now() - new Date(lastSession.created_at).getTime()) / (1000 * 60 * 60 * 24)
+    if (daysSince < 7) return
+  }
+
+  const user1Name = user1.display_name || 'them'
+  const user2Name = user2.display_name || 'them'
+  const trajectory = noraMemory?.couple_notes?.structured_facts?.trajectory || 'unknown'
+  const unsaidThing = noraMemory?.couple_notes?.structured_facts?.unsaid_thing || null
+
+  const prompt = `You are sending a push notification to ${user1Name} to invite them to play a Game Room activity with ${user2Name}. They haven't played together in 7+ days. ${unsaidThing ? `What Nora is watching for: ${unsaidThing}` : ''} Trajectory: ${trajectory}. Write ONE push notification (max 12 words, no quotes) that feels personal and creates genuine curiosity — not generic. Reference something specific about this couple if possible. Never say "feel like playing" or use the word "game".`
+
+  try {
+    const body = await noraGenerate(prompt, { route: 'cron/scheduled-tasks', maxTokens: 60 })
+    await sendPush(user1.user_id, 'ABF', body.trim(), '/game-room')
+    await sendPush(user2.user_id, 'ABF', body.trim(), '/game-room')
+  } catch (err) {
+    console.error('[cron] sendReengagementPush error:', err)
   }
 }
 
@@ -266,7 +307,7 @@ export async function GET(request) {
     const userIds = couples.flatMap(c => [c.user1_id, c.user2_id])
     const { data: profiles } = await supabase
       .from('user_profiles')
-      .select('user_id, timezone')
+      .select('user_id, timezone, display_name')
       .in('user_id', userIds)
 
     const profileMap = Object.fromEntries((profiles || []).map(p => [p.user_id, p]))
