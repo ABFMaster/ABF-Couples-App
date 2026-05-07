@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -25,20 +26,13 @@ export default function SignupPage() {
     }
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: email,
-        password: password,
-        options: {
-          data: {
-            first_name: name,
-          }
-        }
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { first_name: name } }
       })
-
       if (error) throw error
-
-      // Success! Redirect to partner connection
-      router.push(`/onboarding`)
+      router.push('/onboarding')
     } catch (error) {
       setError(error.message)
     } finally {
@@ -46,105 +40,117 @@ export default function SignupPage() {
     }
   }
 
+  const inputStyle = {
+    width: '100%',
+    padding: '14px 16px',
+    background: 'white',
+    border: '0.5px solid #E8DDD0',
+    borderRadius: '12px',
+    fontSize: '15px',
+    color: '#1C1208',
+    outline: 'none',
+    boxSizing: 'border-box',
+    fontFamily: "'DM Sans', -apple-system, sans-serif",
+  }
+
+  const labelStyle = {
+    fontSize: '12px',
+    fontWeight: 600,
+    color: '#7A6A54',
+    letterSpacing: '0.04em',
+    marginBottom: '6px',
+    display: 'block',
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cream-50 to-cream-100 flex flex-col items-center justify-center p-4">
-      {/* Header */}
-      <div className="mb-8 text-center">
-        <div className="inline-block bg-gradient-to-r from-coral-400 to-coral-500 text-white rounded-2xl px-6 py-3 shadow-lg mb-4">
-          <h1 className="text-3xl font-bold tracking-wider">ABF</h1>
-        </div>
-        <h2 className="text-2xl font-bold text-coral-600">Let's get you set up!</h2>
+    <div style={{
+      minHeight: '100dvh',
+      background: '#FAF6EF',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '60px 32px 48px',
+      fontFamily: "'DM Sans', -apple-system, sans-serif",
+    }}>
+
+      {/* Wordmark */}
+      <div style={{ textAlign: 'center' }}>
+        <Link href="/" style={{ textDecoration: 'none' }}>
+          <div style={{ display: 'inline-block', background: '#C4714A', borderRadius: '16px', padding: '12px 24px', marginBottom: '8px' }}>
+            <p style={{ fontSize: '13px', letterSpacing: '0.2em', color: '#FAF6EF', fontWeight: 600, margin: 0 }}>ABF</p>
+          </div>
+        </Link>
       </div>
 
-      {/* Signup Form */}
-      <form onSubmit={handleSignup} className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
-        <div className="space-y-4">
-          {/* Name Input */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              What should we call you?
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your first name"
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent outline-none"
-            />
-          </div>
+      {/* Form */}
+      <div style={{ width: '100%', maxWidth: '320px' }}>
+        <h1 style={{ fontFamily: 'Georgia, serif', fontSize: '26px', fontWeight: 400, color: '#1C1208', margin: '0 0 8px', textAlign: 'center' }}>
+          You were invited.
+        </h1>
+        <p style={{ fontSize: '14px', color: '#A09080', textAlign: 'center', margin: '0 0 32px' }}>
+          ABF is in private beta. Enter your invite code to get started.
+        </p>
 
-          {/* Invite Code Input */}
+        {error && (
+          <div style={{ background: '#FFF0ED', border: '0.5px solid #E8C8B8', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: '#C4714A' }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSignup} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Invite Code
-            </label>
+            <label style={labelStyle}>Invite code</label>
             <input
               type="text"
               value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value)}
-              placeholder="Enter your invite code"
+              onChange={e => setInviteCode(e.target.value)}
+              required
+              placeholder="Enter your code"
               autoCapitalize="characters"
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent outline-none"
+              disabled={loading}
+              style={{ ...inputStyle, letterSpacing: '0.1em', fontWeight: 600 }}
             />
           </div>
-
-          {/* Email Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Your email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent outline-none"
-            />
+            <label style={labelStyle}>Your first name</label>
+            <input type="text" value={name} onChange={e => setName(e.target.value)} required placeholder="What should Nora call you?" disabled={loading} style={inputStyle} />
           </div>
-
-          {/* Password Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Create password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 6 characters"
-              required
-              minLength={6}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-coral-500 focus:border-transparent outline-none"
-            />
+            <label style={labelStyle}>Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@example.com" disabled={loading} style={inputStyle} />
           </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-
-          {/* Submit Button */}
+          <div>
+            <label style={labelStyle}>Password</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" disabled={loading} style={inputStyle} />
+          </div>
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-coral-500 hover:bg-coral-600 disabled:bg-coral-300 text-white font-semibold py-4 rounded-full shadow-lg transition-all transform hover:scale-105 disabled:transform-none"
+            style={{
+              width: '100%',
+              padding: '16px',
+              background: loading ? '#E8DDD0' : '#C4714A',
+              color: loading ? '#A09080' : '#FAF6EF',
+              fontSize: '16px',
+              fontWeight: 600,
+              borderRadius: '14px',
+              border: 'none',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              marginTop: '4px',
+            }}
           >
-            {loading ? 'Creating Account...' : 'Create Account'}
+            {loading ? 'Creating your account…' : 'Create account'}
           </button>
-        </div>
-      </form>
+        </form>
+      </div>
 
-      {/* Sign In Link */}
-      <p className="text-gray-600 text-sm mt-6">
+      {/* Footer */}
+      <p style={{ fontSize: '14px', color: '#A09080', textAlign: 'center' }}>
         Already have an account?{' '}
-        <a href="/login" className="text-coral-500 hover:text-coral-600 font-semibold">
-          Sign In
-        </a>
+        <Link href="/login" style={{ color: '#C4714A', fontWeight: 500, textDecoration: 'none' }}>
+          Sign in
+        </Link>
       </p>
     </div>
   )

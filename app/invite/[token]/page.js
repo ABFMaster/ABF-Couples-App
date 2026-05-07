@@ -35,21 +35,19 @@ export default function InvitePreviewPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F7F4EF] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-[#E8614D] border-t-transparent" />
+      <div style={{ minHeight: '100dvh', background: '#FAF6EF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid #E8DDD0', borderTopColor: '#C4714A', animation: 'spin 0.8s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
       </div>
     )
   }
 
   if (notFound) {
     return (
-      <div className="min-h-screen bg-[#F7F4EF] flex items-center justify-center px-6">
-        <div className="text-center max-w-sm">
-          <p className="text-[18px] text-neutral-700 mb-2"
-             style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-            This link has expired
-          </p>
-          <p className="text-[14px] text-neutral-400">Ask your partner to send a new one.</p>
+      <div style={{ minHeight: '100dvh', background: '#FAF6EF', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px', fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
+        <div style={{ textAlign: 'center', maxWidth: '280px' }}>
+          <p style={{ fontFamily: 'Georgia, serif', fontSize: '20px', color: '#1C1208', marginBottom: '8px', fontWeight: 400 }}>This link has expired.</p>
+          <p style={{ fontSize: '14px', color: '#A09080' }}>Ask your partner to send a new one.</p>
         </div>
       </div>
     )
@@ -59,48 +57,43 @@ export default function InvitePreviewPage() {
   const firstName = senderName.split(' ')[0]
 
   return (
-    <div className="min-h-screen bg-[#F7F4EF]">
-      <div className="px-6 pt-12 pb-16 max-w-md mx-auto space-y-6">
+    <div style={{ minHeight: '100dvh', background: '#FAF6EF', fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
+      <div style={{ padding: '48px 32px 48px', maxWidth: '400px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-        {/* Hero card — purple gradient */}
-        <div className="bg-gradient-to-br from-[#252048] via-[#3E3585] to-[#6B4A72] rounded-2xl p-6 relative overflow-hidden">
-          <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-[#E8614D]/10 pointer-events-none" />
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-2 h-2 rounded-full bg-[#F2A090] animate-pulse" />
-              <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-white/40">From {firstName}</span>
-            </div>
-
-            {invite.prompt && (
-              <p className="text-white text-[18px] leading-[1.45] mb-4"
-                 style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-                {invite.prompt}
-              </p>
-            )}
-
-            {invite.reaction && (
-              <div className="flex items-center gap-3 mt-2">
-                <span className="px-4 py-2 rounded-full text-[13px] font-semibold bg-[#E8614D] text-white">
-                  {invite.reaction}
-                </span>
-                {invite.note && (
-                  <span className="text-white/60 text-[13px]">— {invite.note}</span>
-                )}
-              </div>
-            )}
+        {/* Wordmark */}
+        <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+          <div style={{ display: 'inline-block', background: '#C4714A', borderRadius: '16px', padding: '10px 20px' }}>
+            <p style={{ fontSize: '12px', letterSpacing: '0.2em', color: '#FAF6EF', fontWeight: 600, margin: 0 }}>ABF</p>
           </div>
         </div>
 
-        {/* Framing copy */}
-        <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm p-6 space-y-3">
-          <p className="text-[20px] text-neutral-900 leading-snug"
-             style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}>
-            {firstName} is thinking about you
+        {/* Hero — sender's spark moment */}
+        {invite.prompt && (
+          <div style={{ background: '#1C1208', borderRadius: '20px', padding: '24px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '16px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C4714A' }} />
+              <p style={{ fontSize: '10px', letterSpacing: '0.16em', color: '#C4714A', textTransform: 'uppercase', margin: 0, fontWeight: 600 }}>From {firstName}</p>
+            </div>
+            <p style={{ fontFamily: 'Georgia, serif', fontSize: '18px', color: '#F5ECD7', lineHeight: 1.5, margin: '0 0 16px', fontWeight: 400 }}>
+              "{invite.prompt}"
+            </p>
+            {invite.reaction && (
+              <div style={{ display: 'inline-block', background: '#C4714A', borderRadius: '20px', padding: '6px 14px' }}>
+                <p style={{ fontSize: '13px', color: '#FAF6EF', fontWeight: 500, margin: 0 }}>{invite.reaction}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Framing */}
+        <div style={{ background: 'white', borderRadius: '16px', border: '0.5px solid #EDE5D8', padding: '24px' }}>
+          <p style={{ fontFamily: 'Georgia, serif', fontSize: '20px', color: '#1C1208', lineHeight: 1.4, margin: '0 0 10px', fontWeight: 400 }}>
+            {firstName} is thinking about you.
           </p>
-          <p className="text-[15px] text-neutral-500 leading-relaxed">
-            ABF helps couples stay connected with daily reflections, shared goals, and a relationship coach who knows you both.
+          <p style={{ fontSize: '14px', color: '#7A6A54', lineHeight: 1.6, margin: '0 0 8px' }}>
+            ABF is a relationship app that gets smarter about your specific relationship over time. Daily sparks, games, and an AI guide who knows you both.
           </p>
-          <p className="text-[14px] text-neutral-400">
+          <p style={{ fontSize: '13px', color: '#A09080', margin: 0 }}>
             Join {firstName} — your profiles link automatically.
           </p>
         </div>
@@ -108,15 +101,14 @@ export default function InvitePreviewPage() {
         {/* CTA */}
         <button
           onClick={() => router.push('/onboarding')}
-          className="w-full py-4 rounded-2xl bg-[#E8614D] text-white text-[16px] font-semibold text-center active:scale-[0.98] transition-transform"
+          style={{ width: '100%', padding: '16px', background: '#C4714A', color: '#FAF6EF', fontSize: '16px', fontWeight: 600, borderRadius: '14px', border: 'none', cursor: 'pointer' }}
         >
           Join {firstName} on ABF
         </button>
 
-        {/* Already have account */}
         <button
           onClick={() => router.push('/login')}
-          className="w-full text-center text-[14px] text-neutral-400 py-2"
+          style={{ width: '100%', padding: '12px', background: 'transparent', color: '#A09080', fontSize: '14px', border: 'none', cursor: 'pointer' }}
         >
           Already have an account? Sign in
         </button>

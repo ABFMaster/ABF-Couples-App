@@ -7,35 +7,18 @@ import Link from 'next/link'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  })
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
-    setError('') // Clear error when user types
-  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password
-      })
-
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
-
-      // Success - redirect to connect page
       router.push('/connect')
     } catch (err) {
       setError(err.message || 'Failed to sign in')
@@ -44,88 +27,100 @@ export default function LoginPage() {
     }
   }
 
+  const inputStyle = {
+    width: '100%',
+    padding: '14px 16px',
+    background: 'white',
+    border: '0.5px solid #E8DDD0',
+    borderRadius: '12px',
+    fontSize: '15px',
+    color: '#1C1208',
+    outline: 'none',
+    boxSizing: 'border-box',
+    fontFamily: "'DM Sans', -apple-system, sans-serif",
+  }
+
+  const labelStyle = {
+    fontSize: '12px',
+    fontWeight: 600,
+    color: '#7A6A54',
+    letterSpacing: '0.04em',
+    marginBottom: '6px',
+    display: 'block',
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cream-50 to-cream-100 flex flex-col items-center justify-center p-4">
-      {/* Logo Section */}
-      <div className="mb-8 text-center">
-        <div className="inline-block bg-gradient-to-r from-coral-400 to-coral-500 text-white rounded-2xl px-8 py-4 shadow-lg mb-4">
-          <h1 className="text-4xl font-bold tracking-wider">ABF</h1>
-          <p className="text-xs tracking-wide opacity-90">ALWAYS BE FLIRTING</p>
-        </div>
+    <div style={{
+      minHeight: '100dvh',
+      background: '#FAF6EF',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '60px 32px 48px',
+      fontFamily: "'DM Sans', -apple-system, sans-serif",
+    }}>
+
+      {/* Wordmark */}
+      <div style={{ textAlign: 'center' }}>
+        <Link href="/" style={{ textDecoration: 'none' }}>
+          <div style={{ display: 'inline-block', background: '#C4714A', borderRadius: '16px', padding: '12px 24px', marginBottom: '8px' }}>
+            <p style={{ fontSize: '13px', letterSpacing: '0.2em', color: '#FAF6EF', fontWeight: 600, margin: 0 }}>ABF</p>
+          </div>
+        </Link>
       </div>
 
-      {/* Login Form Card */}
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
-        <h2 className="text-2xl font-bold text-coral-600 mb-2 text-center">
-          Welcome Back! 💕
-        </h2>
-        <p className="text-gray-600 text-center mb-6">
-          Sign in to continue your journey
+      {/* Form */}
+      <div style={{ width: '100%', maxWidth: '320px' }}>
+        <h1 style={{ fontFamily: 'Georgia, serif', fontSize: '26px', fontWeight: 400, color: '#1C1208', margin: '0 0 8px', textAlign: 'center' }}>
+          Welcome back.
+        </h1>
+        <p style={{ fontSize: '14px', color: '#A09080', textAlign: 'center', margin: '0 0 32px' }}>
+          Pick up where you left off.
         </p>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4">
+          <div style={{ background: '#FFF0ED', border: '0.5px solid #E8C8B8', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: '#C4714A' }}>
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-coral-500 focus:border-transparent"
-              placeholder="you@example.com"
-              disabled={loading}
-            />
+            <label style={labelStyle}>Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@example.com" disabled={loading} style={inputStyle} />
           </div>
-
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-coral-500 focus:border-transparent"
-              placeholder="Enter your password"
-              disabled={loading}
-            />
+            <label style={labelStyle}>Password</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" disabled={loading} style={inputStyle} />
           </div>
-
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-coral-500 hover:bg-coral-600 text-white font-semibold py-3 px-8 rounded-lg shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            style={{
+              width: '100%',
+              padding: '16px',
+              background: loading ? '#E8DDD0' : '#C4714A',
+              color: loading ? '#A09080' : '#FAF6EF',
+              fontSize: '16px',
+              fontWeight: 600,
+              borderRadius: '14px',
+              border: 'none',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              marginTop: '4px',
+            }}
           >
-            {loading ? 'Signing In...' : 'Sign In'}
+            {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-gray-600">
-            Don't have an account?{' '}
-            <Link href="/signup" className="text-coral-500 hover:text-coral-600 font-semibold">
-              Sign Up
-            </Link>
-          </p>
-        </div>
       </div>
 
       {/* Footer */}
-      <p className="text-gray-400 text-sm mt-8">
-        Keep the spark alive with ABF
+      <p style={{ fontSize: '14px', color: '#A09080', textAlign: 'center' }}>
+        New here?{' '}
+        <Link href="/signup" style={{ color: '#C4714A', fontWeight: 500, textDecoration: 'none' }}>
+          Get started
+        </Link>
       </p>
     </div>
   )
