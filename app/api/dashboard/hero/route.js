@@ -103,6 +103,7 @@ export async function GET(request) {
         .select('id, title, date_time, status')
         .eq('couple_id', coupleId)
         .in('status', ['planned', 'approved'])
+        .neq('status', 'pending_delete')
         .gte('date_time', nowIso)
         .order('date_time', { ascending: true })
         .limit(5),

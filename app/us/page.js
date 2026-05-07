@@ -120,6 +120,7 @@ export default function UsPage() {
         .select('id, title, date_time')
         .eq('couple_id', cid)
         .in('status', ['planned', 'approved'])
+        .neq('status', 'pending_delete')
         .gte('date_time', new Date().toISOString())
         .order('date_time', { ascending: true })
         .limit(1)

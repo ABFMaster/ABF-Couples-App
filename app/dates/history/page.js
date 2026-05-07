@@ -42,7 +42,7 @@ export default function DateHistoryPage() {
     const now = new Date().toISOString()
 
     const [{ data: customDates }, { data: datePlans }] = await Promise.all([
-      supabase.from('custom_dates').select('id, title, date_time, created_at, status, user1_rating, user2_rating, stops').eq('couple_id', cid).order('created_at', { ascending: false }).limit(50),
+      supabase.from('custom_dates').select('id, title, date_time, created_at, status, user1_rating, user2_rating, stops').eq('couple_id', cid).neq('status', 'pending_delete').order('created_at', { ascending: false }).limit(50),
       supabase.from('date_plans').select('id, title, date_time, status, rating').eq('couple_id', cid).order('date_time', { ascending: false }).limit(50),
     ])
 
