@@ -213,6 +213,17 @@ export default function SparkCard({
             {inviteSent ? '✓ Invited' : `Invite ${partnerName}`}
           </button>
         )}
+        {mine?.nora_solo_insight && (
+          <div style={{ marginTop: '16px', paddingLeft: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C1440E', flexShrink: 0 }} />
+              <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#A0522D', textTransform: 'uppercase', margin: 0 }}>Nora</p>
+            </div>
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#5C3D2E', lineHeight: 1.7, fontStyle: 'italic', margin: 0 }}>
+              {mine.nora_solo_insight}
+            </p>
+          </div>
+        )}
       </div>
     )
   }

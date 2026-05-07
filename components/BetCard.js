@@ -291,6 +291,18 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
           <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#F5ECD7', lineHeight: 1.45 }}>{localMine?.prediction}</p>
         </div>
 
+        {localMine?.nora_solo_insight && (
+          <div style={{ marginBottom: '20px', paddingLeft: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#D4A853', flexShrink: 0 }} />
+              <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#D4A853', textTransform: 'uppercase', margin: 0 }}>Nora</p>
+            </div>
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#C4B49A', lineHeight: 1.7, fontStyle: 'italic', margin: 0 }}>
+              {localMine.nora_solo_insight}
+            </p>
+          </div>
+        )}
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div className="animate-pulse" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#5A4A38', flexShrink: 0 }} />
           <p style={{ fontSize: '13px', color: '#5A4A38' }}>{partnerName} is thinking…</p>

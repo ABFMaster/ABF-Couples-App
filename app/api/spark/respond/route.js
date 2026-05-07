@@ -94,6 +94,27 @@ export async function POST(request) {
 
     const bothAnswered = !!(partnerResponse?.responded_at)
 
+    // Solo Nora insight — always generated, speaks only to this user about themselves
+    const soloPrompt = `The Spark question was: "${sparkRow.question}"
+
+${currentUserName} answered: "${responseText}"
+
+You are Nora — a world-class couples therapist. Read beneath this answer. What does the way ${currentUserName} answered — not just what they said, but how they said it, what they avoided, what they reached for — reveal about what love feels like to them or what they fear?
+
+Write exactly one sentence, maximum 18 words. Speak directly to ${currentUserName} using "you". Be specific to this answer only. Never generic. Never start with "Your answer", "You said", or "That's". The best observations name something the person didn't quite say out loud.`
+
+    const soloInsight = await noraReact(soloPrompt, {
+      route: 'spark/solo-insight',
+      context: 'daily',
+      maxTokens: 60,
+    })
+
+    await supabase
+      .from('spark_responses')
+      .update({ nora_solo_insight: soloInsight })
+      .eq('spark_id', sparkId)
+      .eq('user_id', user.id)
+
     // Step 10: Generate Nora reaction if both have answered
     if (bothAnswered) {
       // Step 10a: Fetch couple profile context
@@ -200,7 +221,7 @@ You are speaking directly to ${partnerName}. React to both answers but speak TO 
         .upsert({ couple_id: coupleId, memory_summary: updatedSummary }, { onConflict: 'couple_id' })
     }
 
-    return NextResponse.json({ success: true, bothAnswered, partnerName })
+    return NextResponse.json({ success: true, bothAnswered, partnerName, noraSoloInsight: soloInsight })
   } catch (err) {
     console.error('[spark/respond] Error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
