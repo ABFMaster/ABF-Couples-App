@@ -985,4 +985,88 @@ git push            # Vercel auto-deploys on push to main
 - Two event sources: Ticketmaster (mainstream) + Eventbrite (community/niche) — pending Eventbrite evaluation
 - Consumer Key = API key for Ticketmaster Discovery API
 - In-date mode: manual "We're here" tap advances stops, fires conversation prompt — geolocation trigger is named upgrade path
+
+---
+
+## Self-Review 2026-05-06 / 2026-05-07
+
+### Week 1 — Foundation Complete
+- Beta invite gate — NEXT_PUBLIC_BETA_INVITE_CODE required on signup, wrong code blocked with clear message
+- In-app feedback button — global component in layout, bottom-right pill, three types (bug/suggestion/positive), writes to feedback table with user_id, couple_id, type, message, page_url
+- Data deletion flow — App Store compliant cascade delete via /api/account/delete, confirmation sheet in Profile, routes to login on success
+- Places API New migration — nearbysearch/json deprecated endpoint replaced with searchNearby POST in both GET and POST handlers, formatPlaceForDisplay updated for new field shapes
+- user1_notes Partner 2 label — data fix via SQL replace, not a code bug
+- nora_calls RLS — had RLS enabled but 0 policies, added service_role full access policy
+- All push/send callers fixed — 17 callers audited, 10 missing Authorization headers fixed, dead notify.js deleted, rabbit-hole client-side caller uses user session token
+- Cron push fix — user1.id was undefined, correct field is user1.user_id (regression from March 24 commit that changed profile query shape without updating downstream callers)
+- force-dynamic on cron route — was compiling as static page, returning cached 200 without executing code
+
+### Week 2 — Reveal Polish Complete
+- Spark reveal timing — partner card at 300ms, your card at 1800ms, Nora at 3200ms, pills at 5000ms, 900ms cubic ease
+- Bet reveal timing — Nora at 1500ms after all cards flip, pills at 3500ms, 800ms cubic ease
+- Spark reveal visual pass — partner answer as hero card (FFF8F4 background, 18px serif), dialogue connector line between cards, Nora as presence not card, reaction buttons fill on active
+- Bet reveal visual pass — static Nora dot (removed animate-pulse), larger reaction text 15px, section labels removed
+- Copy audit — guilt/pressure language removed: SparkCard State B reframed to "Your answer is in. Nora is holding it.", Spark push copy changed to "The Spark is ready.", weekly reflection nudge button removed entirely
+
+### Week 3 — Engagement Complete
+- Personalized Nora re-engagement push — fires Fri/Sat/Sun when couple hasn't played in 7+ days, Nora generates personalized message using display_name and couple_notes structured_facts
+- Peer-to-peer Spark invite — optional "Invite [name]" text link in SparkCard State B, sends push to partner using user's session token, shows "✓ Invited" after tap
+- Push notification copy pass — Bet: "The Bet is ready. Do you know them?", Rabbit Hole: "Nora found something. Your Rabbit Hole has an ending."
+
+### Nora Memory Quality Test
+- Built scripts/test-nora-memory.mjs — 10 synthetic profiles, 8 signals each, 4-dimension evaluation rubric
+- Results: 90% pass rate, 9.7/12 baseline (Matt & Cass), beta bar 7.7/12
+- Only failure: Low Signal Couple (5.3/12) — Nora over-infers from minimal data
+- Fix: SIGNAL DEPTH AWARENESS guard added to buildPersonNotesPrompt in lib/nora-memory.js
+- Notable scores: Intellectual Deflectors 9.7, Fresh Start 10.3, Contradiction 9.7
+- Run again after 2 weeks of real usage to measure improvement
+
+### Solo User Arc — Foundation
+- nora_solo_insight column added to spark_responses and bet_responses tables
+- spark/respond generates individual Nora observation about just the user's answer, stored in nora_solo_insight
+- bet/respond same pattern
+- SparkCard State B displays solo insight below invite button with Nora dot + italic serif styling
+- BetCard State B displays solo insight between prediction cards and partner thinking indicator
+- Prompt designed to read beneath the answer — what the way they answered reveals, not just what they said
+
+### Onboarding Visual Pass
+- app/page.js — new landing: three-zone layout, Georgia serif headline "The relationship that keeps getting better.", honest "Invite only — currently in private beta." copy, no false social proof
+- app/login/page.js — warm cream, serif "Welcome back.", clean inline-style form
+- app/signup/page.js — "You were invited." headline, invite code field leads with letter-spacing and weight to feel intentional, placeholder "What should Nora call you?" for name field
+- app/invite/[token]/page.js — Partner 2's first impression: dark hero card with sender's Spark prompt, warm framing card, matches full aesthetic
+
+### Pre-flight Checks — All Passed
+- Invite gate: wrong code blocked, correct code proceeds ✅
+- Feedback button: writes to Supabase with full context ✅
+- Data deletion: cascades completely, routes to login ✅
+
+### Process Failures Logged
+- When auth added to push/send, callers were not audited — 10 routes broken for weeks
+- When profile query shape changed (March 24), downstream user1.id references not updated — cron push broken for 6+ weeks
+- Root Cause Rule violation both times: data shape changes must grep all consumers and update atomically in same commit
+
+### Known Issues
+- Push notifications 3am delivery: user1.user_id fix deployed, tomorrow morning is the real test
+- Cron diagnostic logs still in place — remove after confirmed working
+- GoTrueClient multiple instances — parked, console warning only
+- Supabase security alert — all tables have RLS, alert likely stale from before feedback table policy was added
+
+### Pages Needing Design Pass (identified, not yet done)
+- app/onboarding/page.js and app/onboarding/welcome/page.js
+- app/connect/page.js
+- app/dates/[id]/page.js
+- Potentially dead pages: mixtape, timeline, partner-insights, learn, results, settings
+
+### Next Session Priorities
+1. Check 3am push notification result
+2. Onboarding flow pages — onboarding/page.js, onboarding/welcome/page.js, connect/page.js
+3. Dead page audit — identify and delete unused pages
+4. dates/[id] visual pass
+5. Run Nora memory test again after week of real usage
+6. Play every game mode end to end with Cass before inviting beta couples
+
+### Beta Readiness Assessment
+Core loop functional. Nora memory producing specific, predictive output at 9.7/12 quality. Push notifications pending confirmation. Onboarding aesthetic mostly complete. Data deletion compliant. Feedback capture live.
+Remaining before first beta invite: onboarding flow pages, connect page, dead page cleanup, one full end-to-end test session with Cass.
+Estimated: 1-2 more sessions before beta invites go out.
 - nearbysearch/json migration to Places API (New) — deferred, works now but on deprecation watchlist
