@@ -94,6 +94,7 @@ export default function DatesPage() {
       .from('custom_dates')
       .select('id, title, date_time, created_at, status, user1_rating, user2_rating, stops')
       .eq('couple_id', cid)
+      .neq('status', 'pending_delete')
       .order('created_at', { ascending: false })
       .limit(6)
 
