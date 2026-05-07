@@ -21,10 +21,7 @@ async function sendPush(userId, title, body, url) {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
       body: JSON.stringify({ userId, title, body, url }),
     })
-    const result = await res.json()
-    console.log('[sendPush] result:', JSON.stringify(result))
-  } catch (err) {
-    console.error('[sendPush] error:', err)
+  } catch {
   }
 }
 
@@ -79,7 +76,6 @@ async function processDailyContent(couple, user1, user2) {
   const todayStr = getTodayInTimezone(timezone)
 
   if (hour !== 3) return
-  console.log('[cron] processing couple, hour:', hour, 'day:', day, 'timezone:', timezone)
   if (!todayStr) return
 
   const { data: noraMemory } = await supabase
@@ -120,10 +116,8 @@ async function processDailyContent(couple, user1, user2) {
       spark_date: todayStr,
     })
 
-    console.log('[cron] sending spark push to:', user1.user_id, user2.user_id)
     await sendPush(user1.user_id, 'The Spark', 'The Spark is ready.', '/dashboard')
     await sendPush(user2.user_id, 'The Spark', 'The Spark is ready.', '/dashboard')
-    console.log('[cron] push sent')
   }
 
   if (BET_DAYS.includes(day)) {
@@ -154,10 +148,8 @@ async function processDailyContent(couple, user1, user2) {
       bet_date: todayStr,
     })
 
-    console.log('[cron] sending bet push to:', user1.user_id, user2.user_id)
     await sendPush(user1.user_id, 'The Bet', "The Bet is ready. Do you know them?", '/dashboard')
     await sendPush(user2.user_id, 'The Bet', "The Bet is ready. Do you know them?", '/dashboard')
-    console.log('[cron] push sent')
   }
 
   // Re-engagement push — only on days with no other push (Fri, Sat, Sun)
@@ -191,8 +183,7 @@ async function sendReengagementPush(couple, user1, user2, noraMemory) {
     const body = await noraGenerate(prompt, { route: 'cron/scheduled-tasks', maxTokens: 60 })
     await sendPush(user1.user_id, 'ABF', body.trim(), '/game-room')
     await sendPush(user2.user_id, 'ABF', body.trim(), '/game-room')
-  } catch (err) {
-    console.error('[cron] sendReengagementPush error:', err)
+  } catch {
   }
 }
 
@@ -265,8 +256,7 @@ Respond in this exact JSON format:
       const raw = response.replace(/```json|```/g, '').trim()
       try {
         parsed = JSON.parse(raw)
-      } catch (e) {
-        console.error('[cron/scheduled-tasks] JSON parse failed:', raw)
+      } catch {
         return Response.json({ error: 'Failed to parse Nora response' }, { status: 500 })
       }
 
@@ -287,7 +277,6 @@ Respond in this exact JSON format:
 }
 
 export async function GET(request) {
-  console.log('[cron] handler started', new Date().toISOString())
   const authHeader = request.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
@@ -298,7 +287,6 @@ export async function GET(request) {
       .from('couples')
       .select('id, created_at, user1_id, user2_id')
       .not('user2_id', 'is', null)
-    console.log('[cron] couples found:', couples?.length)
 
     if (!couples?.length) {
       return Response.json({ ok: true, processed: 0 })

@@ -16,12 +16,10 @@ function ConnectContent() {
   const [submitting, setSubmitting] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  // Check authentication and couple status on mount
   useEffect(() => {
     checkAuthAndCoupleStatus()
   }, [])
 
-  // Pre-fill code from URL param ?code=XXXXXX
   useEffect(() => {
     const urlCode = searchParams.get('code')
     if (urlCode) {
@@ -36,7 +34,6 @@ function ConnectContent() {
 
   const checkAuthAndCoupleStatus = async () => {
     try {
-      // Check if user is authenticated
       const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {
@@ -46,25 +43,21 @@ function ConnectContent() {
 
       setUser(user)
 
-      // Check if user is already in a couple
-      const { data: couples, error } = await supabase
+      const { data: couples } = await supabase
         .from('couples')
         .select('*')
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
         .maybeSingle()
 
       if (couples && couples.connected_at) {
-        // User is already connected, redirect to dashboard
         router.push('/dashboard')
         return
       }
 
-      // If user created a code but hasn't connected yet, show it
       if (couples && couples.user1_id === user.id && !couples.user2_id) {
         setConnectCode(couples.connect_code)
         setMode('create')
       }
-
     } catch (err) {
       console.error('Error checking status:', err)
     } finally {
@@ -73,7 +66,7 @@ function ConnectContent() {
   }
 
   const generateConnectCode = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // Removed similar looking chars
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
     let code = ''
     for (let i = 0; i < 6; i++) {
       code += chars.charAt(Math.floor(Math.random() * chars.length))
@@ -88,7 +81,6 @@ function ConnectContent() {
     try {
       const code = generateConnectCode()
 
-      // Check if code already exists (unlikely but possible)
       const { data: existing } = await supabase
         .from('couples')
         .select('connect_code')
@@ -96,23 +88,17 @@ function ConnectContent() {
         .maybeSingle()
 
       if (existing) {
-        // Try again with a new code
         handleCreateCode()
         return
       }
 
-      // Insert new couple record with connect code
       const { error } = await supabase
         .from('couples')
-        .insert({
-          user1_id: user.id,
-          connect_code: code
-        })
+        .insert({ user1_id: user.id, connect_code: code })
 
       if (error) throw error
 
       setConnectCode(code)
-      setMode('create')
     } catch (err) {
       setError(err.message || 'Failed to create connect code')
     } finally {
@@ -128,41 +114,25 @@ function ConnectContent() {
     try {
       const code = inputCode.toUpperCase().trim()
 
-      if (code.length !== 6) {
-        throw new Error('Code must be 6 characters')
-      }
+      if (code.length !== 6) throw new Error('Code must be 6 characters')
 
-      // Find the couple with this connect code
       const { data: couple, error: findError } = await supabase
         .from('couples')
         .select('*')
         .eq('connect_code', code)
         .maybeSingle()
 
-      if (findError || !couple) {
-        throw new Error('Invalid connect code')
-      }
+      if (findError || !couple) throw new Error('Invalid connect code')
+      if (couple.user2_id) throw new Error('This code has already been used')
+      if (couple.user1_id === user.id) throw new Error('You cannot connect to your own code')
 
-      if (couple.user2_id) {
-        throw new Error('This code has already been used')
-      }
-
-      if (couple.user1_id === user.id) {
-        throw new Error('You cannot connect to your own code')
-      }
-
-      // Update the couple record with user2_id and connected_at
       const { error: updateError } = await supabase
         .from('couples')
-        .update({
-          user2_id: user.id,
-          connected_at: new Date().toISOString()
-        })
+        .update({ user2_id: user.id, connected_at: new Date().toISOString() })
         .eq('id', couple.id)
 
       if (updateError) throw updateError
 
-      // Success! Redirect to dashboard
       router.push('/dashboard')
     } catch (err) {
       setError(err.message || 'Failed to connect')
@@ -176,9 +146,7 @@ function ConnectContent() {
       await navigator.clipboard.writeText(connectCode)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      console.error('Failed to copy:', err)
-    }
+    } catch {}
   }
 
   const handleInputChange = (e) => {
@@ -189,147 +157,215 @@ function ConnectContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-cream-50 to-cream-100 flex items-center justify-center">
-        <div className="text-coral-500 text-xl">Loading...</div>
+      <div style={{ minHeight: '100dvh', background: '#FAF6EF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid #E8DDD0', borderTopColor: '#C4714A', animation: 'spin 0.8s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cream-50 to-cream-100 flex flex-col items-center justify-center p-4">
-      {/* Logo */}
-      <div className="mb-8 text-center">
-        <div className="inline-block bg-gradient-to-r from-coral-400 to-coral-500 text-white rounded-2xl px-8 py-4 shadow-lg mb-4">
-          <h1 className="text-4xl font-bold tracking-wider">ABF</h1>
-          <p className="text-xs tracking-wide opacity-90">ALWAYS BE FLIRTING</p>
-        </div>
-      </div>
+    <div style={{ minHeight: '100dvh', background: '#FAF6EF', fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
+      <div style={{ padding: '48px 32px 64px', maxWidth: '400px', margin: '0 auto' }}>
 
-      {/* Main Card */}
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
-        <h2 className="text-2xl font-bold text-coral-600 mb-2 text-center">
-          Connect with Your Partner 💕
-        </h2>
-        <p className="text-gray-600 text-center mb-6">
-          Create a code or enter your partner's code to connect
-        </p>
+        {/* Wordmark */}
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <div style={{ display: 'inline-block', background: '#C4714A', borderRadius: '16px', padding: '10px 20px' }}>
+            <p style={{ fontSize: '12px', letterSpacing: '0.2em', color: '#FAF6EF', fontWeight: 600, margin: 0 }}>ABF</p>
+          </div>
+        </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4">
+          <div style={{ background: '#FFF0ED', border: '0.5px solid #E8C8B8', borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', fontSize: '13px', color: '#C4714A' }}>
             {error}
           </div>
         )}
 
-        {/* Mode Selection */}
+        {/* ── Mode selection ─────────────────────────────────────────────── */}
         {!mode && (
-          <div className="space-y-4">
-            <button
-              onClick={() => setMode('create')}
-              className="w-full bg-coral-500 hover:bg-coral-600 text-white font-semibold py-4 px-6 rounded-lg shadow-lg transition-all transform hover:scale-105"
-            >
-              Create Connect Code
-            </button>
-            <button
-              onClick={() => setMode('enter')}
-              className="w-full bg-transparent border-2 border-coral-500 text-coral-500 hover:bg-cream-50 font-semibold py-4 px-6 rounded-lg transition-all"
-            >
-              I Have a Code
-            </button>
-            <div className="pt-4 border-t border-gray-100">
+          <div>
+            <h1 style={{ fontFamily: 'Georgia, serif', fontSize: '26px', fontWeight: 400, color: '#1C1208', margin: '0 0 8px' }}>
+              Connect with your partner.
+            </h1>
+            <p style={{ fontSize: '14px', color: '#A09080', margin: '0 0 32px', lineHeight: 1.5 }}>
+              One of you creates a code, the other enters it. Takes ten seconds.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                onClick={() => setMode('create')}
+                style={{ width: '100%', padding: '16px', background: '#C4714A', color: '#FAF6EF', fontSize: '16px', fontWeight: 600, borderRadius: '14px', border: 'none', cursor: 'pointer' }}
+              >
+                Share a code
+              </button>
+              <button
+                onClick={() => setMode('enter')}
+                style={{ width: '100%', padding: '16px', background: 'white', border: '0.5px solid #E8DDD0', color: '#5C3D2E', fontSize: '16px', fontWeight: 600, borderRadius: '14px', cursor: 'pointer' }}
+              >
+                I have a code
+              </button>
               <button
                 onClick={() => router.push('/dashboard')}
-                className="w-full border-2 border-[#E8614D] text-[#E8614D] hover:bg-cream-50 font-semibold py-3 px-6 rounded-lg transition-all"
+                style={{ width: '100%', marginTop: '4px', padding: '12px', background: 'transparent', border: 'none', color: '#A09080', fontSize: '14px', cursor: 'pointer' }}
               >
-                Explore First
+                Skip for now
               </button>
-              <p className="text-xs text-gray-400 mt-2 text-center">
-                You can connect with your partner later
-              </p>
             </div>
           </div>
         )}
 
-        {/* Create Code Mode */}
+        {/* ── Create mode — generate ─────────────────────────────────────── */}
         {mode === 'create' && !connectCode && (
           <div>
+            <h1 style={{ fontFamily: 'Georgia, serif', fontSize: '26px', fontWeight: 400, color: '#1C1208', margin: '0 0 8px' }}>
+              Generate a code.
+            </h1>
+            <p style={{ fontSize: '14px', color: '#A09080', margin: '0 0 32px', lineHeight: 1.5 }}>
+              Your partner will enter this to link your profiles.
+            </p>
+
             <button
               onClick={handleCreateCode}
               disabled={submitting}
-              className="w-full bg-coral-500 hover:bg-coral-600 text-white font-semibold py-4 px-6 rounded-lg shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              style={{
+                width: '100%',
+                padding: '16px',
+                background: submitting ? '#E8DDD0' : '#C4714A',
+                color: submitting ? '#A09080' : '#FAF6EF',
+                fontSize: '16px',
+                fontWeight: 600,
+                borderRadius: '14px',
+                border: 'none',
+                cursor: submitting ? 'not-allowed' : 'pointer',
+              }}
             >
-              {submitting ? 'Generating...' : 'Generate Code'}
+              {submitting ? 'Generating…' : 'Generate code'}
             </button>
+
             <button
               onClick={() => setMode(null)}
-              className="w-full mt-3 text-gray-500 hover:text-gray-700 text-sm"
+              style={{ width: '100%', marginTop: '12px', padding: '12px', background: 'transparent', border: 'none', color: '#A09080', fontSize: '14px', cursor: 'pointer' }}
             >
               ← Back
             </button>
           </div>
         )}
 
-        {/* Show Generated Code */}
+        {/* ── Create mode — show code ────────────────────────────────────── */}
         {mode === 'create' && connectCode && (
-          <div className="text-center">
-            <p className="text-gray-600 mb-4">Share this code with your partner:</p>
-            <div className="bg-cream-50 border-2 border-coral-100 rounded-xl p-6 mb-4">
-              <div className="text-5xl font-bold text-coral-500 tracking-widest mb-4">
+          <div>
+            <h1 style={{ fontFamily: 'Georgia, serif', fontSize: '26px', fontWeight: 400, color: '#1C1208', margin: '0 0 8px' }}>
+              Here's your code.
+            </h1>
+            <p style={{ fontSize: '14px', color: '#A09080', margin: '0 0 24px', lineHeight: 1.5 }}>
+              Send this to your partner. They'll enter it on this page.
+            </p>
+
+            <div style={{ background: '#1C1208', borderRadius: '20px', padding: '32px', textAlign: 'center', marginBottom: '16px' }}>
+              <p style={{ fontSize: '10px', letterSpacing: '0.16em', color: '#C4714A', textTransform: 'uppercase', margin: '0 0 12px', fontWeight: 600 }}>Connect Code</p>
+              <p style={{ fontFamily: 'Georgia, serif', fontSize: '42px', fontWeight: 400, color: '#F5ECD7', letterSpacing: '0.15em', margin: 0 }}>
                 {connectCode}
-              </div>
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
               <button
                 onClick={handleCopyCode}
-                className="bg-coral-500 hover:bg-coral-600 text-white font-semibold py-2 px-6 rounded-lg transition-all"
+                style={{ flex: 1, padding: '14px', background: 'white', border: '0.5px solid #E8DDD0', color: '#5C3D2E', fontSize: '14px', fontWeight: 600, borderRadius: '12px', cursor: 'pointer' }}
               >
-                {copied ? '✓ Copied!' : 'Copy Code'}
+                {copied ? '✓ Copied' : 'Copy code'}
+              </button>
+              <button
+                onClick={async () => {
+                  const shareText = `Join me on ABF! Use code ${connectCode} at abf.app/connect`
+                  if (navigator.share) {
+                    try { await navigator.share({ title: 'Join me on ABF!', text: shareText }) } catch {}
+                  } else {
+                    handleCopyCode()
+                  }
+                }}
+                style={{ flex: 1, padding: '14px', background: '#C4714A', color: '#FAF6EF', fontSize: '14px', fontWeight: 600, borderRadius: '12px', border: 'none', cursor: 'pointer' }}
+              >
+                Share
               </button>
             </div>
-            <p className="text-sm text-gray-500 mb-6">
-              Your partner should use the "I Have a Code" option and enter this code
-            </p>
+
             <button
               onClick={() => router.push('/dashboard')}
-              className="w-full border-2 border-[#E8614D] text-[#E8614D] hover:bg-cream-50 font-semibold py-3 px-6 rounded-lg transition-all"
+              style={{ width: '100%', padding: '14px', background: 'transparent', border: '0.5px solid #E8DDD0', color: '#7A6A54', fontSize: '14px', fontWeight: 500, borderRadius: '12px', cursor: 'pointer' }}
             >
-              I'll Connect Later
+              Connect later
             </button>
           </div>
         )}
 
-        {/* Enter Code Mode */}
+        {/* ── Enter code mode ────────────────────────────────────────────── */}
         {mode === 'enter' && (
-          <form onSubmit={handleEnterCode}>
-            <div className="mb-4">
-              <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-2">
-                Enter Connect Code
-              </label>
+          <div>
+            <h1 style={{ fontFamily: 'Georgia, serif', fontSize: '26px', fontWeight: 400, color: '#1C1208', margin: '0 0 8px' }}>
+              Enter their code.
+            </h1>
+            <p style={{ fontSize: '14px', color: '#A09080', margin: '0 0 28px', lineHeight: 1.5 }}>
+              Ask your partner to share the code they generated.
+            </p>
+
+            <form onSubmit={handleEnterCode}>
               <input
                 type="text"
-                id="code"
                 value={inputCode}
                 onChange={handleInputChange}
                 placeholder="ABC123"
                 maxLength={6}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-coral-500 focus:border-transparent text-center text-2xl font-bold tracking-widest uppercase"
                 disabled={submitting}
                 autoFocus
+                style={{
+                  width: '100%',
+                  padding: '20px',
+                  background: 'white',
+                  border: '0.5px solid #E8DDD0',
+                  borderRadius: '16px',
+                  fontSize: '28px',
+                  fontWeight: 700,
+                  color: '#1C1208',
+                  letterSpacing: '0.2em',
+                  textAlign: 'center',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  fontFamily: "'DM Sans', -apple-system, sans-serif",
+                  marginBottom: '16px',
+                  textTransform: 'uppercase',
+                }}
               />
-            </div>
-            <button
-              type="submit"
-              disabled={submitting || inputCode.length !== 6}
-              className="w-full bg-coral-500 hover:bg-coral-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-            >
-              {submitting ? 'Connecting...' : 'Connect'}
-            </button>
+
+              <button
+                type="submit"
+                disabled={submitting || inputCode.length !== 6}
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  background: (submitting || inputCode.length !== 6) ? '#E8DDD0' : '#C4714A',
+                  color: (submitting || inputCode.length !== 6) ? '#A09080' : '#FAF6EF',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  borderRadius: '14px',
+                  border: 'none',
+                  cursor: (submitting || inputCode.length !== 6) ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {submitting ? 'Connecting…' : 'Connect'}
+              </button>
+            </form>
+
             <button
               type="button"
               onClick={() => setMode(null)}
-              className="w-full mt-3 text-gray-500 hover:text-gray-700 text-sm"
+              style={{ width: '100%', marginTop: '12px', padding: '12px', background: 'transparent', border: 'none', color: '#A09080', fontSize: '14px', cursor: 'pointer' }}
             >
               ← Back
             </button>
-          </form>
+          </div>
         )}
+
       </div>
     </div>
   )
@@ -339,8 +375,9 @@ export default function ConnectPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-gradient-to-br from-cream-50 to-cream-100 flex items-center justify-center">
-          <div className="text-coral-500 text-xl">Loading...</div>
+        <div style={{ minHeight: '100dvh', background: '#FAF6EF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid #E8DDD0', borderTopColor: '#C4714A', animation: 'spin 0.8s linear infinite' }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
       }
     >

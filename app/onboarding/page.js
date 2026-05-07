@@ -53,53 +53,27 @@ const DATE_PREFERENCES = [
 ]
 
 const CHECKIN_TIMES = [
-  { value: 'morning', label: '🌅 Morning' },
-  { value: 'afternoon', label: '☀️ Afternoon' },
-  { value: 'evening', label: '🌆 Evening' },
+  { value: 'morning', label: 'Morning' },
+  { value: 'afternoon', label: 'Afternoon' },
+  { value: 'evening', label: 'Evening' },
 ]
 
-// ── Step Indicator ─────────────────────────────────────────────────────────────
+// ── Step Dots ─────────────────────────────────────────────────────────────────
 
-function StepIndicator({ currentStep }) {
-  const steps = [
-    { num: 1, label: 'Profile' },
-    { num: 2, label: 'Assessment' },
-    { num: 3, label: 'Preferences' },
-    { num: 4, label: 'Invite' },
-  ]
-
+function StepDots({ currentStep }) {
   return (
-    <div className="flex items-center justify-center gap-2 mb-8">
-      {steps.map((step, idx) => (
-        <div key={step.num} className="flex items-center gap-2">
-          <div className="flex flex-col items-center gap-1">
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-                step.num < currentStep
-                  ? 'bg-coral-500 text-white'
-                  : step.num === currentStep
-                  ? 'bg-coral-500 text-white ring-4 ring-coral-100'
-                  : 'bg-gray-100 text-gray-400'
-              }`}
-            >
-              {step.num < currentStep ? '✓' : step.num}
-            </div>
-            <span
-              className={`text-xs font-medium ${
-                step.num === currentStep ? 'text-coral-600' : 'text-gray-400'
-              }`}
-            >
-              {step.label}
-            </span>
-          </div>
-          {idx < steps.length - 1 && (
-            <div
-              className={`h-0.5 w-8 mb-4 transition-all ${
-                step.num < currentStep ? 'bg-coral-500' : 'bg-gray-200'
-              }`}
-            />
-          )}
-        </div>
+    <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', marginBottom: '36px' }}>
+      {[1, 2, 3, 4].map(n => (
+        <div
+          key={n}
+          style={{
+            height: '6px',
+            width: n === currentStep ? '20px' : '6px',
+            borderRadius: '3px',
+            background: n <= currentStep ? '#C4714A' : '#E8DDD0',
+            transition: 'all 0.3s',
+          }}
+        />
       ))}
     </div>
   )
@@ -113,13 +87,19 @@ function Chip({ label, selected, onClick, disabled }) {
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`px-3 py-2 rounded-full text-sm font-medium transition-all ${
-        selected
-          ? 'bg-coral-500 text-white shadow-sm'
-          : disabled
-          ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
-          : 'bg-white border border-gray-200 text-gray-700 hover:border-coral-300 hover:bg-cream-50'
-      }`}
+      style={{
+        padding: '8px 14px',
+        borderRadius: '20px',
+        fontSize: '13px',
+        fontWeight: 500,
+        border: selected ? 'none' : '0.5px solid #E8DDD0',
+        background: selected ? '#C4714A' : 'white',
+        color: selected ? '#FAF6EF' : disabled ? '#C4B5A0' : '#5C3D2E',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled && !selected ? 0.5 : 1,
+        fontFamily: "'DM Sans', -apple-system, sans-serif",
+        transition: 'all 0.15s',
+      }}
     >
       {label}
     </button>
@@ -137,13 +117,46 @@ function generateConnectCode() {
   return code
 }
 
+// ── Shared styles ─────────────────────────────────────────────────────────────
+
+const inputStyle = {
+  width: '100%',
+  padding: '14px 16px',
+  background: 'white',
+  border: '0.5px solid #E8DDD0',
+  borderRadius: '12px',
+  fontSize: '15px',
+  color: '#1C1208',
+  outline: 'none',
+  boxSizing: 'border-box',
+  fontFamily: "'DM Sans', -apple-system, sans-serif",
+}
+
+const labelStyle = {
+  fontSize: '12px',
+  fontWeight: 600,
+  color: '#7A6A54',
+  letterSpacing: '0.04em',
+  marginBottom: '6px',
+  display: 'block',
+}
+
+const sectionLabelStyle = {
+  fontSize: '12px',
+  fontWeight: 600,
+  color: '#7A6A54',
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+  margin: '0 0 10px',
+}
+
 // ── Main Onboarding Component (needs useSearchParams → must be in Suspense) ───
 
 function OnboardingFlow() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const [step, setStep] = useState(null) // null = determining
+  const [step, setStep] = useState(null)
   const [user, setUser] = useState(null)
 
   // Step 1 state
@@ -181,7 +194,6 @@ function OnboardingFlow() {
       }
       setUser(authUser)
 
-      // URL param takes priority for steps 3 & 4 (returned from /assessment)
       const urlStep = parseInt(searchParams.get('step') || '0', 10)
       if (urlStep === 3 || urlStep === 4) {
         setStep(urlStep)
@@ -189,7 +201,6 @@ function OnboardingFlow() {
         return
       }
 
-      // Check assessment completion
       const { data: assessment } = await supabase
         .from('relationship_assessments')
         .select('id')
@@ -203,7 +214,6 @@ function OnboardingFlow() {
         return
       }
 
-      // Check if display_name is already set
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('display_name, partner_display_name, hobbies, date_preferences, preferred_checkin_time')
@@ -211,7 +221,6 @@ function OnboardingFlow() {
         .maybeSingle()
 
       if (profile?.display_name) {
-        // Pre-fill preferences if they exist
         setDisplayName(profile.display_name)
         setPartnerDisplayName(profile.partner_display_name || '')
         setHobbies(profile.hobbies || [])
@@ -242,7 +251,6 @@ function OnboardingFlow() {
       const uid = authUser?.id || user?.id
       if (!uid) return
 
-      // Check existing couple
       const { data: existing } = await supabase
         .from('couples')
         .select('*')
@@ -250,7 +258,6 @@ function OnboardingFlow() {
         .maybeSingle()
 
       if (existing?.connected_at) {
-        // Already connected — skip to dashboard
         router.push('/dashboard')
         return
       }
@@ -258,10 +265,7 @@ function OnboardingFlow() {
       if (existing?.connect_code) {
         setConnectCode(existing.connect_code)
       } else {
-        // Create a new couple record with a connect code
         const code = generateConnectCode()
-
-        // Check for collision (unlikely)
         const { data: collision } = await supabase
           .from('couples')
           .select('id')
@@ -306,7 +310,6 @@ function OnboardingFlow() {
 
       if (error) throw error
 
-      // Also update auth metadata
       await supabase.auth.updateUser({
         data: { display_name: displayName.trim() },
       })
@@ -347,7 +350,7 @@ function OnboardingFlow() {
     }
   }
 
-  // ── Hobby multi-select (max 3) ─────────────────────────────────────────────
+  // ── Toggle helpers ─────────────────────────────────────────────────────────
 
   const toggleHobby = (value) => {
     if (hobbies.includes(value)) {
@@ -389,75 +392,70 @@ function OnboardingFlow() {
 
   if (step === null) {
     return (
-      <div className="min-h-screen bg-cream-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent mx-auto mb-4" />
-          <p className="text-gray-500">Setting things up...</p>
-        </div>
+      <div style={{ minHeight: '100dvh', background: '#FAF6EF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid #E8DDD0', borderTopColor: '#C4714A', animation: 'spin 0.8s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
       </div>
     )
   }
 
-  // ── Shared page shell ──────────────────────────────────────────────────────
+  // ── Shared page wrapper ────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-cream-50 flex flex-col items-center justify-center px-4 py-10">
-      {/* Logo */}
-      <div className="mb-6 text-center">
-        <div className="inline-block bg-gradient-to-r from-coral-400 to-coral-500 text-white rounded-2xl px-6 py-3 shadow-lg">
-          <h1 className="text-2xl font-bold tracking-wider">ABF</h1>
-          <p className="text-xs tracking-wide opacity-90">ALWAYS BE FLIRTING</p>
-        </div>
-      </div>
+    <div style={{ minHeight: '100dvh', background: '#FAF6EF', fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
+      <div style={{ padding: '48px 32px 64px', maxWidth: '400px', margin: '0 auto' }}>
 
-      {/* Step indicator */}
-      <StepIndicator currentStep={step} />
+        {/* Wordmark — step 1 only */}
+        {step === 1 && (
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <div style={{ display: 'inline-block', background: '#C4714A', borderRadius: '16px', padding: '10px 20px' }}>
+              <p style={{ fontSize: '12px', letterSpacing: '0.2em', color: '#FAF6EF', fontWeight: 600, margin: 0 }}>ABF</p>
+            </div>
+          </div>
+        )}
 
-      {/* Card */}
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
+        <StepDots currentStep={step} />
 
-        {/* ── STEP 1: Welcome + Name ── */}
+        {/* ── STEP 1: Names ─────────────────────────────────────────────── */}
         {step === 1 && (
           <div>
-            <div className="text-center mb-6">
-              <span className="text-4xl">👋</span>
-              <h2 className="text-2xl font-bold text-gray-900 mt-3">Welcome to ABF!</h2>
-              <p className="text-gray-500 mt-1">Let's start with the basics.</p>
-            </div>
+            <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '26px', fontWeight: 400, color: '#1C1208', margin: '0 0 8px' }}>
+              What should Nora call you?
+            </h2>
+            <p style={{ fontSize: '14px', color: '#A09080', margin: '0 0 32px', lineHeight: 1.5 }}>
+              This is how your partner will see you too.
+            </p>
 
             {step1Error && (
-              <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+              <div style={{ background: '#FFF0ED', border: '0.5px solid #E8C8B8', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: '#C4714A' }}>
                 {step1Error}
               </div>
             )}
 
-            <div className="space-y-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Your name <span className="text-coral-500">*</span>
-                </label>
+                <label style={labelStyle}>Your name</label>
                 <input
                   type="text"
                   value={displayName}
                   onChange={e => setDisplayName(e.target.value)}
                   placeholder="How should we call you?"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-coral-300 focus:border-transparent"
+                  disabled={step1Saving}
                   autoFocus
                   onKeyDown={e => e.key === 'Enter' && handleStep1()}
+                  style={inputStyle}
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Partner's name <span className="text-gray-400 font-normal">(optional)</span>
-                </label>
+                <label style={labelStyle}>Partner's name <span style={{ fontWeight: 400, color: '#A09080' }}>(optional)</span></label>
                 <input
                   type="text"
                   value={partnerDisplayName}
                   onChange={e => setPartnerDisplayName(e.target.value)}
                   placeholder="What do you call them?"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-coral-300 focus:border-transparent"
+                  disabled={step1Saving}
                   onKeyDown={e => e.key === 'Enter' && handleStep1()}
+                  style={inputStyle}
                 />
               </div>
             </div>
@@ -465,83 +463,105 @@ function OnboardingFlow() {
             <button
               onClick={handleStep1}
               disabled={step1Saving || !displayName.trim()}
-              className="mt-6 w-full bg-coral-500 hover:bg-coral-600 text-white font-semibold py-3.5 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                width: '100%',
+                padding: '16px',
+                marginTop: '24px',
+                background: (step1Saving || !displayName.trim()) ? '#E8DDD0' : '#C4714A',
+                color: (step1Saving || !displayName.trim()) ? '#A09080' : '#FAF6EF',
+                fontSize: '16px',
+                fontWeight: 600,
+                borderRadius: '14px',
+                border: 'none',
+                cursor: (step1Saving || !displayName.trim()) ? 'not-allowed' : 'pointer',
+              }}
             >
-              {step1Saving ? 'Saving...' : "Let's Go →"}
+              {step1Saving ? 'Saving…' : "Let's go →"}
             </button>
           </div>
         )}
 
-        {/* ── STEP 2: Assessment intro ── */}
+        {/* ── STEP 2: Assessment ────────────────────────────────────────── */}
         {step === 2 && (
-          <div className="text-center">
-            <span className="text-4xl">💭</span>
-            <h2 className="text-2xl font-bold text-gray-900 mt-3">Tell us about yourself</h2>
-            <p className="text-gray-500 mt-2 leading-relaxed">
-              A short relationship assessment helps your AI coach give you personalized guidance.
-              It takes about 5 minutes.
+          <div>
+            <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '26px', fontWeight: 400, color: '#1C1208', margin: '0 0 8px' }}>
+              One quick read before you begin.
+            </h2>
+            <p style={{ fontSize: '14px', color: '#7A6A54', margin: '0 0 28px', lineHeight: 1.6 }}>
+              A short assessment helps Nora understand how you communicate and what you need. Takes about 5 minutes.
             </p>
 
-            <div className="mt-6 bg-cream-50 rounded-xl p-4 text-left space-y-2">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span className="text-coral-500 font-bold">✓</span> Love language insights
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span className="text-coral-500 font-bold">✓</span> Communication style profile
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <span className="text-coral-500 font-bold">✓</span> Personalized AI coach advice
-              </div>
+            <div style={{ background: 'white', borderRadius: '16px', border: '0.5px solid #EDE5D8', padding: '20px', marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {[
+                'Love language insights',
+                'Communication style profile',
+                'Personalised Nora guidance',
+              ].map(item => (
+                <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(196, 113, 74, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2 6 5 9 10 3" stroke="#C4714A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
+                  <p style={{ fontSize: '14px', color: '#5C3D2E', margin: 0 }}>{item}</p>
+                </div>
+              ))}
             </div>
 
             <button
               onClick={() => router.push('/assessment?onboarding=true')}
-              className="mt-6 w-full bg-coral-500 hover:bg-coral-600 text-white font-semibold py-3.5 rounded-xl transition-all"
+              style={{ width: '100%', padding: '16px', background: '#C4714A', color: '#FAF6EF', fontSize: '16px', fontWeight: 600, borderRadius: '14px', border: 'none', cursor: 'pointer' }}
             >
-              Start Assessment →
+              Start assessment →
             </button>
 
             <button
               onClick={() => setStep(3)}
-              className="mt-3 w-full text-gray-400 hover:text-gray-600 text-sm py-2 transition-colors"
+              style={{ width: '100%', marginTop: '12px', padding: '12px', background: 'transparent', color: '#A09080', fontSize: '14px', border: 'none', cursor: 'pointer' }}
             >
               Skip for now
             </button>
           </div>
         )}
 
-        {/* ── STEP 3: Preferences ── */}
+        {/* ── STEP 3: Preferences ───────────────────────────────────────── */}
         {step === 3 && (
           <div>
-            <div className="text-center mb-6">
-              <span className="text-4xl">❤️</span>
-              <h2 className="text-2xl font-bold text-gray-900 mt-3">Your preferences</h2>
-              <p className="text-gray-500 mt-1">Help us personalise your experience.</p>
-            </div>
+            <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '26px', fontWeight: 400, color: '#1C1208', margin: '0 0 8px' }}>
+              Tell Nora what you love.
+            </h2>
+            <p style={{ fontSize: '14px', color: '#A09080', margin: '0 0 28px', lineHeight: 1.5 }}>
+              This shapes your date suggestions and check-in timing.
+            </p>
 
             {step3Error && (
-              <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+              <div style={{ background: '#FFF0ED', border: '0.5px solid #E8C8B8', borderRadius: '10px', padding: '12px 16px', marginBottom: '16px', fontSize: '13px', color: '#C4714A' }}>
                 {step3Error}
               </div>
             )}
 
-            <div className="space-y-6">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+
               {/* Check-in time */}
               <div>
-                <p className="text-sm font-semibold text-gray-700 mb-2">
-                  Preferred check-in time
-                </p>
-                <div className="flex gap-2">
+                <p style={sectionLabelStyle}>When to check in</p>
+                <div style={{ display: 'flex', gap: '8px' }}>
                   {CHECKIN_TIMES.map(t => (
                     <button
                       key={t.value}
                       type="button"
                       onClick={() => setCheckinTime(t.value)}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                        checkinTime === t.value
-                          ? 'bg-coral-500 text-white shadow-sm'
-                          : 'bg-gray-100 text-gray-600 hover:bg-cream-100'
-                      }`}
+                      style={{
+                        flex: 1,
+                        padding: '12px 0',
+                        borderRadius: '12px',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        border: checkinTime === t.value ? 'none' : '0.5px solid #E8DDD0',
+                        background: checkinTime === t.value ? '#C4714A' : 'white',
+                        color: checkinTime === t.value ? '#FAF6EF' : '#5C3D2E',
+                        cursor: 'pointer',
+                        fontFamily: "'DM Sans', -apple-system, sans-serif",
+                        transition: 'all 0.15s',
+                      }}
                     >
                       {t.label}
                     </button>
@@ -551,11 +571,11 @@ function OnboardingFlow() {
 
               {/* Hobbies */}
               <div>
-                <p className="text-sm font-semibold text-gray-700 mb-1">
+                <p style={sectionLabelStyle}>
                   Top hobbies{' '}
-                  <span className="text-gray-400 font-normal">(pick up to 3)</span>
+                  <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: '#A09080' }}>(pick up to 3)</span>
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {HOBBIES.map(h => (
                     <Chip
                       key={h.value}
@@ -570,10 +590,8 @@ function OnboardingFlow() {
 
               {/* Date preferences */}
               <div>
-                <p className="text-sm font-semibold text-gray-700 mb-1">
-                  Date ideas you love
-                </p>
-                <div className="flex flex-wrap gap-2">
+                <p style={sectionLabelStyle}>Date ideas you love</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {DATE_PREFERENCES.map(d => (
                     <Chip
                       key={d.value}
@@ -590,9 +608,20 @@ function OnboardingFlow() {
             <button
               onClick={handleStep3}
               disabled={step3Saving}
-              className="mt-6 w-full bg-coral-500 hover:bg-coral-600 text-white font-semibold py-3.5 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                width: '100%',
+                padding: '16px',
+                marginTop: '32px',
+                background: step3Saving ? '#E8DDD0' : '#C4714A',
+                color: step3Saving ? '#A09080' : '#FAF6EF',
+                fontSize: '16px',
+                fontWeight: 600,
+                borderRadius: '14px',
+                border: 'none',
+                cursor: step3Saving ? 'not-allowed' : 'pointer',
+              }}
             >
-              {step3Saving ? 'Saving...' : 'Almost there →'}
+              {step3Saving ? 'Saving…' : 'Almost there →'}
             </button>
 
             <button
@@ -600,66 +629,67 @@ function OnboardingFlow() {
                 await prepareStep4(user)
                 setStep(4)
               }}
-              className="mt-3 w-full text-gray-400 hover:text-gray-600 text-sm py-2 transition-colors"
+              style={{ width: '100%', marginTop: '12px', padding: '12px', background: 'transparent', color: '#A09080', fontSize: '14px', border: 'none', cursor: 'pointer' }}
             >
               Skip for now
             </button>
           </div>
         )}
 
-        {/* ── STEP 4: Invite partner ── */}
+        {/* ── STEP 4: Invite partner ────────────────────────────────────── */}
         {step === 4 && (
-          <div className="text-center">
-            <span className="text-4xl">💌</span>
-            <h2 className="text-2xl font-bold text-gray-900 mt-3">Invite your partner</h2>
-            <p className="text-gray-500 mt-1">
-              Share this code so they can join you on ABF.
+          <div>
+            <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '26px', fontWeight: 400, color: '#1C1208', margin: '0 0 8px' }}>
+              Bring them in.
+            </h2>
+            <p style={{ fontSize: '14px', color: '#A09080', margin: '0 0 28px', lineHeight: 1.5 }}>
+              Share this code. They'll enter it at abf.app/connect and your profiles link automatically.
             </p>
 
             {step4Loading ? (
-              <div className="my-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-4 border-coral-500 border-t-transparent mx-auto" />
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
+                <div style={{ width: '28px', height: '28px', borderRadius: '50%', border: '2px solid #E8DDD0', borderTopColor: '#C4714A', animation: 'spin 0.8s linear infinite' }} />
+                <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
               </div>
             ) : connectCode ? (
-              <div className="mt-6">
-                <div className="bg-cream-50 border-2 border-coral-100 rounded-2xl py-6 px-4 mb-4">
-                  <p className="text-xs text-gray-400 uppercase tracking-wider mb-2 font-medium">Connect Code</p>
-                  <div className="text-5xl font-bold text-coral-500 tracking-widest">
+              <div>
+                <div style={{ background: '#1C1208', borderRadius: '20px', padding: '32px', textAlign: 'center', marginBottom: '16px' }}>
+                  <p style={{ fontSize: '10px', letterSpacing: '0.16em', color: '#C4714A', textTransform: 'uppercase', margin: '0 0 12px', fontWeight: 600 }}>Connect Code</p>
+                  <p style={{ fontFamily: 'Georgia, serif', fontSize: '42px', fontWeight: 400, color: '#F5ECD7', letterSpacing: '0.15em', margin: 0 }}>
                     {connectCode}
-                  </div>
+                  </p>
                 </div>
 
-                <div className="flex gap-3">
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '8px' }}>
                   <button
                     onClick={handleCopyCode}
-                    className="flex-1 bg-white border-2 border-coral-200 text-coral-600 hover:bg-cream-50 font-semibold py-3 rounded-xl transition-all text-sm"
+                    style={{ flex: 1, padding: '14px', background: 'white', border: '0.5px solid #E8DDD0', color: '#5C3D2E', fontSize: '14px', fontWeight: 600, borderRadius: '12px', cursor: 'pointer' }}
                   >
-                    {codeCopied ? '✓ Copied!' : 'Copy Code'}
+                    {codeCopied ? '✓ Copied' : 'Copy code'}
                   </button>
                   <button
                     onClick={handleShareCode}
-                    className="flex-1 bg-coral-500 hover:bg-coral-600 text-white font-semibold py-3 rounded-xl transition-all text-sm"
+                    style={{ flex: 1, padding: '14px', background: '#C4714A', color: '#FAF6EF', fontSize: '14px', fontWeight: 600, borderRadius: '12px', border: 'none', cursor: 'pointer' }}
                   >
-                    {codeShared ? '✓ Shared!' : 'Share Code'}
+                    {codeShared ? '✓ Shared' : 'Share code'}
                   </button>
                 </div>
-
-                <p className="text-xs text-gray-400 mt-3">
-                  They'll use "I Have a Code" at abf.app/connect
-                </p>
               </div>
             ) : (
-              <p className="text-sm text-red-500 mt-4">Failed to generate a code. Please try again.</p>
+              <p style={{ fontSize: '14px', color: '#C4714A', textAlign: 'center', padding: '32px 0' }}>
+                Failed to generate a code. Please try again.
+              </p>
             )}
 
             <button
               onClick={() => router.push('/dashboard')}
-              className="mt-6 w-full border-2 border-coral-300 text-coral-600 hover:bg-cream-50 font-semibold py-3 rounded-xl transition-all"
+              style={{ width: '100%', marginTop: '16px', padding: '14px', background: 'transparent', border: '0.5px solid #E8DDD0', color: '#7A6A54', fontSize: '14px', fontWeight: 500, borderRadius: '12px', cursor: 'pointer' }}
             >
-              Explore Solo First →
+              Explore solo first →
             </button>
           </div>
         )}
+
       </div>
     </div>
   )
@@ -671,8 +701,9 @@ export default function OnboardingPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-cream-50 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-coral-500 border-t-transparent" />
+        <div style={{ minHeight: '100dvh', background: '#FAF6EF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid #E8DDD0', borderTopColor: '#C4714A', animation: 'spin 0.8s linear infinite' }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
         </div>
       }
     >
