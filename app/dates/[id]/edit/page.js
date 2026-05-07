@@ -218,6 +218,7 @@ export default function EditDatePage({ params }) {
         .eq('id', id)
         .maybeSingle()
 
+      console.log('[loadDate] existing:', JSON.stringify(existing))
       if (!existing) {
         setNotFound(true)
         setInitialLoading(false)
