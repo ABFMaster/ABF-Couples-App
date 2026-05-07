@@ -20,6 +20,47 @@
 - [ ] Backfill photo_url on custom_dates stops
 - [ ] Wire FLIRT_SENT on individual send after Flirts redesign
 
+### Google Maps Platform Upgrades (Cloud Next 2026)
+These were announced at Google Cloud Next and are directly relevant to Date Night's roadmap.
+
+**New PlaceTypes (~200 new granular categories)**
+- What it is: granular place types like specific cuisine, activity types, venue specifics — far more precise than current broad types (restaurant, bar, park)
+- Why it matters: Nora's date suggestions become more specific. Instead of "restaurant" she can suggest "izakaya" or "rooftop bar" or "jazz club" — categories that match couple interests
+- What to wire: Update CATEGORY_TO_GOOGLE_TYPE map in dates/suggestions/route.js and CATEGORY_CHIPS in dates/custom/page.js to use new granular types. Map couple interests from game room onboarding to specific place types for Nora intelligence layer
+- Priority: K2 — wire during Nora intelligence layer sprint
+- Effort: Medium — mapping exercise + API update
+
+**Search Along Route**
+- What it is: discover points of interest along a route between origin and destination, up to 13 waypoints
+- Why it matters: in-date experience — "you're heading to the concert, here's a dinner stop 10 minutes off your route" — this is the composable date architecture we designed
+- What to wire: new /api/dates/along-route endpoint using Grounding with Google Maps, called when a date has 2+ stops with geo coordinates. Surface in date detail view as "stops along your way" suggestions
+- Priority: K3 — in-date experience sprint
+- Effort: Medium-High — new route, new UI surface in dates/[id]/page.js
+
+**Grounding Lite via MCP (Google Maps MCP server)**
+- What it is: lightweight MCP integration giving AI agents access to Places, Routes, and Weather data
+- Why it matters: Nora date concept — instead of pre-fetching suggestions, Nora calls Google Maps as a tool during date planning. "Find me a jazz bar within 10 minutes of the venue" becomes a real-time tool call
+- What to wire: integrate Google Maps MCP server into /api/dates/suggestions route, allow Nora to make live tool calls for date planning rather than static category fetches
+- Priority: K2/K3 — evaluate during Nora date concept sprint
+- Effort: High — architectural change to how suggestions work
+
+**3D Maps / Abstract Basemaps**
+- What it is: photorealistic 3D maps with brand customization, toggleable between 3D and abstract views
+- Why it matters: date detail page and builder map strip could be significantly more visually compelling — showing the date route in 3D would make the "building a date" feeling tangible
+- What to wire: replace current flat Google Maps embed in dates/custom/page.js map strip and dates/[id]/page.js static map with 3D Maps for JavaScript. Apply ABF warm color palette as custom basemap
+- Priority: Post-K3 — polish sprint after core date functionality complete
+- Effort: Medium — SDK swap + styling
+
+**Places UI Kit**
+- What it is: ready-to-use component library powered by Google Maps Places data — pre-built place cards, search UI, etc.
+- Why it matters: could replace our custom NearbyCard component with Google's native place presentation — photos, hours, ratings, reviews all built in
+- What to wire: evaluate as replacement for NearbyCard in dates/custom/page.js. If visual quality exceeds current custom cards, swap out. If not, use only specific data fields
+- Priority: K2 evaluation — assess during Nora picks panel polish
+- Effort: Low-Medium — component evaluation and potential swap
+
+**Overall Date Night UX note:**
+These APIs don't fix UX — they enrich content. The current builder UX is functional but the discovery surface lacks depth and the detail pages lack the immersive quality that makes a date feel exciting before it happens. The right order: fix UX architecture first (K2/K3), then layer in richer map and place data to elevate the visual experience. 3D maps and Places UI Kit are polish that amplifies good UX — they cannot substitute for it.
+
 ## SINGLE USER ARC
 - [ ] Nora individual insight in Spark State B — deployed, needs real-world validation
 - [ ] Nora individual insight in Bet State B — deployed, needs real-world validation
