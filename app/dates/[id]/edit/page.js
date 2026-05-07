@@ -191,6 +191,15 @@ export default function EditDatePage({ params }) {
   const [saveStage, setSaveStage] = useState(null)
   const [saveError, setSaveError] = useState(null)
 
+  // Delete
+  const [currentUserId, setCurrentUserId] = useState(null)
+  const [dateStatus, setDateStatus] = useState(null)
+  const [deleteRequestedBy, setDeleteRequestedBy] = useState(null)
+  const [dateOwnerId, setDateOwnerId] = useState(null)
+  const [sharedWith, setSharedWith] = useState(null)
+  const [deleteStage, setDeleteStage] = useState(null) // null | 'confirming' | 'requesting' | 'done'
+  const [deleteError, setDeleteError] = useState(null)
+
   // Refs
   const mapDivRef       = useRef(null)
   const mapInstance     = useRef(null)
@@ -225,6 +234,14 @@ export default function EditDatePage({ params }) {
           `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`
         )
       }
+
+      const { data: { user } } = await supabase.auth.getUser()
+      setCurrentUserId(user.id)
+      setDateStatus(existing.status)
+      setDeleteRequestedBy(existing.delete_requested_by)
+      setDateOwnerId(existing.user_id)
+      setSharedWith(existing.shared_with)
+
       setInitialLoading(false)
     }
     loadDate()
@@ -591,6 +608,61 @@ export default function EditDatePage({ params }) {
     }
   }
 
+  // ── Delete handlers ──────────────────────────────────────────────
+  const handleRequestDelete = async () => {
+    setDeleteError(null)
+    setDeleteStage('requesting')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/dates/delete/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ dateId: id }),
+      })
+      if (!res.ok) throw new Error()
+      setDateStatus('pending_delete')
+      setDeleteRequestedBy(currentUserId)
+      setDeleteStage('done')
+    } catch {
+      setDeleteError('Could not request deletion. Try again.')
+      setDeleteStage(null)
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    setDeleteError(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/dates/delete/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ dateId: id }),
+      })
+      if (!res.ok) throw new Error()
+      router.push('/dates')
+    } catch {
+      setDeleteError('Could not confirm deletion. Try again.')
+    }
+  }
+
+  const handleCancelDelete = async () => {
+    setDeleteError(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/dates/delete/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ dateId: id }),
+      })
+      if (!res.ok) throw new Error()
+      setDateStatus('planned')
+      setDeleteRequestedBy(null)
+      setDeleteStage(null)
+    } catch {
+      setDeleteError('Could not cancel deletion. Try again.')
+    }
+  }
+
   // ── Close dropdown on outside click ─────────────────────────────
   useEffect(() => {
     const handler = e => { if (!e.target.closest('[data-search-box]')) setShowDropdown(false) }
@@ -626,6 +698,33 @@ export default function EditDatePage({ params }) {
   // ════════════════════════════════════════════════════════════════
   // RENDER
   // ════════════════════════════════════════════════════════════════
+
+  if (dateStatus === 'pending_delete' && currentUserId !== deleteRequestedBy) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, background: '#FAF6EF', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px', fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
+        <div style={{ maxWidth: '320px', width: '100%', textAlign: 'center' }}>
+          <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '26px', fontWeight: 400, color: '#1C1208', margin: '0 0 10px' }}>Delete this date?</h2>
+          <p style={{ fontSize: '14px', color: '#7A6A54', margin: '0 0 32px', lineHeight: 1.5 }}>Your partner requested this date be deleted.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <button
+              onClick={handleConfirmDelete}
+              style={{ width: '100%', padding: '16px', background: '#C4714A', color: 'white', fontSize: '16px', fontWeight: 600, borderRadius: '14px', border: 'none', cursor: 'pointer' }}
+            >
+              Confirm deletion
+            </button>
+            <button
+              onClick={handleCancelDelete}
+              style={{ width: '100%', padding: '16px', background: '#EDE5D8', color: '#1C1208', fontSize: '16px', fontWeight: 600, borderRadius: '14px', border: 'none', cursor: 'pointer' }}
+            >
+              Keep it
+            </button>
+          </div>
+          {deleteError && <p style={{ fontSize: '13px', color: '#C4714A', marginTop: '12px' }}>{deleteError}</p>}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col" style={{ height: '100dvh', minHeight: '100vh' }}>
 
@@ -925,6 +1024,43 @@ export default function EditDatePage({ params }) {
               />
             </div>
             {saveError && <p className="text-xs text-red-500 text-center">{saveError}</p>}
+
+            {/* Delete section */}
+            {dateStatus !== 'pending_delete' && deleteStage === null && (
+              <button
+                onClick={() => setDeleteStage('confirming')}
+                style={{ background: 'none', border: 'none', color: '#C4714A', fontSize: '13px', cursor: 'pointer', padding: '4px 0', fontFamily: "'DM Sans', -apple-system, sans-serif" }}
+              >
+                Delete this date
+              </button>
+            )}
+            {deleteStage === 'confirming' && (
+              <div style={{ fontSize: '13px', color: '#7A6A54' }}>
+                <p style={{ margin: '0 0 8px' }}>Are you sure? This will ask your partner to confirm.</p>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <button
+                    onClick={handleRequestDelete}
+                    style={{ background: '#C4714A', color: 'white', border: 'none', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', -apple-system, sans-serif" }}
+                  >
+                    Yes, request deletion
+                  </button>
+                  <button
+                    onClick={() => setDeleteStage(null)}
+                    style={{ background: 'none', border: 'none', color: '#A09080', fontSize: '13px', cursor: 'pointer', fontFamily: "'DM Sans', -apple-system, sans-serif" }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+            {deleteStage === 'requesting' && (
+              <p style={{ fontSize: '13px', color: '#A09080' }}>Requesting…</p>
+            )}
+            {deleteStage === 'done' && (
+              <p style={{ fontSize: '13px', color: '#7A6A54' }}>Deletion requested. Waiting for partner to confirm.</p>
+            )}
+            {deleteError && <p style={{ fontSize: '13px', color: '#C4714A' }}>{deleteError}</p>}
+
             {saveStage === null && (
               <button
                 onClick={handleSave}

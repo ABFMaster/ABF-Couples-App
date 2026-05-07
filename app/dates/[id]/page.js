@@ -77,6 +77,12 @@ export default function DateDetailPage({ params }) {
   const [approvingDate, setApprovingDate] = useState(false)
   const [approvalError, setApprovalError] = useState(null)
 
+  // Delete state
+  const [dateStatus, setDateStatus] = useState(null)
+  const [deleteRequestedBy, setDeleteRequestedBy] = useState(null)
+  const [deleteStage, setDeleteStage] = useState(null)
+  const [deleteError, setDeleteError] = useState(null)
+
   // Timeline prompt state
   const [showTimelinePrompt, setShowTimelinePrompt] = useState(false)
   const [timelinePhoto, setTimelinePhoto] = useState(null)
@@ -126,6 +132,8 @@ export default function DateDetailPage({ params }) {
     if (custom) {
       setDate({ ...custom, _source: 'custom' })
       setSentToPartner(!!custom.shared_with)
+      setDateStatus(custom.status)
+      setDeleteRequestedBy(custom.delete_requested_by || null)
       setLoading(false)
       return
     }
@@ -300,6 +308,74 @@ export default function DateDetailPage({ params }) {
     } finally {
       setApprovingDate(false)
     }
+  }
+
+  const handleRequestDelete = async () => {
+    setDeleteError(null)
+    setDeleteStage('requesting')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/dates/delete/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ dateId: date.id }),
+      })
+      if (!res.ok) throw new Error()
+      setDateStatus('pending_delete')
+      setDeleteRequestedBy(currentUserId)
+      setDeleteStage('done')
+    } catch {
+      setDeleteError('Could not request deletion. Try again.')
+      setDeleteStage(null)
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    setDeleteError(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/dates/delete/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ dateId: date.id }),
+      })
+      if (!res.ok) throw new Error()
+      router.push('/dates')
+    } catch {
+      setDeleteError('Could not confirm deletion. Try again.')
+    }
+  }
+
+  const handleCancelDelete = async () => {
+    setDeleteError(null)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/dates/delete/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ dateId: date.id }),
+      })
+      if (!res.ok) throw new Error()
+      setDateStatus('planned')
+      setDeleteRequestedBy(null)
+      setDeleteStage(null)
+    } catch {
+      setDeleteError('Could not cancel deletion. Try again.')
+    }
+  }
+
+  if (isCustom && dateStatus === 'pending_delete' && currentUserId && currentUserId !== deleteRequestedBy) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, background: '#FAF6EF', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px', fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
+        <div style={{ maxWidth: '320px', width: '100%', textAlign: 'center' }}>
+          <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '26px', fontWeight: 400, color: '#1C1208', margin: '0 0 10px' }}>Delete this date?</h2>
+          <p style={{ fontSize: '14px', color: '#7A6A54', margin: '0 0 32px', lineHeight: 1.5 }}>Your partner requested this date be deleted.</p>
+          <button onClick={handleConfirmDelete} style={{ display: 'block', width: '100%', padding: '16px', background: '#C4714A', color: 'white', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', marginBottom: '10px', fontFamily: "'DM Sans', sans-serif" }}>Confirm deletion</button>
+          <button onClick={handleCancelDelete} style={{ display: 'block', width: '100%', padding: '16px', background: '#EDE5D8', color: '#1C1208', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Keep it</button>
+          {deleteError && <p style={{ fontSize: '13px', color: '#C4714A', marginTop: '12px' }}>{deleteError}</p>}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -590,6 +666,29 @@ export default function DateDetailPage({ params }) {
           >
             ✓ Mark as Done
           </button>
+        )}
+
+        {/* ── Delete flow ───────────────────────────────────── */}
+        {isCustom && !isCompleted && dateStatus !== 'pending_delete' && (
+          <div style={{ textAlign: 'center', paddingTop: '4px' }}>
+            {deleteStage === null && (
+              <button onClick={() => setDeleteStage('confirming')} style={{ background: 'none', border: 'none', color: '#C4714A', fontSize: '13px', cursor: 'pointer', padding: '4px 8px', fontFamily: 'DM Sans, sans-serif' }}>
+                Delete this date
+              </button>
+            )}
+            {deleteStage === 'confirming' && (
+              <div style={{ fontSize: '13px', color: '#7A6A54', fontFamily: 'DM Sans, sans-serif' }}>
+                <p style={{ margin: '0 0 10px' }}>Are you sure? This will ask your partner to confirm.</p>
+                <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                  <button onClick={handleRequestDelete} style={{ background: '#C4714A', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Yes, request deletion</button>
+                  <button onClick={() => setDeleteStage(null)} style={{ background: '#EDE5D8', color: '#1C1208', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Cancel</button>
+                </div>
+              </div>
+            )}
+            {deleteStage === 'requesting' && <p style={{ fontSize: '13px', color: '#A09080', fontFamily: 'DM Sans, sans-serif' }}>Requesting…</p>}
+            {deleteStage === 'done' && <p style={{ fontSize: '13px', color: '#7A6A54', fontFamily: 'DM Sans, sans-serif' }}>Deletion requested. Waiting for partner to confirm.</p>}
+            {deleteError && <p style={{ fontSize: '13px', color: '#C4714A', fontFamily: 'DM Sans, sans-serif' }}>{deleteError}</p>}
+          </div>
         )}
 
         {/* ── Plan again CTA ────────────────────────────────── */}
