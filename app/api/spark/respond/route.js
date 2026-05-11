@@ -72,12 +72,12 @@ export async function POST(request) {
 
     // Steps 7 & 8: Fetch both user names
     const [{ data: myProfile }, { data: partnerProfile }] = await Promise.all([
-      supabase.from('user_profiles').select('name').eq('user_id', user.id).maybeSingle(),
-      supabase.from('user_profiles').select('name').eq('user_id', partnerId).maybeSingle(),
+      supabase.from('user_profiles').select('display_name').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_profiles').select('display_name').eq('user_id', partnerId).maybeSingle(),
     ])
 
-    const currentUserName = myProfile?.name || 'Your partner'
-    const partnerName = partnerProfile?.name || 'Your partner'
+    const currentUserName = myProfile?.display_name || 'Your partner'
+    const partnerName = partnerProfile?.display_name || 'Your partner'
 
     // Step 9: Push notification to partner
     const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'

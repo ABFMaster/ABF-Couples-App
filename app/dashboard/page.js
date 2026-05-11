@@ -33,6 +33,7 @@ export default function Dashboard() {
   const [mine, setMine]               = useState(null)
   const [theirs, setTheirs]           = useState(null)
   const [sparkIntroShown, setSparkIntroShown] = useState(false)
+  const [sparkSubmitting, setSparkSubmitting] = useState(false)
   const [bet, setBet]                 = useState(null)
   const [betMine, setBetMine]         = useState(null)
   const [betTheirs, setBetTheirs]     = useState(null)
@@ -192,18 +193,24 @@ export default function Dashboard() {
   }
 
   const handleSparkRespond = async (answerText) => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return
-    const res = await fetch('/api/spark/respond', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ sparkId: spark.id, responseText: answerText }),
-    })
-    if (!res.ok) return
-    await fetchSpark()
+    if (sparkSubmitting) return
+    setSparkSubmitting(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+      const res = await fetch('/api/spark/respond', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sparkId: spark.id, responseText: answerText }),
+      })
+      if (!res.ok) return
+      await fetchSpark()
+    } finally {
+      setSparkSubmitting(false)
+    }
   }
 
   const fetchBet = async () => {
