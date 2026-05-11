@@ -381,16 +381,15 @@ export default function DateDetailPage({ params }) {
   return (
     <div style={{ minHeight: '100vh', background: '#FAF6F0', paddingBottom: '100px', fontFamily: 'DM Sans, sans-serif' }}>
 
-      <div style={{ background: 'linear-gradient(145deg, #1C1410 0%, #2D3561 100%)', padding: '52px 24px 32px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '140px', height: '140px', borderRadius: '50%', background: 'rgba(201,168,76,0.06)' }} />
-        <button onClick={() => router.back()} style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '20px', padding: 0, fontFamily: 'DM Sans, sans-serif' }}>← Back</button>
+      <div style={{ background: '#FAF6EF', padding: '52px 24px 24px', position: 'relative', overflow: 'hidden' }}>
+        <button onClick={() => router.back()} style={{ fontSize: '12px', color: '#A09080', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '20px', padding: 0, fontFamily: 'DM Sans, sans-serif' }}>← Back</button>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
-          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', fontWeight: 300, color: 'white', lineHeight: 1.2, flex: 1 }}>{date.title}</div>
+          <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '32px', fontWeight: 300, color: '#1C1208', lineHeight: 1.2, flex: 1 }}>{date.title}</div>
           <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
             {canEdit && (
-              <button onClick={() => router.push(`/dates/${date.id}/edit`)} style={{ fontSize: '11px', fontWeight: 500, color: 'rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 14px', borderRadius: '20px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Edit</button>
+              <button onClick={() => router.push(`/dates/${date.id}/edit`)} style={{ fontSize: '11px', fontWeight: 500, color: '#1C1208', background: 'rgba(28,18,8,0.06)', border: '1px solid rgba(28,18,8,0.12)', padding: '6px 14px', borderRadius: '20px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Edit</button>
             )}
-            <div style={{ fontSize: '11px', fontWeight: 500, color: 'rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 14px', borderRadius: '20px' }}>{statusLabel}</div>
+            <div style={{ fontSize: '11px', fontWeight: 500, color: '#1C1208', background: 'rgba(28,18,8,0.06)', border: '1px solid rgba(28,18,8,0.12)', padding: '6px 14px', borderRadius: '20px' }}>{statusLabel}</div>
           </div>
         </div>
       </div>
@@ -450,7 +449,7 @@ export default function DateDetailPage({ params }) {
             <div className="space-y-4">
               {date.stops.map((stop, i) => (
                 <div key={i} className="flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-coral-400 to-purple-400 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm">
+                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#C4714A', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}>
                     {i + 1}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -573,8 +572,7 @@ export default function DateDetailPage({ params }) {
                 <p className="text-gray-500 text-sm mb-3">Send this to {partnerName} so they can review, edit, and approve it.</p>
                 <button
                   onClick={sendToPartner}
-                  disabled={sendingToPartner}
-                  className="w-full py-3 bg-gradient-to-r from-[#3D3580] to-[#5D55A0] text-white font-bold rounded-2xl text-sm disabled:opacity-40"
+                  style={{ width: '100%', padding: '12px', background: '#1C1208', color: 'white', fontWeight: 600, borderRadius: '14px', fontSize: '14px', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', opacity: sendingToPartner ? 0.4 : 1 }}
                 >
                   {sendingToPartner ? 'Sending…' : `💌 Send to ${partnerName}`}
                 </button>
@@ -694,7 +692,7 @@ export default function DateDetailPage({ params }) {
         {/* ── Plan again CTA ────────────────────────────────── */}
         <button
           onClick={() => router.push('/dates/custom')}
-          style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg, #8B4A2A 0%, #2D3561 100%)', color: 'white', border: 'none', borderRadius: '14px', fontSize: '14px', fontWeight: 500, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+          style={{ width: '100%', padding: '14px', background: '#C4714A', color: 'white', border: 'none', borderRadius: '14px', fontSize: '14px', fontWeight: 500, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
         >
           <span>✨</span> Plan Another Date
         </button>
