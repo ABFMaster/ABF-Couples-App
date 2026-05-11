@@ -670,7 +670,7 @@ export default function DateDetailPage({ params }) {
         {isCustom && !isCompleted && dateStatus !== 'pending_delete' && (
           <div style={{ textAlign: 'center', paddingTop: '4px' }}>
             {deleteStage === null && (
-              <button onClick={() => setDeleteStage('confirming')} style={{ background: 'none', border: 'none', color: '#C4714A', fontSize: '13px', cursor: 'pointer', padding: '4px 8px', fontFamily: 'DM Sans, sans-serif' }}>
+              <button onClick={() => setDeleteStage('confirming')} style={{ background: 'none', border: 'none', color: '#B0A090', fontSize: '11px', cursor: 'pointer', padding: '4px 8px', fontFamily: 'DM Sans, sans-serif', marginTop: '4px' }}>
                 Delete this date
               </button>
             )}
