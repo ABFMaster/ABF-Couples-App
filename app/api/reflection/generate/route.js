@@ -89,7 +89,7 @@ export async function POST(request) {
       .from('custom_dates')
       .select('title, status, date_time, created_at')
       .eq('couple_id', coupleId)
-      .gte('created_at', weekStartStr)
+      .gte('created_at', weekStart)
       .neq('status', 'pending_delete')
       .order('created_at', { ascending: true })
 

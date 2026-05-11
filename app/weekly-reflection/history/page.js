@@ -1,196 +1,134 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import BottomNav from '@/components/BottomNav'
-
-function formatWeekRange(weekStartStr) {
-  const start = new Date(weekStartStr + 'T00:00:00')
-  const end = new Date(start)
-  end.setDate(start.getDate() + 6)
-  const opts = { month: 'short', day: 'numeric' }
-  return `${start.toLocaleDateString('en-US', opts)} – ${end.toLocaleDateString('en-US', opts)}`
-}
 
 export default function ReflectionHistoryPage() {
   const router = useRouter()
+  const supabase = createClient()
+
   const [loading, setLoading] = useState(true)
-  const [isUser1, setIsUser1] = useState(true)
-  const [userName, setUserName] = useState('You')
-  const [partnerName, setPartnerName] = useState('Partner')
   const [reflections, setReflections] = useState([])
-  const [checkinsMap, setCheckinsMap] = useState({}) // id → checkin record
+  const [error, setError] = useState(null)
 
-  const fetchData = useCallback(async () => {
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError || !user) { router.push('/login'); return }
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) { router.push('/login'); return }
 
-      const { data: coupleData } = await supabase
-        .from('couples')
-        .select('*')
-        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-        .maybeSingle()
+        const uid = session.user.id
 
-      if (!coupleData) { router.push('/connect'); return }
+        const { data: couple } = await supabase
+          .from('couples')
+          .select('id')
+          .or(`user1_id.eq.${uid},user2_id.eq.${uid}`)
+          .maybeSingle()
 
-      const userIsUser1 = coupleData.user1_id === user.id
-      setIsUser1(userIsUser1)
-      const partnerId = userIsUser1 ? coupleData.user2_id : coupleData.user1_id
+        if (!couple) { setError('No couple found.'); setLoading(false); return }
 
-      // Fetch display names
-      const [{ data: myProfile }, { data: partnerProfile }] = await Promise.all([
-        supabase.from('user_profiles').select('display_name').eq('user_id', user.id).maybeSingle(),
-        supabase.from('user_profiles').select('display_name').eq('user_id', partnerId).maybeSingle(),
-      ])
-      setUserName(myProfile?.display_name || 'You')
-      setPartnerName(partnerProfile?.display_name || 'Partner')
+        const { data: rows } = await supabase
+          .from('weekly_reflections')
+          .select('id, week_start, opening, moments, pattern, week_ahead, generated_at')
+          .eq('couple_id', couple.id)
+          .not('opening', 'is', null)
+          .order('week_start', { ascending: false })
 
-      // Fetch all completed reflections (both partners done)
-      const { data: refs } = await supabase
-        .from('weekly_reflections')
-        .select('*')
-        .eq('couple_id', coupleData.id)
-        .not('user1_completed_at', 'is', null)
-        .not('user2_completed_at', 'is', null)
-        .order('week_start', { ascending: false })
-
-      setReflections(refs || [])
-
-      // Collect all check-in IDs referenced by these reflections
-      const checkinIds = []
-      for (const r of refs || []) {
-        if (r.user1_favorite_checkin_id) checkinIds.push(r.user1_favorite_checkin_id)
-        if (r.user2_favorite_checkin_id) checkinIds.push(r.user2_favorite_checkin_id)
+        setReflections(rows || [])
+      } catch {
+        setError('Something went wrong.')
       }
-
-      if (checkinIds.length > 0) {
-        const { data: checkins } = await supabase
-          .from('daily_checkins')
-          .select('id, question_text, question_response, check_date')
-          .in('id', checkinIds)
-
-        const map = {}
-        for (const c of checkins || []) map[c.id] = c
-        setCheckinsMap(map)
-      }
-
-      setLoading(false)
-    } catch (err) {
-      console.error('History fetch error:', err)
       setLoading(false)
     }
-  }, [router])
+    init()
+  }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  const getWeekLabel = (weekStart) => {
+    if (!weekStart) return 'Unknown week'
+    const d = new Date(weekStart + 'T12:00:00')
+    return 'Week of ' + d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FDF6EF] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent" />
+      <div style={{ minHeight: '100vh', background: '#FAF6EF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#C4714A', animation: 'pulse 1.5s ease-in-out infinite' }} />
+        <style>{`@keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }`}</style>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#FAF6EF', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+        <p style={{ color: '#C4714A', fontSize: '15px', fontFamily: 'DM Sans, sans-serif' }}>{error}</p>
+        <button onClick={() => router.push('/weekly-reflection')} style={{ marginTop: '20px', background: 'none', border: 'none', color: '#A09080', fontSize: '13px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>← Back</button>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#FDF6EF] pb-24">
-
+    <div style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: 'DM Sans, sans-serif', paddingBottom: '100px' }}>
       {/* Header */}
-      <header className="bg-white border-b border-gray-100 px-4 pt-14 pb-4">
-        <div className="max-w-2xl mx-auto">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="text-[#9CA3AF] hover:text-[#2D3648] text-sm mb-3 flex items-center gap-1 transition-colors"
-          >
-            ← Back
-          </button>
-          <h1 className="text-2xl font-bold text-[#2D3648]">Our Reflections</h1>
-          <p className="text-[#9CA3AF] text-sm mt-1">A record of what you've noticed in each other</p>
+      <div style={{ padding: '56px 24px 24px' }}>
+        <button onClick={() => router.push('/weekly-reflection')} style={{ background: 'none', border: 'none', color: '#A09080', fontSize: '12px', cursor: 'pointer', padding: 0, marginBottom: '20px', fontFamily: 'DM Sans, sans-serif' }}>← Back</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+          <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#C4714A' }} />
+          <span style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87' }}>Nora · Archive</span>
         </div>
-      </header>
+        <h1 style={{ fontFamily: 'Georgia, serif', fontSize: '28px', fontWeight: 300, color: '#1C1208', lineHeight: 1.3, margin: 0 }}>Past Reflections</h1>
+      </div>
 
-      {/* Content */}
-      <div className="max-w-2xl mx-auto px-4 py-5 space-y-6">
+      <div style={{ padding: '0 24px' }}>
         {reflections.length === 0 ? (
-          <div className="bg-white rounded-2xl p-10 text-center shadow-sm mt-4">
-            <p className="text-5xl mb-4">💕</p>
-            <p className="text-[#2D3648] font-semibold text-lg mb-2">No reflections yet</p>
-            <p className="text-[#9CA3AF] text-sm max-w-xs mx-auto">
-              Your reflection history will appear here after you complete your first weekly reflection together 💕
-            </p>
+          <div style={{ textAlign: 'center', paddingTop: '60px' }}>
+            <p style={{ fontFamily: 'Georgia, serif', fontSize: '16px', color: '#A09080', fontStyle: 'italic' }}>No reflections yet. Check back after your first week.</p>
           </div>
         ) : (
-          reflections.map((reflection, index) => {
-            const myPickId     = isUser1 ? reflection.user1_favorite_checkin_id : reflection.user2_favorite_checkin_id
-            const partnerPickId = isUser1 ? reflection.user2_favorite_checkin_id : reflection.user1_favorite_checkin_id
-            const myReason     = isUser1 ? reflection.user1_reason : reflection.user2_reason
-            const partnerReason = isUser1 ? reflection.user2_reason : reflection.user1_reason
-            const myPick       = checkinsMap[myPickId]
-            const partnerPick  = checkinsMap[partnerPickId]
-            const delta = reflection.health_score_before != null && reflection.health_score_after != null
-              ? reflection.health_score_after - reflection.health_score_before
-              : null
-
-            return (
-              <div key={reflection.id}>
-                {/* Week heading */}
-                <div className="flex items-center justify-between mb-3 px-1">
-                  <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider">
-                    Week of {formatWeekRange(reflection.week_start)}
-                  </p>
-                  {delta !== null && delta !== 0 && (
-                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                      delta > 0 ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-[#9CA3AF]'
-                    }`}>
-                      {delta > 0 ? '+' : ''}{delta} pts
-                    </span>
-                  )}
-                </div>
-
-                {/* Your pick */}
-                {myPick && (
-                  <div className="bg-white rounded-2xl shadow-sm p-5 mb-3">
-                    <p className="text-xs font-semibold text-[#E8614D] mb-2 uppercase tracking-wide">
-                      You picked from {partnerName}'s answers
-                    </p>
-                    <p className="text-xs text-[#9CA3AF] italic mb-2">"{myPick.question_text}"</p>
-                    <p className="text-[#2D3648] text-sm leading-relaxed">{myPick.question_response}</p>
-                    {myReason && (
-                      <p className="text-[#9CA3AF] text-xs mt-2 italic">Your reason: "{myReason}"</p>
-                    )}
-                  </div>
-                )}
-
-                {/* Partner's pick */}
-                {partnerPick && (
-                  <div className="bg-white rounded-2xl shadow-sm p-5 mb-3">
-                    <p className="text-xs font-semibold text-[#3D3580] mb-2 uppercase tracking-wide">
-                      {partnerName} picked from your answers
-                    </p>
-                    <p className="text-xs text-[#9CA3AF] italic mb-2">"{partnerPick.question_text}"</p>
-                    <p className="text-[#2D3648] text-sm leading-relaxed">{partnerPick.question_response}</p>
-                    {partnerReason && (
-                      <p className="text-[#9CA3AF] text-xs mt-2 italic">{partnerName}'s reason: "{partnerReason}"</p>
-                    )}
-                  </div>
-                )}
-
-                {/* AI Coach insight */}
-                {reflection.ai_insight && (
-                  <div className="bg-gradient-to-r from-[#E8614D] to-[#3D3580] rounded-2xl p-5 mb-3 text-white">
-                    <p className="text-xs font-medium opacity-75 mb-2">💡 Coach Insight</p>
-                    <p className="text-sm leading-relaxed">{reflection.ai_insight}</p>
-                  </div>
-                )}
-
-                {/* Divider between weeks */}
-                {index < reflections.length - 1 && (
-                  <div className="border-t border-gray-100 mt-4" />
-                )}
+          reflections.map((r, idx) => (
+            <div key={r.id} style={{ marginBottom: '32px', paddingBottom: '32px', borderBottom: idx < reflections.length - 1 ? '1px solid #EDE5D8' : 'none' }}>
+              {/* Week label */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C4AA87' }} />
+                <span style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87' }}>{getWeekLabel(r.week_start)}</span>
               </div>
-            )
-          })
+
+              {/* Opening */}
+              {r.opening && (
+                <p style={{ fontFamily: 'Georgia, serif', fontSize: '16px', color: '#2D2418', lineHeight: 1.6, margin: '0 0 16px', fontStyle: 'italic' }}>{r.opening}</p>
+              )}
+
+              {/* Moments */}
+              {r.moments?.length > 0 && (
+                <div style={{ marginBottom: '14px' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '8px' }}>Moments</div>
+                  {r.moments.map((moment, i) => (
+                    <div key={i} style={{ background: 'white', borderRadius: '12px', padding: '12px 14px', marginBottom: '8px', border: '1px solid #EDE5D8' }}>
+                      <p style={{ fontFamily: 'Georgia, serif', fontSize: '14px', color: '#2D2418', lineHeight: 1.5, margin: 0 }}>{typeof moment === 'string' ? moment : moment.text || moment}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Pattern */}
+              {r.pattern && (
+                <div style={{ marginBottom: '12px' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '6px' }}>Pattern</div>
+                  <p style={{ fontFamily: 'Georgia, serif', fontSize: '14px', color: '#2D2418', lineHeight: 1.5, margin: 0 }}>{r.pattern}</p>
+                </div>
+              )}
+
+              {/* Week ahead */}
+              {r.week_ahead && (
+                <div style={{ background: '#1C1208', borderRadius: '12px', padding: '12px 14px' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(201,168,76,0.8)', marginBottom: '6px' }}>Carried forward</div>
+                  <p style={{ fontFamily: 'Georgia, serif', fontSize: '14px', color: '#FAF6EF', lineHeight: 1.5, margin: 0, fontStyle: 'italic' }}>{r.week_ahead}</p>
+                </div>
+              )}
+            </div>
+          ))
         )}
       </div>
 
