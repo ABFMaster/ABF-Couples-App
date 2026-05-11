@@ -187,6 +187,29 @@ async function sendReengagementPush(couple, user1, user2, noraMemory) {
   }
 }
 
+async function processWeeklyReflection(couple, user1, user2) {
+  const timezone = user1.timezone || user2.timezone || 'America/Los_Angeles'
+  const day = getDayInTimezone(timezone)
+  const hour = getHourInTimezone(timezone)
+
+  // Only Sunday at 3am
+  if (day !== 0 || hour !== 3) return
+
+  try {
+    await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/reflection/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.CRON_SECRET}`
+      },
+      body: JSON.stringify({
+        userId: couple.user1_id,
+        coupleId: couple.id
+      })
+    })
+  } catch {}
+}
+
 async function processRabbitHoleConvergence() {
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
@@ -305,6 +328,7 @@ export async function GET(request) {
       const user1 = profileMap[couple.user1_id] || {}
       const user2 = profileMap[couple.user2_id] || {}
       await processDailyContent(couple, user1, user2)
+      await processWeeklyReflection(couple, user1, user2)
       processed++
     }
 

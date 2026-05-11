@@ -4,6 +4,20 @@ import { getWeekStart } from '@/lib/dates'
 
 export async function GET(request) {
   try {
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const token = authHeader.replace('Bearer ', '')
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
     const coupleId = searchParams.get('coupleId')
@@ -11,11 +25,6 @@ export async function GET(request) {
     if (!userId || !coupleId) {
       return NextResponse.json({ error: 'userId and coupleId required' }, { status: 400 })
     }
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
 
     const weekStart = getWeekStart()
 

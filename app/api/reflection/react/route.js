@@ -3,6 +3,20 @@ import { NextResponse } from 'next/server'
 
 export async function POST(request) {
   try {
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const token = authHeader.replace('Bearer ', '')
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { coupleId, momentIndex, reaction } = await request.json()
     if (!coupleId || momentIndex === undefined || momentIndex === null || !reaction) {
       return NextResponse.json({ error: 'coupleId, momentIndex, and reaction required' }, { status: 400 })
@@ -11,11 +25,6 @@ export async function POST(request) {
     if (reaction !== 'lands' && reaction !== 'not_quite') {
       return NextResponse.json({ error: 'reaction must be lands or not_quite' }, { status: 400 })
     }
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
 
     // Fetch most recent reflection for this couple
     const { data: reflection, error: fetchError } = await supabase

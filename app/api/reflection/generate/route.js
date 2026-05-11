@@ -6,16 +6,29 @@ import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 
 export async function POST(request) {
   try {
+    const authHeader = request.headers.get('authorization') || ''
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
+
+    if (authHeader === `Bearer ${process.env.CRON_SECRET}`) {
+      // cron caller — allowed
+    } else if (authHeader.startsWith('Bearer ')) {
+      const token = authHeader.replace('Bearer ', '')
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+      if (authError || !user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+    } else {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { userId, coupleId } = await request.json()
 
     if (!userId || !coupleId) {
       return NextResponse.json({ error: 'userId and coupleId required' }, { status: 400 })
     }
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
 
     // STEP 1 — Compute Monday of current week in Pacific time
     const weekStart = getWeekStart()
@@ -46,7 +59,7 @@ export async function POST(request) {
     ] = await Promise.all([
       supabase
         .from('spark_responses')
-        .select('*, sparks(prompt)')
+        .select('*, sparks(question)')
         .eq('couple_id', coupleId)
         .gte('created_at', weekStart)
         .lt('created_at', weekEndStr),
@@ -72,12 +85,20 @@ export async function POST(request) {
         .eq('couple_id', coupleId),
     ])
 
+    const { data: weekDates } = await supabase
+      .from('custom_dates')
+      .select('title, status, date_time, created_at')
+      .eq('couple_id', coupleId)
+      .gte('created_at', weekStartStr)
+      .neq('status', 'pending_delete')
+      .order('created_at', { ascending: true })
+
     // STEP 4 — Build context string
     const profile1 = userProfiles?.[0]
     const profile2 = userProfiles?.[1]
 
     const sparkLines = (sparkResponses || [])
-      .map(r => `- Spark: "${r.sparks?.prompt || 'unknown'}" → Response: "${r.response}"`)
+      .map(r => `- Spark: "${r.sparks?.question || 'unknown'}" → Response: "${r.response}"`)
       .join('\n')
 
     const betLines = (betData || [])
@@ -111,7 +132,11 @@ export async function POST(request) {
       })
       .join('\n')
 
-    const contextString = `
+    const dateLines = (weekDates || []).map(d =>
+      `- Date "${d.title}" — status: ${d.status}${d.date_time ? ', scheduled: ' + new Date(d.date_time).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) : ''}`
+    )
+
+    const contextString = (`
 WEEK: ${weekStart}
 
 COUPLE PROFILES:
@@ -127,8 +152,7 @@ BETS THIS WEEK:
 ${betLines || 'None.'}
 
 ACTIVE RITUALS:
-${ritualLines || 'None.'}
-`.trim()
+${ritualLines || 'None.'}` + (dateLines.length > 0 ? `\n\nDATE ACTIVITY THIS WEEK:\n${dateLines.join('\n')}` : '')).trim()
 
     // STEP 5 — Generate reflection using Claude
     const systemPrompt = `You've been paying attention to this couple all week. The reflection moments you surface should be specific to what actually happened — not generic prompts dressed up with their names. Each observation should make them feel caught in the best possible way: "Nora noticed that." Never preachy. Never therapeutic framing. The prompt that follows each observation opens something they haven't said yet — not something they've already answered.

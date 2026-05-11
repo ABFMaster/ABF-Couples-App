@@ -3,16 +3,25 @@ import { NextResponse } from 'next/server'
 
 export async function PATCH(request) {
   try {
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const token = authHeader.replace('Bearer ', '')
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { userId, coupleId, weekStart } = await request.json()
 
     if (!userId || !coupleId || !weekStart) {
       return NextResponse.json({ error: 'userId, coupleId, and weekStart required' }, { status: 400 })
     }
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
 
     // Determine whether this user is user1 or user2
     const { data: couple } = await supabase
