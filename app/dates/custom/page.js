@@ -785,6 +785,38 @@ export default function CustomDateBuilderPage() {
           )}
         </div>
 
+        {/* Place preview card */}
+        {(previewPlace || loadingPreview) && (
+          <div style={{ margin: '8px 16px 0', background: 'white', borderRadius: '14px', border: '1px solid #EDE5D8', overflow: 'hidden' }}>
+            {loadingPreview ? (
+              <div style={{ padding: '24px', textAlign: 'center', color: '#A09080', fontSize: '13px', fontFamily: 'DM Sans, sans-serif' }}>Loading…</div>
+            ) : (
+              <>
+                {previewPlace.photo_url && (
+                  <img src={previewPlace.photo_url} alt={previewPlace.name} style={{ width: '100%', height: '140px', objectFit: 'cover', display: 'block' }} />
+                )}
+                <div style={{ padding: '12px 14px' }}>
+                  <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '15px', fontWeight: 600, color: '#1C1208', margin: '0 0 4px' }}>{previewPlace.name}</p>
+                  <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: '#A09080', margin: '0 0 4px' }}>{previewPlace.address}</p>
+                  {previewPlace.rating && (
+                    <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: '#C4AA87', margin: '0 0 12px' }}>★ {previewPlace.rating}</p>
+                  )}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => addToItinerary(previewPlace)}
+                      style={{ flex: 1, padding: '9px 0', background: '#C4714A', color: 'white', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+                    >Add to date</button>
+                    <button
+                      onClick={() => setPreviewPlace(null)}
+                      style={{ flex: 1, padding: '9px 0', background: 'transparent', color: '#A09080', border: '1px solid #EDE5D8', borderRadius: '10px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+                    >Cancel</button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Date/time selector */}
         <div style={{ position: 'relative', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '14px' }}>📅</span>
