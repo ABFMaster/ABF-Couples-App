@@ -369,7 +369,7 @@ export default function DateDetailPage({ params }) {
       <div style={{ position: 'fixed', inset: 0, background: '#FAF6EF', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px', fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
         <div style={{ maxWidth: '320px', width: '100%', textAlign: 'center' }}>
           <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '26px', fontWeight: 400, color: '#1C1208', margin: '0 0 10px' }}>Delete this date?</h2>
-          <p style={{ fontSize: '14px', color: '#7A6A54', margin: '0 0 32px', lineHeight: 1.5 }}>Your partner requested this date be deleted.</p>
+          <p style={{ fontSize: '14px', color: '#7A6A54', margin: '0 0 32px', lineHeight: 1.5 }}>Your partner requested "{date.title}" be deleted.</p>
           <button onClick={handleConfirmDelete} style={{ display: 'block', width: '100%', padding: '16px', background: '#C4714A', color: 'white', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', marginBottom: '10px', fontFamily: "'DM Sans', sans-serif" }}>Confirm deletion</button>
           <button onClick={handleCancelDelete} style={{ display: 'block', width: '100%', padding: '16px', background: '#EDE5D8', color: '#1C1208', border: 'none', borderRadius: '12px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Keep it</button>
           {deleteError && <p style={{ fontSize: '13px', color: '#C4714A', marginTop: '12px' }}>{deleteError}</p>}
