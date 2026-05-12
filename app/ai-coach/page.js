@@ -312,11 +312,10 @@ function AiCoachContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-cream-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent mx-auto mb-4"></div>
-          <p className="text-[#E8614D] text-lg">Loading Nora...</p>
-        </div>
+      <div style={{ minHeight: '100vh', background: '#FAF6EF', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#C4714A', marginBottom: '20px', animation: 'pulse 1.5s ease-in-out infinite' }} />
+        <p style={{ fontFamily: 'Georgia, serif', fontSize: '15px', color: '#7A6A54', fontStyle: 'italic' }}>Nora is here.</p>
+        <style>{`@keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }`}</style>
       </div>
     );
   }
@@ -510,11 +509,10 @@ function AiCoachContent() {
 export default function AiCoach() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-cream-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent mx-auto mb-4"></div>
-          <p className="text-[#E8614D] text-lg">Loading Nora...</p>
-        </div>
+      <div style={{ minHeight: '100vh', background: '#FAF6EF', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#C4714A', marginBottom: '20px', animation: 'pulse 1.5s ease-in-out infinite' }} />
+        <p style={{ fontFamily: 'Georgia, serif', fontSize: '15px', color: '#7A6A54', fontStyle: 'italic' }}>Nora is here.</p>
+        <style>{`@keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }`}</style>
       </div>
     }>
       <AiCoachContent />

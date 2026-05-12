@@ -183,7 +183,11 @@ export default function WeeklyReflectionPage() {
 
         {/* Talk to Nora */}
         <button
-          onClick={() => router.push('/ai-coach')}
+          onClick={() => {
+            const openerText = `I just read our weekly reflection. The opening was: "${reflection.opening}" The pattern Nora noticed: "${reflection.pattern}" Carry this forward: "${reflection.week_ahead}". I want to talk through what this means for us.`
+            sessionStorage.setItem('nora_opener', openerText)
+            router.push('/ai-coach?new=true')
+          }}
           style={{ width: '100%', padding: '14px', background: '#C4714A', color: 'white', border: 'none', borderRadius: '14px', fontSize: '14px', fontWeight: 500, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', marginBottom: '16px' }}
         >Talk to Nora about this →</button>
 
