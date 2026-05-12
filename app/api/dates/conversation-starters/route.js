@@ -4,12 +4,23 @@ import { noraGenerate } from '@/lib/nora'
 
 export async function POST(request) {
   try {
-    const { coupleId, userId, dateId, dateTitle, stops } = await request.json()
+    const authHeader = request.headers.get('authorization') || ''
+    if (!authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const token = authHeader.replace('Bearer ', '')
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     )
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { coupleId, userId, dateId, dateTitle, stops } = await request.json()
 
     // Fetch couple user IDs first, then profiles
     const coupleRes = await supabase
@@ -43,7 +54,7 @@ export async function POST(request) {
     // Fetch recent weekly reflection themes
     const { data: reflection } = await supabase
       .from('weekly_reflections')
-      .select('ai_insight, user1_reason, user2_reason')
+      .select('opening, pattern, week_ahead')
       .eq('couple_id', coupleId)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -58,7 +69,10 @@ export async function POST(request) {
       .filter(Boolean)
       .slice(0, 5)
       .join('; ')
-    const reflectionInsight = reflection?.ai_insight || ''
+    const recentReflection = reflection
+    const reflectionInsight = assessments?.length > 0
+      ? (recentReflection?.opening ? `Recent reflection: ${recentReflection.opening}` : '')
+      : ''
     const assessmentSummary = (assessments || [])
       .map(a => `${a.user_id}: ${a.overall_percentage}% overall`)
       .join(', ')
