@@ -407,8 +407,8 @@ export default function UsPage() {
         <div style={{ padding: '24px 20px' }}>
 
           {/* Nora weekly read */}
-          <div style={{ background: 'linear-gradient(145deg, #1C1410 0%, #2D3561 100%)', borderRadius: '20px', padding: '26px 22px', marginBottom: '14px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(201,168,76,0.07)' }} />
+          <div style={{ background: '#1C1208', borderRadius: '20px', padding: '26px 22px', marginBottom: '14px', position: 'relative', overflow: 'hidden' }}>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
               <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C9A84C' }} />
               <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C9A84C' }}>Nora · This week</div>
@@ -431,7 +431,7 @@ export default function UsPage() {
                 <div style={{ fontSize: '11px', color: '#7A8C7E', marginTop: '2px' }}>{ritual.streak} week streak</div>
               )}
             </div>
-            <div style={{ fontSize: '11px', fontWeight: 500, color: '#2D3561', border: '1px solid #2D3561', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+            <div style={{ fontSize: '11px', fontWeight: 500, color: '#1C1208', border: '1px solid #1C1208', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
               {todayName === 'Friday' ? 'Do it →' : 'See ritual'}
             </div>
           </div>
@@ -444,7 +444,7 @@ export default function UsPage() {
                 {lastReflectionDays === null ? 'Not started yet' : lastReflectionDays < 7 ? `${lastReflectionDays} days ago` : 'Ready for a new one'}
               </div>
             </div>
-            <div style={{ fontSize: '11px', fontWeight: 500, color: '#2D3561', border: '1px solid #2D3561', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap' }}>Reflect →</div>
+            <div style={{ fontSize: '11px', fontWeight: 500, color: '#1C1208', border: '1px solid #1C1208', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap' }}>Reflect →</div>
           </div>
 
           {/* Game Room suggestion */}
@@ -454,7 +454,7 @@ export default function UsPage() {
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: '#1C1410' }}>This week: {suggestedGame.label}</div>
               <div style={{ fontSize: '11px', color: '#8B7355', marginTop: '2px' }}>Nora will guide the game</div>
             </div>
-            <div style={{ fontSize: '11px', fontWeight: 500, color: '#2D3561', border: '1px solid #2D3561', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap' }}>Let's play</div>
+            <div style={{ fontSize: '11px', fontWeight: 500, color: '#1C1208', border: '1px solid #1C1208', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap' }}>Let's play</div>
           </div>
         </div>
       )}
@@ -477,7 +477,7 @@ export default function UsPage() {
                   {nextDate ? new Date(nextDate.date_time).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) : 'Nothing planned yet'}
                 </div>
               </div>
-              <button onClick={() => router.push('/dates')} style={{ fontSize: '11px', fontWeight: 500, color: '#2D3561', border: '1px solid #2D3561', padding: '8px 16px', borderRadius: '20px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <button onClick={() => router.push('/dates')} style={{ fontSize: '11px', fontWeight: 500, color: '#1C1208', border: '1px solid #1C1208', padding: '8px 16px', borderRadius: '20px', background: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 {nextDate ? 'See plan →' : 'Plan one →'}
               </button>
             </div>
