@@ -422,7 +422,7 @@ export default function UsPage() {
           <div style={{ background: 'white', borderRadius: '14px', padding: '16px', marginBottom: '10px', boxShadow: '0 1px 4px rgba(28,20,16,0.05)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} onClick={() => router.push('/ritual')}>
             <div>
               <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '3px' }}>
-                {todayName === 'Friday' ? 'Today' : 'Friday'} · The Ritual
+                The Ritual
               </div>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#1C1410' }}>
                 {ritual?.title || 'No ritual set yet'}
@@ -439,9 +439,9 @@ export default function UsPage() {
           {/* Weekly reflection */}
           <div style={{ background: 'white', borderRadius: '14px', padding: '14px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(28,20,16,0.05)', cursor: 'pointer' }} onClick={() => router.push('/weekly-reflection')}>
             <div>
-              <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '2px' }}>Sunday · Weekly Reflection</div>
+              <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '2px' }}>Weekly Reflection</div>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: '#1C1410' }}>
-                {lastReflectionDays === null ? 'Not started yet' : lastReflectionDays < 7 ? `${lastReflectionDays} days ago` : 'Ready for a new one'}
+                {lastReflectionDays === null ? 'Not started yet' : lastReflectionDays === 0 ? 'Just reflected' : lastReflectionDays === 1 ? 'Yesterday' : lastReflectionDays < 7 ? `${lastReflectionDays} days ago` : 'Ready for a new one'}
               </div>
             </div>
             <div style={{ fontSize: '11px', fontWeight: 500, color: '#1C1208', border: '1px solid #1C1208', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap' }}>Reflect →</div>
@@ -450,7 +450,7 @@ export default function UsPage() {
           {/* Game Room suggestion */}
           <div style={{ background: 'white', borderRadius: '14px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(28,20,16,0.05)', cursor: 'pointer' }} onClick={() => router.push('/game-room')}>
             <div>
-              <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '2px' }}>Saturday · Game Room</div>
+              <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '2px' }}>Game Room</div>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: '#1C1410' }}>This week: {suggestedGame.label}</div>
               <div style={{ fontSize: '11px', color: '#8B7355', marginTop: '2px' }}>Nora will guide the game</div>
             </div>
