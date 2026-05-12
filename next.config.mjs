@@ -7,11 +7,6 @@ const nextConfig = {
         destination: '/dashboard',
         permanent: false,
       },
-      {
-        source: '/weekly-reflection',
-        destination: '/us',
-        permanent: false,
-      },
     ]
   },
 };
