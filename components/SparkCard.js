@@ -106,13 +106,13 @@ export default function SparkCard({
 
   const questionLarge = (
     <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '24px', color: '#2C1810', textAlign: 'center', lineHeight: 1.35, fontWeight: 400 }}>
-      {spark.question}
+      {spark.question.replace(/{partnerName}/g, partnerName || 'your partner')}
     </p>
   )
 
   const questionMuted = (
     <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '18px', color: '#7A6455', textAlign: 'center', lineHeight: 1.35, fontWeight: 400 }}>
-      {spark.question}
+      {spark.question.replace(/{partnerName}/g, partnerName || 'your partner')}
     </p>
   )
 
