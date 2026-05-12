@@ -218,6 +218,8 @@ export default function CustomDateBuilderPage() {
   const [predictions, setPredictions] = useState([])
   const [searching, setSearching] = useState(false)
   const [showDropdown, setShowDropdown] = useState(false)
+  const [previewPlace, setPreviewPlace] = useState(null)
+  const [loadingPreview, setLoadingPreview] = useState(false)
   const [selectedCard, setSelectedCard] = useState(null)
   const [planExpanded, setPlanExpanded] = useState(false)
 
