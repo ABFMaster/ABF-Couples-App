@@ -105,7 +105,7 @@ export default function ReflectionHistoryPage() {
                   <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '8px' }}>Moments</div>
                   {r.moments.map((moment, i) => (
                     <div key={i} style={{ background: 'white', borderRadius: '12px', padding: '12px 14px', marginBottom: '8px', border: '1px solid #EDE5D8' }}>
-                      <p style={{ fontFamily: 'Georgia, serif', fontSize: '14px', color: '#2D2418', lineHeight: 1.5, margin: 0 }}>{typeof moment === 'string' ? moment : moment.text || moment}</p>
+                      <p style={{ fontFamily: 'Georgia, serif', fontSize: '14px', color: '#2D2418', lineHeight: 1.5, margin: 0 }}>{typeof moment === 'string' ? moment : moment.observation || moment.text || moment}</p>
                     </div>
                   ))}
                 </div>

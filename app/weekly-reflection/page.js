@@ -149,7 +149,7 @@ export default function WeeklyReflectionPage() {
             <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '12px' }}>Moments from this week</div>
             {moments.map((moment, i) => (
               <div key={i} style={{ background: 'white', borderRadius: '14px', padding: '16px', marginBottom: '10px', border: '1px solid #EDE5D8' }}>
-                <p style={{ fontFamily: 'Georgia, serif', fontSize: '15px', color: '#2D2418', lineHeight: 1.5, margin: '0 0 12px' }}>{typeof moment === 'string' ? moment : moment.text || moment}</p>
+                <p style={{ fontFamily: 'Georgia, serif', fontSize: '15px', color: '#2D2418', lineHeight: 1.5, margin: '0 0 12px' }}>{typeof moment === 'string' ? moment : moment.observation || moment.text || moment}</p>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
                     onClick={() => handleReact(i, 'lands')}
