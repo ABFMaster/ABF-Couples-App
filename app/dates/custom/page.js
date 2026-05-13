@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { searchMovies, searchShows, getDetails } from '@/lib/omdb'
+import { fetchAndStorePlacePhoto } from '@/lib/place-photo'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const DEFAULT_CENTER = { lat: 47.6062, lng: -122.3321 }
@@ -242,6 +243,7 @@ export default function CustomDateBuilderPage() {
 
   // Itinerary
   const [itinerary, setItinerary] = useState([])
+  const [coupleId, setCoupleId] = useState(null)
 
   // Save
   const [dateName, setDateName] = useState(defaultDateName())
@@ -272,6 +274,14 @@ export default function CustomDateBuilderPage() {
       setSuggestionVibe(vibe)
       sessionStorage.removeItem('date_suggestion_vibe')
     }
+  }, [])
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase.from('couples').select('id').or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`).single()
+        .then(({ data }) => { if (data) setCoupleId(data.id) })
+    })
   }, [])
 
   // ── Load Google Maps JS API ──────────────────────────────────────
@@ -528,7 +538,18 @@ export default function CustomDateBuilderPage() {
     setQuery('')
     setActiveChip(null)
     setChipResults([])
-  }, [])
+    if (place.place_id && coupleId) {
+      fetchAndStorePlacePhoto(place.place_id, coupleId).then(permanentUrl => {
+        if (permanentUrl) {
+          setItinerary(prev => prev.map(stop =>
+            stop.place_id === place.place_id
+              ? { ...stop, photo_url: permanentUrl }
+              : stop
+          ))
+        }
+      }).catch(() => {})
+    }
+  }, [coupleId])
 
   // ── Debounced media search ───────────────────────────────────────
   useEffect(() => {

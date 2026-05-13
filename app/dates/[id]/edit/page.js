@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { searchMovies, searchShows, getDetails } from '@/lib/omdb'
+import { fetchAndStorePlacePhoto } from '@/lib/place-photo'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const SEATTLE_CENTER = { lat: 47.6062, lng: -122.3321 }
@@ -184,6 +185,7 @@ export default function EditDatePage({ params }) {
   // Itinerary
   const [itinerary, setItinerary] = useState([])
   const [travelTimes, setTravelTimes] = useState([])
+  const [coupleId, setCoupleId] = useState(null)
 
   // Save
   const [dateName, setDateName] = useState('')
@@ -208,6 +210,14 @@ export default function EditDatePage({ params }) {
   const dirService      = useRef(null)
   const debounceRef     = useRef(null)
   const inputRef        = useRef(null)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase.from('couples').select('id').or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`).single()
+        .then(({ data }) => { if (data) setCoupleId(data.id) })
+    })
+  }, [])
 
   // ── Load existing date ───────────────────────────────────────────
   useEffect(() => {
@@ -440,7 +450,18 @@ export default function EditDatePage({ params }) {
     setQuery('')
     setActiveChip(null)
     setChipResults([])
-  }, [])
+    if (place.place_id && coupleId) {
+      fetchAndStorePlacePhoto(place.place_id, coupleId).then(permanentUrl => {
+        if (permanentUrl) {
+          setItinerary(prev => prev.map(stop =>
+            stop.place_id === place.place_id
+              ? { ...stop, photo_url: permanentUrl }
+              : stop
+          ))
+        }
+      }).catch(() => {})
+    }
+  }, [coupleId])
 
   // ── Add custom stop ──────────────────────────────────────────────
   const addCustomStop = () => {
