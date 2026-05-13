@@ -127,7 +127,7 @@ export async function POST(request) {
     // Only notify partner if they are not already in the lobby
     const partnerAlreadyIn = isUser1 ? session?.user2_in_lobby : session?.user1_in_lobby
     if (!partnerAlreadyIn) {
-      await fetch(`${appBase}/api/push/send`, {
+      fetch(`${appBase}/api/push/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
         body: JSON.stringify({

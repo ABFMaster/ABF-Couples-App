@@ -89,7 +89,7 @@ export async function POST(request) {
 
       if (!sess?.together) {
         const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
-        await fetch(`${appBase}/api/push/send`, {
+        fetch(`${appBase}/api/push/send`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
           body: JSON.stringify({

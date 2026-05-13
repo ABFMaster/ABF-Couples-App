@@ -58,7 +58,7 @@ export async function POST(request) {
 
     const cancellerName = cancellerProfile?.display_name || 'Your partner'
 
-    await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/push/send`, {
+    fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/push/send`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

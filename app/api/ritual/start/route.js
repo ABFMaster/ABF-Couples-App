@@ -53,7 +53,7 @@ export async function POST(request) {
         .maybeSingle()
       if (couple) {
         const partnerId = couple.user1_id === userId ? couple.user2_id : couple.user1_id
-        await fetch(`${appBase}/api/push/send`, {
+        fetch(`${appBase}/api/push/send`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
           body: JSON.stringify({

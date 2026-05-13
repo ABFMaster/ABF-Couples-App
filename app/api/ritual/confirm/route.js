@@ -76,7 +76,7 @@ export async function POST(request) {
         const notifBody = action === 'confirm'
           ? `Your partner is in — the ritual is starting.`
           : `Your partner wants to talk about the ritual first.`
-        await fetch(`${appBase}/api/push/send`, {
+        fetch(`${appBase}/api/push/send`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
           body: JSON.stringify({

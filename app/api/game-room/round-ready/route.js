@@ -87,7 +87,7 @@ export async function POST(request) {
     } else {
       if (isRemote) {
         // Notify partner that this user is ready
-        await fetch(`${appBase}/api/push/send`, {
+        fetch(`${appBase}/api/push/send`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

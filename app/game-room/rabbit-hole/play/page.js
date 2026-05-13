@@ -483,7 +483,7 @@ function RabbitHolePlayContent() {
       if (couple) {
         const partnerUserId = couple.user1_id === userId ? couple.user2_id : couple.user1_id
         const { data: { session } } = await supabase.auth.getSession()
-        await fetch('/api/push/send', {
+        fetch('/api/push/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
           body: JSON.stringify({

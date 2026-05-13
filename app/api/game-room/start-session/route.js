@@ -80,7 +80,7 @@ export async function POST(request) {
       const partnerId = hostSession?.host_user_id === couple.user1_id ? couple.user2_id : couple.user1_id
       const { data: sessionData } = await supabase.from('game_sessions').select('together').eq('id', sessionId).maybeSingle()
       if (!sessionData?.together) {
-        await fetch(`${appBase}/api/push/send`, {
+        fetch(`${appBase}/api/push/send`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
           body: JSON.stringify({ userId: partnerId, title, body, url }),

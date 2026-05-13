@@ -81,7 +81,7 @@ export async function POST(request) {
 
     // Step 9: Push notification to partner
     const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
-    await fetch(`${appBase}/api/push/send`, {
+    fetch(`${appBase}/api/push/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
       body: JSON.stringify({
