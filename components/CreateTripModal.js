@@ -104,16 +104,11 @@ export default function CreateTripModal({ isOpen, onClose, coupleId, partnerName
         status,
       }
 
-      console.log('=== Trip Insert Debug ===')
-      console.log('Data being inserted:', insertData)
-
       const { data, error: insertError } = await supabase
         .from('trips')
         .insert(insertData)
         .select()
         .maybeSingle()
-
-      console.log('Insert result:', { data, error: insertError })
 
       if (insertError) {
         console.error('Error creating trip:', insertError)

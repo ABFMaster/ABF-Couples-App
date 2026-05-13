@@ -67,7 +67,6 @@ export default function DateHistoryPage() {
     const allDates = [...normalizedCustom, ...normalizedPlans]
       .sort((a, b) => new Date(b.date_time || b.created_at || 0) - new Date(a.date_time || a.created_at || 0))
 
-    console.log('allDates', allDates.length)
     setDates(allDates)
     setLoading(false)
   }, [router])

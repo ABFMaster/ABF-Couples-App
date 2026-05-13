@@ -32,7 +32,6 @@ async function getValidAccessToken(supabase, userId, connection) {
 
   // If token expires in less than 5 minutes, refresh it
   if (expiresAt.getTime() - now.getTime() < 5 * 60 * 1000) {
-    console.log('Refreshing Spotify token...')
     const tokens = await refreshAccessToken(connection.refresh_token)
 
     const newExpiresAt = new Date(Date.now() + tokens.expires_in * 1000)

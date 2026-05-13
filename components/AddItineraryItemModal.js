@@ -80,16 +80,11 @@ export default function AddItineraryItemModal({
         notes: notes.trim() || null,
       }
 
-      console.log('=== Itinerary Item Insert Debug ===')
-      console.log('Data being inserted:', insertData)
-
       const { data, error: insertError } = await supabase
         .from('trip_itinerary')
         .insert(insertData)
         .select()
         .maybeSingle()
-
-      console.log('Insert result:', { data, error: insertError })
 
       if (insertError) {
         console.error('Error creating itinerary item:', insertError)

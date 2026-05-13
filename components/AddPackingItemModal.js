@@ -65,16 +65,11 @@ export default function AddPackingItemModal({
         category,
       }
 
-      console.log('=== Packing Item Insert Debug ===')
-      console.log('Data being inserted:', insertData)
-
       const { data, error: insertError } = await supabase
         .from('trip_packing')
         .insert(insertData)
         .select()
         .maybeSingle()
-
-      console.log('Insert result:', { data, error: insertError })
 
       if (insertError) {
         console.error('Error creating packing item:', insertError)

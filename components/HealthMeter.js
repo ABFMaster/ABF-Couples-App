@@ -37,8 +37,6 @@ export default function HealthMeter({ coupleId, onRefresh }) {
     try {
       // Always recalculate on first load or when forced
       if (forceRecalculate || loading) {
-        console.log('[HealthMeter] Calculating relationship health...');
-
         // Call the stored procedure to calculate/update health
         const { data: calculated, error: calcError } = await supabase
           .rpc('calculate_relationship_health', { p_couple_id: coupleId });
@@ -46,8 +44,6 @@ export default function HealthMeter({ coupleId, onRefresh }) {
         if (calcError) {
           console.error('[HealthMeter] Error calculating health:', calcError);
           // Fall through to fetch existing data
-        } else {
-          console.log('[HealthMeter] Calculation result:', calculated);
         }
       }
 
