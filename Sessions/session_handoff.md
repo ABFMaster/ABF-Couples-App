@@ -1,5 +1,5 @@
 # ABF — Developer Handoff Briefing
-# Last Updated: 2026-04-24
+# Last Updated: 2026-05-13
 
 ---
 
@@ -1070,3 +1070,69 @@ Core loop functional. Nora memory producing specific, predictive output at 9.7/1
 Remaining before first beta invite: onboarding flow pages, connect page, dead page cleanup, one full end-to-end test session with Cass.
 Estimated: 1-2 more sessions before beta invites go out.
 - nearbysearch/json migration to Places API (New) — deferred, works now but on deprecation watchlist
+
+---
+
+## Self-Review 2026-05-13
+
+### Beta Readiness — Completed This Session
+- Push notifications confirmed working — cron diagnostic logs removed across all files
+- Dead page audit complete — deleted: partner-insights, results, settings, learn (entire directory). Parked: timeline, mixtape (code kept, no nav entry)
+- dates/[id] visual pass — cream header, palette-aligned buttons (#C4714A stop circles, #1C1208 Send/Plan buttons), dark link styling for delete
+- Weekly Reflection sprint complete — rebuilt weekly-reflection/page.js and history/page.js around new reflection/generate system; fixed sparks.question column name (was sparks.prompt); added date activity context; auth on all four reflection routes; wired Sunday 3am cron generation; "Talk to Nora" handoff via sessionStorage opener; past reflections archive
+- Date delete flow — full two-user test confirmed end-to-end: confirm path (row deleted, both routed to /dates) and cancel path (status reverts to planned, delete_requested_by nulled) both working
+- Date builder search fixed — missing previewPlace and loadingPreview state declarations causing silent crash on every keystroke
+- Preview card added to date builder — place details, photo, Add to date / Cancel buttons
+- Spark partnerName interpolation — SparkCard renders {partnerName} in question text; 8 self-directed questions rewritten as partner-directed
+
+### Code Audit — Completed
+- All console.log debug statements removed (8 files: ai-coach-context, AddItineraryItemModal, AddPackingItemModal, CreateTripModal, HealthMeter, checkin-questions, dates/history, spotify/search)
+- Orphaned routes deleted: api/spark-reaction, api/spark/react, api/weekly-reflection/insight, api/learn, api/flirt, app/profile-onboarding/page.js.disabled
+- ANTHROPIC_API_KEY guard fixed in ai-coach/route.js (was checking NEXT_PUBLIC_ prefix)
+- Nora architecture rule confirmed intact — zero direct Anthropic imports outside lib/nora.js
+- No hardcoded secrets found
+- No TODO/FIXME comments remaining (stale Giphy TODO removed)
+
+### Bug Fixes
+- Push subscription deduplication — delete stale subscriptions on register, one active per user
+- Spark double-submit guard — sparkSubmitting state prevents duplicate API calls
+- display_name fix in spark/respond — was selecting 'name' column (doesn't exist), now correctly selects 'display_name'
+- await removed from ALL internal push/send calls (12 files) — fire-and-forget pattern; await was blocking route execution causing Nora generation to be skipped when push was slow
+- pending_delete filter added to all 6 custom_dates list/display queries — dates/page, dates/history, us, dashboard/hero, ai-coach-context (x2)
+- conversation-starters auth guard added + weekly_reflections schema fixed (old fields → opening/pattern/week_ahead)
+- Send to Cass push notification added — partner now receives push when date is shared
+- Us page visual pass — Nora card #1C1208 solid (removed navy gradient and blob), all card buttons palette-aligned to #1C1208, day labels removed from Ritual/Game Room/Reflection cards, reflection recency text improved (0 days ago → "Just reflected")
+- Date delete overlay now shows date title so partner knows which date is being deleted
+
+### Process Failures Logged
+- await on internal push/send calls was silently killing Nora generation in spark/respond — root cause: fire-and-forget calls should never use await on Vercel serverless. Fixed universally across 12 files.
+- pending_delete status filter was applied to only one query instead of all consumers — caught by DATA SHAPE RULE, fixed across all 6 list queries atomically.
+
+### Known Issues / Bugs for Next Session
+- Spark reaction (Made me Smile, Keep It Coming) never persists — writes to local state only, never saved to DB. Needs save call on selection.
+- Nora home prompt showing wrong content on wrong days (Bet/Ritual copy appearing on incorrect days)
+- Location images not always showing for date banners
+- Ritual "We did it" not showing progress on Us page
+- Push delivery logging — no visibility into APNs/FCM delivery failures. Need push_log table.
+- DirectionsRenderer/DirectionsService deprecation warnings (Google Maps)
+
+### Architectural Decisions Locked
+- Weekly Reflection uses reflection/generate system (not weekly-reflection/insight — deleted). Single source of truth.
+- Push notifications are always fire-and-forget — never await internal push/send calls on Vercel
+- pending_delete is a valid custom_dates status — all list queries must filter it out
+- Spark questions are always partner-directed — "Answer about {partnerName}" is the universal framing
+- {partnerName} interpolation happens at render time in SpockCard, fallback to 'your partner'
+
+### Next Session Priorities
+1. Fix Spark reaction persistence — save reaction_icon to DB on selection
+2. Fix Nora home prompt wrong content on wrong days
+3. Fix Ritual "We did it" progress not showing on Us page
+4. Location images missing on date banners
+5. Us/Now dynamic presence sprint — day-aware content, not static weekly schedule
+6. Run full end-to-end test session with Cass — every game mode, every daily activity
+7. Continue bug hunting from ongoing Cass testing
+
+### Beta Readiness Assessment
+Core loop functional. Push notifications working. Weekly Reflection live and generating. Date flow complete including delete. Nora memory at 9.7/12 quality. Code audit clean — no debug logs, no orphaned routes, architecture intact.
+Remaining before first beta invite: full end-to-end test session with Cass, fix known bugs above.
+Estimated: 1 session before beta invites go out.

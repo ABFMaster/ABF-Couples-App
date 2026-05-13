@@ -1,12 +1,20 @@
-# ABF Product Backlog — Updated 2026-05-07
+# ABF Product Backlog — Updated 2026-05-13
+
+## BUGS — ACTIVE (found in testing, fix before beta)
+- [ ] Spark reaction (Made me Smile, Keep It Coming) never persists — local state only, never saved to DB
+- [ ] Nora home prompt showing wrong content on wrong days — Bet/Ritual copy appearing on incorrect days
+- [ ] Location images not always showing on date banners and Next Up card
+- [ ] Ritual "We did it" not showing progress on Us page after completion
+- [ ] No Nora verdict on Spark — root cause fixed (await on push blocking Nora generation), verify working Thursday
+- [ ] Push delivery logging — no visibility into APNs/FCM failures, need push_log table
 
 ## BETA READINESS (do first)
-- [ ] Onboarding flow visual pass — onboarding/page.js, onboarding/welcome/page.js
-- [ ] Connect page visual pass — app/connect/page.js
-- [ ] Dead page audit and cleanup — mixtape, timeline, partner-insights, learn, results, settings
-- [ ] dates/[id] visual pass — date detail page matches builder aesthetic
+- [x] Onboarding flow visual pass — onboarding/page.js, onboarding/welcome/page.js
+- [x] Connect page visual pass — app/connect/page.js
+- [x] Dead page audit and cleanup — mixtape, timeline, partner-insights, learn, results, settings
+- [x] dates/[id] visual pass — date detail page matches builder aesthetic
 - [ ] Full end-to-end test session with Cass — every game mode, every daily activity
-- [ ] Remove cron diagnostic logs after push confirmed working
+- [x] Remove cron diagnostic logs after push confirmed working
 - [ ] Run Nora memory test after 2 weeks real usage
 
 ## SPRINT K — DATE NIGHT (in progress)
@@ -72,6 +80,7 @@ These APIs don't fix UX — they enrich content. The current builder UX is funct
 - [ ] Thursday: Nora gap prompt — memory-powered question, fallback hierarchy (full memory → question bank → generic)
 - [ ] Individual wellbeing pulse — one word before Spark reveal, feeds Nora context
 - [ ] Love language flirt mode — flirt generator suggests expression in partner's love language
+- [ ] Weekly Reflection — rebuilt and live. Nora draws from Sparks, Bets, rituals, dates, nora_memory. Sunday cron generation. "Talk to Nora" handoff. Past reflections archive. Run Nora memory test after 2 weeks real usage to validate reflection quality.
 
 ## NORA INTELLIGENCE
 - [ ] Nora named address unlock — post-beta, boolean flag Nora sets herself when confident enough
@@ -144,10 +153,18 @@ These APIs don't fix UX — they enrich content. The current builder UX is funct
 - [ ] Bet question categories — 120 questions need category field
 - [ ] Us in 5 Years / The Dream — designed above
 - [ ] Sexual intimacy / After Dark — product decision locked
+- [ ] Joint couple Nora session — both partners in same Nora conversation simultaneously. Review previous design conversations before building.
+- [ ] Nora context handoff system — universal pattern for launching Nora from any surface (reflection, verdict, Spark reveal, date debrief) with pre-loaded context. Nora opens conversation, not user.
+- [ ] Push delivery logging — log send attempts, endpoint, response code to push_log table
+- [ ] Us/Now dynamic presence sprint — day-aware, activity-aware content surfacing. Nora card responds to what happened this week not just the schedule.
 
 ## TECHNICAL DEBT
 - [ ] GoTrueClient multiple instances — parked
 - [ ] nearbysearch deprecation watchlist
 - [ ] Dead pages: mixtape, timeline, partner-insights, learn, results, settings — audit and delete
 - [ ] Cron diagnostic logs — remove after push confirmed working
-- [ ] conversation-starters route has no auth guard (any caller can trigger)
+- [x] conversation-starters route has no auth guard (any caller can trigger)
+- [ ] Multi-device push support — current deduplication keeps one subscription per user, breaks if user switches devices between cron run and morning open
+- [ ] window.location usage in dashboard/page.js and us/page.js — should use useSearchParams with Suspense wrapper
+- [ ] relationship_points written directly from client components (FlirtView, FlirtComposer) — should go through API route
+- [ ] Pre-App Store hardening sprint — add Bearer JWT auth to all 56 unprotected API routes
