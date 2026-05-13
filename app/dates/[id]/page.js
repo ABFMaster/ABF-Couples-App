@@ -240,6 +240,19 @@ export default function DateDetailPage({ params }) {
           flirt_type: 'date_shared',
         })
       }
+      const { data: { session } } = await supabase.auth.getSession()
+      const currentUserName = session?.user?.user_metadata?.first_name || 'Your partner'
+      const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
+      fetch('/api/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          userId: partnerId,
+          title: 'New Date Plan',
+          body: `${currentUserName} planned a date for you two. Take a look.`,
+          url: `/dates/${date.id}`,
+        }),
+      }).catch(() => {})
       setSentToPartner(true)
       loadDate()
     } catch (err) {
