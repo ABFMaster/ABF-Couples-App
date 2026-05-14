@@ -15,7 +15,7 @@ async function fetchAndStorePlacePhoto(placeId, coupleId) {
     const storagePath = `${coupleId}/${placeId}.jpg`
 
     // Check if already stored
-    const { data: existing } = await supabase.storage
+    const { data: existing } = supabase.storage
       .from('date-photos')
       .getPublicUrl(storagePath)
 
@@ -30,7 +30,8 @@ async function fetchAndStorePlacePhoto(placeId, coupleId) {
       `https://places.googleapis.com/v1/places/${placeId}?key=${process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY}`,
       {
         headers: {
-          'X-Goog-FieldMask': 'photos'
+          'X-Goog-FieldMask': 'photos',
+          'Referer': 'https://abf-couples-app.vercel.app'
         }
       }
     )
@@ -42,7 +43,12 @@ async function fetchAndStorePlacePhoto(placeId, coupleId) {
 
     // Fetch photo media
     const photoRes = await fetch(
-      `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=800&skipHttpRedirect=true&key=${process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY}`
+      `https://places.googleapis.com/v1/${photoName}/media?maxWidthPx=800&skipHttpRedirect=true&key=${process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY}`,
+      {
+        headers: {
+          'Referer': 'https://abf-couples-app.vercel.app'
+        }
+      }
     )
     if (!photoRes.ok) { console.log(`[fail] Photo media error for ${placeId}`); return null }
 
