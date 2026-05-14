@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SharedItemCard from '@/components/SharedItemCard'
+import { getWeekStart } from '@/lib/dates'
 export default function UsPage() {
   const router = useRouter()
   const [user, setUser] = useState(null)
@@ -19,6 +20,7 @@ export default function UsPage() {
 
   // Now data
   const [ritual, setRitual] = useState(null)
+  const [ritualCompletedThisWeek, setRitualCompletedThisWeek] = useState(false)
   const [lastReflectionDays, setLastReflectionDays] = useState(null)
   const [heroData, setHeroData] = useState(null)
 
@@ -93,6 +95,18 @@ export default function UsPage() {
         .limit(1)
         .single()
       setRitual(ritualData || null)
+
+      if (ritualData) {
+        const weekStart = getWeekStart()
+        const { data: completion } = await supabase
+          .from('ritual_completions')
+          .select('completed')
+          .eq('ritual_id', ritualData.id)
+          .eq('week_start', weekStart)
+          .eq('completed', true)
+          .maybeSingle()
+        setRitualCompletedThisWeek(!!completion)
+      }
 
       // Last reflection for Now
       const { data: reflections } = await supabase
@@ -431,9 +445,13 @@ export default function UsPage() {
                 <div style={{ fontSize: '11px', color: '#7A8C7E', marginTop: '2px' }}>{ritual.streak} week streak</div>
               )}
             </div>
-            <div style={{ fontSize: '11px', fontWeight: 500, color: '#1C1208', border: '1px solid #1C1208', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
-              {todayName === 'Friday' ? 'Do it →' : 'See ritual'}
-            </div>
+            {ritualCompletedThisWeek ? (
+              <div style={{ fontSize: '11px', fontWeight: 500, color: '#7A9E7E', background: '#F0F7F0', border: '1px solid #C5DEC5', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap' }}>✓ Done this week</div>
+            ) : (
+              <div style={{ fontSize: '11px', fontWeight: 500, color: '#1C1208', border: '1px solid #1C1208', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                {todayName === 'Friday' ? 'Do it →' : 'See ritual'}
+              </div>
+            )}
           </div>
 
           {/* Weekly reflection */}
