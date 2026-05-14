@@ -1136,3 +1136,70 @@ Estimated: 1-2 more sessions before beta invites go out.
 Core loop functional. Push notifications working. Weekly Reflection live and generating. Date flow complete including delete. Nora memory at 9.7/12 quality. Code audit clean — no debug logs, no orphaned routes, architecture intact.
 Remaining before first beta invite: full end-to-end test session with Cass, fix known bugs above.
 Estimated: 1 session before beta invites go out.
+
+---
+
+## Self-Review 2026-05-14
+
+### Critical Fix — force-dynamic Missing from 68 API Routes
+Root cause of wrong Nora prompts on wrong days, stale Spark/Bet content, cached ritual state. Next.js was statically compiling all API routes — they ran once at deploy time and served cached responses forever. Added `export const dynamic = 'force-dynamic'` to all 68 affected routes. This was causing subtle bugs across the entire app for months. Every route that touches a database, reads the current user, or depends on the current date was affected.
+
+### Place Photo Permanent Storage
+- Created Supabase Storage bucket 'date-photos' with public read, authenticated write policies
+- Built lib/place-photo.js — fetches photo from Google Places API (New), uploads to Supabase Storage, returns permanent URL. Requires GOOGLE_PLACES_SERVER_KEY (unrestricted server key) with Referer header set to app domain
+- Wired into app/dates/custom/page.js and app/dates/[id]/edit/page.js — photos stored permanently when stop is added to itinerary
+- Built scripts/backfill-place-photos.mjs — backfilled 13 existing date stops successfully
+- Date history grid and detail page banner now show real place photos instead of gradient placeholders
+- Key learnings: NEXT_PUBLIC_ keys are referrer-restricted (browser only); GOOGLE_PLACES_SERVER_KEY needed for server-side; Node.js fetch requires explicit Referer header or Google blocks as empty referer
+
+### Spark Reaction Persistence
+- Rebuilt app/api/spark/react/route.js with proper JWT auth and force-dynamic
+- Wired save call in SparkCard handleReaction — fire and forget POST to /api/spark/react
+- reaction_icon now persists to DB via spark_responses, survives navigation
+- Bug found in testing: tapping a reaction closes the reaction tabs instead of staying open with selection highlighted. Cannot select a different reaction after first tap. Needs persistent selected state with visual highlight.
+
+### Ritual Completion on Us Page
+- Imported getWeekStart from lib/dates.js into us/page.js
+- Added ritual_completions query on load — checks current week for completed=true
+- Us page now shows "✓ Done this week" in muted green when couple has checked in this week
+- Previously showed "Do it →" forever regardless of completion state
+
+### Nora Hero Card — force-dynamic Fix
+- dashboard/hero route was statically cached — served same Nora message from deploy day forever
+- force-dynamic fix deployed — verify Thursday morning that correct Spark content shows
+- Larger issue identified: Nora hero card is a feature announcement system not a relationship intelligence surface. Needs full prompt redesign.
+
+### Process Failures Logged
+- force-dynamic missing from 68 routes — should be standard on every new API route going forward. Add to new file checklist in session rules.
+- Google Places API key confusion — three keys (NEXT_PUBLIC_GOOGLE_PLACES_API_KEY, GOOGLE_PLACES_API_KEY, GOOGLE_PLACES_SERVER_KEY) with unclear ownership. GOOGLE_PLACES_SERVER_KEY had no value in Vercel. Document key purposes clearly.
+
+### Known Issues / Bugs for Next Session
+- Spark reaction UX: tapping a reaction closes tabs instead of highlighting selection. Cannot change reaction after first tap.
+- Spark submit button no loading state — "Share my answer" shows no feedback for 2-3 seconds after tap
+- Nora hero card wrong day content — force-dynamic deployed, verify Thursday morning
+- Nora hero card prompt quality — feature announcement not insight. Needs therapist relationship arc redesign.
+- Bet verdict tone — misread self-deprecating humor as vulnerability (Cass: "I am already my mother" read as confession not self-aware humor)
+
+### Architectural Decisions Locked
+- All API routes must have `export const dynamic = 'force-dynamic'` — add to new file checklist
+- Place photos stored permanently in Supabase Storage, never as temporary Google URLs
+- GOOGLE_PLACES_SERVER_KEY for all server-side Places API calls (no referrer restrictions, requires Referer header in Node.js fetch)
+- NEXT_PUBLIC_GOOGLE_PLACES_API_KEY for client-side Maps JS API only (referrer-restricted to app domain)
+
+### Product Ideas Logged
+- Nora Relationship Arc Sprint — research therapist rapport-building with new couples. Week 1: warm curiosity. Week 2: first pattern observations. Week 3+: earned specificity. "Holy shit she sees us" moment by day 7.
+- Relationship Room — onboarding photo prompts ("Where did you meet?", "Your first date?"), source images via Places API or user upload, store as couple visual identity anchors used throughout app. Single user arc: build the room before partner joins.
+- Image expansion sprint — surface permanent place photos on Next Up card, date suggestions, anywhere a visual anchor elevates the experience.
+
+### Next Session Priorities
+1. Spark reaction UX fix — keep tabs open, highlight selected, allow changing reaction
+2. Spark submit button loading state
+3. Verify Nora hero card shows correct Thursday content (Spark day)
+4. Nora hero card prompt pass — therapist relationship arc research and redesign
+5. Full end-to-end test session with Cass — every game mode, every daily activity
+6. Relationship Room sprint planning
+
+### Beta Readiness Assessment
+Force-dynamic fix resolves the most pervasive silent bug in the app. Place photos now showing. Spark reactions persisting. Ritual completion visible on Us page. Core loop functional with significantly improved reliability.
+Remaining before first beta invite: Spark reaction UX fix, Spark submit loading state, full end-to-end test with Cass, Nora hero card prompt pass.
+Estimated: 1 session before beta invites go out.

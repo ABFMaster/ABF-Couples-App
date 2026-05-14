@@ -18,12 +18,17 @@ export async function POST(request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { sparkId, reactionIcon } = await request.json()
-    if (!sparkId || !reactionIcon) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+    const { sparkId, reactionIcon, questionRating } = await request.json()
+    if (!sparkId || (!reactionIcon && questionRating === undefined)) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+
+    const updates = {
+      ...(reactionIcon && { reaction_icon: reactionIcon, reacted_at: new Date().toISOString() }),
+      ...(questionRating !== undefined && { question_rating: questionRating }),
+    }
 
     const { error } = await supabase
       .from('spark_responses')
-      .update({ reaction_icon: reactionIcon, reacted_at: new Date().toISOString() })
+      .update(updates)
       .eq('spark_id', sparkId)
       .eq('user_id', user.id)
 

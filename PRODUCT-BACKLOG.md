@@ -1,12 +1,16 @@
-# ABF Product Backlog — Updated 2026-05-13
+# ABF Product Backlog — Updated 2026-05-14
 
 ## BUGS — ACTIVE (found in testing, fix before beta)
 - [ ] Spark reaction (Made me Smile, Keep It Coming) never persists — local state only, never saved to DB
 - [ ] Nora home prompt showing wrong content on wrong days — Bet/Ritual copy appearing on incorrect days
 - [ ] Location images not always showing on date banners and Next Up card
 - [ ] Ritual "We did it" not showing progress on Us page after completion
-- [ ] No Nora verdict on Spark — root cause fixed (await on push blocking Nora generation), verify working Thursday
+- [x] No Nora verdict on Spark — FIXED: removed await from all push/send calls, verified working 2026-05-13
 - [ ] Push delivery logging — no visibility into APNs/FCM failures, need push_log table
+- [ ] Spark reaction UX — tapping a reaction closes tabs instead of highlighting selection. Cannot change reaction after first tap. Needs persistent selected state with visual highlight.
+- [ ] Spark submit button no loading state — "Share my answer" shows no feedback for 2-3 seconds after tap
+- [ ] Nora hero card wrong day content — force-dynamic fix deployed 2026-05-14, verify next morning
+- [ ] Bet verdict tone — misreads self-deprecating humor as vulnerability (Cass: "I am already my mother" read as confession not self-aware humor). Needs prompt tuning.
 
 ## BETA READINESS (do first)
 - [x] Onboarding flow visual pass — onboarding/page.js, onboarding/welcome/page.js
@@ -16,6 +20,13 @@
 - [ ] Full end-to-end test session with Cass — every game mode, every daily activity
 - [x] Remove cron diagnostic logs after push confirmed working
 - [ ] Run Nora memory test after 2 weeks real usage
+
+## IMAGE EXPANSION
+- [x] Place photo permanent storage — Supabase Storage bucket 'date-photos', lib/place-photo.js, wired into date builder and edit page, backfill script run 2026-05-14
+- [ ] Relationship Room — onboarding photo prompts ("Where did you meet?", "Your first date?"), source via Places API or user upload, store as couple visual identity anchors. Solo user arc: build before partner joins.
+- [ ] Next Up card photo — show first stop photo on dashboard Next Up card when date is planned
+- [ ] Date suggestion cards — surface real place photos on Ideas for You Two suggestion cards
+- [ ] Image expansion sprint — surface permanent place photos anywhere a visual anchor elevates experience
 
 ## SPRINT K — DATE NIGHT (in progress)
 - [ ] K2: Nora intelligence layer — vibe selection from couple_notes, "why this" one-liner per suggestion
@@ -88,6 +99,9 @@ These APIs don't fix UX — they enrich content. The current builder UX is funct
 - [ ] Weekly reflection data quality — system claims week-long observation but only 2 data points fed
 - [ ] Nora memory data flow audit — verify all signals accumulating correctly
 - [ ] Re-run Nora memory quality test after 2 weeks real usage
+- [ ] Nora Relationship Arc Sprint — research therapist rapport-building with new couples. Redesign hero card prompt to progress: Week 1 warm curiosity → Week 2 first pattern observations → Week 3+ earned specificity. "Holy shit she sees us" moment by day 7.
+- [ ] Nora hero card prompt pass — currently a feature announcement system, not relationship intelligence. Needs full redesign drawing from couple memory.
+- [ ] Bet verdict prompt tuning — improve tone detection, distinguish self-deprecating humor from vulnerability confession
 
 ## ALWAYS BE FEEDING — REMAINING GAPS
 - [ ] Wire FLIRT_SENT on individual flirt send (post Flirts redesign)
@@ -157,6 +171,7 @@ These APIs don't fix UX — they enrich content. The current builder UX is funct
 - [ ] Nora context handoff system — universal pattern for launching Nora from any surface (reflection, verdict, Spark reveal, date debrief) with pre-loaded context. Nora opens conversation, not user.
 - [ ] Push delivery logging — log send attempts, endpoint, response code to push_log table
 - [ ] Us/Now dynamic presence sprint — day-aware, activity-aware content surfacing. Nora card responds to what happened this week not just the schedule.
+- [ ] Nora Relationship Arc — therapist-informed rapport building across first 3 weeks
 
 ## TECHNICAL DEBT
 - [ ] GoTrueClient multiple instances — parked
@@ -168,3 +183,6 @@ These APIs don't fix UX — they enrich content. The current builder UX is funct
 - [ ] window.location usage in dashboard/page.js and us/page.js — should use useSearchParams with Suspense wrapper
 - [ ] relationship_points written directly from client components (FlirtView, FlirtComposer) — should go through API route
 - [ ] Pre-App Store hardening sprint — add Bearer JWT auth to all 56 unprotected API routes
+- [x] force-dynamic missing from all API routes — FIXED 2026-05-14, added to all 68 routes
+- [ ] New API route checklist — every new route must include: export const dynamic = 'force-dynamic', Bearer JWT auth, console.error in catch only (no console.log)
+- [ ] Google Places API key documentation — three keys exist with unclear ownership. Document: NEXT_PUBLIC_GOOGLE_PLACES_API_KEY (browser/Maps JS, referrer-restricted), GOOGLE_PLACES_API_KEY (unknown), GOOGLE_PLACES_SERVER_KEY (server-side, unrestricted, use for Places API calls)

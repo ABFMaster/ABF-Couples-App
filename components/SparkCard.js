@@ -32,6 +32,8 @@ export default function SparkCard({
   const [selectedReaction, setSelectedReaction] = useState(mine?.reaction_icon ?? null)
   const [selectedRating, setSelectedRating] = useState(mine?.question_rating ?? null)
 
+  useEffect(() => { if (mine?.reaction_icon && !selectedReaction) setSelectedReaction(mine.reaction_icon) }, [mine?.reaction_icon])
+
   // State C reveal animation states
   const [partnerCardShown, setPartnerCardShown] = useState(false)
   const [myCardShown, setMyCardShown] = useState(false)
@@ -51,7 +53,6 @@ export default function SparkCard({
   let state
   if (!hasAnswered) state = 'A'
   else if (!partnerAnswered) state = 'B'
-  else if (mine?.reaction_icon || (selectedReaction && selectedRating)) state = 'D'
   else state = 'C'
 
   useEffect(() => {
@@ -77,7 +78,6 @@ export default function SparkCard({
   const handleReaction = (icon) => {
     triggerPulse(icon)
     setSelectedReaction(icon)
-    onReact(icon, activeRating).catch(() => {})
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) return
       fetch('/api/spark/react', {
@@ -91,7 +91,14 @@ export default function SparkCard({
   const handleRating = (rating) => {
     triggerPulse(rating)
     setSelectedRating(rating)
-    onReact(activeReaction, rating).catch(() => {})
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return
+      fetch('/api/spark/react', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ sparkId: spark.id, questionRating: rating }),
+      }).catch(() => {})
+    }).catch(() => {})
   }
 
   const revealStyle = (shown) => ({
@@ -230,52 +237,6 @@ export default function SparkCard({
             </div>
             <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#5C3D2E', lineHeight: 1.7, fontStyle: 'italic', margin: 0 }}>
               {mine.nora_solo_insight}
-            </p>
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  if (state === 'D') {
-    const reactionObj = REACTIONS.find(r => r.key === activeReaction)
-    const ratingObj = RATINGS.find(r => r.key === activeRating)
-    const ReactionIcon = reactionObj?.icon
-    const RatingIcon = ratingObj?.icon
-    return (
-      <div style={wrapperStyle}>
-        {sparkLabel}
-        <div style={{ marginBottom: '20px' }}>{questionMuted}</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderLeft: '3px solid #C1440E', borderRadius: '0 14px 14px 0', padding: '18px 20px' }}>
-            <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#A0522D', textTransform: 'uppercase', marginBottom: '8px' }}>You</p>
-            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#2C1810', lineHeight: 1.55 }}>{mine?.response_text}</p>
-          </div>
-          <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '14px', padding: '18px 20px' }}>
-            <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#A0522D', textTransform: 'uppercase', marginBottom: '8px' }}>{partnerName}</p>
-            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#2C1810', lineHeight: 1.55 }}>{theirs?.response_text}</p>
-          </div>
-        </div>
-        {ReactionIcon && (
-          <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ color: '#C1440E' }}><ReactionIcon size={16} strokeWidth={1.75} /></span>
-            <span style={{ fontSize: '13px', color: '#5C3D2E' }}>{reactionObj.label}</span>
-          </div>
-        )}
-        {RatingIcon && (
-          <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ color: '#C1440E' }}><RatingIcon size={14} strokeWidth={1.75} /></span>
-            <span style={{ fontSize: '13px', color: '#5C3D2E' }}>{ratingObj.label}</span>
-          </div>
-        )}
-        {mine?.nora_reaction && (
-          <div style={{ marginTop: '20px', background: '#FFF8F4', border: '0.5px solid #E8C8B8', borderRadius: '14px', padding: '18px 20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C1440E', flexShrink: 0 }} />
-              <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#A0522D', textTransform: 'uppercase' }}>Nora</p>
-            </div>
-            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#5C3D2E', lineHeight: 1.65, fontStyle: 'italic' }}>
-              {mine.nora_reaction}
             </p>
           </div>
         )}
