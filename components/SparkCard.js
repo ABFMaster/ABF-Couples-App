@@ -31,8 +31,20 @@ export default function SparkCard({
   const [inviteSent, setInviteSent] = useState(false)
   const [selectedReaction, setSelectedReaction] = useState(mine?.reaction_icon ?? null)
   const [selectedRating, setSelectedRating] = useState(mine?.question_rating ?? null)
+  const [reactionComplete, setReactionComplete] = useState(false)
 
   useEffect(() => { if (mine?.reaction_icon && !selectedReaction) setSelectedReaction(mine.reaction_icon) }, [mine?.reaction_icon])
+
+  useEffect(() => {
+    if (selectedReaction && selectedRating) {
+      const timer = setTimeout(() => setReactionComplete(true), 800)
+      return () => clearTimeout(timer)
+    }
+  }, [selectedReaction, selectedRating])
+
+  useEffect(() => {
+    if (mine?.reaction_icon && mine?.question_rating) setReactionComplete(true)
+  }, [mine?.reaction_icon, mine?.question_rating])
 
   // State C reveal animation states
   const [partnerCardShown, setPartnerCardShown] = useState(false)
@@ -250,47 +262,51 @@ export default function SparkCard({
       {sparkLabel}
       <div style={{ marginBottom: '24px' }}>{questionMuted}</div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-        {/* Partner's answer — the reveal, most visual weight */}
-        <div style={{
-          background: '#FFF8F4',
-          borderRadius: '16px',
-          padding: '22px 22px 20px',
-          ...revealStyle(partnerCardShown)
-        }}>
-          <p style={{ fontSize: '10px', letterSpacing: '0.16em', color: '#C1440E', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>{partnerName}</p>
-          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '18px', color: '#2C1810', lineHeight: 1.6, margin: 0 }}>{theirs?.response_text}</p>
-        </div>
+      {reactionComplete && (
+        <>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+            {/* Partner's answer — the reveal, most visual weight */}
+            <div style={{
+              background: '#FFF8F4',
+              borderRadius: '16px',
+              padding: '22px 22px 20px',
+              ...revealStyle(partnerCardShown)
+            }}>
+              <p style={{ fontSize: '10px', letterSpacing: '0.16em', color: '#C1440E', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>{partnerName}</p>
+              <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '18px', color: '#2C1810', lineHeight: 1.6, margin: 0 }}>{theirs?.response_text}</p>
+            </div>
 
-        {/* Visual connector between the two answers */}
-        <div style={{ display: 'flex', alignItems: 'center', padding: '6px 22px', ...revealStyle(myCardShown) }}>
-          <div style={{ width: '1px', height: '20px', background: '#E8DDD0', marginLeft: '2px' }} />
-        </div>
+            {/* Visual connector between the two answers */}
+            <div style={{ display: 'flex', alignItems: 'center', padding: '6px 22px', ...revealStyle(myCardShown) }}>
+              <div style={{ width: '1px', height: '20px', background: '#E8DDD0', marginLeft: '2px' }} />
+            </div>
 
-        {/* Your answer — contrast to partner's */}
-        <div style={{
-          background: '#FFFFFF',
-          border: '0.5px solid #E8DDD0',
-          borderLeft: '3px solid #C1440E',
-          borderRadius: '0 14px 14px 0',
-          padding: '18px 20px',
-          ...revealStyle(myCardShown)
-        }}>
-          <p style={{ fontSize: '10px', letterSpacing: '0.16em', color: '#A0522D', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>You</p>
-          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#2C1810', lineHeight: 1.6, margin: 0 }}>{mine?.response_text}</p>
-        </div>
-      </div>
+            {/* Your answer — contrast to partner's */}
+            <div style={{
+              background: '#FFFFFF',
+              border: '0.5px solid #E8DDD0',
+              borderLeft: '3px solid #C1440E',
+              borderRadius: '0 14px 14px 0',
+              padding: '18px 20px',
+              ...revealStyle(myCardShown)
+            }}>
+              <p style={{ fontSize: '10px', letterSpacing: '0.16em', color: '#A0522D', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 600 }}>You</p>
+              <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#2C1810', lineHeight: 1.6, margin: 0 }}>{mine?.response_text}</p>
+            </div>
+          </div>
 
-      {/* Nora — no card, just presence */}
-      <div style={{ marginTop: '28px', paddingLeft: '4px', ...revealStyle(noraShown) }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C1440E', flexShrink: 0 }} />
-          <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#A0522D', textTransform: 'uppercase', margin: 0 }}>Nora</p>
-        </div>
-        <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#5C3D2E', lineHeight: 1.7, fontStyle: 'italic', margin: 0 }}>
-          {mine?.nora_reaction}
-        </p>
-      </div>
+          {/* Nora — no card, just presence */}
+          <div style={{ marginTop: '28px', paddingLeft: '4px', ...revealStyle(noraShown) }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C1440E', flexShrink: 0 }} />
+              <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#A0522D', textTransform: 'uppercase', margin: 0 }}>Nora</p>
+            </div>
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#5C3D2E', lineHeight: 1.7, fontStyle: 'italic', margin: 0 }}>
+              {mine?.nora_reaction}
+            </p>
+          </div>
+        </>
+      )}
 
       {/* Separator */}
       <div style={{ height: '0.5px', background: '#E8DDD0', margin: '24px 0 0', ...revealStyle(pillsShown) }} />
