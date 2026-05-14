@@ -28,6 +28,7 @@ export default function SparkCard({
   onInvite,
 }) {
   const [answerText, setAnswerText] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const [inviteSent, setInviteSent] = useState(false)
   const [selectedReaction, setSelectedReaction] = useState(mine?.reaction_icon ?? null)
   const [selectedRating, setSelectedRating] = useState(mine?.question_rating ?? null)
@@ -83,8 +84,13 @@ export default function SparkCard({
   }
 
   const handleRespond = async () => {
-    if (!answerText.trim()) return
-    await onRespond(answerText.trim())
+    if (!answerText.trim() || submitting) return
+    setSubmitting(true)
+    try {
+      await onRespond(answerText.trim())
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleReaction = (icon) => {
@@ -180,7 +186,7 @@ export default function SparkCard({
         />
         <button
           onClick={handleRespond}
-          disabled={!answerText.trim()}
+          disabled={!answerText.trim() || submitting}
           style={{
             width: '100%',
             marginTop: '12px',
@@ -191,12 +197,12 @@ export default function SparkCard({
             fontWeight: 600,
             border: 'none',
             borderRadius: '30px',
-            cursor: !answerText.trim() ? 'not-allowed' : 'pointer',
-            opacity: !answerText.trim() ? 0.4 : 1,
+            cursor: (!answerText.trim() || submitting) ? 'not-allowed' : 'pointer',
+            opacity: (!answerText.trim() || submitting) ? 0.4 : 1,
             transition: 'opacity 150ms',
           }}
         >
-          Share my answer
+          {submitting ? 'Sharing…' : 'Share my answer'}
         </button>
         {(mine?.skip_count == null || mine.skip_count < 2) && (
           <button
