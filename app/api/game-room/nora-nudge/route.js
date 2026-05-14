@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { createClient } from '@supabase/supabase-js'
 import { noraReact } from '@/lib/nora'
 const supabase = createClient(

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { createClient } from '@supabase/supabase-js'
 import { CHALLENGE_PROMPTS, MEMORY_UNLOCK } from '@/lib/challenge-prompts'
 import { noraGenerate } from '@/lib/nora'

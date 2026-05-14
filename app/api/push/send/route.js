@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import webpush from 'web-push'
 import { createClient } from '@supabase/supabase-js'
 

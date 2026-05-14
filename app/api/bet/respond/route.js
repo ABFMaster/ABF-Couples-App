@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // DB migration: ALTER TABLE bet_responses ADD COLUMN IF NOT EXISTS nora_intro text;
 
 import { createClient } from '@supabase/supabase-js'

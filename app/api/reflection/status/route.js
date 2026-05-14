@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { getWeekStart } from '@/lib/dates'

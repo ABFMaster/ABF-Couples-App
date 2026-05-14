@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { createClient } from '@supabase/supabase-js'
 import { getAvailableMissions, ALL_HUNT_MISSIONS } from '@/lib/hunt-missions'
 import { noraGenerate } from '@/lib/nora'
