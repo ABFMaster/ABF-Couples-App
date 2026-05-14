@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Clock, Heart, Smile, Zap, HeartHandshake, Flame, Waves } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 const REACTIONS = [
   { icon: Heart, key: 'heart', label: 'Loved it' },
@@ -77,6 +78,14 @@ export default function SparkCard({
     triggerPulse(icon)
     setSelectedReaction(icon)
     onReact(icon, activeRating).catch(() => {})
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return
+      fetch('/api/spark/react', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ sparkId: spark.id, reactionIcon: icon }),
+      }).catch(() => {})
+    }).catch(() => {})
   }
 
   const handleRating = (rating) => {
