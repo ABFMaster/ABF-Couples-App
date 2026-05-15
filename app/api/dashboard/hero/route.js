@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraSignal, noraChat } from '@/lib/nora'
-import { getTodayString, getDayOfWeek, getDateDayLabel } from '@/lib/dates'
+import { getTodayString, getDayOfWeek, getDateDayLabel, getWeekStart } from '@/lib/dates'
 
 export async function GET(request) {
   try {
@@ -96,7 +96,7 @@ export async function GET(request) {
       // Friday — Ritual
       const { data: ritual } = await supabase
         .from('rituals')
-        .select('id, title, status')
+        .select('id, title, status, streak')
         .eq('couple_id', coupleId)
         .in('status', ['discovering', 'adopted'])
         .order('created_at', { ascending: false })
@@ -104,7 +104,17 @@ export async function GET(request) {
         .maybeSingle()
 
       if (ritual) {
-        feature = { type: 'ritual', label: 'Ritual', title: ritual.title, status: ritual.status, mine: null, theirs: null }
+        const { data: completion } = await supabase
+          .from('ritual_completions')
+          .select('completed')
+          .eq('ritual_id', ritual.id)
+          .eq('week_start', getWeekStart('America/Los_Angeles'))
+          .limit(1)
+          .maybeSingle()
+
+        const ritualCompletedThisWeek = !!completion?.completed
+        const ritualStreak = ritual.streak || 0
+        feature = { type: 'ritual', label: 'Ritual', title: ritual.title, status: ritual.status, completedThisWeek: ritualCompletedThisWeek, streak: ritualStreak, mine: null, theirs: null }
       }
     }
 
@@ -234,9 +244,15 @@ export async function GET(request) {
         cta_href  = '/ai-coach'
       }
     } else if (feature?.type === 'ritual') {
-      priority  = 1
-      cta_label = 'Go to Today'
-      cta_href  = '/dashboard'
+      if (feature.completedThisWeek) {
+        priority  = 3
+        cta_label = 'Talk to Nora'
+        cta_href  = '/ai-coach'
+      } else {
+        priority  = 1
+        cta_label = null
+        cta_href  = null
+      }
     }
 
     if (priority === 5 && nextDate && daysUntilDate <= 3) {
@@ -261,12 +277,21 @@ export async function GET(request) {
     const name = userName || 'there'
     let message
 
+    const ritualContext = feature?.type === 'ritual'
+      ? priority === 1
+        ? `It's Friday. You two are working on a ritual: "${feature.title}". This is week ${feature.streak + 1} — they haven't completed it yet this week.`
+        : priority === 3
+        ? `You two just completed your ritual: "${feature.title}". This is completion number ${feature.streak} — ${feature.streak === 1 ? 'first time' : feature.streak === 2 ? 'second week in a row' : feature.streak + ' weeks running'}.`
+        : null
+      : null
+
     if (mode === 'pre') {
       const systemPrompt = `You are Nora — you have been watching this couple and you have something specific to say. Write one sentence (max 18 words) for the dashboard hero card. You are NOT announcing a feature or pointing at an activity. You are surfacing one specific observation about this person or this couple from what you know about them. If memory is rich, say something only sayable about THIS couple — a pattern, a contradiction, something you've noticed. If memory is sparse, ask one warm specific question that makes them think. Never start with Hey or Hi. Never mention app features by name. Never be generic. Tone: like a sharp, warm friend who pays attention.`
 
       const userPrompt = [
         `User's name: ${name}`,
         `Partner's name: ${partnerName}`,
+        ritualContext ? `Today's context: ${ritualContext}` : null,
         myPersonNotes ? `What I know about ${name}: ${myPersonNotes.slice(0, 300)}` : null,
         coupleNotes   ? `What I know about this couple: ${coupleNotes.slice(0, 400)}` : null,
         structuredFacts ? `Structured observations: ${JSON.stringify(structuredFacts)}` : null,
@@ -290,10 +315,12 @@ Do not label which mode you chose. Do not explain. Just write it. Never start wi
       const userPrompt = [
         `User's name: ${name}`,
         `Partner's name: ${partnerName}`,
+        ritualContext ? `Today's context: ${ritualContext}` : null,
         questionOrPrompt ? `Today's question: "${questionOrPrompt}"` : null,
         myAnswer    ? `${name}'s answer: "${myAnswer}"` : null,
         theirAnswer ? `${partnerName}'s answer: "${theirAnswer}"` : null,
         noraReaction ? `Nora's prior observation on ${name}'s answer: "${noraReaction}"` : null,
+        feature?.type === 'ritual' ? `Ritual streak: ${feature.streak} completions. ${feature.streak === 1 ? 'First time — still noticing.' : feature.streak === 2 ? 'Two in a row — something is forming.' : 'This one is becoming real.'}` : null,
         myPersonNotes   ? `What I know about ${name}: ${myPersonNotes.slice(0, 300)}` : null,
         coupleNotes     ? `What I know about this couple: ${coupleNotes.slice(0, 400)}` : null,
         structuredFacts ? `Structured observations: ${JSON.stringify(structuredFacts)}` : null,
