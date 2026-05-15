@@ -71,6 +71,8 @@ export async function POST(request) {
         .insert({ bet_id: betId, user_id: userId, couple_id: resolvedCoupleId, ...updatePayload })
     }
 
+    supabase.from('hero_cache').delete().eq('couple_id', resolvedCoupleId).then(() => {}).catch(() => {})
+
     // Log activity to daily_checkins
     const { getTodayString } = await import('@/lib/dates')
     const todayStr = getTodayString()

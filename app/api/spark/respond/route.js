@@ -41,6 +41,8 @@ export async function POST(request) {
         responded_at: new Date().toISOString(),
       }, { onConflict: 'spark_id,user_id' })
 
+    supabase.from('hero_cache').delete().eq('couple_id', coupleId).then(() => {}).catch(() => {})
+
     // Log activity to daily_checkins
     const { getTodayString } = await import('@/lib/dates')
     const todayStr = getTodayString()

@@ -112,7 +112,7 @@ export async function GET(request) {
           .limit(1)
           .maybeSingle()
 
-        const ritualCompletedThisWeek = !!completion?.completed
+const ritualCompletedThisWeek = !!completion?.completed
         const ritualStreak = ritual.streak || 0
         feature = { type: 'ritual', label: 'Ritual', title: ritual.title, status: ritual.status, completedThisWeek: ritualCompletedThisWeek, streak: ritualStreak, mine: null, theirs: null }
       }

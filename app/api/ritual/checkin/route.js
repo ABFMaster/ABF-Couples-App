@@ -67,6 +67,8 @@ export async function POST(request) {
         .from('rituals')
         .update({ streak: (current?.streak || 0) + 1, updated_at: now })
         .eq('id', ritualId)
+
+      supabase.from('hero_cache').delete().eq('couple_id', coupleId).then(() => {}).catch(() => {})
     }
 
     // Fetch updated ritual row
