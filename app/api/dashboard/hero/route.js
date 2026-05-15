@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { noraSignal } from '@/lib/nora'
+import { noraSignal, noraChat } from '@/lib/nora'
 import { getTodayString, getDayOfWeek, getDateDayLabel } from '@/lib/dates'
 
 export async function GET(request) {
@@ -38,8 +38,27 @@ export async function GET(request) {
       ? (couple.user1_id === userId ? couple.user2_id : couple.user1_id)
       : null
 
-    // ── Feature status ────────────────────────────────────────────────────────
-    let feature = null // { type, label, mine, theirs }
+    // ── PART 1: Cache — early exit for post mode ──────────────────────────────
+    // Check post cache before feature detection to save DB calls
+    const { data: earlyCache } = await supabase
+      .from('hero_cache')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('cache_date', todayStr)
+      .maybeSingle()
+
+    if (earlyCache?.mode === 'post') {
+      return NextResponse.json({
+        message:   earlyCache.message,
+        cta_label: earlyCache.cta_label,
+        cta_href:  earlyCache.cta_href,
+        pills:     earlyCache.pills,
+        mode:      earlyCache.mode,
+      })
+    }
+
+    // ── PART 2: Feature detection ─────────────────────────────────────────────
+    let feature = null
 
     if (dayOfWeek === 3) {
       // Wednesday — Bet
@@ -52,8 +71,8 @@ export async function GET(request) {
 
       if (bet) {
         const [{ data: mine }, { data: theirs }] = await Promise.all([
-          supabase.from('bet_responses').select('prediction, nora_reaction').eq('bet_id', bet.id).eq('user_id', userId).maybeSingle(),
-          partnerId ? supabase.from('bet_responses').select('prediction').eq('bet_id', bet.id).eq('user_id', partnerId).maybeSingle() : Promise.resolve({ data: null }),
+          supabase.from('bet_responses').select('prediction, actual_answer, nora_reaction, nora_solo_insight').eq('bet_id', bet.id).eq('user_id', userId).maybeSingle(),
+          partnerId ? supabase.from('bet_responses').select('prediction, actual_answer').eq('bet_id', bet.id).eq('user_id', partnerId).maybeSingle() : Promise.resolve({ data: null }),
         ])
         feature = { type: 'bet', label: 'Bet', question: bet.question, mine: mine || null, theirs: theirs || null }
       }
@@ -68,8 +87,8 @@ export async function GET(request) {
 
       if (spark) {
         const [{ data: mine }, { data: theirs }] = await Promise.all([
-          supabase.from('spark_responses').select('responded_at, reaction_icon').eq('spark_id', spark.id).eq('user_id', userId).maybeSingle(),
-          partnerId ? supabase.from('spark_responses').select('responded_at').eq('spark_id', spark.id).eq('user_id', partnerId).maybeSingle() : Promise.resolve({ data: null }),
+          supabase.from('spark_responses').select('responded_at, reaction_icon, response_text, nora_reaction, nora_solo_insight').eq('spark_id', spark.id).eq('user_id', userId).maybeSingle(),
+          partnerId ? supabase.from('spark_responses').select('responded_at, response_text').eq('spark_id', spark.id).eq('user_id', partnerId).maybeSingle() : Promise.resolve({ data: null }),
         ])
         feature = { type: 'spark', label: 'Spark', prompt: spark.prompt, mine: mine || null, theirs: theirs || null }
       }
@@ -89,7 +108,40 @@ export async function GET(request) {
       }
     }
 
-    // ── Next upcoming date plan (date_plans + custom_dates) ──────────────────
+    // ── PART 1 (continued): Pre cache check — now that we know current state ──
+    if (earlyCache?.mode === 'pre') {
+      const mineActed   = feature?.type === 'bet' ? !!feature.mine?.prediction : !!feature?.mine?.responded_at
+      const theirsActed = feature?.type === 'bet' ? !!feature.theirs?.prediction : !!feature?.theirs?.responded_at
+      const currentStateIsPost = feature?.type !== 'ritual' && mineActed && theirsActed
+
+      if (!currentStateIsPost) {
+        return NextResponse.json({
+          message:   earlyCache.message,
+          cta_label: earlyCache.cta_label,
+          cta_href:  earlyCache.cta_href,
+          pills:     earlyCache.pills,
+          mode:      earlyCache.mode,
+        })
+      }
+      // State has advanced to post — delete stale pre cache and regenerate
+      await supabase.from('hero_cache').delete().eq('user_id', userId).eq('cache_date', todayStr)
+    }
+
+    // ── PART 3: Nora memory ───────────────────────────────────────────────────
+    const { data: memory } = await supabase
+      .from('nora_memory')
+      .select('user1_notes, user2_notes, couple_notes')
+      .eq('couple_id', coupleId)
+      .limit(1)
+      .maybeSingle()
+
+    const myNotes       = couple?.user1_id === userId ? memory?.user1_notes : memory?.user2_notes
+    const coupleNotes   = memory?.couple_notes?.notes || null
+    const structuredFacts = memory?.couple_notes?.structured_facts || null
+    const myPersonNotes = myNotes?.notes || null
+    const noraReaction  = feature?.mine?.nora_reaction || null
+
+    // ── PART 4: Dates + pills + weather ──────────────────────────────────────
     const nowIso = new Date().toISOString()
     const [{ data: planDates }, { data: customDates }] = await Promise.all([
       supabase
@@ -118,7 +170,6 @@ export async function GET(request) {
       ? Math.round((new Date(nextDate.date_time) - new Date()) / 86400000)
       : null
 
-    // ── Pills: next two feature days + upcoming date ─────────────────────────
     const DAY_ABBR      = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
     const FEATURE_LABEL = { 0: 'Reflection', 1: 'The Spark', 2: 'The Spark', 3: 'The Bet', 4: 'The Spark', 5: 'Ritual' }
 
@@ -137,7 +188,6 @@ export async function GET(request) {
       pills.push(`${dateDay} · ${nextDate.title}`)
     }
 
-    // ── Weather (optional) ────────────────────────────────────────────────────
     let weather = null
     if (lat && lon) {
       try {
@@ -161,8 +211,8 @@ export async function GET(request) {
       } catch { /* non-blocking */ }
     }
 
-    // ── Determine priority and CTA ────────────────────────────────────────────
-    let priority = 5
+    // ── PART 5: Priority + CTA + mode ────────────────────────────────────────
+    let priority  = 5
     let cta_label = 'Talk to Nora'
     let cta_href  = '/ai-coach'
 
@@ -195,62 +245,77 @@ export async function GET(request) {
       cta_href  = `/dates/${nextDate.id}`
     }
 
-    // ── Build Claude prompt ───────────────────────────────────────────────────
+    const mode = priority === 3 ? 'post' : 'pre'
+
+    if (mode === 'post') {
+      if (structuredFacts) {
+        cta_label = 'Talk to Nora'
+        cta_href  = '/ai-coach'
+      } else {
+        cta_label = null
+        cta_href  = null
+      }
+    }
+
+    // ── PART 6: Prompts ───────────────────────────────────────────────────────
     const name = userName || 'there'
+    let message
 
-    const featureContext = feature
-      ? (() => {
-          if (feature.type === 'bet') {
-            const mineActed   = !!feature.mine?.prediction
-            const theirsActed = !!feature.theirs?.prediction
-            if (priority === 1) return `Today is Bet day. Neither you nor ${partnerName} has submitted a prediction yet. Question: "${feature.question}"`
-            if (priority === 2) return `Today is Bet day. ${partnerName} already submitted their prediction. You haven't yet. Question: "${feature.question}"`
-            if (priority === 3) return `Both you and ${partnerName} answered today's Bet. Question: "${feature.question}"`
-          }
-          if (feature.type === 'spark') {
-            const mineActed   = !!feature.mine?.responded_at
-            const theirsActed = !!feature.theirs?.responded_at
-            if (priority === 1) return `Today has a Spark prompt. Neither of you has responded. Prompt: "${feature.prompt}"`
-            if (priority === 2) return `Today has a Spark prompt. ${partnerName} already responded. You haven't yet. Prompt: "${feature.prompt}"`
-            if (priority === 3) return `Both of you responded to today's Spark. Prompt: "${feature.prompt}"`
-          }
-          if (feature.type === 'ritual') {
-            return `It's Friday. You two have a ${feature.status === 'adopted' ? 'running ritual' : 'ritual you\'re trying out'}: "${feature.title}"`
-          }
-          return null
-        })()
-      : null
+    if (mode === 'pre') {
+      const systemPrompt = `You are Nora — you have been watching this couple and you have something specific to say. Write one sentence (max 18 words) for the dashboard hero card. You are NOT announcing a feature or pointing at an activity. You are surfacing one specific observation about this person or this couple from what you know about them. If memory is rich, say something only sayable about THIS couple — a pattern, a contradiction, something you've noticed. If memory is sparse, ask one warm specific question that makes them think. Never start with Hey or Hi. Never mention app features by name. Never be generic. Tone: like a sharp, warm friend who pays attention.`
 
-    const dateContext = nextDate && daysUntilDate <= 3
-      ? `Upcoming date: "${nextDate.title}" in ${daysUntilDate === 0 ? 'tonight' : daysUntilDate === 1 ? '1 day' : `${daysUntilDate} days`}.`
-      : null
+      const userPrompt = [
+        `User's name: ${name}`,
+        `Partner's name: ${partnerName}`,
+        myPersonNotes ? `What I know about ${name}: ${myPersonNotes.slice(0, 300)}` : null,
+        coupleNotes   ? `What I know about this couple: ${coupleNotes.slice(0, 400)}` : null,
+        structuredFacts ? `Structured observations: ${JSON.stringify(structuredFacts)}` : null,
+        `Write one sentence that says something specific about this person or couple. Make it feel like you've been paying attention.`,
+      ].filter(Boolean).join('\n')
 
-    const weatherContext = weather
-      ? weather.isSnow  ? `It's snowing outside (${weather.temp}°F).`
-      : weather.isStorm ? `There's a thunderstorm outside (${weather.temp}°F).`
-      : weather.isRain  ? `It's raining outside (${weather.temp}°F).`
-      : weather.isHot   ? `It's ${weather.temp}°F outside — really hot.`
-      : weather.isCold  ? `It's ${weather.temp}°F outside — really cold.`
-      : null
-      : null
+      const response = await noraSignal(userPrompt, { route: 'dashboard/hero', system: systemPrompt, maxTokens: 200 })
+      message = response || `Good to see you, ${name}.`
 
-    const systemPrompt = `Write a single short message (1-2 sentences, max 20 words) for the dashboard hero card. Be direct and human — no fluff, no filler. Do not start with "Hey" or "Hi". Use the user's name if provided. Reference specific context if available. Tone: warm, grounded, occasionally a little playful. When referencing a feature, always use its full name — "The Bet", "The Spark", "The Ritual", or "Weekly Reflection". Never substitute with "it", "this", or "today's activity". If a feature is present in the context, you MUST begin your message by naming it — start with "The Bet", "The Spark", "The Ritual", or "Weekly Reflection" as the first words of your message. Never wrap a date title or feature name in quotes. When referencing an upcoming date, lead with excitement and specificity — name the date, say how far away it is, make it feel anticipated not administrative.`
+    } else {
+      const questionOrPrompt = feature?.type === 'bet' ? feature.question : feature?.prompt
+      const myAnswer         = feature?.type === 'bet' ? feature.mine?.prediction : feature?.mine?.response_text
+      const theirAnswer      = feature?.type === 'bet' ? feature.theirs?.prediction : feature?.theirs?.response_text
 
-    const userPrompt = [
-      `User's name: ${name}`,
-      `Partner's name: ${partnerName}`,
-      featureContext  ? `Feature context: ${featureContext}` : null,
-      dateContext     ? `Date context: ${dateContext}` : null,
-      weatherContext  ? `Weather: ${weatherContext}` : null,
-      `Priority level: ${priority} (1=feature urgent, 2=partner acted, 3=both done, 4=date soon, 5=quiet day)`,
-      `Write the message now.`,
-    ].filter(Boolean).join('\n')
+      const systemPrompt = `You are Nora — you just watched this couple answer the same question separately. You have their answers and your memory of them. Write 1-2 sentences (max 25 words total) that hand them something real to do with what just happened. Choose exactly one of these three modes based on what will land hardest:
+MICRO-ACTION: one tiny specific thing to do today — a text, a touch, a word. Derived directly from their answers.
+PATTERN: connect what just happened to something you've seen before in this couple. The holy shit moment. Only use this if you have real memory to draw on.
+CONVERSATION SEED: one question to ask each other tonight. Specific to their answers, not generic.
+Do not label which mode you chose. Do not explain. Just write it. Never start with Hey or Hi. Never be generic. Tone: warm, direct, occasionally surprising.`
 
-    const response = await noraSignal(userPrompt, { route: 'dashboard/hero', system: systemPrompt, maxTokens: 200 })
+      const userPrompt = [
+        `User's name: ${name}`,
+        `Partner's name: ${partnerName}`,
+        questionOrPrompt ? `Today's question: "${questionOrPrompt}"` : null,
+        myAnswer    ? `${name}'s answer: "${myAnswer}"` : null,
+        theirAnswer ? `${partnerName}'s answer: "${theirAnswer}"` : null,
+        noraReaction ? `Nora's prior observation on ${name}'s answer: "${noraReaction}"` : null,
+        myPersonNotes   ? `What I know about ${name}: ${myPersonNotes.slice(0, 300)}` : null,
+        coupleNotes     ? `What I know about this couple: ${coupleNotes.slice(0, 400)}` : null,
+        structuredFacts ? `Structured observations: ${JSON.stringify(structuredFacts)}` : null,
+        `Choose the mode that will land hardest for this specific couple right now. Write it.`,
+      ].filter(Boolean).join('\n')
 
-    const message = response || `Good to see you, ${name}.`
+      const response = await noraChat(
+        [{ role: 'user', content: userPrompt }],
+        { route: 'dashboard/hero', system: systemPrompt, maxTokens: 300 }
+      )
+      message = response || `Good to see you, ${name}.`
+    }
 
-    return NextResponse.json({ message, cta_label, cta_href, pills })
+    // ── PART 7: Cache write ───────────────────────────────────────────────────
+    await supabase.from('hero_cache').upsert(
+      { user_id: userId, couple_id: coupleId, cache_date: todayStr, message, cta_label, cta_href, pills: JSON.stringify(pills), mode },
+      { onConflict: 'user_id,cache_date' }
+    )
+
+    // ── PART 8: Return ────────────────────────────────────────────────────────
+    return NextResponse.json({ message, cta_label, cta_href, pills, mode })
+
   } catch (err) {
     console.error('[dashboard/hero] Error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
