@@ -108,7 +108,7 @@ export default function Dashboard() {
       .finally(() => setMemoryLoading(false))
   }, [user, couple])
 
-  useEffect(() => {
+  const fetchHero = useCallback(() => {
     if (!user?.id || !couple?.id) return
     setHeroLoading(true)
     const params = new URLSearchParams({
@@ -142,6 +142,10 @@ export default function Dashboard() {
       doFetch(null, null)
     }
   }, [user, couple, userName, partnerName])
+
+  useEffect(() => {
+    fetchHero()
+  }, [fetchHero])
 
   useEffect(() => {
     const initPush = async () => {
@@ -310,6 +314,7 @@ export default function Dashboard() {
               userId={user?.id}
               coupleId={couple?.id}
               partnerName={partnerName}
+              onCheckinComplete={fetchHero}
             />
           </div>
         )}

@@ -143,7 +143,7 @@ function SuggestionCycle({ index, onNext, onSelect, submitting, usedIds = [] }) 
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export default function RitualCard({ userId, coupleId, partnerName }) {
+export default function RitualCard({ userId, coupleId, partnerName, onCheckinComplete }) {
   const [loading, setLoading] = useState(true)
   const [rituals, setRituals] = useState([])
   const [completions, setCompletions] = useState([])
@@ -358,6 +358,7 @@ export default function RitualCard({ userId, coupleId, partnerName }) {
         }
       }
       setCheckinResult(completed ? 'completed' : 'missed')
+      if (completed) onCheckinComplete?.()
     } catch {} finally {
       setSubmitting(false)
     }
