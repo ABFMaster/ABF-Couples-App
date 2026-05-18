@@ -210,6 +210,45 @@ async function processWeeklyReflection(couple, user1, user2) {
   } catch {}
 }
 
+async function processNoraSynthesis(couples, profileMap) {
+  const timezone = 'America/Los_Angeles'
+  const day = getDayInTimezone(timezone)
+  const hour = getHourInTimezone(timezone)
+
+  if (day !== 0 || hour !== 6) return
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { data: activeEntries } = await supabase
+    .from('notebook_entries')
+    .select('user_id')
+    .gte('created_at', sevenDaysAgo)
+    .is('deleted_at', null)
+
+  if (!activeEntries?.length) return
+
+  const userIds = [...new Set(activeEntries.map(e => e.user_id))]
+  let count = 0
+
+  for (const userId of userIds) {
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/me/synthesis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.CRON_SECRET}`,
+        },
+        body: JSON.stringify({ userId }),
+      })
+      count++
+    } catch (err) {
+      console.error(`[cron] me-synthesis error for user ${userId}:`, err)
+    }
+  }
+
+  console.error('[cron] me-synthesis processed:', count)
+}
+
 async function processRabbitHoleConvergence() {
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
@@ -332,6 +371,7 @@ export async function GET(request) {
       processed++
     }
 
+    processNoraSynthesis(couples, profileMap)
     await processRabbitHoleConvergence()
 
     return Response.json({ ok: true, processed })
