@@ -11,7 +11,7 @@ const TABS = [
   { href: '/ai-coach',   icon: Sparkles,  label: 'Nora' },
   { href: '/us',         icon: Heart,     label: 'Us' },
   { href: '/game-room',  icon: Gamepad2,  label: 'Game Room' },
-  { href: '/profile',    icon: User,      label: 'Profile' },
+  { href: '/profile',    icon: User,      label: 'Me' },
 ]
 
 export default function BottomNav({ badgeTabs = {} }) {

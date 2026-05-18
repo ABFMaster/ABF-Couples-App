@@ -22,7 +22,6 @@ export async function GET(request) {
       .from('user_practices')
       .select('*')
       .eq('user_id', user.id)
-      .neq('status', 'done')
       .order('created_at', { ascending: false })
 
     if (error) return NextResponse.json({ error: 'Failed to fetch practices' }, { status: 500 })

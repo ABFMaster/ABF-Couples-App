@@ -4,6 +4,19 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const TIMEZONES = [
+  { value: 'America/Los_Angeles', label: 'Pacific Time' },
+  { value: 'America/Denver',      label: 'Mountain Time' },
+  { value: 'America/Chicago',     label: 'Central Time' },
+  { value: 'America/New_York',    label: 'Eastern Time' },
+  { value: 'Europe/London',       label: 'London' },
+  { value: 'Europe/Paris',        label: 'Paris / Berlin' },
+  { value: 'Asia/Tokyo',          label: 'Tokyo' },
+  { value: 'Australia/Sydney',    label: 'Sydney' },
+]
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getInitials(name) {
@@ -40,6 +53,9 @@ export default function MePage() {
   const [user, setUser]               = useState(null)
   const [session, setSession]         = useState(null)
   const [displayName, setDisplayName] = useState('')
+  const [birthday, setBirthday]       = useState('')
+  const [anniversary, setAnniversary] = useState('')
+  const [timezone, setTimezone]       = useState('America/Los_Angeles')
   const [notifications, setNotifications] = useState({ checkin_reminder: true, flirt_received: true, date_planned: true, weekly_reflection: true })
   const [saving, setSaving]           = useState(false)
   const [saved, setSaved]             = useState(false)
@@ -79,12 +95,15 @@ export default function MePage() {
 
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('display_name, notification_preferences')
+        .select('display_name, birthday, anniversary, timezone, notification_preferences')
         .eq('user_id', session.user.id)
         .maybeSingle()
 
       if (profile) {
         setDisplayName(profile.display_name || '')
+        setBirthday(profile.birthday || '')
+        setAnniversary(profile.anniversary || '')
+        setTimezone(profile.timezone || 'America/Los_Angeles')
         if (profile.notification_preferences) setNotifications(profile.notification_preferences)
       }
     }
@@ -141,6 +160,9 @@ export default function MePage() {
     try {
       await supabase.from('user_profiles').update({
         display_name: displayName,
+        birthday: birthday || null,
+        anniversary: anniversary || null,
+        timezone,
         notification_preferences: notifications,
         updated_at: new Date().toISOString(),
       }).eq('user_id', user.id)
@@ -219,7 +241,7 @@ export default function MePage() {
 
   const handleCycleStatus = async (practice) => {
     const newStatus = nextStatus(practice.status)
-    setPractices(prev => prev.map(p => p.id === practice.id ? { ...p, status: newStatus } : p))
+    setPractices(prev => prev.map(p => p.id === practice.id ? { ...p, status: newStatus, updated_at: new Date().toISOString() } : p))
     try {
       await fetch(`/api/practices/${practice.id}`, {
         method: 'PATCH',
@@ -259,8 +281,10 @@ export default function MePage() {
 
   // ── Derived ──────────────────────────────────────────────────────────────────
 
-  const activePractices = practices.filter(p => p.status !== 'done')
-  const donePractices   = practices.filter(p => p.status === 'done')
+  const _now = Date.now()
+  const recentlyDone     = practices.filter(p => p.status === 'done' && (_now - new Date(p.updated_at).getTime()) < 86400000)
+  const oldDone          = practices.filter(p => p.status === 'done' && (_now - new Date(p.updated_at).getTime()) >= 86400000)
+  const visiblePractices = [...practices.filter(p => p.status !== 'done'), ...recentlyDone]
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -416,37 +440,40 @@ export default function MePage() {
             </div>
           ) : (
             <>
-              {activePractices.length === 0 && (
+              {visiblePractices.length === 0 && oldDone.length === 0 && (
                 <p style={{ fontSize: 13, color: '#C4AA87', fontFamily: "'DM Sans', sans-serif", textAlign: 'center', padding: '8px 0 4px' }}>
                   No active practices yet.
                 </p>
               )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {activePractices.map(practice => (
-                  <div key={practice.id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #EDE4D8', padding: '13px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 14, fontFamily: "'DM Sans', sans-serif", color: '#1C1208', flex: 1, marginRight: 10 }}>{practice.title}</span>
-                    <button
-                      onClick={() => handleCycleStatus(practice)}
-                      style={{ ...STATUS_STYLE[practice.status], fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, padding: '4px 10px', borderRadius: 20, cursor: 'pointer', whiteSpace: 'nowrap', textTransform: 'capitalize' }}
-                    >
-                      {practice.status === 'working_on' ? 'Working on' : practice.status.charAt(0).toUpperCase() + practice.status.slice(1)}
-                    </button>
-                  </div>
-                ))}
+                {visiblePractices.map(practice => {
+                  const isDone = practice.status === 'done'
+                  return (
+                    <div key={practice.id} style={{ background: isDone ? '#F8F5F1' : '#fff', borderRadius: 12, border: '1px solid #EDE4D8', padding: '13px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: isDone ? 0.7 : 1 }}>
+                      <span style={{ fontSize: 14, fontFamily: "'DM Sans', sans-serif", color: isDone ? '#8B7A60' : '#1C1208', flex: 1, marginRight: 10, textDecoration: isDone ? 'line-through' : 'none' }}>{practice.title}</span>
+                      <button
+                        onClick={() => handleCycleStatus(practice)}
+                        style={{ ...STATUS_STYLE[practice.status], fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, padding: '4px 10px', borderRadius: 20, cursor: 'pointer', whiteSpace: 'nowrap', textTransform: 'capitalize' }}
+                      >
+                        {practice.status.charAt(0).toUpperCase() + practice.status.slice(1)}
+                      </button>
+                    </div>
+                  )
+                })}
               </div>
 
-              {/* Done practices */}
-              {donePractices.length > 0 && (
+              {/* Practices done for >24h */}
+              {oldDone.length > 0 && (
                 <div style={{ marginTop: 10 }}>
                   <button
                     onClick={() => setShowDone(v => !v)}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: '#8B7A60', padding: '4px 4px', letterSpacing: '0.02em' }}
                   >
-                    {showDone ? `Hide completed` : `Show completed (${donePractices.length})`}
+                    {showDone ? `Hide completed` : `Show completed (${oldDone.length})`}
                   </button>
                   {showDone && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-                      {donePractices.map(practice => (
+                      {oldDone.map(practice => (
                         <div key={practice.id} style={{ background: '#F8F5F1', borderRadius: 12, border: '1px solid #EDE4D8', padding: '13px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: 0.7 }}>
                           <span style={{ fontSize: 14, fontFamily: "'DM Sans', sans-serif", color: '#8B7A60', flex: 1, marginRight: 10, textDecoration: 'line-through' }}>{practice.title}</span>
                           <button
@@ -488,28 +515,57 @@ export default function MePage() {
             <div style={{ width: 40, height: 4, background: '#EDE5D8', borderRadius: 2, margin: '0 auto 20px' }} />
             <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 22, fontWeight: 400, color: '#1C1208', margin: '0 0 20px 4px' }}>Settings</h2>
 
-            {/* Display name */}
+            {/* Profile fields */}
             <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #EDE4D8', padding: '0 16px', marginBottom: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: '1px solid #F0EBE3' }}>
-                <span style={{ fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: '#6B5A48', fontWeight: 500 }}>Name</span>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={e => setDisplayName(e.target.value)}
-                  style={{ fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, color: '#1C1208', background: 'transparent', border: 'none', outline: 'none', textAlign: 'right', width: 160 }}
-                />
-              </div>
+              {[
+                { label: 'Name', value: displayName, onChange: setDisplayName, type: 'text' },
+                { label: 'Birthday', value: birthday, onChange: setBirthday, type: 'date' },
+                { label: 'Anniversary', value: anniversary, onChange: setAnniversary, type: 'date' },
+              ].map(({ label, value, onChange, type }, i, arr) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: i < arr.length - 1 ? '1px solid #F0EBE3' : 'none' }}>
+                  <span style={{ fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: '#6B5A48', fontWeight: 500 }}>{label}</span>
+                  <input
+                    type={type}
+                    value={value}
+                    onChange={e => onChange(e.target.value)}
+                    style={{ fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, color: '#1C1208', background: 'transparent', border: 'none', outline: 'none', textAlign: 'right', width: 160 }}
+                  />
+                </div>
+              ))}
+            </div>
 
-              {/* Push notifications toggle */}
+            {/* Timezone */}
+            <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #EDE4D8', padding: '0 16px', marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0' }}>
-                <span style={{ fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: '#6B5A48', fontWeight: 500 }}>Push notifications</span>
-                <button
-                  onClick={() => setNotifications(n => ({ ...n, checkin_reminder: !n.checkin_reminder }))}
-                  style={{ width: 44, height: 24, borderRadius: 12, background: notifications.checkin_reminder ? '#C4714A' : '#D5C9BE', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
+                <span style={{ fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: '#6B5A48', fontWeight: 500 }}>Timezone</span>
+                <select
+                  value={timezone}
+                  onChange={e => setTimezone(e.target.value)}
+                  style={{ fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, color: '#1C1208', background: 'transparent', border: 'none', outline: 'none', textAlign: 'right' }}
                 >
-                  <div style={{ position: 'absolute', top: 2, left: notifications.checkin_reminder ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
-                </button>
+                  {TIMEZONES.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
+                </select>
               </div>
+            </div>
+
+            {/* Notifications */}
+            <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #EDE4D8', padding: '0 16px', marginBottom: 12 }}>
+              {[
+                { key: 'checkin_reminder', label: 'Check-in reminder' },
+                { key: 'flirt_received',   label: 'Flirt received' },
+                { key: 'date_planned',     label: 'Date planned' },
+                { key: 'weekly_reflection',label: 'Weekly reflection' },
+              ].map(({ key, label }, i, arr) => (
+                <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: i < arr.length - 1 ? '1px solid #F0EBE3' : 'none' }}>
+                  <span style={{ fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: '#6B5A48', fontWeight: 500 }}>{label}</span>
+                  <button
+                    onClick={() => setNotifications(n => ({ ...n, [key]: !n[key] }))}
+                    style={{ width: 44, height: 24, borderRadius: 12, background: notifications[key] ? '#C4714A' : '#D5C9BE', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
+                  >
+                    <div style={{ position: 'absolute', top: 2, left: notifications[key] ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
+                  </button>
+                </div>
+              ))}
             </div>
 
             <button
