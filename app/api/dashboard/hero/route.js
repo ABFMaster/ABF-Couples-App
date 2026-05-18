@@ -45,6 +45,7 @@ export async function GET(request) {
       .select('*')
       .eq('user_id', userId)
       .eq('cache_date', todayStr)
+      .eq('type', 'hero')
       .maybeSingle()
 
     if (earlyCache?.mode === 'post') {
@@ -336,8 +337,8 @@ Do not label which mode you chose. Do not explain. Just write it. Never start wi
 
     // ── PART 7: Cache write ───────────────────────────────────────────────────
     await supabase.from('hero_cache').upsert(
-      { user_id: userId, couple_id: coupleId, cache_date: todayStr, message, cta_label, cta_href, pills: JSON.stringify(pills), mode },
-      { onConflict: 'user_id,cache_date' }
+      { user_id: userId, couple_id: coupleId, cache_date: todayStr, message, cta_label, cta_href, pills: JSON.stringify(pills), mode, type: 'hero' },
+      { onConflict: 'user_id,cache_date,type' }
     )
 
     // ── PART 8: Return ────────────────────────────────────────────────────────

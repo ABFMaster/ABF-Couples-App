@@ -1,337 +1,153 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-const TIMEZONES = [
-  { value: 'America/Los_Angeles', label: 'Pacific Time' },
-  { value: 'America/Denver', label: 'Mountain Time' },
-  { value: 'America/Chicago', label: 'Central Time' },
-  { value: 'America/New_York', label: 'Eastern Time' },
-  { value: 'Europe/London', label: 'London' },
-  { value: 'Europe/Paris', label: 'Paris / Berlin' },
-  { value: 'Asia/Tokyo', label: 'Tokyo' },
-  { value: 'Australia/Sydney', label: 'Sydney' },
-]
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-const LOVE_LANGUAGE_LABELS = {
-  words: 'Words of Affirmation',
-  time: 'Quality Time',
-  acts: 'Acts of Service',
-  gifts: 'Receiving Gifts',
-  touch: 'Physical Touch',
+function getInitials(name) {
+  if (!name) return '?'
+  return name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('')
 }
 
-const CONFLICT_STYLE_LABELS = {
-  validating: 'Validator',
-  volatile: 'Passionate Fighter',
-  avoiding: 'Peacekeeper',
-  hostile: 'Reactive Fighter',
+function relativeDate(iso) {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
+  if (days === 0) return 'today'
+  if (days === 1) return 'yesterday'
+  return `${days} days ago`
 }
 
-const ATTACHMENT_LABELS = {
-  secure: 'Secure',
-  anxious: 'Anxious',
-  avoidant: 'Avoidant',
-  disorganized: 'Disorganized',
+function nextStatus(s) {
+  if (s === 'active') return 'paused'
+  if (s === 'paused') return 'done'
+  return 'active'
 }
 
-const HOBBIES = [
-  { value: 'reading', label: 'Reading' },
-  { value: 'gaming', label: 'Gaming' },
-  { value: 'cooking', label: 'Cooking' },
-  { value: 'fitness', label: 'Fitness' },
-  { value: 'music', label: 'Music' },
-  { value: 'movies', label: 'Movies/TV' },
-  { value: 'travel', label: 'Travel' },
-  { value: 'outdoors', label: 'Outdoors' },
-  { value: 'sports', label: 'Sports' },
-  { value: 'art', label: 'Art' },
-  { value: 'photography', label: 'Photography' },
-  { value: 'writing', label: 'Writing' },
-  { value: 'dancing', label: 'Dancing' },
-  { value: 'crafts', label: 'Crafts/DIY' },
-  { value: 'gardening', label: 'Gardening' },
-  { value: 'pets', label: 'Pets' },
-  { value: 'technology', label: 'Technology' },
-  { value: 'meditation', label: 'Meditation' },
-  { value: 'podcasts', label: 'Podcasts' },
-  { value: 'board_games', label: 'Board Games' },
-  { value: 'wine', label: 'Wine/Drinks' },
-  { value: 'volunteering', label: 'Volunteering' },
-]
-
-const DATE_PREFERENCES = [
-  { value: 'dinner', label: 'Nice dinner out' },
-  { value: 'home_cooking', label: 'Cooking at home' },
-  { value: 'movie_night', label: 'Movie night' },
-  { value: 'outdoor_adventure', label: 'Outdoor adventure' },
-  { value: 'museum', label: 'Museums/galleries' },
-  { value: 'concert', label: 'Concert/live music' },
-  { value: 'coffee', label: 'Coffee date' },
-  { value: 'picnic', label: 'Picnic' },
-  { value: 'spa', label: 'Spa day' },
-  { value: 'game_night', label: 'Game night' },
-  { value: 'dancing', label: 'Dancing' },
-  { value: 'travel', label: 'Weekend getaway' },
-  { value: 'stargazing', label: 'Stargazing' },
-  { value: 'beach', label: 'Beach day' },
-  { value: 'workout', label: 'Working out together' },
-  { value: 'shopping', label: 'Shopping' },
-  { value: 'sports_event', label: 'Sports event' },
-  { value: 'lazy_day', label: 'Lazy day in' },
-]
-
-const CHECKIN_TIMES = [
-  { value: 'morning', label: 'Morning' },
-  { value: 'afternoon', label: 'Afternoon' },
-  { value: 'evening', label: 'Evening' },
-  { value: 'night', label: 'Night' },
-]
-
-function SectionLabel({ children }) {
-  return (
-    <p className="text-[11px] font-bold tracking-[0.09em] uppercase text-neutral-400 mb-3 px-1">
-      {children}
-    </p>
-  )
+const TYPE_LABELS = { noticed: 'Noticed', working_on: 'Working on', reflection: 'Reflection' }
+const STATUS_STYLE = {
+  active:  { background: '#F0F7F0', color: '#4A8A5A', border: '1px solid #C5DEC5' },
+  paused:  { background: '#FFF7E8', color: '#A07840', border: '1px solid #E8D4A0' },
+  done:    { background: '#F0F0F0', color: '#8A8A8A', border: '1px solid #D0D0D0' },
 }
+const TYPE_PILL_BASE = { fontSize: 12, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, padding: '5px 12px', borderRadius: 20, border: '1.5px solid transparent', cursor: 'pointer', transition: 'all 0.15s' }
 
-function InfoRow({ label, value, placeholder, type = 'text', onChange, options }) {
-  if (options) return (
-    <div className="flex items-center justify-between py-3.5 border-b border-neutral-100 last:border-0">
-      <span className="text-[13px] text-neutral-500 font-medium">{label}</span>
-      <select
-        value={value || ''}
-        onChange={e => onChange(e.target.value)}
-        className="text-[13px] font-semibold text-neutral-900 bg-transparent text-right border-none outline-none"
-      >
-        {options.map(o => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
-    </div>
-  )
+// ── Main page ─────────────────────────────────────────────────────────────────
 
-  return (
-    <div className="flex items-center justify-between py-3.5 border-b border-neutral-100 last:border-0">
-      <span className="text-[13px] text-neutral-500 font-medium">{label}</span>
-      <input
-        type={type}
-        value={value || ''}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="text-[13px] font-semibold text-neutral-900 bg-transparent text-right border-none outline-none placeholder:text-neutral-300 w-40"
-      />
-    </div>
-  )
-}
-
-function StylePill({ label, value }) {
-  if (!value) return null
-  return (
-    <div className="flex items-center justify-between py-3.5 border-b border-neutral-100 last:border-0">
-      <span className="text-[13px] text-neutral-500 font-medium">{label}</span>
-      <span className="text-[13px] font-semibold text-neutral-900">{value}</span>
-    </div>
-  )
-}
-
-function NotificationRow({ label, value, onChange }) {
-  return (
-    <div className="flex items-center justify-between py-3.5 border-b border-neutral-100 last:border-0">
-      <span className="text-[13px] text-neutral-500 font-medium">{label}</span>
-      <button
-        onClick={() => onChange(!value)}
-        className={`w-11 h-6 rounded-full transition-colors relative ${value ? 'bg-[#C4714A]' : 'bg-neutral-200'}`}
-      >
-        <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${value ? 'translate-x-5' : 'translate-x-0.5'}`} />
-      </button>
-    </div>
-  )
-}
-
-export default function ProfilePage() {
+export default function MePage() {
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const [user, setUser] = useState(null)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [deleting, setDeleting] = useState(false)
 
-  // Editable fields
+  const [user, setUser]               = useState(null)
+  const [session, setSession]         = useState(null)
   const [displayName, setDisplayName] = useState('')
-  const [birthday, setBirthday] = useState('')
-  const [anniversary, setAnniversary] = useState('')
-  const [timezone, setTimezone] = useState('America/Los_Angeles')
-  const [notifications, setNotifications] = useState({
-    checkin_reminder: true,
-    flirt_received: true,
-    date_planned: true,
-    weekly_reflection: true,
-  })
+  const [notifications, setNotifications] = useState({ checkin_reminder: true, flirt_received: true, date_planned: true, weekly_reflection: true })
+  const [saving, setSaving]           = useState(false)
+  const [saved, setSaved]             = useState(false)
 
-  // Preference fields
-  const [hobbies, setHobbies] = useState([])
-  const [datePreferences, setDatePreferences] = useState([])
-  const [checkinTime, setCheckinTime] = useState(null)
+  const [settingsOpen, setSettingsOpen]       = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting]               = useState(false)
 
-  // Read-only assessment data
-  const [attachmentStyle, setAttachmentStyle] = useState(null)
-  const [conflictStyle, setConflictStyle] = useState(null)
-  const [loveLanguage, setLoveLanguage] = useState(null)
+  // Synthesis
+  const [synthesis, setSynthesis]         = useState(null)
+  const [synthesisLoading, setSynthesisLoading] = useState(true)
 
-  // Partner data
-  const [partnerName, setPartnerName] = useState(null)
-  const [partnerAttachment, setPartnerAttachment] = useState(null)
-  const [partnerConflict, setPartnerConflict] = useState(null)
-  const [partnerLoveLanguage, setPartnerLoveLanguage] = useState(null)
-  const [daysTogether, setDaysTogether] = useState(0)
+  // Notebook
+  const [entries, setEntries]             = useState([])
+  const [entriesLoading, setEntriesLoading] = useState(true)
+  const [entryExpanded, setEntryExpanded] = useState(false)
+  const [entryType, setEntryType]         = useState(null)
+  const [entryContent, setEntryContent]   = useState('')
+  const [savingEntry, setSavingEntry]     = useState(false)
+  const textareaRef = useRef(null)
 
-  const fetchAll = useCallback(async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login'); return }
-      setUser(user)
+  // Practices
+  const [practices, setPractices]         = useState([])
+  const [practicesLoading, setPracticesLoading] = useState(true)
+  const [newPracticeTitle, setNewPracticeTitle] = useState('')
+  const [savingPractice, setSavingPractice] = useState(false)
+  const [showDone, setShowDone]           = useState(false)
 
-      const { data: couple } = await supabase
-        .from('couples')
-        .select('*')
-        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+  // ── Auth + initial load ─────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { router.push('/login'); return }
+      setSession(session)
+      setUser(session.user)
+
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('display_name, notification_preferences')
+        .eq('user_id', session.user.id)
         .maybeSingle()
 
-      const partnerId = couple
-        ? couple.user1_id === user.id ? couple.user2_id : couple.user1_id
-        : null
-
-      if (couple) {
-        setDaysTogether(Math.floor((Date.now() - new Date(couple.created_at).getTime()) / 86400000))
+      if (profile) {
+        setDisplayName(profile.display_name || '')
+        if (profile.notification_preferences) setNotifications(profile.notification_preferences)
       }
-
-      await Promise.allSettled([
-
-        // My profile
-        (async () => {
-          const { data } = await supabase
-            .from('user_profiles')
-            .select('display_name, birthday, anniversary, timezone, notification_preferences, love_language_primary, conflict_style, hobbies, date_preferences, preferred_checkin_time')
-            .eq('user_id', user.id)
-            .maybeSingle()
-          if (data) {
-            setDisplayName(data.display_name || '')
-            setBirthday(data.birthday || '')
-            setAnniversary(data.anniversary || '')
-            setTimezone(data.timezone || 'America/Los_Angeles')
-            setNotifications(data.notification_preferences || {
-              checkin_reminder: true,
-              flirt_received: true,
-              date_planned: true,
-              weekly_reflection: true,
-            })
-            setLoveLanguage(data.love_language_primary || null)
-            if (data.conflict_style) setConflictStyle(data.conflict_style)
-            setHobbies(data.hobbies || [])
-            setDatePreferences(data.date_preferences || [])
-            setCheckinTime(data.preferred_checkin_time || null)
-          }
-        })(),
-
-        // My attachment style
-        (async () => {
-          const { data } = await supabase
-            .from('attachment_assessments')
-            .select('primary_style')
-            .eq('user_id', user.id)
-            .order('completed_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-          if (data?.primary_style) setAttachmentStyle(data.primary_style)
-        })(),
-
-        // My conflict style
-        (async () => {
-          const { data } = await supabase
-            .from('conflict_assessments')
-            .select('primary_style')
-            .eq('user_id', user.id)
-            .order('completed_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-          if (data?.primary_style) setConflictStyle(data.primary_style)
-        })(),
-
-        // Partner profile
-        partnerId ? (async () => {
-          const { data } = await supabase
-            .from('user_profiles')
-            .select('display_name, love_language_primary, conflict_style')
-            .eq('user_id', partnerId)
-            .maybeSingle()
-          if (data) {
-            setPartnerName(data.display_name || null)
-            setPartnerLoveLanguage(data.love_language_primary || null)
-            setPartnerConflict(data.conflict_style || null)
-          }
-        })() : Promise.resolve(),
-
-        // Partner attachment
-        partnerId ? (async () => {
-          const { data } = await supabase
-            .from('attachment_assessments')
-            .select('primary_style')
-            .eq('user_id', partnerId)
-            .order('completed_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-          if (data?.primary_style) setPartnerAttachment(data.primary_style)
-        })() : Promise.resolve(),
-
-        // Partner conflict
-        partnerId ? (async () => {
-          const { data } = await supabase
-            .from('conflict_assessments')
-            .select('primary_style')
-            .eq('user_id', partnerId)
-            .order('completed_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-          if (data?.primary_style) setPartnerConflict(data.primary_style)
-        })() : Promise.resolve(),
-
-      ])
-
-      setLoading(false)
-    } catch (err) {
-      console.error('Profile error:', err)
-      setLoading(false)
     }
+    init()
   }, [router])
 
-  useEffect(() => { fetchAll() }, [fetchAll])
+  // ── Fetch synthesis ─────────────────────────────────────────────────────────
 
-  const handleSave = async () => {
+  useEffect(() => {
+    if (!session) return
+    setSynthesisLoading(true)
+    fetch('/api/me/synthesis', {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+      .then(r => r.json())
+      .then(d => setSynthesis(d.synthesis || null))
+      .catch(() => setSynthesis(null))
+      .finally(() => setSynthesisLoading(false))
+  }, [session])
+
+  // ── Fetch entries ───────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!session) return
+    setEntriesLoading(true)
+    fetch('/api/notebook/entries', {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+      .then(r => r.json())
+      .then(d => setEntries(d.entries || []))
+      .catch(() => setEntries([]))
+      .finally(() => setEntriesLoading(false))
+  }, [session])
+
+  // ── Fetch practices ─────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!session) return
+    setPracticesLoading(true)
+    fetch('/api/practices', {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+      .then(r => r.json())
+      .then(d => setPractices(d.practices || []))
+      .catch(() => setPractices([]))
+      .finally(() => setPracticesLoading(false))
+  }, [session])
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
+
+  const handleSaveProfile = async () => {
     if (!user) return
     setSaving(true)
     try {
-      await supabase
-        .from('user_profiles')
-        .update({
-          display_name: displayName,
-          birthday: birthday || null,
-          anniversary: anniversary || null,
-          timezone,
-          notification_preferences: notifications,
-          hobbies,
-          date_preferences: datePreferences,
-          preferred_checkin_time: checkinTime,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', user.id)
+      await supabase.from('user_profiles').update({
+        display_name: displayName,
+        notification_preferences: notifications,
+        updated_at: new Date().toISOString(),
+      }).eq('user_id', user.id)
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch (err) {
-      console.error('Save error:', err)
+      console.error('[profile] save error:', err)
     } finally {
       setSaving(false)
     }
@@ -345,7 +161,6 @@ export default function ProfilePage() {
   const handleDelete = async () => {
     setDeleting(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/account/delete', {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
@@ -359,257 +174,396 @@ export default function ProfilePage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#FAF6F0] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-[#C4714A] border-t-transparent" />
-      </div>
-    )
+  const handleExpandEntry = () => {
+    setEntryExpanded(true)
+    setTimeout(() => textareaRef.current?.focus(), 50)
   }
 
-  return (
-    <div className="min-h-screen bg-[#FAF6F0]">
-      <div className="px-6 pt-10 pb-32 space-y-8">
+  const handleSaveEntry = async () => {
+    if (!entryType || !entryContent.trim() || savingEntry || !session) return
+    setSavingEntry(true)
+    const optimistic = { id: `tmp-${Date.now()}`, entry_type: entryType, content: entryContent.trim(), created_at: new Date().toISOString() }
+    setEntries(prev => [optimistic, ...prev])
+    setEntryExpanded(false)
+    setEntryType(null)
+    setEntryContent('')
+    try {
+      const res = await fetch('/api/notebook/entry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ entryType, content: optimistic.content }),
+      })
+      const data = await res.json()
+      if (data.entry) {
+        setEntries(prev => prev.map(e => e.id === optimistic.id ? data.entry : e))
+      }
+    } catch (err) {
+      console.error('[notebook] save error:', err)
+      setEntries(prev => prev.filter(e => e.id !== optimistic.id))
+    } finally {
+      setSavingEntry(false)
+    }
+  }
 
-        {/* Header */}
-        <div>
-          <p className="font-bold mb-1" style={{ color: '#8B7355', letterSpacing: '0.14em', textTransform: 'uppercase', fontSize: '10px', fontFamily: 'DM Sans, sans-serif' }}>Your account</p>
-          <h1 className="text-[28px] text-neutral-900 leading-tight"
-              style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 400 }}>
-            {displayName || 'Profile'}
-          </h1>
-          {daysTogether > 0 && (
-            <p className="text-[13px] text-neutral-400 mt-1">{daysTogether} days together</p>
-          )}
+  const handleDeleteEntry = async (id) => {
+    setEntries(prev => prev.filter(e => e.id !== id))
+    try {
+      await fetch(`/api/notebook/entry/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+    } catch (err) {
+      console.error('[notebook] delete error:', err)
+    }
+  }
+
+  const handleCycleStatus = async (practice) => {
+    const newStatus = nextStatus(practice.status)
+    setPractices(prev => prev.map(p => p.id === practice.id ? { ...p, status: newStatus } : p))
+    try {
+      await fetch(`/api/practices/${practice.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ status: newStatus }),
+      })
+    } catch (err) {
+      console.error('[practices] update error:', err)
+      setPractices(prev => prev.map(p => p.id === practice.id ? { ...p, status: practice.status } : p))
+    }
+  }
+
+  const handleAddPractice = async (e) => {
+    if (e.key !== 'Enter' || !newPracticeTitle.trim() || savingPractice || !session) return
+    setSavingPractice(true)
+    const title = newPracticeTitle.trim()
+    setNewPracticeTitle('')
+    const optimistic = { id: `tmp-${Date.now()}`, title, status: 'active', created_at: new Date().toISOString() }
+    setPractices(prev => [optimistic, ...prev])
+    try {
+      const res = await fetch('/api/practices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ title }),
+      })
+      const data = await res.json()
+      if (data.practice) {
+        setPractices(prev => prev.map(p => p.id === optimistic.id ? data.practice : p))
+      }
+    } catch (err) {
+      console.error('[practices] add error:', err)
+      setPractices(prev => prev.filter(p => p.id !== optimistic.id))
+    } finally {
+      setSavingPractice(false)
+    }
+  }
+
+  // ── Derived ──────────────────────────────────────────────────────────────────
+
+  const activePractices = practices.filter(p => p.status !== 'done')
+  const donePractices   = practices.filter(p => p.status === 'done')
+
+  // ── Render ───────────────────────────────────────────────────────────────────
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#FFF8F4', paddingBottom: 100 }}>
+
+      {/* ── HEADER ────────────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', padding: '56px 20px 20px' }}>
+        <h1 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 34, fontWeight: 400, color: '#1C1208', margin: 0, lineHeight: 1 }}>
+          Me
+        </h1>
+        <button
+          onClick={() => setSettingsOpen(true)}
+          style={{ width: 40, height: 40, borderRadius: '50%', background: '#C4714A', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 700, color: '#fff', letterSpacing: '0.02em' }}>
+            {getInitials(displayName)}
+          </span>
+        </button>
+      </div>
+
+      <div style={{ padding: '0 16px' }}>
+
+        {/* ── SECTION 1: NORA WEEKLY SYNTHESIS ──────────────────────────────── */}
+        <div style={{ background: 'linear-gradient(145deg, #1C1410 0%, #2D3561 100%)', borderRadius: 18, padding: '18px 20px', marginBottom: 24, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(201,168,76,0.07)', pointerEvents: 'none' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, position: 'relative' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#C9A84C', display: 'inline-block' }} />
+            <span style={{ fontSize: 9, fontFamily: "'DM Sans', sans-serif", fontWeight: 700, color: '#C9A84C', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Nora · This Week</span>
+          </div>
+          <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 16, fontWeight: 300, fontStyle: 'italic', color: '#fff', lineHeight: 1.6, margin: '0 0 12px', position: 'relative' }}>
+            {synthesisLoading
+              ? <span style={{ display: 'inline-block', width: 200, height: 16, background: 'rgba(255,255,255,0.08)', borderRadius: 4 }} />
+              : synthesis?.message || 'Nora is watching. Check back Sunday.'}
+          </p>
+          <button
+            onClick={() => router.push('/ai-coach')}
+            style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: 'rgba(255,255,255,0.45)', cursor: 'pointer', display: 'block', position: 'relative' }}
+          >
+            Talk to Nora →
+          </button>
         </div>
 
-        {/* SECTION 1 — YOUR INFO */}
-        <section>
-          <SectionLabel>You</SectionLabel>
-          <div className="bg-white rounded-2xl shadow-sm px-5" style={{ border: '1px solid #EDE4D8' }}>
-            <InfoRow label="Name" value={displayName} placeholder="Your name" onChange={setDisplayName} />
-            <InfoRow label="Birthday" value={birthday} type="date" placeholder="mm/dd/yyyy" onChange={setBirthday} />
-            <InfoRow label="Anniversary" value={anniversary} type="date" placeholder="mm/dd/yyyy" onChange={setAnniversary} />
-            <InfoRow label="Timezone" value={timezone} onChange={setTimezone} options={TIMEZONES} />
-          </div>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full mt-3 min-h-[48px] bg-[#C4714A] text-white rounded-xl font-semibold text-[15px] active:scale-[0.98] transition-transform disabled:opacity-50"
-          >
-            {saved ? 'Saved ✓' : saving ? 'Saving…' : 'Save changes'}
-          </button>
-        </section>
+        {/* ── SECTION 2: MY NOTEBOOK ────────────────────────────────────────── */}
+        <div style={{ marginBottom: 28 }}>
+          <p style={{ fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: '#8B7A60', margin: '0 4px 12px' }}>
+            My Notebook
+          </p>
 
-        {/* SECTION 2 — WHO YOU ARE */}
-        <section>
-          <SectionLabel>Who you are</SectionLabel>
-          <div className="bg-white rounded-2xl shadow-sm px-5" style={{ border: '1px solid #EDE4D8' }}>
-            <StylePill label="Attachment style" value={ATTACHMENT_LABELS[attachmentStyle] || attachmentStyle} />
-            <StylePill label="Conflict style" value={CONFLICT_STYLE_LABELS[conflictStyle] || conflictStyle} />
-            <StylePill label="Love language" value={LOVE_LANGUAGE_LABELS[loveLanguage] || loveLanguage} />
-            {(!attachmentStyle && !conflictStyle && !loveLanguage) ? (
-              <div className="py-3.5">
-                <button
-                  onClick={() => router.push('/profile/assessment')}
-                  className="text-[13px] font-semibold text-[#C4714A]"
-                >
-                  Complete your assessment →
-                </button>
-              </div>
+          {/* New entry input */}
+          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #EDE4D8', marginBottom: 12, overflow: 'hidden' }}>
+            {!entryExpanded ? (
+              <button
+                onClick={handleExpandEntry}
+                style={{ width: '100%', padding: '14px 16px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: 14, fontFamily: "'DM Sans', sans-serif", color: '#C4AA87' }}
+              >
+                Something worth capturing…
+              </button>
             ) : (
-              <div className="py-3.5">
-                <button
-                  onClick={() => router.push('/profile/assessment')}
-                  className="text-[13px] font-medium text-neutral-400"
-                >
-                  Retake assessment →
-                </button>
+              <div style={{ padding: '14px 16px' }}>
+                {/* Type pills */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                  {Object.entries(TYPE_LABELS).map(([val, label]) => {
+                    const selected = entryType === val
+                    return (
+                      <button
+                        key={val}
+                        onClick={() => setEntryType(val)}
+                        style={{
+                          ...TYPE_PILL_BASE,
+                          background: selected ? '#FFF0E8' : '#F5F0EB',
+                          color: selected ? '#C4714A' : '#8B7A60',
+                          border: selected ? '1.5px solid #C4714A' : '1.5px solid transparent',
+                        }}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+                <textarea
+                  ref={textareaRef}
+                  value={entryContent}
+                  onChange={e => setEntryContent(e.target.value)}
+                  placeholder="What are you noticing?"
+                  rows={3}
+                  style={{ width: '100%', border: 'none', outline: 'none', resize: 'none', fontSize: 14, fontFamily: "'DM Sans', sans-serif", color: '#1C1208', background: 'transparent', lineHeight: 1.6, boxSizing: 'border-box' }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+                  <button
+                    onClick={() => { setEntryExpanded(false); setEntryType(null); setEntryContent('') }}
+                    style={{ background: 'none', border: 'none', fontSize: 13, color: '#C4AA87', cursor: 'pointer', padding: 0, fontFamily: "'DM Sans', sans-serif" }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveEntry}
+                    disabled={!entryType || !entryContent.trim() || savingEntry}
+                    style={{ background: !entryType || !entryContent.trim() ? '#EDE4D8' : '#C4714A', color: !entryType || !entryContent.trim() ? '#C4AA87' : '#fff', border: 'none', borderRadius: 10, padding: '8px 18px', fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, cursor: !entryType || !entryContent.trim() ? 'not-allowed' : 'pointer', transition: 'background 0.15s' }}
+                  >
+                    {savingEntry ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
               </div>
             )}
           </div>
-        </section>
 
-        {/* SECTION 3 — YOUR PARTNER */}
-        {partnerName && (
-          <section>
-            <SectionLabel>{partnerName}</SectionLabel>
-            <div className="bg-white rounded-2xl shadow-sm px-5" style={{ border: '1px solid #EDE4D8' }}>
-              <StylePill label="Attachment style" value={ATTACHMENT_LABELS[partnerAttachment] || partnerAttachment} />
-              <StylePill label="Conflict style" value={CONFLICT_STYLE_LABELS[partnerConflict] || partnerConflict} />
-              <StylePill label="Love language" value={LOVE_LANGUAGE_LABELS[partnerLoveLanguage] || partnerLoveLanguage} />
-              {!partnerAttachment && !partnerConflict && !partnerLoveLanguage && (
-                <div className="py-4 text-center">
-                  <p className="text-[13px] text-neutral-400">
-                    {partnerName} hasn't completed their assessment yet
+          {/* Entry list */}
+          {entriesLoading ? (
+            <div style={{ display: 'flex', gap: 12, flexDirection: 'column' }}>
+              {[1, 2].map(i => (
+                <div key={i} style={{ background: '#fff', borderRadius: 12, border: '1px solid #EDE4D8', padding: '14px 16px', height: 72 }} />
+              ))}
+            </div>
+          ) : entries.length === 0 ? (
+            <p style={{ fontSize: 13, color: '#C4AA87', fontFamily: "'DM Sans', sans-serif", textAlign: 'center', padding: '12px 0' }}>Nothing captured yet.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {entries.map(entry => (
+                <div key={entry.id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #EDE4D8', padding: '12px 14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span style={{ fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#C4714A', background: '#FFF0E8', padding: '3px 9px', borderRadius: 20 }}>
+                      {TYPE_LABELS[entry.entry_type] || entry.entry_type}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: '#C4AA87' }}>{relativeDate(entry.created_at)}</span>
+                      <button
+                        onClick={() => handleDeleteEntry(entry.id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 16, color: '#C4AA87', lineHeight: 1 }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                  <p style={{ margin: 0, fontSize: 14, fontFamily: "'DM Sans', sans-serif", color: '#2C1810', lineHeight: 1.5 }}>
+                    {entry.content}
                   </p>
                 </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── SECTION 3: MY PRACTICES ───────────────────────────────────────── */}
+        <div style={{ marginBottom: 28 }}>
+          <p style={{ fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: '#8B7A60', margin: '0 4px 12px' }}>
+            My Practices
+          </p>
+
+          {practicesLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[1, 2].map(i => <div key={i} style={{ background: '#fff', borderRadius: 12, border: '1px solid #EDE4D8', height: 52 }} />)}
+            </div>
+          ) : (
+            <>
+              {activePractices.length === 0 && (
+                <p style={{ fontSize: 13, color: '#C4AA87', fontFamily: "'DM Sans', sans-serif", textAlign: 'center', padding: '8px 0 4px' }}>
+                  No active practices yet.
+                </p>
               )}
-            </div>
-          </section>
-        )}
-
-        {/* SECTION 4 — YOUR PREFERENCES */}
-        <section>
-          <SectionLabel>Your preferences</SectionLabel>
-
-          {/* Check-in time */}
-          <div className="bg-white rounded-2xl shadow-sm px-5 mb-3" style={{ border: '1px solid #EDE4D8' }}>
-            <div className="py-3.5 border-b border-neutral-100">
-              <p className="text-[13px] text-neutral-500 font-medium mb-3">Best time to check in</p>
-              <div className="flex gap-2 flex-wrap">
-                {CHECKIN_TIMES.map(t => (
-                  <button
-                    key={t.value}
-                    onClick={() => setCheckinTime(t.value)}
-                    className={`px-4 py-2 rounded-full text-[13px] font-semibold transition-all ${
-                      checkinTime === t.value
-                        ? 'bg-neutral-900 text-white'
-                        : 'bg-neutral-100 text-neutral-500'
-                    }`}
-                  >
-                    {t.label}
-                  </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {activePractices.map(practice => (
+                  <div key={practice.id} style={{ background: '#fff', borderRadius: 12, border: '1px solid #EDE4D8', padding: '13px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 14, fontFamily: "'DM Sans', sans-serif", color: '#1C1208', flex: 1, marginRight: 10 }}>{practice.title}</span>
+                    <button
+                      onClick={() => handleCycleStatus(practice)}
+                      style={{ ...STATUS_STYLE[practice.status], fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, padding: '4px 10px', borderRadius: 20, cursor: 'pointer', whiteSpace: 'nowrap', textTransform: 'capitalize' }}
+                    >
+                      {practice.status === 'working_on' ? 'Working on' : practice.status.charAt(0).toUpperCase() + practice.status.slice(1)}
+                    </button>
+                  </div>
                 ))}
               </div>
-            </div>
 
-            {/* Hobbies */}
-            <div className="py-3.5 border-b border-neutral-100">
-              <p className="text-[13px] text-neutral-500 font-medium mb-3">Hobbies & interests</p>
-              <div className="flex gap-2 flex-wrap">
-                {HOBBIES.map(h => (
+              {/* Done practices */}
+              {donePractices.length > 0 && (
+                <div style={{ marginTop: 10 }}>
                   <button
-                    key={h.value}
-                    onClick={() => setHobbies(prev =>
-                      prev.includes(h.value)
-                        ? prev.filter(v => v !== h.value)
-                        : [...prev, h.value]
-                    )}
-                    className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all ${
-                      hobbies.includes(h.value)
-                        ? 'bg-neutral-900 text-white'
-                        : 'bg-neutral-100 text-neutral-500'
-                    }`}
+                    onClick={() => setShowDone(v => !v)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: '#8B7A60', padding: '4px 4px', letterSpacing: '0.02em' }}
                   >
-                    {h.label}
+                    {showDone ? `Hide completed` : `Show completed (${donePractices.length})`}
                   </button>
-                ))}
+                  {showDone && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                      {donePractices.map(practice => (
+                        <div key={practice.id} style={{ background: '#F8F5F1', borderRadius: 12, border: '1px solid #EDE4D8', padding: '13px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: 0.7 }}>
+                          <span style={{ fontSize: 14, fontFamily: "'DM Sans', sans-serif", color: '#8B7A60', flex: 1, marginRight: 10, textDecoration: 'line-through' }}>{practice.title}</span>
+                          <button
+                            onClick={() => handleCycleStatus(practice)}
+                            style={{ ...STATUS_STYLE.done, fontSize: 11, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, padding: '4px 10px', borderRadius: 20, cursor: 'pointer' }}
+                          >
+                            Done
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Add practice input */}
+              <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #EDE4D8', marginTop: 10, display: 'flex', alignItems: 'center', padding: '0 14px' }}>
+                <span style={{ fontSize: 16, color: '#C4AA87', marginRight: 8, userSelect: 'none' }}>+</span>
+                <input
+                  type="text"
+                  value={newPracticeTitle}
+                  onChange={e => setNewPracticeTitle(e.target.value)}
+                  onKeyDown={handleAddPractice}
+                  placeholder="Add a practice…"
+                  style={{ flex: 1, border: 'none', outline: 'none', fontSize: 14, fontFamily: "'DM Sans', sans-serif", color: '#1C1208', background: 'transparent', padding: '14px 0' }}
+                />
               </div>
-            </div>
-
-            {/* Date preferences */}
-            <div className="py-3.5">
-              <p className="text-[13px] text-neutral-500 font-medium mb-3">Date ideas you love</p>
-              <div className="flex gap-2 flex-wrap">
-                {DATE_PREFERENCES.map(d => (
-                  <button
-                    key={d.value}
-                    onClick={() => setDatePreferences(prev =>
-                      prev.includes(d.value)
-                        ? prev.filter(v => v !== d.value)
-                        : [...prev, d.value]
-                    )}
-                    className={`px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all ${
-                      datePreferences.includes(d.value)
-                        ? 'bg-neutral-900 text-white'
-                        : 'bg-neutral-100 text-neutral-500'
-                    }`}
-                  >
-                    {d.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full mt-1 min-h-[48px] bg-[#C4714A] text-white rounded-xl font-semibold text-[15px] active:scale-[0.98] transition-transform disabled:opacity-50"
-          >
-            {saved ? 'Saved ✓' : saving ? 'Saving…' : 'Save changes'}
-          </button>
-        </section>
-
-        {/* SECTION 5 — NOTIFICATIONS */}
-        <section>
-          <SectionLabel>Notifications</SectionLabel>
-          <div className="bg-white rounded-2xl shadow-sm px-5" style={{ border: '1px solid #EDE4D8' }}>
-            <NotificationRow
-              label="Check-in reminder"
-              value={notifications.checkin_reminder}
-              onChange={v => setNotifications(n => ({ ...n, checkin_reminder: v }))}
-            />
-            <NotificationRow
-              label="Flirt received"
-              value={notifications.flirt_received}
-              onChange={v => setNotifications(n => ({ ...n, flirt_received: v }))}
-            />
-            <NotificationRow
-              label="Date planned"
-              value={notifications.date_planned}
-              onChange={v => setNotifications(n => ({ ...n, date_planned: v }))}
-            />
-            <NotificationRow
-              label="Weekly reflection"
-              value={notifications.weekly_reflection}
-              onChange={v => setNotifications(n => ({ ...n, weekly_reflection: v }))}
-            />
-          </div>
-        </section>
-
-        {/* Sign out */}
-        <section>
-          <button
-            onClick={handleSignOut}
-            className="w-full min-h-[48px] bg-white rounded-xl font-semibold text-[15px] text-neutral-500 active:scale-[0.98] transition-transform shadow-sm"
-            style={{ border: '1px solid #EDE4D8' }}
-          >
-            Sign out
-          </button>
-        </section>
-
-        {/* Danger zone */}
-        <section>
-          <div style={{ height: '0.5px', background: '#EDE5D8', margin: '32px 0' }} />
-          <p style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.09em', color: '#C47A6A' }}>Danger zone</p>
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            style={{ width: '100%', padding: '14px', borderRadius: '12px', background: 'transparent', border: '1px solid #C47A6A', color: '#C47A6A', fontSize: '14px', fontWeight: 500, marginTop: '12px', cursor: 'pointer' }}
-          >
-            Delete my account
-          </button>
-        </section>
+            </>
+          )}
+        </div>
 
       </div>
 
-      {/* Delete confirmation sheet */}
+      {/* ── SETTINGS SHEET ────────────────────────────────────────────────────── */}
+      {settingsOpen && (
+        <>
+          <div onClick={() => setSettingsOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(28,18,8,0.4)', zIndex: 50 }} />
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 60, background: '#FAF6EF', borderRadius: '24px 24px 0 0', padding: '20px 20px 48px' }}>
+            <div style={{ width: 40, height: 4, background: '#EDE5D8', borderRadius: 2, margin: '0 auto 20px' }} />
+            <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 22, fontWeight: 400, color: '#1C1208', margin: '0 0 20px 4px' }}>Settings</h2>
+
+            {/* Display name */}
+            <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #EDE4D8', padding: '0 16px', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: '1px solid #F0EBE3' }}>
+                <span style={{ fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: '#6B5A48', fontWeight: 500 }}>Name</span>
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={e => setDisplayName(e.target.value)}
+                  style={{ fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, color: '#1C1208', background: 'transparent', border: 'none', outline: 'none', textAlign: 'right', width: 160 }}
+                />
+              </div>
+
+              {/* Push notifications toggle */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0' }}>
+                <span style={{ fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: '#6B5A48', fontWeight: 500 }}>Push notifications</span>
+                <button
+                  onClick={() => setNotifications(n => ({ ...n, checkin_reminder: !n.checkin_reminder }))}
+                  style={{ width: 44, height: 24, borderRadius: 12, background: notifications.checkin_reminder ? '#C4714A' : '#D5C9BE', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
+                >
+                  <div style={{ position: 'absolute', top: 2, left: notifications.checkin_reminder ? 22 : 2, width: 20, height: 20, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={async () => { await handleSaveProfile(); setSettingsOpen(false) }}
+              disabled={saving}
+              style={{ width: '100%', padding: '14px', borderRadius: 12, background: '#C4714A', color: '#fff', fontSize: 14, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, border: 'none', cursor: 'pointer', marginBottom: 10, opacity: saving ? 0.7 : 1 }}
+            >
+              {saved ? 'Saved ✓' : saving ? 'Saving…' : 'Save'}
+            </button>
+
+            <button
+              onClick={() => { setSettingsOpen(false); handleSignOut() }}
+              style={{ width: '100%', padding: '14px', borderRadius: 12, background: '#F0EBE3', color: '#6B5A48', fontSize: 14, fontFamily: "'DM Sans', sans-serif", border: 'none', cursor: 'pointer', marginBottom: 10 }}
+            >
+              Sign out
+            </button>
+
+            <button
+              onClick={() => { setSettingsOpen(false); setTimeout(() => setShowDeleteConfirm(true), 200) }}
+              style={{ width: '100%', padding: '14px', borderRadius: 12, background: 'transparent', color: '#C47A6A', fontSize: 13, fontFamily: "'DM Sans', sans-serif", border: '1px solid #E8C4BC', cursor: 'pointer' }}
+            >
+              Delete my account
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* ── DELETE CONFIRM SHEET ──────────────────────────────────────────────── */}
       {showDeleteConfirm && (
         <>
           <div onClick={() => setShowDeleteConfirm(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(28,18,8,0.4)', zIndex: 50 }} />
           <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 60, background: '#FAF6EF', borderRadius: '24px 24px 0 0', padding: '24px 20px 48px' }}>
-            <div style={{ width: '40px', height: '4px', background: '#EDE5D8', borderRadius: '2px', margin: '0 auto 0' }} />
-            <p style={{ fontFamily: 'Georgia, serif', fontSize: '18px', color: '#1C1208', textAlign: 'center', margin: '16px 0 8px' }}>Delete your account?</p>
-            <p style={{ fontSize: '13px', color: '#7A6A54', textAlign: 'center', lineHeight: 1.6, margin: '0 0 24px' }}>
-              This permanently deletes your profile, relationship history, and all of Nora's memory about you and your partner. This cannot be undone.
+            <div style={{ width: 40, height: 4, background: '#EDE5D8', borderRadius: 2, margin: '0 auto 16px' }} />
+            <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 20, color: '#1C1208', textAlign: 'center', margin: '0 0 10px' }}>Delete your account?</p>
+            <p style={{ fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: '#7A6A54', textAlign: 'center', lineHeight: 1.6, margin: '0 0 24px' }}>
+              This permanently deletes your profile, relationship history, and all of Nora's memory. This cannot be undone.
             </p>
             <button
               onClick={handleDelete}
               disabled={deleting}
-              style={{ width: '100%', padding: '14px', borderRadius: '12px', background: '#C47A6A', color: 'white', fontSize: '14px', fontWeight: 500, marginBottom: '10px', border: 'none', cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.7 : 1 }}
+              style={{ width: '100%', padding: '14px', borderRadius: 12, background: '#C47A6A', color: '#fff', fontSize: 14, fontFamily: "'DM Sans', sans-serif", fontWeight: 500, border: 'none', cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.7 : 1, marginBottom: 10 }}
             >
               {deleting ? 'Deleting…' : 'Yes, delete everything'}
             </button>
             <button
               onClick={() => setShowDeleteConfirm(false)}
-              style={{ width: '100%', padding: '14px', borderRadius: '12px', background: '#F0EBE3', color: '#7A6A54', fontSize: '14px', border: 'none', cursor: 'pointer' }}
+              style={{ width: '100%', padding: '14px', borderRadius: 12, background: '#F0EBE3', color: '#7A6A54', fontSize: 14, fontFamily: "'DM Sans', sans-serif", border: 'none', cursor: 'pointer' }}
             >
               Cancel
             </button>
           </div>
         </>
       )}
+
     </div>
   )
 }
