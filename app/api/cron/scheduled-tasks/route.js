@@ -234,14 +234,7 @@ async function sendReengagementPush(couple, user1, user2, noraMemory) {
   }
 }
 
-async function processWeeklyReflection(couple, user1, user2) {
-  const timezone = user1.timezone || user2.timezone || 'America/Los_Angeles'
-  const day = getDayInTimezone(timezone)
-  const hour = getHourInTimezone(timezone)
-
-  // Only Sunday at 3am
-  if (day !== 0 || hour !== 3) return
-
+async function processWeeklyReflection(couple) {
   try {
     await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/reflection/generate`, {
       method: 'POST',
@@ -254,7 +247,7 @@ async function processWeeklyReflection(couple, user1, user2) {
         coupleId: couple.id
       })
     })
-  } catch {}
+  } catch (err) { console.error('[reflection/generate] couple:', couple.id, err) }
 }
 
 async function processNoraSynthesis(couples, profileMap) {
@@ -414,7 +407,8 @@ export async function GET(request) {
       const user1 = profileMap[couple.user1_id] || {}
       const user2 = profileMap[couple.user2_id] || {}
       await processDailyContent(couple, user1, user2)
-      await processWeeklyReflection(couple, user1, user2)
+      const day = getDayInTimezone(user1.timezone || user2.timezone || 'America/Los_Angeles')
+      if (day === 0) await processWeeklyReflection(couple)
       processed++
     }
 
