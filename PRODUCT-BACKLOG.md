@@ -7,10 +7,15 @@
 - [ ] Ritual "We did it" not showing progress on Us page after completion
 - [x] No Nora verdict on Spark — FIXED: removed await from all push/send calls, verified working 2026-05-13
 - [ ] Push delivery logging — no visibility into APNs/FCM failures, need push_log table
-- [ ] Spark reaction UX — tapping a reaction closes tabs instead of highlighting selection. Cannot change reaction after first tap. Needs persistent selected state with visual highlight.
-- [ ] Spark submit button no loading state — "Share my answer" shows no feedback for 2-3 seconds after tap
-- [ ] Nora hero card wrong day content — force-dynamic fix deployed 2026-05-14, verify next morning
+- [x] Spark reaction UX — tapping a reaction closes tabs instead of highlighting selection. Cannot change reaction after first tap. Needs persistent selected state with visual highlight.
+- [x] Spark submit button no loading state — "Share my answer" shows no feedback for 2-3 seconds after tap
+- [x] Nora hero card wrong day content — force-dynamic fix deployed 2026-05-14, FIXED 2026-05-19
 - [ ] Bet verdict tone — misreads self-deprecating humor as vulnerability (Cass: "I am already my mother" read as confession not self-aware humor). Needs prompt tuning.
+- [ ] Ritual card resets to pre-state on page reload — shows checkin buttons again after completion
+- [ ] Weekly Reflection did not trigger 2026-05-18 — fixed (hour gate removed), verify next Sunday
+- [ ] Nora standalone synthesis cron route missing — Sunday synthesis will 404, build before 2026-05-25
+- [x] Push wrong person name — FIXED 2026-05-19 (per-user reengagement copy), verify Wednesday
+- [x] Nora privacy leak — FIXED 2026-05-19 (NORA_CONVERSATION excluded from couple_notes, couple_notes cleared)
 
 ## BETA READINESS (do first)
 - [x] Onboarding flow visual pass — onboarding/page.js, onboarding/welcome/page.js
@@ -20,6 +25,17 @@
 - [ ] Full end-to-end test session with Cass — every game mode, every daily activity
 - [x] Remove cron diagnostic logs after push confirmed working
 - [ ] Run Nora memory test after 2 weeks real usage
+- [x] Nora hero card — memory-powered pre/post modes, hero_cache, auto-invalidation
+- [x] Me tab — Notebook, Practices, synthesis card, nav renamed
+
+## NORA STANDALONE — LAUNCHED 2026-05-19
+- Live: https://nora-app-mauve.vercel.app
+- Repo: ABFMaster/Nora-App
+- Supabase: nora-standalone project
+- Status: functional, ready for friends/family test group
+- Pending: synthesis cron route, feedback verification
+- Invite message: drafted and ready to send
+- Test group: Cass + 2-5 friends/family, direct send
 
 ## IMAGE EXPANSION
 - [x] Place photo permanent storage — Supabase Storage bucket 'date-photos', lib/place-photo.js, wired into date builder and edit page, backfill script run 2026-05-14
@@ -100,8 +116,8 @@ These APIs don't fix UX — they enrich content. The current builder UX is funct
 - [ ] Nora memory data flow audit — verify all signals accumulating correctly
 - [ ] Re-run Nora memory quality test after 2 weeks real usage
 - [ ] Nora Relationship Arc Sprint — research therapist rapport-building with new couples. Redesign hero card prompt to progress: Week 1 warm curiosity → Week 2 first pattern observations → Week 3+ earned specificity. "Holy shit she sees us" moment by day 7.
-- [ ] Nora hero card prompt pass — currently a feature announcement system, not relationship intelligence. Needs full redesign drawing from couple memory.
-- [ ] Bet verdict prompt tuning — improve tone detection, distinguish self-deprecating humor from vulnerability confession
+- [x] Nora hero card prompt pass — PRE mode rewritten, singular you enforced 2026-05-19
+- [x] Bet verdict prompt tuning — surgical ambiguity guard added, BET_REVEAL memory lens updated 2026-05-19
 
 ## ALWAYS BE FEEDING — REMAINING GAPS
 - [ ] Wire FLIRT_SENT on individual flirt send (post Flirts redesign)
@@ -185,4 +201,6 @@ These APIs don't fix UX — they enrich content. The current builder UX is funct
 - [ ] Pre-App Store hardening sprint — add Bearer JWT auth to all 56 unprotected API routes
 - [x] force-dynamic missing from all API routes — FIXED 2026-05-14, added to all 68 routes
 - [ ] New API route checklist — every new route must include: export const dynamic = 'force-dynamic', Bearer JWT auth, console.error in catch only (no console.log)
+- [ ] Nora standalone cron route — build /api/cron/scheduled-tasks in Nora-App before Sunday 2026-05-25
+- [ ] hero_cache type constraint — onConflict updated to user_id,cache_date,type everywhere
 - [ ] Google Places API key documentation — three keys exist with unclear ownership. Document: NEXT_PUBLIC_GOOGLE_PLACES_API_KEY (browser/Maps JS, referrer-restricted), GOOGLE_PLACES_API_KEY (unknown), GOOGLE_PLACES_SERVER_KEY (server-side, unrestricted, use for Places API calls)
