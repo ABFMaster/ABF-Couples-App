@@ -512,7 +512,23 @@ export default function MePage() {
       {settingsOpen && (
         <>
           <div onClick={() => setSettingsOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(28,18,8,0.4)', zIndex: 50 }} />
-          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 60, background: '#FAF6EF', borderRadius: '24px 24px 0 0', padding: '20px 20px 48px' }}>
+          <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 60, background: '#FAF6EF', borderRadius: '24px 24px 0 0', padding: '20px 20px 48px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setSettingsOpen(false)}
+                style={{
+                  position: 'absolute',
+                  top: 16,
+                  right: 20,
+                  background: 'none',
+                  border: 'none',
+                  fontSize: 24,
+                  color: '#B0A8A0',
+                  cursor: 'pointer',
+                  lineHeight: 1,
+                  padding: 4
+                }}
+              >×</button>
             <div style={{ width: 40, height: 4, background: '#EDE5D8', borderRadius: 2, margin: '0 auto 20px' }} />
             <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 22, fontWeight: 400, color: '#1C1208', margin: '0 0 20px 4px' }}>Settings</h2>
 
@@ -612,6 +628,7 @@ export default function MePage() {
             >
               Delete my account
             </button>
+            </div>
           </div>
         </>
       )}
