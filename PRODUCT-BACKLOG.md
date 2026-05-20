@@ -1,8 +1,8 @@
 # ABF Product Backlog — Updated 2026-05-14
 
 ## BUGS — ACTIVE (found in testing, fix before beta)
-- [ ] Spark reaction (Made me Smile, Keep It Coming) never persists — local state only, never saved to DB
-- [ ] Nora home prompt showing wrong content on wrong days — Bet/Ritual copy appearing on incorrect days
+- [x] Spark reaction (Made me Smile, Keep It Coming) never persists — local state only, never saved to DB — FIXED 2026-05-19
+- [x] Nora home prompt showing wrong content on wrong days — Bet/Ritual copy appearing on incorrect days — FIXED force-dynamic 2026-05-14, hero card rewritten 2026-05-19
 - [ ] Location images not always showing on date banners and Next Up card
 - [ ] Ritual "We did it" not showing progress on Us page after completion
 - [x] No Nora verdict on Spark — FIXED: removed await from all push/send calls, verified working 2026-05-13
