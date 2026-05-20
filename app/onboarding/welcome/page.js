@@ -42,7 +42,7 @@ export default function WelcomePage() {
 
   const handleNext = () => {
     if (isLast) {
-      router.push('/onboarding')
+      router.push('/onboarding/privacy')
       return
     }
     setExiting(true)
