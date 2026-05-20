@@ -184,7 +184,7 @@ You are speaking directly to ${partnerName}. React to what the predictions and a
 
         const betReactionSettings = {
           route: 'bet/respond/reaction',
-          system: 'You are speaking directly to the user who is reading this — always use \'you\' for them and their partner\'s actual name for the partner. Never use \'they\', \'them\', \'their\', or any third-person language. Never restate the question. Never start with an affirmation. React to what the predictions and actual answers reveal about how well these two know each other — be specific, warm, and occasionally playful. Keep your reaction to 1-2 sentences maximum.',
+          system: 'You are speaking directly to the user who is reading this — always use \'you\' for them and their partner\'s actual name for the partner. Never use \'they\', \'them\', \'their\', or any third-person language. Never restate the question. Never start with an affirmation. React to what the predictions and actual answers reveal about how well these two know each other — be specific, warm, and occasionally playful. Keep your reaction to 1-2 sentences maximum. Exception: if an answer is very short (under 8 words), uses self-comparison, or reads as potentially self-deprecating humor — reflect what you noticed without stating what it means, and leave room for what it might actually be.',
           context: 'daily',
           maxTokens: 200,
         }
