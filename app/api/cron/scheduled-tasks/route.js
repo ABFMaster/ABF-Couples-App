@@ -78,6 +78,9 @@ async function processDailyContent(couple, user1, user2) {
   if (hour !== 3) return
   if (!todayStr) return
 
+  const user1Name = user1.display_name || 'them'
+  const user2Name = user2.display_name || 'them'
+
   const { data: noraMemory } = await supabase
     .from('nora_memory')
     .select('couple_notes, conversation_count')
@@ -152,8 +155,47 @@ async function processDailyContent(couple, user1, user2) {
     await sendPush(user2.user_id, 'The Bet', "The Bet is ready. Do you know them?", '/dashboard')
   }
 
-  // Re-engagement push — only on days with no other push (Fri, Sat, Sun)
-  if (![1, 2, 3, 4].includes(day)) {
+  if (day === 5) {
+    const { data: ritual } = await supabase
+      .from('rituals')
+      .select('id, title')
+      .eq('couple_id', couple.id)
+      .in('status', ['discovering', 'adopted'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (ritual) {
+      await sendPush(user1.user_id, 'The Ritual', `${ritual.title} — check in together today.`, '/dashboard')
+      await sendPush(user2.user_id, 'The Ritual', `${ritual.title} — check in together today.`, '/dashboard')
+    }
+  }
+
+  if (day === 6) {
+    const { data: lastSession } = await supabase
+      .from('game_sessions')
+      .select('created_at')
+      .eq('couple_id', couple.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const daysSince = lastSession
+      ? (Date.now() - new Date(lastSession.created_at).getTime()) / (1000 * 60 * 60 * 24)
+      : 999
+
+    if (daysSince >= 3) {
+      await sendPush(user1.user_id, 'Game Room', `Saturday night. ${user2Name} is waiting.`, '/game-room')
+      await sendPush(user2.user_id, 'Game Room', `Saturday night. ${user1Name} is waiting.`, '/game-room')
+    }
+  }
+
+  if (day === 0) {
+    await sendPush(user1.user_id, 'Weekly Reflection', `Your week with ${user2Name} — Nora is ready when you are.`, '/dashboard')
+    await sendPush(user2.user_id, 'Weekly Reflection', `Your week with ${user1Name} — Nora is ready when you are.`, '/dashboard')
+  }
+
+  if (day === 0) {
     await sendReengagementPush(couple, user1, user2, noraMemory)
   }
 }
@@ -177,12 +219,17 @@ async function sendReengagementPush(couple, user1, user2, noraMemory) {
   const trajectory = noraMemory?.couple_notes?.structured_facts?.trajectory || 'unknown'
   const unsaidThing = noraMemory?.couple_notes?.structured_facts?.unsaid_thing || null
 
-  const prompt = `You are sending a push notification to ${user1Name} to invite them to play a Game Room activity with ${user2Name}. They haven't played together in 7+ days. ${unsaidThing ? `What Nora is watching for: ${unsaidThing}` : ''} Trajectory: ${trajectory}. Write ONE push notification (max 12 words, no quotes) that feels personal and creates genuine curiosity — not generic. Reference something specific about this couple if possible. Never say "feel like playing" or use the word "game".`
+  const prompt1 = `You are sending a push notification to ${user1Name} to reconnect with ${user2Name} in the ABF Game Room. They haven't played together in 7+ days. ${unsaidThing ? `What Nora is watching: ${unsaidThing}` : ''} Trajectory: ${trajectory}. Write ONE push notification (max 12 words, no quotes) addressed to ${user1Name} that feels personal and creates genuine curiosity. Never say "feel like playing" or use the word "game".`
+
+  const prompt2 = `You are sending a push notification to ${user2Name} to reconnect with ${user1Name} in the ABF Game Room. They haven't played together in 7+ days. ${unsaidThing ? `What Nora is watching: ${unsaidThing}` : ''} Trajectory: ${trajectory}. Write ONE push notification (max 12 words, no quotes) addressed to ${user2Name} that feels personal and creates genuine curiosity. Never say "feel like playing" or use the word "game".`
 
   try {
-    const body = await noraGenerate(prompt, { route: 'cron/scheduled-tasks', maxTokens: 60 })
-    await sendPush(user1.user_id, 'ABF', body.trim(), '/game-room')
-    await sendPush(user2.user_id, 'ABF', body.trim(), '/game-room')
+    const [body1, body2] = await Promise.all([
+      noraGenerate(prompt1, { route: 'cron/reengagement-user1', maxTokens: 60 }),
+      noraGenerate(prompt2, { route: 'cron/reengagement-user2', maxTokens: 60 }),
+    ])
+    await sendPush(user1.user_id, 'ABF', body1.trim(), '/game-room')
+    await sendPush(user2.user_id, 'ABF', body2.trim(), '/game-room')
   } catch {
   }
 }
