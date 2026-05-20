@@ -179,6 +179,11 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
         setHasRituals(data.hasRituals || false)
         setRituals(data.rituals || [])
         setCompletions(data.completions || [])
+        const thisWeekStart = getWeekStart()
+        const thisWeekCompletion = (data.completions || []).find(c => c.week_start === thisWeekStart && c.completed === true)
+        if (thisWeekCompletion) {
+          setCheckinResult('completed')
+        }
         const pending = (data.rituals || []).find(
           r => r.status === 'pending' && String(r.proposed_by) !== String(userId) && !r.needs_discussion
         )
