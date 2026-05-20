@@ -9,6 +9,23 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY
 )
 
+async function logPush(supabase, { userId, endpoint, status, statusCode, errorMessage, route, title, body }) {
+  try {
+    await supabase.from('push_log').insert({
+      user_id: userId,
+      endpoint: endpoint || null,
+      status,
+      status_code: statusCode || null,
+      error_message: errorMessage || null,
+      route: route || null,
+      title: title || null,
+      body: body || null
+    })
+  } catch (err) {
+    console.error('[push_log] Failed to log push:', err)
+  }
+}
+
 export async function POST(request) {
   try {
     const supabase = createClient(
@@ -28,7 +45,7 @@ export async function POST(request) {
       }
     }
 
-    const { userId, title, body, url } = await request.json()
+    const { userId, title, body, url, route } = await request.json()
     if (!userId || !title) {
       return Response.json({ error: 'userId and title required' }, { status: 400 })
     }
@@ -51,21 +68,28 @@ export async function POST(request) {
       )
     )
 
-    const sent = results.filter(r => r.status === 'fulfilled').length
-    const errors = results
-      .filter(r => r.status === 'rejected')
-      .map(r => r.reason?.message || String(r.reason))
-    console.error('Push errors:', errors)
+    let sent = 0
+    const errors = []
 
-    // Remove expired subscriptions
     for (let i = 0; i < results.length; i++) {
-      if (results[i].status === 'rejected') {
-        const reason = results[i].reason
-        if (reason?.statusCode === 410 || reason?.statusCode === 404) {
-          const endpoint = subscriptions[i].subscription?.endpoint
+      const result = results[i]
+      const endpoint = subscriptions[i].subscription?.endpoint
+
+      if (result.status === 'fulfilled') {
+        sent++
+        logPush(supabase, { userId, endpoint, status: 'success', statusCode: result.value?.statusCode, route, title, body })
+      } else {
+        const reason = result.reason
+        const statusCode = reason?.statusCode || null
+        errors.push(reason?.message || String(reason))
+
+        if (statusCode === 410 || statusCode === 404) {
+          logPush(supabase, { userId, endpoint, status: 'stale', statusCode, route, title, body })
           if (endpoint) {
             await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint)
           }
+        } else {
+          logPush(supabase, { userId, endpoint, status: 'failed', statusCode, errorMessage: reason?.message, route, title, body })
         }
       }
     }

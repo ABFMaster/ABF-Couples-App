@@ -14,12 +14,12 @@ const supabase = createClient(
 const SPARK_DAYS = [1, 2, 4] // Mon, Tue, Thu
 const BET_DAYS = [3] // Wed
 
-async function sendPush(userId, title, body, url) {
+async function sendPush(userId, title, body, url, route) {
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/push/send`, {
+    await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/push/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
-      body: JSON.stringify({ userId, title, body, url }),
+      body: JSON.stringify({ userId, title, body, url, route }),
     })
   } catch {
   }
@@ -119,8 +119,8 @@ async function processDailyContent(couple, user1, user2) {
       spark_date: todayStr,
     })
 
-    await sendPush(user1.user_id, 'The Spark', 'The Spark is ready.', '/dashboard')
-    await sendPush(user2.user_id, 'The Spark', 'The Spark is ready.', '/dashboard')
+    await sendPush(user1.user_id, 'The Spark', 'The Spark is ready.', '/dashboard', 'cron/spark')
+    await sendPush(user2.user_id, 'The Spark', 'The Spark is ready.', '/dashboard', 'cron/spark')
   }
 
   if (BET_DAYS.includes(day)) {
@@ -151,8 +151,8 @@ async function processDailyContent(couple, user1, user2) {
       bet_date: todayStr,
     })
 
-    await sendPush(user1.user_id, 'The Bet', "The Bet is ready. Do you know them?", '/dashboard')
-    await sendPush(user2.user_id, 'The Bet', "The Bet is ready. Do you know them?", '/dashboard')
+    await sendPush(user1.user_id, 'The Bet', "The Bet is ready. Do you know them?", '/dashboard', 'cron/bet')
+    await sendPush(user2.user_id, 'The Bet', "The Bet is ready. Do you know them?", '/dashboard', 'cron/bet')
   }
 
   if (day === 5) {
@@ -166,8 +166,8 @@ async function processDailyContent(couple, user1, user2) {
       .maybeSingle()
 
     if (ritual) {
-      await sendPush(user1.user_id, 'The Ritual', `${ritual.title} — check in together today.`, '/dashboard')
-      await sendPush(user2.user_id, 'The Ritual', `${ritual.title} — check in together today.`, '/dashboard')
+      await sendPush(user1.user_id, 'The Ritual', `${ritual.title} — check in together today.`, '/dashboard', 'cron/ritual')
+      await sendPush(user2.user_id, 'The Ritual', `${ritual.title} — check in together today.`, '/dashboard', 'cron/ritual')
     }
   }
 
@@ -185,14 +185,14 @@ async function processDailyContent(couple, user1, user2) {
       : 999
 
     if (daysSince >= 3) {
-      await sendPush(user1.user_id, 'Game Room', `Saturday night. ${user2Name} is waiting.`, '/game-room')
-      await sendPush(user2.user_id, 'Game Room', `Saturday night. ${user1Name} is waiting.`, '/game-room')
+      await sendPush(user1.user_id, 'Game Room', `Saturday night. ${user2Name} is waiting.`, '/game-room', 'cron/game-night')
+      await sendPush(user2.user_id, 'Game Room', `Saturday night. ${user1Name} is waiting.`, '/game-room', 'cron/game-night')
     }
   }
 
   if (day === 0) {
-    await sendPush(user1.user_id, 'Weekly Reflection', `Your week with ${user2Name} — Nora is ready when you are.`, '/dashboard')
-    await sendPush(user2.user_id, 'Weekly Reflection', `Your week with ${user1Name} — Nora is ready when you are.`, '/dashboard')
+    await sendPush(user1.user_id, 'Weekly Reflection', `Your week with ${user2Name} — Nora is ready when you are.`, '/dashboard', 'cron/reflection')
+    await sendPush(user2.user_id, 'Weekly Reflection', `Your week with ${user1Name} — Nora is ready when you are.`, '/dashboard', 'cron/reflection')
   }
 
   if (day === 0) {
@@ -228,8 +228,8 @@ async function sendReengagementPush(couple, user1, user2, noraMemory) {
       noraGenerate(prompt1, { route: 'cron/reengagement-user1', maxTokens: 60 }),
       noraGenerate(prompt2, { route: 'cron/reengagement-user2', maxTokens: 60 }),
     ])
-    await sendPush(user1.user_id, 'ABF', body1.trim(), '/game-room')
-    await sendPush(user2.user_id, 'ABF', body2.trim(), '/game-room')
+    await sendPush(user1.user_id, 'ABF', body1.trim(), '/game-room', 'cron/reengagement')
+    await sendPush(user2.user_id, 'ABF', body2.trim(), '/game-room', 'cron/reengagement')
   } catch {
   }
 }
