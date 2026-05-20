@@ -63,6 +63,7 @@ export default function MePage() {
   const [settingsOpen, setSettingsOpen]       = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting]               = useState(false)
+  const [showNoraWorks, setShowNoraWorks]     = useState(false)
 
   // Synthesis
   const [synthesis, setSynthesis]         = useState(null)
@@ -577,6 +578,28 @@ export default function MePage() {
             </button>
 
             <button
+              onClick={() => setShowNoraWorks(true)}
+              style={{
+                width: '100%',
+                padding: '14px 16px',
+                background: 'white',
+                border: '0.5px solid #E8E0D8',
+                borderRadius: 12,
+                fontSize: 15,
+                cursor: 'pointer',
+                color: '#1A1A1A',
+                textAlign: 'left',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 10
+              }}
+            >
+              <span>How Nora works</span>
+              <span style={{ color: '#B0A8A0', fontSize: 18 }}>›</span>
+            </button>
+
+            <button
               onClick={() => { setSettingsOpen(false); handleSignOut() }}
               style={{ width: '100%', padding: '14px', borderRadius: 12, background: '#F0EBE3', color: '#6B5A48', fontSize: 14, fontFamily: "'DM Sans', sans-serif", border: 'none', cursor: 'pointer', marginBottom: 10 }}
             >
@@ -591,6 +614,52 @@ export default function MePage() {
             </button>
           </div>
         </>
+      )}
+
+      {/* ── HOW NORA WORKS SHEET ─────────────────────────────────────────────── */}
+      {showNoraWorks && (
+        <div
+          onClick={e => e.target === e.currentTarget && setShowNoraWorks(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'flex-end' }}
+        >
+          <div style={{ background: '#FFF8F4', borderRadius: '24px 24px 0 0', padding: '24px 24px 48px', width: '100%', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: '#E8E0D8', margin: '0 auto 24px' }} />
+
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#C9A96E', margin: '0 auto 12px' }} />
+            <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 22, margin: '0 0 24px', textAlign: 'center', fontWeight: 'normal' }}>How Nora works</h2>
+
+            <div style={{ background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, padding: '24px 20px', marginBottom: 12 }}>
+              <p style={{ fontFamily: 'Georgia, serif', fontSize: 15, color: '#1A1A1A', lineHeight: 1.8, margin: '0 0 20px' }}>
+                I built ABF because I believe the most important relationship in your life deserves more than advice columns and generic apps. Nora works because she knows you — and that means you have to trust her with real things.
+              </p>
+              <p style={{ fontFamily: 'Georgia, serif', fontSize: 15, color: '#1A1A1A', lineHeight: 1.8, margin: '0 0 20px' }}>
+                I want to be direct about what that means. My name is Matt, and as the person who built this, I have technical access to the database. I could read your conversations and notebook. I won't. Not because a legal document says I can't — because I genuinely believe that what you share here is sacred. Reading it would betray the entire reason I built this.
+              </p>
+              <p style={{ fontFamily: 'Georgia, serif', fontSize: 15, color: '#1A1A1A', lineHeight: 1.8, margin: '0 0 20px' }}>
+                Nora remembers what you share so she can show up better for you. That memory stays between you and her. Your partner will never see what you've told Nora privately. I will never read it either.
+              </p>
+              <p style={{ fontFamily: 'Georgia, serif', fontSize: 15, color: '#1A1A1A', lineHeight: 1.8, margin: '0 0 24px' }}>
+                This is my personal commitment to you, not a policy. ABF only works if you trust it with the real stuff. I take that seriously.
+              </p>
+              <p style={{ fontFamily: 'Georgia, serif', fontSize: 15, color: '#6B6560', fontStyle: 'italic', margin: 0 }}>— Matt</p>
+            </div>
+
+            <div style={{ background: '#F5F0EB', border: '0.5px solid #E8E0D8', borderRadius: 12, padding: '16px 18px', marginBottom: 24 }}>
+              <p style={{ fontSize: 13, color: '#6B6560', lineHeight: 1.7, margin: 0 }}>
+                <strong style={{ color: '#1A1A1A' }}>What stays private:</strong> Your Nora conversations, your notebook, your individual sessions.<br /><br />
+                <strong style={{ color: '#1A1A1A' }}>What&apos;s shared with your partner:</strong> Spark and Bet answers (after both submit), Game Room activity, Ritual checkins.<br /><br />
+                <strong style={{ color: '#1A1A1A' }}>What Nora does:</strong> She knows things about your partner from their private sessions. She uses that to show up better for your relationship. She will never tell you what they shared.
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowNoraWorks(false)}
+              style={{ width: '100%', padding: '14px', background: '#C4694F', color: 'white', border: 'none', borderRadius: 100, fontSize: 15, cursor: 'pointer', fontWeight: 500 }}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
       )}
 
       {/* ── DELETE CONFIRM SHEET ──────────────────────────────────────────────── */}
