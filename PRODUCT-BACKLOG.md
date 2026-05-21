@@ -6,22 +6,26 @@
 - [ ] Location images not always showing on date banners and Next Up card
 - [ ] Ritual "We did it" not showing progress on Us page after completion
 - [x] No Nora verdict on Spark — FIXED: removed await from all push/send calls, verified working 2026-05-13
-- [ ] Push delivery logging — no visibility into APNs/FCM failures, need push_log table
+- [x] Push delivery logging — push_log table built, all 18 peer-to-peer routes labeled, all 6 cron routes labeled 2026-05-21
+- [x] Multi-device push — last device wins fix deployed 2026-05-21
 - [x] Spark reaction UX — tapping a reaction closes tabs instead of highlighting selection. Cannot change reaction after first tap. Needs persistent selected state with visual highlight.
 - [x] Spark submit button no loading state — "Share my answer" shows no feedback for 2-3 seconds after tap
 - [x] Nora hero card wrong day content — force-dynamic fix deployed 2026-05-14, FIXED 2026-05-19
 - [ ] Bet verdict tone — misreads self-deprecating humor as vulnerability (Cass: "I am already my mother" read as confession not self-aware humor). Needs prompt tuning.
 - [ ] Ritual card resets to pre-state on page reload — shows checkin buttons again after completion
-- [ ] Weekly Reflection did not trigger 2026-05-18 — fixed (hour gate removed), verify next Sunday
+- [x] Weekly Reflection not triggering — hour gate removed, day gate moved to call site 2026-05-21
 - [ ] Nora standalone synthesis cron route missing — Sunday synthesis will 404, build before 2026-05-25
 - [x] Push wrong person name — FIXED 2026-05-19 (per-user reengagement copy), verify Wednesday
 - [x] Nora privacy leak — FIXED 2026-05-19 (NORA_CONVERSATION excluded from couple_notes, couple_notes cleared)
+- [ ] Google Cloud free trial ended — Places API breaks in 30 days, upgrade required URGENT
 
 ## BETA READINESS (do first)
 - [x] Onboarding flow visual pass — onboarding/page.js, onboarding/welcome/page.js
 - [x] Connect page visual pass — app/connect/page.js
 - [x] Dead page audit and cleanup — mixtape, timeline, partner-insights, learn, results, settings
 - [x] dates/[id] visual pass — date detail page matches builder aesthetic
+- [x] Privacy communication — onboarding screen, How Nora works in settings, first-session acknowledgment
+- [x] Push delivery logging — full visibility into all push attempts
 - [ ] Full end-to-end test session with Cass — every game mode, every daily activity
 - [x] Remove cron diagnostic logs after push confirmed working
 - [ ] Run Nora memory test after 2 weeks real usage
@@ -110,6 +114,8 @@ These APIs don't fix UX — they enrich content. The current builder UX is funct
 - [ ] Weekly Reflection — rebuilt and live. Nora draws from Sparks, Bets, rituals, dates, nora_memory. Sunday cron generation. "Talk to Nora" handoff. Past reflections archive. Run Nora memory test after 2 weeks real usage to validate reflection quality.
 
 ## NORA INTELLIGENCE
+- [x] Nora architecture unification — NORA_VOICE powers all surfaces, assessment data wired into ai-coach, buildCoachSystem, getMemoryBriefing rename 2026-05-21
+- [x] Verdict quality pass — all 7 routes have memory context, names used, find what they didn't say 2026-05-21
 - [ ] Nora named address unlock — post-beta, boolean flag Nora sets herself when confident enough
 - [ ] Four Horsemen detection — Tension Intelligence Arc Sprint 4
 - [ ] Weekly reflection data quality — system claims week-long observation but only 2 data points fed
@@ -195,7 +201,8 @@ These APIs don't fix UX — they enrich content. The current builder UX is funct
 - [ ] Dead pages: mixtape, timeline, partner-insights, learn, results, settings — audit and delete
 - [ ] Cron diagnostic logs — remove after push confirmed working
 - [x] conversation-starters route has no auth guard (any caller can trigger)
-- [ ] Multi-device push support — current deduplication keeps one subscription per user, breaks if user switches devices between cron run and morning open
+- [x] Multi-device push deduplication — last device wins 2026-05-21
+- [x] Push route labels — all 18 peer-to-peer + 6 cron call sites labeled 2026-05-21
 - [ ] window.location usage in dashboard/page.js and us/page.js — should use useSearchParams with Suspense wrapper
 - [ ] relationship_points written directly from client components (FlirtView, FlirtComposer) — should go through API route
 - [ ] Pre-App Store hardening sprint — add Bearer JWT auth to all 56 unprotected API routes
