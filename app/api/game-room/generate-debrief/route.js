@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getNoraBriefing } from '@/lib/nora-memory'
+import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing } from '@/lib/nora-memory'
 import { noraVerdict } from '@/lib/nora'
 
 export async function POST(request) {
@@ -57,7 +57,7 @@ export async function POST(request) {
     const user2Name = user2Profile?.display_name || 'Partner 2'
 
     const noraMemory = await getNoraMemory(coupleId)
-    const noraBriefing = noraMemory ? getNoraBriefing(noraMemory, user1Name, user2Name) : null
+    const noraBriefing = noraMemory ? getMemoryBriefing(noraMemory, user1Name, user2Name) : null
 
     const find1 = finds?.find(f => f.user_id === couple.user1_id)
     const find2 = finds?.find(f => f.user_id === couple.user2_id)

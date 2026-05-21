@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { createClient } from '@supabase/supabase-js'
 import { noraVerdict } from '@/lib/nora'
-import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
+import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing } from '@/lib/nora-memory'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -33,6 +33,8 @@ export async function POST(request) {
       .in('user_id', [coupleData.user1_id, coupleData.user2_id])
 
     const names = profiles ? profiles.map(p => p.display_name).join(' and ') : 'this couple'
+    const noraMemoryFull = await getNoraMemory(coupleId)
+    const noraBriefing = noraMemoryFull ? getMemoryBriefing(noraMemoryFull, profiles?.[0]?.display_name || 'Partner 1', profiles?.[1]?.display_name || 'Partner 2') : null
 
     let storyText = coupleResponse || ''
     if (challengeType === 'story') {
@@ -141,9 +143,11 @@ Give a verdict that:
 - Is warm, grounded, and 2-4 sentences max`
     }
 
+    if (noraBriefing) verdictPrompt += `\n\nWhat Nora knows about this couple:\n${noraBriefing}`
+
     const response = await noraVerdict(verdictPrompt, {
       route: 'game-room/challenge/submit',
-      system: 'You find what neither person said out loud. You never restate what was just told to you. You get straight to the insight. When observing individual patterns, use \'one of you / the other\' — let them claim the observation themselves.',
+      system: 'You find what neither person said out loud. You never restate what was just told to you. You get straight to the insight. When observing individual patterns, use \'one of you / the other\' — let them claim the observation themselves. Use their actual names when you see something specific to them. Find what they didn\'t say. Don\'t explain it.',
       maxTokens: 400,
     })
 

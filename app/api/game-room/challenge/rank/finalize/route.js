@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraVerdict } from '@/lib/nora'
+import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing } from '@/lib/nora-memory'
 
 export async function POST(request) {
   try {
@@ -39,6 +40,9 @@ export async function POST(request) {
     const u1Name = u1Profile?.display_name || 'Partner 1'
     const u2Name = u2Profile?.display_name || 'Partner 2'
 
+    const noraMemoryFull = await getNoraMemory(coupleId)
+    const noraBriefing = noraMemoryFull ? getMemoryBriefing(noraMemoryFull, u1Name, u2Name) : null
+
     const rankFinal = round.rank_final || []
     const noAgreements = round.no_agreements || []
 
@@ -60,12 +64,13 @@ Give a verdict that:
 - Finds what the disagreements reveal about them as individuals or as a couple
 - Is 2-3 sentences max, warm but sharp
 
-If they agreed on everything: react to the fact that they're perfectly aligned — that's its own kind of interesting.`
+If they agreed on everything: react to the fact that they're perfectly aligned — that's its own kind of interesting.
+${noraBriefing ? `\nWhat Nora knows about this couple:\n${noraBriefing}` : ''}`
 
     const response = await noraVerdict(verdictPrompt, {
       route: 'challenge/rank/finalize',
       maxTokens: 400,
-      system: 'Two people just negotiated a shared ranking after disagreeing. What they conceded and what they held tells you more than the final list. Find what the negotiation revealed about each of them — not the ranking itself. Never list the items back. One sharp observation, one targeted question to one specific person.',
+      system: 'Two people just negotiated a shared ranking after disagreeing. What they conceded and what they held tells you more than the final list. Find what the negotiation revealed about each of them — not the ranking itself. Never list the items back. One sharp observation, one targeted question to one specific person. Use their actual names when you see something specific to them. Find what they didn\'t say. Don\'t explain it.',
     })
 
     const verdictText = response
@@ -75,6 +80,7 @@ If they agreed on everything: react to the fact that they're perfectly aligned �
       .update({ nora_verdict: verdictText, completed_at: new Date().toISOString() })
       .eq('id', roundId)
 
+    updateNoraMemory({ coupleId, signalType: SIGNAL_TYPES.GAME_ROOM_DEBRIEF, inputData: { gameType: 'rank_challenge', prompt, rankFinal, noAgreements, verdictText } }).catch(() => {})
     return NextResponse.json({ noraVerdict: verdictText, rankFinal, noAgreements })
   } catch (err) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

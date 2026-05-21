@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraVerdict } from '@/lib/nora'
-import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
+import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing } from '@/lib/nora-memory'
 
 export async function POST(request) {
   try {
@@ -51,6 +51,9 @@ export async function POST(request) {
     const predictorName = predictorProfile?.display_name || 'You'
     const hotSeatName = hotSeatProfile?.display_name || 'your partner'
 
+    const noraMemory = await getNoraMemory(coupleId)
+    const noraBriefing = noraMemory ? getMemoryBriefing(noraMemory, predictorName, hotSeatName) : null
+
     // Build rounds summary for Nora
     const roundsSummary = rounds?.map(r =>
       `Round ${r.round_number}: "${r.scenario}" — ${hotSeatName} chose "${r.hot_seat_answer}", ${predictorName} guessed "${r.predictor_answer}" — ${r.correct ? 'correct ✓' : 'wrong ✗'}${r.hot_seat_explanation ? ` — ${hotSeatName} said: "${r.hot_seat_explanation}"` : ''}`
@@ -72,9 +75,10 @@ Score context:
 3/5 — know each other well enough to be dangerous
 2/5 — more surprising than they thought
 1/5 — a mystery to each other
-0/5 — ${predictorName}, introduce yourself`
+0/5 — ${predictorName}, introduce yourself
+${noraBriefing ? `\nWhat Nora knows about this couple:\n${noraBriefing}` : ''}`
 
-    const response = await noraVerdict(prompt, { route: 'game-room/call/verdict', maxTokens: 400, system: 'You watched someone try to predict their partner across 5 rounds. The score is a starting point — the specific misses tell you everything. Find the most revealing gap — not what they got wrong, but what the wrong answers reveal about each person individually. Use \'one of you / the other\' when observing individual patterns — never name who is who. Let them claim the observation. Never recap the rounds. Two sentences maximum. Land it and stop.' })
+    const response = await noraVerdict(prompt, { route: 'game-room/call/verdict', maxTokens: 400, system: 'You watched someone try to predict their partner across 5 rounds. The score is a starting point — the specific misses tell you everything. Find the most revealing gap — not what they got wrong, but what the wrong answers reveal about each person individually. Use \'one of you / the other\' when observing individual patterns — never name who is who. Let them claim the observation. Never recap the rounds. Two sentences maximum. Land it and stop. Use their actual names when you see something specific to them. Find what they didn\'t say. Don\'t explain it.' })
 
     const verdict = response
     await supabase

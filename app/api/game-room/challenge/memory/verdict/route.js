@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { createClient } from '@supabase/supabase-js'
 import { noraVerdict } from '@/lib/nora'
+import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing } from '@/lib/nora-memory'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -72,6 +73,9 @@ export async function POST(request) {
     const guesserName = guesserProfile?.display_name || 'Partner 1'
     const answerHolderName = answerHolderProfile?.display_name || 'Partner 2'
 
+    const noraMemory = await getNoraMemory(coupleId)
+    const noraBriefing = noraMemory ? getMemoryBriefing(noraMemory, guesserName, answerHolderName) : null
+
     const hintsGranted = (round.hints_granted || []).length
     const hintsDenied = round.hint_denials || 0
     const hintsRequested = round.hint_requests || 0
@@ -92,7 +96,7 @@ export async function POST(request) {
       hintNarrative = `${guesserName} used ${hintsGranted} hint${hintsGranted > 1 ? 's' : ''}.`
     }
 
-    const systemPrompt = `You are the game master for a Love Map memory game. Your verdict is a reflection, not a scorecard. You stay in game master voice throughout — warm, specific, a little mischievous. The insight lands naturally as part of the story you're telling. You never label what you're doing. You never say "this reveals" or "research shows" or pivot into therapist mode. You end with one directed question to one specific person — not "discuss this together," but a targeted poke that almost always becomes a real conversation.`
+    const systemPrompt = `You are the game master for a Love Map memory game. Your verdict is a reflection, not a scorecard. You stay in game master voice throughout — warm, specific, a little mischievous. The insight lands naturally as part of the story you're telling. You never label what you're doing. You never say "this reveals" or "research shows" or pivot into therapist mode. You end with one directed question to one specific person — not "discuss this together," but a targeted poke that almost always becomes a real conversation. Use their actual names when you see something specific to them. Find what they didn't say. Don't explain it.`
 
     const userPrompt = `Round ${roundNumber} of the Love Map memory game just finished.
 
@@ -110,6 +114,7 @@ Write Nora's verdict for this round. 3-4 sentences max.
 - Land one observation about what this moment says about these two — not a diagnosis, just a noticing. Make it feel earned, not announced.
 - End with one directed question to either ${guesserName} or ${answerHolderName} specifically — a poke that opens territory rather than closes it. Not "discuss this." Something they'll answer out loud without thinking.
 
+${noraBriefing ? `\nWhat Nora knows about this couple:\n${noraBriefing}\n` : ''}
 PHILOSOPHY: A miss is not a failure — it's a map gap worth knowing about. A hit is worth celebrating. Either way, ${guesserName} knows something now they may not have known before. That's the point.`
 
     const response = await noraVerdict(userPrompt, {
@@ -131,6 +136,7 @@ PHILOSOPHY: A miss is not a failure — it's a map gap worth knowing about. A hi
       return Response.json({ error: 'Failed to save verdict' }, { status: 500 })
     }
 
+    updateNoraMemory({ coupleId, userId: round.guesser_user_id, signalType: SIGNAL_TYPES.GAME_ROOM_DEBRIEF, inputData: { gameType: 'love_map_memory', question: round.memory_question, correctAnswer, guesserAnswer, verdict } }).catch(() => {})
     return Response.json({ ok: true, verdict })
   } catch (err) {
     return Response.json({ error: 'Internal server error' }, { status: 500 })

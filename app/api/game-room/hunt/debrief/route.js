@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { createClient } from '@supabase/supabase-js'
 import { noraVerdict } from '@/lib/nora'
-import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
+import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing } from '@/lib/nora-memory'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -74,7 +74,10 @@ export async function POST(request) {
     const name1 = user1Profile?.display_name || 'Partner 1'
     const name2 = user2Profile?.display_name || 'Partner 2'
 
-    const systemPrompt = `You just sent a couple on a mission and they came back with a story. Your verdict is warm, specific, a little mischievous. You find what neither person said out loud. You stay in game master voice throughout — never therapist mode. You end with one directed question to one specific person that almost always becomes a real conversation.`
+    const noraMemory = await getNoraMemory(coupleId)
+    const noraBriefing = noraMemory ? getMemoryBriefing(noraMemory, name1, name2) : null
+
+    const systemPrompt = `You just sent a couple on a mission and they came back with a story. Your verdict is warm, specific, a little mischievous. You find what neither person said out loud. You stay in game master voice throughout — never therapist mode. You end with one directed question to one specific person that almost always becomes a real conversation. Use their actual names when you see something specific to them. Find what they didn't say. Don't explain it.`
 
     const userPrompt = `${name1} and ${name2} just completed a Hunt mission.
 
@@ -95,6 +98,7 @@ Write Nora's verdict. 3-4 sentences max.
 - Land one observation that reframes what they did as something that reveals who they are together
 - End with one directed question to either ${name1} or ${name2} specifically — not "discuss this together," a targeted poke that opens territory
 
+${noraBriefing ? `\nWhat Nora knows about this couple:\n${noraBriefing}\n` : ''}
 PHILOSOPHY: The mission was the ignition. The conversation that follows is the point. Push them toward each other, not toward their phones.`
 
     const response = await noraVerdict(userPrompt, {
