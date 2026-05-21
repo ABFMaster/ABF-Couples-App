@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraVerdict } from '@/lib/nora'
-import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
+import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getNoraBriefing } from '@/lib/nora-memory'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -46,6 +46,9 @@ export async function POST(request) {
       .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
       .maybeSingle()
     const isUser1 = couple?.user1_id === userId
+
+    const noraMemory = await getNoraMemory(couple?.id)
+    const noraBriefing = noraMemory ? getNoraBriefing(noraMemory, userName, partnerName) : null
 
     // Build questions map from session
     const questions = existingSession?.questions || []
@@ -91,9 +94,10 @@ Rules:
 - Never start with an affirmation
 - Never be clinical or therapist-y
 - Be specific to what they actually answered — no generic relationship advice
-- Humor is welcome if it's earned, not forced`
+- Humor is welcome if it's earned, not forced
+${noraBriefing ? `\nWhat Nora knows about this couple:\n${noraBriefing}` : ''}`
 
-    const response = await noraVerdict(prompt, { route: 'game-room/hot-take/summary-insight', maxTokens: 400, system: 'You watched two people rapid-fire opinions at each other. The disagreements are more interesting than the agreements — find what the pattern reveals about each person individually, not the couple as a label. Use \'one of you / the other\' when observing individual patterns — never name who is who. Let them claim the observation. Never restate the answers. The closing question should feel like something they\'d actually say to each other tonight — not therapy homework.' })
+    const response = await noraVerdict(prompt, { route: 'game-room/hot-take/summary-insight', maxTokens: 400, system: 'You watched two people rapid-fire opinions at each other. The disagreements are more interesting than the agreements — find what the pattern reveals about each person individually, not the couple as a label. Use their actual names when you see something specific to them — don\'t hide behind \'one of you\'. Two sentences max. Find what their answers revealed that they didn\'t say out loud. Don\'t explain it. Never restate the answers. The closing line should feel like something they\'d actually say to each other tonight — not therapy homework.' })
     const insight = response
 
     await supabase
