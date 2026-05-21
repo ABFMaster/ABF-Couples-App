@@ -1,88 +1,88 @@
-# ABF Session Handoff — Updated 2026-05-19
+# ABF Session Handoff — Updated 2026-05-21
 
 ## Session Summary
-Massive session covering two major feature areas plus Nora standalone launch.
+Two-day session covering Nora architecture unification, standalone Nora launch, privacy implementation, sprint quality work, and push system completion.
 
 ## What Shipped This Session
 
-### Spark Fixes
-- Spark reaction UX complete — removed State D, unified reveal, interactive tabs, compact completion summary (❤️ Loved it · 🔥 Keep it coming) after both reaction and rating selected
-- Spark submit loading state — "Sharing…" label and disabled during onRespond await
-- Spark reaction now saves to DB (question_rating added to /api/spark/react route)
-- onReact remount bug fixed — removed from both handleReaction and handleRating
+### Nora Architecture Unification — Most Important Work
+- NORA_VOICE (lib/nora-knowledge.js) now powers ALL surfaces — ai-coach, verdicts, game room, hero card, standalone Nora. One character foundation everywhere.
+- buildCoachSystem() added to lib/nora.js — ai-coach now builds prompt from NORA_VOICE + clinical knowledge + operational rules
+- getNoraBriefing from nora-knowledge.js finally wired into ai-coach — assessment data (attachment styles, conflict styles, love languages, pairing matrix) now flows into coaching sessions for the first time
+- getMemoryBriefing rename — getNoraBriefing in nora-memory.js renamed to avoid naming conflict. 8 call sites updated atomically.
+- ai-coach now receives BOTH assessment briefing (nora-knowledge.js) AND memory briefing (nora-memory.js) — full context for the first time
+- Calibrated question technique (Voss) added to CLINICAL_KNOWLEDGE — how/what questions, tactical empathy, mirroring
+- Guide character framing (Gadney) added — Nora is a presence in this couple's story, not a tool
+- NORA_SYSTEM_PROMPT deleted and replaced with CLINICAL_KNOWLEDGE + OPERATIONAL_RULES constants built via buildCoachSystem()
+- Standalone Nora chat route wired to NORA_VOICE — same character foundation as ABF
 
-### Nora Hero Card — Full Rewrite
-- hero_cache table created (user_id, couple_id, cache_date, type, message, cta_label, cta_href, pills, mode)
-- Two generation modes: pre (noraSignal, fast) and post (noraChat, rich)
-- Pre-mode: memory-powered observation about this specific person — singular "you", never "you two"
-- Post-mode: The Thread — micro-action, pattern connection, or conversation seed after both partners answer
-- Cache persists all day, invalidates on Spark respond, Bet respond, Ritual checkin
-- Hero card auto-refreshes after Ritual checkin via onCheckinComplete callback
-- Ritual longitudinal arc: streak-aware prompts, Week 1/2/3+ language, completion detection
-- Pre-mode system prompt rewritten: speaks to individual not couple, singular "you" enforced
+### Verdict Quality Pass — All 7 Routes
+- getNoraMemory + getMemoryBriefing added to all 7 verdict routes
+- Nora now has memory context in every game room verdict — no longer observing strangers
+- System prompts updated: use actual names not "one of you", find what they didn't say, don't explain it
+- updateNoraMemory added to challenge/memory/verdict and challenge/rank/finalize (were missing entirely)
 
-### Nora Memory Privacy Fix
-- CRITICAL: NORA_CONVERSATION signal was bleeding into couple_notes — private Cass sessions were surfacing in Matt's hero card ("her pressure building sober")
-- Fixed: NORA_CONVERSATION and FLIRT_SENT now excluded from couple_notes update
-- Existing contaminated couple_notes cleared via SQL
-- Architecture clarified: person notes = private per individual, couple_notes = shared signals only (Spark, Bet, Game Room, Ritual, Date, Reflection)
+### Privacy Implementation
+- app/onboarding/privacy/page.js — new screen between welcome and onboarding. Matt's personal commitment. "Before we begin."
+- "How Nora works" added to Me tab settings sheet — full privacy statement always accessible
+- Nora first-session acknowledgment added to NORA_SYSTEM_PROMPT — she naturally names the privacy boundary in the first message of a new conversation
+- Settings sheet close bug fixed — × button added, maxHeight 80vh, position context fix
 
-### Push Notification Fixes
-- Wrong name bug fixed: sendReengagementPush now generates two separate Nora messages per user (prompt1 for user1, prompt2 for user2) — no more shared copy sent to both
-- Ritual push added: fires Friday with ritual title
-- Saturday Game Night push added: fires if no session in 3 days, personalized per user
-- Sunday Weekly Reflection push added
-- Re-engagement scoped to Sunday only (was firing Fri/Sat/Sun)
-- Weekly Reflection bug fixed: removed fragile hour !== 3 gate inside processWeeklyReflection, moved day === 0 gate to call site in main loop
-- Second cron entry added to vercel.json: 0 13 * * 0 (Sunday 1pm UTC = 6am PT) for Nora synthesis
+### Push System Completion
+- push_log table created — logs every push attempt with status, status_code, error_message, route, title, body
+- Route labels added to all 6 cron triggers (spark, bet, ritual, game-night, reflection, reengagement)
+- Route labels added to all 18 peer-to-peer push call sites
+- Multi-device push bug fixed — all user subscriptions deleted before new registration, last device wins
+- Weekly Reflection cron bug fixed — removed fragile hour !== 3 gate, moved day === 0 check to call site
+- Ritual push added (Friday), Saturday Game Night push added, Sunday Reflection push added
+- Re-engagement scoped to Sunday only
+- Second cron entry added to vercel.json: Sunday 1pm UTC (6am PT) for Nora synthesis
 
-### Bet Verdict Tone
-- Surgical ambiguity guard added to betReactionSettings system prompt: short answers, self-comparison, or self-deprecating humor held lightly — reflect without concluding
-- BET_REVEAL memory lens updated: now notes HOW the person expressed their answer (humor, deflection, earnestness) — tone is data
+### Nora Standalone — Launched
+- Live at: https://nora-app-mauve.vercel.app
+- Repo: ABFMaster/Nora-App
+- Supabase: nora-standalone project
+- Full onboarding: 6 screens, seeds notebook + Nora memory
+- Feedback system: FeedbackCard (post-session, mid-check), Day7Survey in Me tab
+- Welcome email: Resend integration, personal letter from Matt, fires on onboarding completion
+- Feedback re-show bug fixed — DB as source of truth on mount
+- Nora synthesis cron confirmed working (processed 2/2 manually tested)
 
 ### Me Tab (ABF)
-- Profile tab renamed "Me" in BottomNav.js
-- Full Me tab built: Notebook (Noticed/Working on/Reflection), Practices (Active/Paused/Done cycle), Nora weekly synthesis card
-- Settings moved to initials circle → bottom sheet (Name, Birthday, Anniversary, Timezone, notification toggles, Save, Sign out, Delete)
-- hero_cache extended with type column (hero/synthesis), unique constraint updated to (user_id, cache_date, type)
-- Sunday synthesis cron wired into scheduled-tasks at 6am gate
-- New signal types: NOTEBOOK_ENTRY, PRACTICE_ADDED, PRACTICE_UPDATED — person notes only, never couple_notes
-- New tables: notebook_entries, user_practices
-- New API routes: /api/notebook/entry, /api/notebook/entries, /api/notebook/entry/[id], /api/practices, /api/practices/[id], /api/me/synthesis
+- Profile tab renamed "Me"
+- Notebook, Practices, Nora synthesis card all working
+- Sunday synthesis cron wired at 6am gate
+- Settings sheet: all profile fields, How Nora works section, close button
 
-### Nora Standalone — "Nora" app launched
-- New repo: ABFMaster/Nora-App
-- New Supabase project: nora-standalone (qzhnsxdyqlanwgqlcrin.supabase.co)
-- Live at: https://nora-app-mauve.vercel.app
-- Stack: Next.js 15, Tailwind, same Anthropic + Supabase patterns as ABF
-- Brand identity: coral wordmark, gold dot above for brand contexts, dot-left for in-app presence
-- 6-screen onboarding: name, why here, working on (→ first notebook entry), hard feelings (one tap), good week, Nora ready
-- Two tabs: Nora (chat) + Me (notebook/practices/synthesis)
-- Feedback system: FeedbackCard component (post-session after 4+ messages, mid-check after 12+), Day7Survey in Me tab, /api/feedback route
-- Invite message drafted and ready to send
-- lib/nora-memory.js adapted for solo use (user_id as key, single user_notes layer, no couple layer)
-- vercel.json: Sunday 1pm UTC cron for synthesis
+### Bet Verdict Tone
+- Surgical ambiguity guard — short/self-deprecating answers held lightly
+- BET_REVEAL memory lens updated — tone is data
+
+### Hero Card
+- Pre-mode system prompt rewritten — singular "you", speaks to individual not couple
+- Cache auto-invalidation on Spark, Bet, Ritual completion
 
 ## Verification Checkpoints — Watch This Week
-- Wednesday 3am PT: Bet push fires for both Matt and Cass with correct names
-- Friday 3am PT: Ritual push fires with "The Six-Second Kiss — check in together today."
-- Saturday 3am PT: Game Night push fires if no session in 3 days
-- Sunday 3am PT: Weekly Reflection push fires + reflection generates (check Vercel logs for [reflection/generate])
-- Sunday 6am PT: Nora synthesis generates for Me tab (check hero_cache for type='synthesis' rows)
-- Monday Spark: hero card auto-flips to post-mode after both Matt and Cass answer without manual cache clear
+- Friday 3am PT — Ritual push fires with ritual title
+- Saturday 3am PT — Game Night push fires if no session in 3 days
+- Sunday 3am PT — Weekly Reflection push + reflection generates
+- Sunday 6am PT — Nora synthesis generates for Me tab
+- Next Wednesday 3am PT — First logged Bet cron push
 
 ## Active Bugs
-- Push delivery logging — no visibility into APNs/FCM failures, need push_log table
-- Ritual card resets to pre-state on page reload (separate from hero card, which is correct)
-- Nora standalone cron route not yet built — Sunday synthesis will 404 until built
+- Ritual card resets to pre-state on page reload — seeding fix deployed, verify Friday
 - GoTrueClient singleton warning — low priority
+- Google Cloud free trial ended — 30 day countdown before Places API breaks, URGENT
 
 ## Architecture Notes
-- hero_cache is now the single cache for both hero (dashboard) and synthesis (Me tab) — differentiated by type column
-- All hero card logic: check cache first → cache hit serve immediately → cache miss generate → write cache → return
-- Cache invalidation: Spark respond, Bet respond, Ritual checkin all delete couple's cache rows fire-and-forget
-- Nora memory privacy boundary: SHARED_SIGNALS array in lib/nora-memory.js is the gate — only signals in that array update couple_notes
-- Me tab notebook/practices: couple_id nullable throughout — supports solo users
+- NORA_VOICE in lib/nora-knowledge.js is the single source of truth for Nora's character
+- buildCoachSystem(clinicalKnowledge, operationalRules) in lib/nora.js builds the ai-coach prompt
+- getNoraBriefing (nora-knowledge.js) = assessment data, takes full profile objects
+- getMemoryBriefing (nora-memory.js) = synthesized memory notes, takes (memory, user1Name, user2Name)
+- ai-coach uses both: assessmentBriefing + memoryBriefing combined into fullContext
+- All verdict routes use getMemoryBriefing for memory context
+- push_log table captures every push attempt — query for visibility into delivery failures
+- Last device wins for push subscriptions — multi-device deduplication fixed
 
 ## Key Test User IDs
 - Matt: fe1e0be6-4574-4bc1-8c89-9cb1b6bbe870
@@ -90,8 +90,10 @@ Massive session covering two major feature areas plus Nora standalone launch.
 - Couple ID: 8230e60f-44ca-4668-be28-06cb32b1b831
 
 ## Next Session Priorities
-1. Verify Wednesday Bet push (correct names, correct copy)
-2. Nora standalone cron route — build before Sunday
-3. Full Cass end-to-end test — still the beta gate
-4. Push delivery logging (push_log table)
-5. Weekly Reflection verification Sunday morning
+1. Google Cloud upgrade — urgent, Places API breaks in 30 days
+2. Full Cass end-to-end test — beta gate
+3. Verify Friday Ritual push and Saturday Game Night push
+4. Nora standalone — send invites to test group
+5. Invite-only signup end-to-end test with real new user
+6. Nora Relationship Arc design sprint
+7. Weekly rhythm rebuild — Thursday Nora gap prompt, Tuesday Hot Take lite
