@@ -266,6 +266,7 @@ Return only the JSON object. No markdown, no explanation, no wrapper text.`
               title: 'Weekly Reflection',
               body: "Your week together is ready to reflect on.",
               url: '/dashboard',
+              route: 'reflection/generate',
             }),
           }).catch(() => {}),
           fetch(`${appBase}/api/push/send`, {
@@ -276,6 +277,7 @@ Return only the JSON object. No markdown, no explanation, no wrapper text.`
               title: 'Weekly Reflection',
               body: "Your week together is ready to reflect on.",
               url: '/dashboard',
+              route: 'reflection/generate',
             }),
           }).catch(() => {}),
         ])

@@ -72,6 +72,7 @@ export async function POST(request) {
               title: 'The Rabbit Hole',
               body: "You're both ready — Nora is sending you deeper.",
               url: '/game-room/rabbit-hole/play',
+              route: 'game-room/round-ready',
             }),
           }).catch(() => {}),
           fetch(`${appBase}/api/push/send`, {
@@ -82,6 +83,7 @@ export async function POST(request) {
               title: 'The Rabbit Hole',
               body: "You're both ready — Nora is sending you deeper.",
               url: '/game-room/rabbit-hole/play',
+              route: 'game-room/round-ready',
             }),
           }).catch(() => {}),
         ])
@@ -97,6 +99,7 @@ export async function POST(request) {
             title: 'The Rabbit Hole',
             body: `${myName} is ready for the next thread whenever you are.`,
             url: '/game-room/rabbit-hole/play',
+            route: 'game-room/round-ready',
           }),
         }).catch(() => {})
       }

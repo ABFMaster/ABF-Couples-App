@@ -73,6 +73,7 @@ export async function POST(request) {
         title: 'Date deletion requested',
         body: `${requesterName} wants to delete "${date.title}". Open the date to confirm or cancel.`,
         url: `/dates/${dateId}`,
+        route: 'dates/request',
       }),
     }).catch(() => {})
   }

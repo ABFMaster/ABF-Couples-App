@@ -251,6 +251,7 @@ export default function DateDetailPage({ params }) {
           title: 'New Date Plan',
           body: `${currentUserName} planned a date for you two. Take a look.`,
           url: `/dates/${date.id}`,
+          route: 'dates',
         }),
       }).catch(() => {})
       setSentToPartner(true)

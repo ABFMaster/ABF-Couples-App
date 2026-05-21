@@ -75,6 +75,7 @@ export async function POST(request) {
         title: 'Date deleted',
         body: `${confirmerName} confirmed. "${date.title}" has been deleted.`,
         url: '/dates',
+        route: 'dates/confirm',
       }),
     }).catch(() => {})
   }

@@ -99,6 +99,7 @@ export async function POST(request) {
             title: 'Hot Take',
             body: 'Your partner locked in their answer.',
             url: '/game-room/hot-take',
+            route: 'hot-take/answer',
           }),
         }).catch(() => {})
       }

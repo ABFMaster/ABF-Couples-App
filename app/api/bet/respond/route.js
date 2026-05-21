@@ -145,6 +145,7 @@ Write exactly one sentence, maximum 18 words. Speak directly to ${myName} using 
         title: 'The Bet',
         body: pushBody,
         url: '/dashboard',
+        route: 'bet/respond',
       }),
     }).catch(() => {})
 

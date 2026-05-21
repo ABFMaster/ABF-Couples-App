@@ -71,6 +71,7 @@ export async function POST(request) {
         title: 'Deletion cancelled',
         body: `${cancellerName} kept the date. "${date.title}" is still on.`,
         url: `/dates/${dateId}`,
+        route: 'dates/cancel',
       }),
     }).catch(() => {})
   }

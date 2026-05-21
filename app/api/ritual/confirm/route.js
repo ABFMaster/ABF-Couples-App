@@ -86,6 +86,7 @@ export async function POST(request) {
             title: 'The Ritual',
             body: notifBody,
             url: '/ritual',
+            route: 'ritual/confirm',
           }),
         }).catch(() => {})
       }

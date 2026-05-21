@@ -93,6 +93,7 @@ export async function POST(request) {
         title: 'The Spark',
         body: `${currentUserName} just answered The Spark.`,
         url: '/dashboard',
+        route: 'spark/respond',
       }),
     }).catch(() => {})
 

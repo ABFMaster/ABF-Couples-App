@@ -65,6 +65,7 @@ export async function POST(request) {
               ? `Your partner added a ritual you already do: "${title}"`
               : `Your partner proposed a new ritual: "${title}"`,
             url: '/ritual',
+            route: 'ritual/start',
           }),
         }).catch(() => {})
       }

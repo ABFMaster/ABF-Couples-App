@@ -137,6 +137,7 @@ export async function POST(request) {
           title: 'The Game Room',
           body: 'Your partner is in the lobby. Ready to play?',
           url: notificationUrl,
+          route: 'game-room/lobby',
         }),
       }).catch(() => {})
     }

@@ -178,6 +178,7 @@ export default function Dashboard() {
         title: 'The Spark',
         body: `${userName} wants to know what you think.`,
         url: '/dashboard',
+        route: 'dashboard',
       }),
     }).catch(() => {})
   }

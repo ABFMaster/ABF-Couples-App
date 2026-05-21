@@ -491,6 +491,7 @@ function RabbitHolePlayContent() {
             title: userName || 'Your partner',
             body: 'Tell me more',
             url: '/game-room/rabbit-hole/play',
+            route: 'rabbit-hole',
           }),
         })
       }
