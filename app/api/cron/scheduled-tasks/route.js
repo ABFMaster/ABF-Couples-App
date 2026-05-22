@@ -4,7 +4,8 @@ import { createClient } from '@supabase/supabase-js'
 import { getSparkQuestion } from '@/lib/spark-questions'
 import { getBetQuestion } from '@/lib/bet-questions'
 import { getTodayString, getDayOfWeek } from '@/lib/dates'
-import { noraGenerate } from '@/lib/nora'
+import { noraGenerate, noraChat } from '@/lib/nora'
+import { getNoraMemory, getMemoryBriefing } from '@/lib/nora-memory'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -250,6 +251,175 @@ async function processWeeklyReflection(couple) {
   } catch (err) { console.error('[reflection/generate] couple:', couple.id, err) }
 }
 
+async function processThursdayGeneration(couple, user1, user2) {
+  try {
+    const todayStr = getTodayString('America/Los_Angeles')
+
+    // Check if already generated today
+    const { data: existing } = await supabase
+      .from('thursday_entries')
+      .select('id')
+      .eq('couple_id', couple.id)
+      .eq('date', todayStr)
+      .maybeSingle()
+
+    if (existing) return
+
+    const user1Name = user1.display_name || 'Partner 1'
+    const user2Name = user2.display_name || 'Partner 2'
+
+    // Fetch recent activity context
+    const [{ data: recentSparks }, noraMemory] = await Promise.all([
+      supabase
+        .from('sparks')
+        .select('prompt, spark_date, spark_responses(user_id, response_text)')
+        .eq('couple_id', couple.id)
+        .order('spark_date', { ascending: false })
+        .limit(4),
+      getNoraMemory(couple.id)
+    ])
+
+    const memoryBriefing = noraMemory ? getMemoryBriefing(noraMemory, user1Name, user2Name) : null
+
+    const recentContext = recentSparks?.map(s => {
+      const responses = s.spark_responses?.map(r => {
+        const name = r.user_id === couple.user1_id ? user1Name : user2Name
+        return `${name}: "${r.response_text}"`
+      }).join(' | ')
+      return `"${s.prompt}": ${responses}`
+    }).join('\n') || 'No recent Spark answers.'
+
+    const systemPrompt = `You are Nora — you have been watching this couple all week. Generate a unique, personal Thursday observation and calibrated question for one specific partner.
+
+RULES:
+- Speak directly to this person using "you" — never "you two" or "both of you"
+- The observation must be specific to THIS person, angled from what you know about them individually
+- Draw from recent Spark answers and memory patterns — name specific things you noticed
+- End with ONE calibrated question beginning with "what" or "how" — never "why"
+- The question opens new territory, it does not summarize the observation
+- 2-3 sentences for the observation, 1 sentence for the question
+- Never sound like a Spark question — this is Nora speaking first from her own observation
+- Tone: warm, direct, slightly surprising`
+
+    // Generate for user1
+    const user1Prompt = [
+      `You are speaking to ${user1Name}.`,
+      memoryBriefing ? `What you know about this couple:\n${memoryBriefing}` : null,
+      `Recent Spark answers this week:\n${recentContext}`,
+      `Generate a Thursday observation and calibrated question specifically for ${user1Name} — angle it toward what you notice about them individually, not just the couple.`
+    ].filter(Boolean).join('\n\n')
+
+    // Generate for user2
+    const user2Prompt = [
+      `You are speaking to ${user2Name}.`,
+      memoryBriefing ? `What you know about this couple:\n${memoryBriefing}` : null,
+      `Recent Spark answers this week:\n${recentContext}`,
+      `Generate a Thursday observation and calibrated question specifically for ${user2Name} — angle it toward what you notice about them individually, not just the couple.`
+    ].filter(Boolean).join('\n\n')
+
+    const [user1Result, user2Result] = await Promise.all([
+      noraChat([{ role: 'user', content: user1Prompt }], { route: 'thursday/generate-user1', system: systemPrompt, maxTokens: 200 }),
+      noraChat([{ role: 'user', content: user2Prompt }], { route: 'thursday/generate-user2', system: systemPrompt, maxTokens: 200 })
+    ])
+
+    // Parse observation and question from each result
+    // Nora returns 2-3 sentences observation + 1 question sentence
+    // Store full text — split on display
+    const user1Text = user1Result?.trim() || ''
+    const user2Text = user2Result?.trim() || ''
+
+    if (!user1Text || !user2Text) return
+
+    // Extract observation (all but last sentence) and question (last sentence)
+    const splitObsQuestion = (text) => {
+      const sentences = text.match(/[^.!?]+[.!?]+/g) || [text]
+      const question = sentences[sentences.length - 1].trim()
+      const observation = sentences.slice(0, -1).join(' ').trim()
+      return { observation: observation || text, question: question || '' }
+    }
+
+    const user1Parsed = splitObsQuestion(user1Text)
+    const user2Parsed = splitObsQuestion(user2Text)
+
+    // Insert thursday_entries row
+    await supabase.from('thursday_entries').insert({
+      couple_id: couple.id,
+      date: todayStr,
+      user1_id: couple.user1_id,
+      user2_id: couple.user2_id,
+      user1_observation: user1Parsed.observation,
+      user1_question: user1Parsed.question,
+      user2_observation: user2Parsed.observation,
+      user2_question: user2Parsed.question,
+    })
+
+    // Send pushes
+    await sendPush(user1.user_id, 'Nora', 'Something worth looking at today.', '/dashboard', 'thursday/generate')
+    await sendPush(user2.user_id, 'Nora', 'Something worth looking at today.', '/dashboard', 'thursday/generate')
+
+  } catch (err) {
+    console.error('[thursday/generate] couple:', couple.id, err)
+  }
+}
+
+async function processThursdayReveal(couple, user1, user2) {
+  try {
+    const todayStr = getTodayString('America/Los_Angeles')
+
+    const { data: entry } = await supabase
+      .from('thursday_entries')
+      .select('*')
+      .eq('couple_id', couple.id)
+      .eq('date', todayStr)
+      .eq('status', 'pending')
+      .maybeSingle()
+
+    if (!entry) return
+
+    const user1Name = user1.display_name || 'Partner 1'
+    const user2Name = user2.display_name || 'Partner 2'
+
+    // Generate synthesis
+    const hasUser1 = !!entry.user1_response
+    const hasUser2 = !!entry.user2_response
+
+    let synthesis = ''
+
+    if (hasUser1 || hasUser2) {
+      const synthesisPrompt = [
+        `You are Nora. Two people privately reflected on your observations today. Now bring their responses together.`,
+        hasUser1 ? `${user1Name}'s observation: "${entry.user1_observation} ${entry.user1_question}"` : null,
+        hasUser1 ? `${user1Name}'s response: "${entry.user1_response}"` : null,
+        hasUser2 ? `${user2Name}'s observation: "${entry.user2_observation} ${entry.user2_question}"` : null,
+        hasUser2 ? `${user2Name}'s response: "${entry.user2_response}"` : null,
+        !hasUser1 ? `${user1Name} did not respond today.` : null,
+        !hasUser2 ? `${user2Name} did not respond today.` : null,
+        `Write a 2-3 sentence synthesis that connects what you see across both responses — or speaks directly to the one who did respond if only one answered. End with one calibrated "what" or "how" question that creates a conversation between them tonight. Never summarize. Find the thread.`
+      ].filter(Boolean).join('\n\n')
+
+      const systemPrompt = `You are Nora — warm, direct, specific. You find the thread between what two people said privately and name it. Never generic. Never therapeutic jargon. End with one question that makes them want to talk to each other tonight.`
+
+      synthesis = await noraChat(
+        [{ role: 'user', content: synthesisPrompt }],
+        { route: 'thursday/reveal', system: systemPrompt, maxTokens: 200 }
+      ) || ''
+    }
+
+    // Update entry to revealed
+    await supabase
+      .from('thursday_entries')
+      .update({ nora_synthesis: synthesis.trim(), status: 'revealed' })
+      .eq('id', entry.id)
+
+    // Send reveal pushes
+    await sendPush(user1.user_id, 'Nora', 'Something to see together tonight.', '/dashboard', 'thursday/reveal')
+    await sendPush(user2.user_id, 'Nora', 'Something to see together tonight.', '/dashboard', 'thursday/reveal')
+
+  } catch (err) {
+    console.error('[thursday/reveal] couple:', couple.id, err)
+  }
+}
+
 async function processNoraSynthesis(couples, profileMap) {
   const timezone = 'America/Los_Angeles'
   const day = getDayInTimezone(timezone)
@@ -409,6 +579,8 @@ export async function GET(request) {
       await processDailyContent(couple, user1, user2)
       const day = getDayInTimezone(user1.timezone || user2.timezone || 'America/Los_Angeles')
       if (day === 0) await processWeeklyReflection(couple)
+      if (day === 4) await processThursdayGeneration(couple, user1, user2)
+      if (new Date().getUTCDay() === 5 && new Date().getUTCHours() === 2) await processThursdayReveal(couple, user1, user2)
       processed++
     }
 
