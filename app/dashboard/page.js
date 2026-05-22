@@ -7,6 +7,7 @@ import FlirtSheet from '@/components/FlirtSheet'
 import SparkCard from '@/components/SparkCard'
 import BetCard from '@/components/BetCard'
 import RitualCard from '@/components/RitualCard'
+import ThursdayCard from '@/components/ThursdayCard'
 
 // ── MAIN DASHBOARD ───────────────────────────────────────────────────────────
 
@@ -25,6 +26,7 @@ export default function Dashboard() {
   const [memoryCard, setMemoryCard]   = useState(null)
   const [memoryLoading, setMemoryLoading] = useState(true)
 
+  const [session, setSession]         = useState(null)
   const [heroData, setHeroData]       = useState(null)
   const [heroLoading, setHeroLoading] = useState(true)
   const [weather, setWeather]         = useState(null)
@@ -51,6 +53,9 @@ export default function Dashboard() {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) { router.push('/login'); return }
       setUser(user)
+
+      const { data: { session: s } } = await supabase.auth.getSession()
+      setSession(s)
 
       const { data: coupleData } = await supabase
         .from('couples')
@@ -371,6 +376,15 @@ export default function Dashboard() {
             Talk to Nora →
           </button>
         </div>
+
+        {/* SECTION 3.5 — THURSDAY CARD */}
+        <ThursdayCard
+          userId={user?.id}
+          coupleId={couple?.id}
+          userName={userName}
+          partnerName={partnerName}
+          session={session}
+        />
 
         {/* SECTION 4 — DAYS TOGETHER + MEMORY */}
         <div style={{ padding: '0 16px' }}>
