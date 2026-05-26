@@ -12,8 +12,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
-const SPARK_DAYS = [1, 2, 4] // Mon, Tue, Thu
-const BET_DAYS = [3] // Wed
+const SPARK_DAYS = [1] // Mon
+const BET_DAYS = [2] // Tue
 
 async function sendPush(userId, title, body, url, route) {
   try {
