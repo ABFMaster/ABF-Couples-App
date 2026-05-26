@@ -53,7 +53,7 @@ export default function WednesdayCard({ userId, coupleId, userName, partnerName,
           <p style={{ fontFamily: 'Georgia, serif', fontSize: 16, color: '#1A1A1A', lineHeight: 1.7, margin: '0 0 4px' }}>
             What's one thing you've noticed about {partnerName} this week
           </p>
-          <p style={{ fontFamily: 'Georgia, serif', fontSize: 16, color: '#C4694F', lineHeight: 1.7, margin: '0 0 16px', fontStyle: 'italic' }}>
+          <p style={{ fontFamily: 'Georgia, serif', fontSize: 16, color: '#1A1A1A', lineHeight: 1.7, margin: '0 0 16px' }}>
             that you haven't said out loud?
           </p>
         </div>
@@ -88,10 +88,10 @@ export default function WednesdayCard({ userId, coupleId, userName, partnerName,
           <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: '#C9A96E', textTransform: 'uppercase' }}>The Notice · Wednesday</span>
         </div>
         <p style={{ fontFamily: 'Georgia, serif', fontSize: 15, color: '#1A1A1A', lineHeight: 1.7, margin: '0 0 6px' }}>
-          {partnerName} has something for you.
+          Sent to {partnerName}.
         </p>
         {partnerSent ? (
-          <p style={{ fontSize: 13, color: '#B0A8A0', margin: 0 }}>Nora reveals tonight — check back at 7pm.</p>
+          <p style={{ fontSize: 13, color: '#B0A8A0', margin: 0 }}>Nora reveals tonight at 7pm.</p>
         ) : (
           <p style={{ fontSize: 13, color: '#B0A8A0', margin: 0 }}>{partnerName} hasn't sent theirs yet. Nora reveals tonight at 7pm either way.</p>
         )}
