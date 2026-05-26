@@ -8,6 +8,7 @@ import SparkCard from '@/components/SparkCard'
 import BetCard from '@/components/BetCard'
 import RitualCard from '@/components/RitualCard'
 import ThursdayCard from '@/components/ThursdayCard'
+import WednesdayCard from '@/components/WednesdayCard'
 
 // ── MAIN DASHBOARD ───────────────────────────────────────────────────────────
 
@@ -379,6 +380,14 @@ export default function Dashboard() {
 
         {/* SECTION 3.5 — THURSDAY CARD */}
         <ThursdayCard
+          userId={user?.id}
+          coupleId={couple?.id}
+          userName={userName}
+          partnerName={partnerName}
+          session={session}
+        />
+
+        <WednesdayCard
           userId={user?.id}
           coupleId={couple?.id}
           userName={userName}

@@ -420,6 +420,91 @@ async function processThursdayReveal(couple, user1, user2) {
   }
 }
 
+async function processWednesdayNotice(couple, user1, user2) {
+  try {
+    const todayStr = getTodayString('America/Los_Angeles')
+
+    const { data: existing } = await supabase
+      .from('wednesday_notices')
+      .select('id')
+      .eq('couple_id', couple.id)
+      .eq('date', todayStr)
+      .maybeSingle()
+
+    if (existing) return
+
+    const user1Name = user1.display_name || 'Partner 1'
+    const user2Name = user2.display_name || 'Partner 2'
+
+    // Insert the row — no generation needed, users write their own notices
+    await supabase.from('wednesday_notices').insert({
+      couple_id: couple.id,
+      date: todayStr,
+      user1_id: couple.user1_id,
+      user2_id: couple.user2_id
+    })
+
+    // Send morning pushes
+    await sendPush(user1.user_id, 'The Notice', `What's one thing you've noticed about ${user2Name} this week that you haven't said out loud?`, '/dashboard', 'wednesday/morning')
+    await sendPush(user2.user_id, 'The Notice', `What's one thing you've noticed about ${user1Name} this week that you haven't said out loud?`, '/dashboard', 'wednesday/morning')
+
+  } catch (err) {
+    console.error('[wednesday/notice] couple:', couple.id, err)
+  }
+}
+
+async function processWednesdayReveal(couple, user1, user2) {
+  try {
+    const todayStr = getTodayString('America/Los_Angeles')
+
+    const { data: entry } = await supabase
+      .from('wednesday_notices')
+      .select('*')
+      .eq('couple_id', couple.id)
+      .eq('date', todayStr)
+      .eq('status', 'pending')
+      .maybeSingle()
+
+    if (!entry) return
+
+    const user1Name = user1.display_name || 'Partner 1'
+    const user2Name = user2.display_name || 'Partner 2'
+
+    const hasUser1 = !!entry.user1_notice
+    const hasUser2 = !!entry.user2_notice
+
+    let synthesis = ''
+
+    if (hasUser1 || hasUser2) {
+      const synthesisPrompt = [
+        `You are Nora. Two partners sent each other a specific appreciation today — something they noticed but hadn't said out loud. Read what they sent and find the thread.`,
+        hasUser1 ? `${user1Name} sent to ${user2Name}: "${entry.user1_notice}"` : `${user1Name} did not send a notice today.`,
+        hasUser2 ? `${user2Name} sent to ${user1Name}: "${entry.user2_notice}"` : `${user2Name} did not send a notice today.`,
+        `Write 2 sentences maximum. Find what the two notices reveal about how this couple sees each other — not a summary, a connection. End with one warm observation, not a question. This is a moment of appreciation — honor it without over-analyzing it.`
+      ].filter(Boolean).join('\n\n')
+
+      const systemPrompt = `You are Nora — warm, specific, brief. Two people just said something kind and true about each other. Your job is to hold that moment and name what it reveals. Never generic. Never therapeutic. Just what you actually see.`
+
+      synthesis = await noraChat(
+        [{ role: 'user', content: synthesisPrompt }],
+        { route: 'wednesday/reveal', system: systemPrompt, maxTokens: 150 }
+      ) || ''
+    }
+
+    await supabase
+      .from('wednesday_notices')
+      .update({ nora_synthesis: synthesis.trim(), status: 'revealed' })
+      .eq('id', entry.id)
+
+    // Send evening reveal pushes
+    await sendPush(user1.user_id, 'The Notice', 'Nora noticed something in what you both sent today.', '/dashboard', 'wednesday/reveal')
+    await sendPush(user2.user_id, 'The Notice', 'Nora noticed something in what you both sent today.', '/dashboard', 'wednesday/reveal')
+
+  } catch (err) {
+    console.error('[wednesday/reveal] couple:', couple.id, err)
+  }
+}
+
 async function processNoraSynthesis(couples, profileMap) {
   const timezone = 'America/Los_Angeles'
   const day = getDayInTimezone(timezone)
@@ -581,6 +666,8 @@ export async function GET(request) {
       if (day === 0) await processWeeklyReflection(couple)
       if (day === 4) await processThursdayGeneration(couple, user1, user2)
       if (new Date().getUTCDay() === 5 && new Date().getUTCHours() === 2) await processThursdayReveal(couple, user1, user2)
+      if (day === 3) await processWednesdayNotice(couple, user1, user2)
+      if (new Date().getUTCDay() === 4 && new Date().getUTCHours() === 2) await processWednesdayReveal(couple, user1, user2)
       processed++
     }
 

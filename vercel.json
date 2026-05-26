@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/scheduled-tasks",
       "schedule": "0 2 * * 5"
+    },
+    {
+      "path": "/api/cron/scheduled-tasks",
+      "schedule": "0 2 * * 4"
     }
   ]
 }
