@@ -46,9 +46,10 @@ export default function Dashboard() {
   const showSpark = ['Monday', 'Tuesday', 'Thursday'].includes(todayName) || params.includes('spark=true')
   const showBet = todayName === 'Tuesday' || params.includes('bet=true')
   const showNotice = todayName === 'Wednesday' || params.includes('notice=true')
+  const showThursday = todayName === 'Thursday' || params.includes('thursday=true')
   const showRitual = todayName === 'Friday' || params.includes('ritual=true')
   const showGameRoom = todayName === 'Saturday' || params.includes('game=true')
-  const anyScheduled = showSpark || showBet || showRitual || showGameRoom
+  const anyScheduled = showSpark || showBet || showRitual || showGameRoom || showNotice || showThursday
 
   const fetchAll = useCallback(async () => {
     try {
