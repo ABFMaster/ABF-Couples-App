@@ -50,7 +50,7 @@ export default function WednesdayCard({ userId, coupleId, userName, partnerName,
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#C9A96E' }}></div>
             <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: '#C9A96E', textTransform: 'uppercase' }}>The Notice · Wednesday</span>
           </div>
-          <p style={{ fontFamily: 'Georgia, serif', fontSize: 16, color: '#1A1A1A', lineHeight: 1.7, margin: '0 0 4px' }}>
+          <p style={{ fontFamily: 'Georgia, serif', fontSize: 17, color: '#1A1A1A', lineHeight: 1.6, margin: '0 0 4px' }}>
             What's one thing you've noticed about {partnerName} this week
           </p>
           <p style={{ fontFamily: 'Georgia, serif', fontSize: 16, color: '#C4694F', lineHeight: 1.7, margin: '0 0 16px', fontStyle: 'italic' }}>

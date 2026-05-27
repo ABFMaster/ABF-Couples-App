@@ -390,13 +390,15 @@ export default function Dashboard() {
         </div>
 
         {/* SECTION 3.5 — THURSDAY CARD */}
-        <ThursdayCard
-          userId={user?.id}
-          coupleId={couple?.id}
-          userName={userName}
-          partnerName={partnerName}
-          session={session}
-        />
+        {showThursday && (
+          <ThursdayCard
+            userId={user?.id}
+            coupleId={couple?.id}
+            userName={userName}
+            partnerName={partnerName}
+            session={session}
+          />
+        )}
 
         {/* SECTION 4 — DAYS TOGETHER + MEMORY */}
         <div style={{ padding: '0 16px' }}>
