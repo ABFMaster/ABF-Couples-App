@@ -113,6 +113,67 @@ These APIs don't fix UX — they enrich content. The current builder UX is funct
 - [ ] Love language flirt mode — flirt generator suggests expression in partner's love language
 - [ ] Weekly Reflection — rebuilt and live. Nora draws from Sparks, Bets, rituals, dates, nora_memory. Sunday cron generation. "Talk to Nora" handoff. Past reflections archive. Run Nora memory test after 2 weeks real usage to validate reflection quality.
 
+## ONBOARDING & TUTORIAL DESIGN SPRINT
+Status: Designed, not built. Requires dedicated session before implementation.
+
+### Core Philosophy (locked)
+- Nora is the guide — not tooltips, not carousels, not explainer screens
+- Education happens at moment of value, not upfront
+- Users go from "this seems cool" to "holy shit she can do that?" through experience
+- Nora never announces her own progression ("I know you better now") — she demonstrates it
+- Progression is felt, not named
+
+### Tutorial/Walkthrough Design (locked direction, not built)
+- No feature carousel upfront
+- No tooltip overlays
+- Contextual education: after first Spark reveal, after first Bet, etc — Nora delivers one sentence contextualizing what just happened
+- First week is a guided experience with Nora as narrator
+- Mock up before building — design first
+
+### Nora Introduction — Open Question
+How do we elegantly introduce Nora's abilities without scaring users?
+- She should be quiet about what she's doing (established principle)
+- But there is room to hint at her capabilities early — needs design
+- Balance: enough to spark curiosity, not enough to feel invasive
+- "This seems cool" → "holy shit she can do that?" arc
+- Needs dedicated design work before implementation
+
+### Daily Rhythm Introduction (direction locked)
+- Introduce several things on Day 1: Spark, Ritual, Game Room, Reflection
+- Expand on others as they arrive: Bet introduced Tuesday, Notice introduced Wednesday, Nora's Day introduced Thursday
+- Each new feature gets a Nora contextual introduction on first encounter
+
+### Day 1 vs Day 30 Hero Card (open)
+- Day 1: Nora is just getting started — curious, warm, building the picture
+- Day 30: Relationship is built, Nora is trusted counsel
+- Exact language and design to be determined in design sprint
+- Core principle: the progression is felt through specificity, not announced
+
+### The "Aha Moment" (open — requires design sprint)
+- Goal: first holy shit moment by Day 7 for engaged couples
+- Requires multiple moving parts working together
+- Nora's tier system, signal accumulation, hero card specificity all contribute
+- Need to design the guaranteed path to this moment
+- Questions to answer in design sprint:
+  - What is the specific moment we're designing toward?
+  - What has to happen in the first week to guarantee it?
+  - How do we design for it without making it feel manufactured?
+
+### Nora Arc Progression (open — requires design sprint)
+- Individual arc: 0-5 discovery, 6-15 pattern recognition, 16+ earned intimacy
+- Couple arc: 0-7 new together, 8-20 building context, 21+ deep familiarity
+- Signal definitions and thresholds locked (see NORA INTELLIGENCE section)
+- Tier context blocks drafted, reviewed against Voss/Gadney/Van Dam
+- Implementation ready pending design sprint sign-off
+
+### Pre-Build Checklist
+- [ ] Mock up tutorial flow
+- [ ] Design Nora introduction language for onboarding
+- [ ] Design Day 1 hero card language
+- [ ] Design contextual education sentences for each feature first-encounter
+- [ ] Define and design the guaranteed Day 7 aha moment path
+- [ ] Sign off on tier context blocks before implementation
+
 ## NORA INTELLIGENCE
 - [x] Nora architecture unification — NORA_VOICE powers all surfaces, assessment data wired into ai-coach, buildCoachSystem, getMemoryBriefing rename 2026-05-21
 - [x] Verdict quality pass — all 7 routes have memory context, names used, find what they didn't say 2026-05-21

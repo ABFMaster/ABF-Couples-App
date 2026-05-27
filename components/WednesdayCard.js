@@ -53,7 +53,7 @@ export default function WednesdayCard({ userId, coupleId, userName, partnerName,
           <p style={{ fontFamily: 'Georgia, serif', fontSize: 16, color: '#1A1A1A', lineHeight: 1.7, margin: '0 0 4px' }}>
             What's one thing you've noticed about {partnerName} this week
           </p>
-          <p style={{ fontFamily: 'Georgia, serif', fontSize: 16, color: '#1A1A1A', lineHeight: 1.7, margin: '0 0 16px' }}>
+          <p style={{ fontFamily: 'Georgia, serif', fontSize: 16, color: '#C4694F', lineHeight: 1.7, margin: '0 0 16px', fontStyle: 'italic' }}>
             that you haven't said out loud?
           </p>
         </div>

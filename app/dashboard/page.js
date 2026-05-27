@@ -44,7 +44,8 @@ export default function Dashboard() {
   const todayName = new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long' })
   const params = typeof window !== 'undefined' ? window.location.search : ''
   const showSpark = ['Monday', 'Tuesday', 'Thursday'].includes(todayName) || params.includes('spark=true')
-  const showBet = todayName === 'Wednesday' || params.includes('bet=true')
+  const showBet = todayName === 'Tuesday' || params.includes('bet=true')
+  const showNotice = todayName === 'Wednesday' || params.includes('notice=true')
   const showRitual = todayName === 'Friday' || params.includes('ritual=true')
   const showGameRoom = todayName === 'Saturday' || params.includes('game=true')
   const anyScheduled = showSpark || showBet || showRitual || showGameRoom
@@ -315,6 +316,15 @@ export default function Dashboard() {
             />
           </div>
         )}
+        {showNotice && (
+          <WednesdayCard
+            userId={user?.id}
+            coupleId={couple?.id}
+            userName={userName}
+            partnerName={partnerName}
+            session={session}
+          />
+        )}
         {showRitual && user?.id && couple?.id && (
           <div style={{ margin: '0 16px 14px' }}>
             <RitualCard
@@ -380,14 +390,6 @@ export default function Dashboard() {
 
         {/* SECTION 3.5 — THURSDAY CARD */}
         <ThursdayCard
-          userId={user?.id}
-          coupleId={couple?.id}
-          userName={userName}
-          partnerName={partnerName}
-          session={session}
-        />
-
-        <WednesdayCard
           userId={user?.id}
           coupleId={couple?.id}
           userName={userName}
