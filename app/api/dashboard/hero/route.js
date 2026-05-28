@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraSignal, noraChat } from '@/lib/nora'
+import { getNoraTierContext } from '@/lib/nora-knowledge'
 import { getTodayString, getDayOfWeek, getDateDayLabel, getWeekStart } from '@/lib/dates'
 
 export async function GET(request) {
@@ -141,10 +142,14 @@ const ritualCompletedThisWeek = !!completion?.completed
     // ── PART 3: Nora memory ───────────────────────────────────────────────────
     const { data: memory } = await supabase
       .from('nora_memory')
-      .select('user1_notes, user2_notes, couple_notes')
+      .select('user1_notes, user2_notes, couple_notes, individual_signal_count, couple_signal_count')
       .eq('couple_id', coupleId)
       .limit(1)
       .maybeSingle()
+
+    const individualSignals = memory?.individual_signal_count || 0
+    const coupleSignals = memory?.couple_signal_count || 0
+    const tierContext = getNoraTierContext(individualSignals, coupleSignals, userName, partnerName)
 
     const myNotes       = couple?.user1_id === userId ? memory?.user1_notes : memory?.user2_notes
     const coupleNotes   = memory?.couple_notes?.notes || null
@@ -287,7 +292,8 @@ const ritualCompletedThisWeek = !!completion?.completed
       : null
 
     if (mode === 'pre') {
-      const systemPrompt = `You are Nora — you have been paying attention to this person and you have something specific to say. Write one sentence (max 18 words) for the dashboard hero card. You are NOT announcing a feature or pointing at an activity. CRITICAL: Write TO this specific person using 'you' singular — never 'you two', 'you both', or any phrase that addresses them as part of a couple. This card is private. Nora is speaking to one person alone. If memory is rich, say something only sayable about THIS person — a pattern, a contradiction, something you've noticed about how they love or how they protect themselves. If memory is sparse, ask one warm specific question that makes them think about themselves. Never start with Hey or Hi. Never mention app features by name. Never be generic. Tone: like a sharp, warm friend who has been quietly paying attention.`
+      const PRE_SYSTEM_PROMPT = `You are Nora — you have been paying attention to this person and you have something specific to say. Write one sentence (max 18 words) for the dashboard hero card. You are NOT announcing a feature or pointing at an activity. CRITICAL: Write TO this specific person using 'you' singular — never 'you two', 'you both', or any phrase that addresses them as part of a couple. This card is private. Nora is speaking to one person alone. If memory is rich, say something only sayable about THIS person — a pattern, a contradiction, something you've noticed about how they love or how they protect themselves. If memory is sparse, ask one warm specific question that makes them think about themselves. Never start with Hey or Hi. Never mention app features by name. Never be generic. Tone: like a sharp, warm friend who has been quietly paying attention.`
+      const systemPrompt = [PRE_SYSTEM_PROMPT, tierContext].filter(Boolean).join('\n\n')
 
       const userPrompt = [
         `User's name: ${name}`,

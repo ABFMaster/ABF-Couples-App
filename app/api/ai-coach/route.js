@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 import { buildCoachContext, formatContextForPrompt, getRecentActivity, getConversationHistory } from '@/lib/ai-coach-context';
 import { getNoraMemory, updateNoraMemory, maybeUpdateNoraMemory, shouldUpdateMemory, getMemoryBriefing, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { noraChat, buildCoachSystem } from '@/lib/nora'
-import { getNoraBriefing } from '@/lib/nora-knowledge'
+import { getNoraBriefing, getNoraTierContext } from '@/lib/nora-knowledge'
 
 // ── NORA PERSONA ──────────────────────────────────────────────────────────────
 
@@ -301,7 +301,11 @@ export async function POST(request) {
 
     const memoryBriefing = noraBriefing || null
 
-    const contextBlock = [contextString, assessmentBriefing, memoryBriefing, activityNote, dynamicOpenerNote, sessionFocusNote].filter(Boolean).join('\n\n')
+    const individualSignals = noraMemory?.individual_signal_count || 0
+    const coupleSignals = noraMemory?.couple_signal_count || 0
+    const tierContext = getNoraTierContext(individualSignals, coupleSignals, uName, pName)
+
+    const contextBlock = [contextString, assessmentBriefing, memoryBriefing, tierContext, activityNote, dynamicOpenerNote, sessionFocusNote].filter(Boolean).join('\n\n')
 
     const fullSystemPrompt = buildCoachSystem(
       CLINICAL_KNOWLEDGE,

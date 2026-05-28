@@ -6,6 +6,7 @@ import { getBetQuestion } from '@/lib/bet-questions'
 import { getTodayString, getDayOfWeek } from '@/lib/dates'
 import { noraGenerate, noraChat } from '@/lib/nora'
 import { getNoraMemory, getMemoryBriefing } from '@/lib/nora-memory'
+import { getNoraTierContext } from '@/lib/nora-knowledge'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -281,6 +282,11 @@ async function processThursdayGeneration(couple, user1, user2) {
 
     const memoryBriefing = noraMemory ? getMemoryBriefing(noraMemory, user1Name, user2Name) : null
 
+    const individualSignals1 = noraMemory?.individual_signal_count || 0
+    const coupleSignals = noraMemory?.couple_signal_count || 0
+    const user1TierContext = getNoraTierContext(individualSignals1, coupleSignals, user1Name, user2Name)
+    const user2TierContext = getNoraTierContext(individualSignals1, coupleSignals, user2Name, user1Name)
+
     const recentContext = recentSparks?.map(s => {
       const responses = s.spark_responses?.map(r => {
         const name = r.user_id === couple.user1_id ? user1Name : user2Name
@@ -306,6 +312,7 @@ RULES:
       `You are speaking to ${user1Name}.`,
       memoryBriefing ? `What you know about this couple:\n${memoryBriefing}` : null,
       `Recent Spark answers this week:\n${recentContext}`,
+      user1TierContext,
       `Generate a Thursday observation and calibrated question specifically for ${user1Name} — angle it toward what you notice about them individually, not just the couple.`
     ].filter(Boolean).join('\n\n')
 
@@ -314,6 +321,7 @@ RULES:
       `You are speaking to ${user2Name}.`,
       memoryBriefing ? `What you know about this couple:\n${memoryBriefing}` : null,
       `Recent Spark answers this week:\n${recentContext}`,
+      user2TierContext,
       `Generate a Thursday observation and calibrated question specifically for ${user2Name} — angle it toward what you notice about them individually, not just the couple.`
     ].filter(Boolean).join('\n\n')
 
