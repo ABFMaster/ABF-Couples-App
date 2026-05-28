@@ -127,7 +127,7 @@ export default function WednesdayCard({ userId, coupleId, userName, partnerName,
 
         {/* Nora synthesis */}
         {entry.nora_synthesis && (
-          <div style={{ background: '#1C1F3A', padding: '16px 18px' }}>
+          <div style={{ background: '#2D1F3A', padding: '16px 18px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
               <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#C9A96E' }}></div>
               <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: '#C9A96E', textTransform: 'uppercase' }}>Nora</span>

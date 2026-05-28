@@ -445,8 +445,8 @@ async function processWednesdayNotice(couple, user1, user2) {
     })
 
     // Send morning pushes
-    await sendPush(user1.user_id, 'The Notice', `What's one thing you've noticed about ${user2Name} this week that you haven't said out loud?`, '/dashboard', 'wednesday/morning')
-    await sendPush(user2.user_id, 'The Notice', `What's one thing you've noticed about ${user1Name} this week that you haven't said out loud?`, '/dashboard', 'wednesday/morning')
+    await sendPush(user1.user_id, 'The Notice', `The Notice is ready. What have you noticed about ${user2Name} this week? Open to send.`, '/dashboard', 'wednesday/morning')
+    await sendPush(user2.user_id, 'The Notice', `The Notice is ready. What have you noticed about ${user1Name} this week? Open to send.`, '/dashboard', 'wednesday/morning')
 
   } catch (err) {
     console.error('[wednesday/notice] couple:', couple.id, err)

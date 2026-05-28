@@ -272,3 +272,20 @@ How do we elegantly introduce Nora's abilities without scaring users?
 - [ ] Nora standalone cron route — build /api/cron/scheduled-tasks in Nora-App before Sunday 2026-05-25
 - [ ] hero_cache type constraint — onConflict updated to user_id,cache_date,type everywhere
 - [ ] Google Places API key documentation — three keys exist with unclear ownership. Document: NEXT_PUBLIC_GOOGLE_PLACES_API_KEY (browser/Maps JS, referrer-restricted), GOOGLE_PLACES_API_KEY (unknown), GOOGLE_PLACES_SERVER_KEY (server-side, unrestricted, use for Places API calls)
+
+## SECURITY — PRE-SCALE
+Items that are acceptable at beta scale but must be addressed before public launch or significant user growth.
+
+### Requires Supabase Pro Plan
+- [ ] Prevent use of leaked passwords — enable HaveIBeenPwned password checking in Auth → Attack Protection. Requires Pro plan upgrade.
+
+### Requires attention before 100+ users
+- [ ] Public bucket listing — date-photos, photos, timeline-photos, trip-photos buckets allow clients to enumerate all files. Tighten SELECT policies to prevent listing while keeping object URL access. Low risk at beta scale.
+- [ ] Authenticated SECURITY DEFINER functions — 9 functions callable by signed-in users via REST API. Currently acceptable as these are intentional features, but should be audited and moved to SECURITY INVOKER where possible before public launch.
+
+### Completed
+- [x] Anon SECURITY DEFINER functions — revoked anon execute on 12 functions 2026-05-27
+- [x] Google Cloud upgrade — paid account, Places API safe 2026-05-22
+
+### October 30, 2026 deadline
+- [ ] Supabase public schema grants — new tables in public schema will require explicit GRANT statements. Run Security Advisor before October 30 and add explicit grants to table-creation flow.
