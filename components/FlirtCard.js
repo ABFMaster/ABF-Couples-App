@@ -33,6 +33,14 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
 
   useEffect(() => { fetchInbox() }, [session, coupleId])
 
+  const current = view === 'stack' ? unopened[currentIndex] : null
+
+  useEffect(() => {
+    if (view === 'stack' && current && !current.opened_at) {
+      handleOpen(current)
+    }
+  }, [view, currentIndex, unopened.length])
+
   const handleSend = async () => {
     if (!content.trim() || sending) return
     setSending(true)
@@ -419,13 +427,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   // STACK VIEW — receiver seeing flirts
   if (view === 'stack') {
     const allFlirts = unopened
-    const current = allFlirts[currentIndex]
     if (!current) return null
-
-    // Auto-open on view
-    useEffect(() => {
-      if (current && !current.opened_at) handleOpen(current)
-    }, [current?.id])
 
     return (
       <div style={{ margin: '0 16px 16px', background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, overflow: 'hidden' }}>
@@ -489,7 +491,14 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
             <div key={f.id} style={{ padding: '12px 18px', borderBottom: '0.5px solid #F0EAE2', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <span style={{ fontSize: 13, color: '#1A1A1A', fontFamily: f.type === 'word' || f.type === 'memory' ? 'Georgia, serif' : 'system-ui' }}>
-                  {f.type === 'song' ? (f.metadata?.track_name || 'Song') : f.type === 'found' ? (f.metadata?.title || f.metadata?.domain || 'Link') : f.content.substring(0, 40)}
+                  {f.type === 'song'
+                    ? (f.metadata?.track_name || 'Song')
+                    : f.type === 'found'
+                    ? (f.metadata?.title || f.metadata?.domain || 'Link')
+                    : f.type === 'photo'
+                    ? 'Photo'
+                    : f.content.substring(0, 40)
+                  }
                 </span>
                 <span style={{ fontSize: 11, color: '#B0A8A0', display: 'block', marginTop: 2 }}>{formatTimeAgo(f.created_at)}</span>
               </div>
