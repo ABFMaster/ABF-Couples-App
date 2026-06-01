@@ -11,7 +11,12 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   const [sending, setSending] = useState(false)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [reacting, setReacting] = useState(false)
+  const [spotifyQuery, setSpotifyQuery] = useState('')
+  const [spotifyResults, setSpotifyResults] = useState([])
+  const [spotifySearching, setSpotifySearching] = useState(false)
+  const [selectedTrack, setSelectedTrack] = useState(null)
   const fileInputRef = useRef(null)
+  const spotifyTimeout = useRef(null)
 
   const fetchInbox = async () => {
     if (!session || !coupleId) return
@@ -35,11 +40,26 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
       await fetch('/api/flirts/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ coupleId, receiverId: partnerId, type: dropType, content })
+        body: JSON.stringify({
+          coupleId,
+          receiverId: partnerId,
+          type: dropType,
+          content,
+          metadata: dropType === 'song' && selectedTrack ? {
+            track_name: selectedTrack.name,
+            artist: selectedTrack.artist,
+            album_art: selectedTrack.albumArt,
+            preview_url: selectedTrack.previewUrl,
+            track_url: selectedTrack.spotifyUrl
+          } : undefined
+        })
       })
       setContent('')
       setDropType(null)
       setView('home')
+      setSelectedTrack(null)
+      setSpotifyQuery('')
+      setSpotifyResults([])
       await fetchInbox()
     } catch {}
     setSending(false)
@@ -171,7 +191,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
             }}>
               {hasUnseen
                 ? `${partnerName} left something for you.`
-                : `Leave something for ${partnerName}.`
+                : `Flirt with ${partnerName}.`
               }
             </span>
           </div>
@@ -220,14 +240,14 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
         <div style={{ padding: '14px 18px', borderBottom: '0.5px solid #E8E0D8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#C9A96E' }} />
-            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: '#C9A96E', textTransform: 'uppercase' }}>Leave something for {partnerName}</span>
+            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: '#C9A96E', textTransform: 'uppercase' }}>Flirt with {partnerName}</span>
           </div>
-          <button onClick={() => { setView('home'); setDropType(null); setContent('') }} style={{ background: 'none', border: 'none', fontSize: 20, color: '#B0A8A0', cursor: 'pointer', padding: 0 }}>×</button>
+          <button onClick={() => { setView('home'); setDropType(null); setContent(''); setSelectedTrack(null); setSpotifyQuery(''); setSpotifyResults([]) }} style={{ background: 'none', border: 'none', fontSize: 20, color: '#B0A8A0', cursor: 'pointer', padding: 0 }}>×</button>
         </div>
 
         {!dropType && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: '#E8E0D8' }}>
-            {types.map(t => (
+            {types.map((t, index) => (
               <button
                 key={t.key}
                 onClick={() => setDropType(t.key)}
@@ -239,7 +259,8 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                   textAlign: 'left',
                   fontSize: 15,
                   color: '#1A1A1A',
-                  fontFamily: 'Georgia, serif'
+                  fontFamily: 'Georgia, serif',
+                  gridColumn: index === types.length - 1 && types.length % 2 !== 0 ? '1 / -1' : undefined
                 }}
               >
                 {t.label}
@@ -248,7 +269,80 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
           </div>
         )}
 
-        {dropType && dropType !== 'photo' && (
+        {dropType === 'song' && (
+          <div style={{ padding: '16px 18px' }}>
+            <button onClick={() => { setDropType(null); setContent(''); setSpotifyResults([]); setSelectedTrack(null) }} style={{ background: 'none', border: 'none', fontSize: 12, color: '#B0A8A0', cursor: 'pointer', padding: '0 0 12px', display: 'block' }}>← Song</button>
+
+            {!selectedTrack ? (
+              <div>
+                <input
+                  value={spotifyQuery}
+                  onChange={e => {
+                    setSpotifyQuery(e.target.value)
+                    clearTimeout(spotifyTimeout.current)
+                    if (e.target.value.length > 2) {
+                      setSpotifySearching(true)
+                      spotifyTimeout.current = setTimeout(async () => {
+                        try {
+                          const res = await fetch(`/api/spotify/search?q=${encodeURIComponent(e.target.value)}`, {
+                            headers: { 'Authorization': `Bearer ${session.access_token}` }
+                          })
+                          const data = await res.json()
+                          setSpotifyResults(data.tracks || [])
+                        } catch {}
+                        setSpotifySearching(false)
+                      }, 400)
+                    } else {
+                      setSpotifyResults([])
+                      setSpotifySearching(false)
+                    }
+                  }}
+                  placeholder="Search for a song..."
+                  style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.5px solid #E8E0D8', fontSize: 15, background: 'transparent', outline: 'none', boxSizing: 'border-box', color: '#1A1A1A' }}
+                  autoFocus
+                />
+                {spotifySearching && <p style={{ fontSize: 12, color: '#B0A8A0', marginTop: 8 }}>Searching...</p>}
+                {spotifyResults.length > 0 && (
+                  <div style={{ marginTop: 8, maxHeight: 240, overflowY: 'auto' }}>
+                    {spotifyResults.slice(0, 6).map(track => (
+                      <div
+                        key={track.id}
+                        onClick={() => {
+                          setSelectedTrack(track)
+                          setContent(track.spotifyUrl)
+                          setSpotifyResults([])
+                        }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: '0.5px solid #F0EAE2', cursor: 'pointer' }}
+                      >
+                        {track.albumArtSmall && <img src={track.albumArtSmall} style={{ width: 40, height: 40, borderRadius: 4, flexShrink: 0 }} alt="" />}
+                        <div>
+                          <p style={{ fontSize: 14, color: '#1A1A1A', margin: '0 0 2px', fontWeight: 500 }}>{track.name}</p>
+                          <p style={{ fontSize: 12, color: '#6B6560', margin: 0 }}>{track.artist}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '0.5px solid #E8E0D8', marginBottom: 16 }}>
+                  {selectedTrack.albumArt && <img src={selectedTrack.albumArt} style={{ width: 52, height: 52, borderRadius: 6, flexShrink: 0 }} alt="" />}
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 15, fontWeight: 600, color: '#1A1A1A', margin: '0 0 3px' }}>{selectedTrack.name}</p>
+                    <p style={{ fontSize: 13, color: '#6B6560', margin: 0 }}>{selectedTrack.artist}</p>
+                  </div>
+                  <button onClick={() => { setSelectedTrack(null); setContent(''); setSpotifyQuery('') }} style={{ background: 'none', border: 'none', fontSize: 12, color: '#B0A8A0', cursor: 'pointer' }}>Change</button>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <button onClick={handleSend} disabled={sending} style={{ background: '#C4694F', color: 'white', border: 'none', padding: '10px 24px', borderRadius: 100, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>{sending ? 'Dropping...' : 'Drop it'}</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {dropType && dropType !== 'photo' && dropType !== 'song' && (
           <div style={{ padding: '16px 18px' }}>
             <button onClick={() => { setDropType(null); setContent('') }} style={{ background: 'none', border: 'none', fontSize: 12, color: '#B0A8A0', cursor: 'pointer', padding: '0 0 12px', display: 'block' }}>← {selected?.label}</button>
             {dropType === 'word' ? (
@@ -287,15 +381,20 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
             <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={async e => {
               const file = e.target.files?.[0]
               if (!file) return
-              // Upload to Supabase storage
-              const { createClient } = await import('@supabase/supabase-js')
-              const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-              const { data: { session: s } } = await sb.auth.getSession()
-              const path = `flirts/${s.user.id}/${Date.now()}_${file.name}`
-              const { data } = await sb.storage.from('photos').upload(path, file, { upsert: true })
-              if (data) {
+              try {
+                const { createClient } = await import('@supabase/supabase-js')
+                const sb = createClient(
+                  process.env.NEXT_PUBLIC_SUPABASE_URL,
+                  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+                  { global: { headers: { Authorization: `Bearer ${session.access_token}` } } }
+                )
+                const path = `flirts/${userId}/${Date.now()}_${file.name.replace(/\s/g, '_')}`
+                const { data, error } = await sb.storage.from('photos').upload(path, file, { upsert: true })
+                if (error) { console.error('Upload error:', error); return }
                 const { data: urlData } = sb.storage.from('photos').getPublicUrl(path)
                 setContent(urlData.publicUrl)
+              } catch (err) {
+                console.error('Photo upload error:', err)
               }
             }} />
             {!content ? (
@@ -407,7 +506,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
         </div>
         <div style={{ padding: '14px 18px' }}>
           <button onClick={() => setView('drop')} style={{ width: '100%', padding: '12px', background: '#FFF8F4', border: '0.5px solid #E8E0D8', borderRadius: 10, fontSize: 14, color: '#C4694F', cursor: 'pointer', fontFamily: 'Georgia, serif' }}>
-            Leave something for {partnerName} →
+            Flirt with {partnerName} →
           </button>
         </div>
       </div>
