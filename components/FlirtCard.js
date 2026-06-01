@@ -208,10 +208,10 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   if (view === 'drop') {
     const types = [
       { key: 'song', label: 'Song', placeholder: 'Paste a Spotify link...' },
-      { key: 'photo', label: 'Photo', placeholder: null },
       { key: 'word', label: 'Word', placeholder: `One word for ${partnerName}...`, maxLength: 20 },
+      { key: 'photo', label: 'Photo', placeholder: null },
+      { key: 'memory', label: 'Memory', placeholder: 'Something worth remembering...', maxLength: 120 },
       { key: 'found', label: 'Found', placeholder: 'Paste a URL...' },
-      { key: 'memory', label: 'Memory', placeholder: 'Something worth remembering...', maxLength: 120 }
     ]
     const selected = types.find(t => t.key === dropType)
 
