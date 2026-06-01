@@ -280,7 +280,9 @@ async function processThursdayGeneration(couple, user1, user2) {
       getNoraMemory(couple.id)
     ])
 
-    const memoryBriefing = noraMemory ? getMemoryBriefing(noraMemory, user1Name, user2Name) : null
+    const coupleContext = noraMemory?.couple_notes?.notes
+      ? `What Nora knows about this couple:\n${noraMemory.couple_notes.notes}`
+      : null
 
     const individualSignals1 = noraMemory?.individual_signal_count || 0
     const coupleSignals = noraMemory?.couple_signal_count || 0
@@ -310,7 +312,7 @@ RULES:
     // Generate for user1
     const user1Prompt = [
       `You are speaking to ${user1Name}.`,
-      memoryBriefing ? `What you know about this couple:\n${memoryBriefing}` : null,
+      coupleContext,
       `Recent Spark answers this week:\n${recentContext}`,
       user1TierContext,
       `Generate a Thursday observation and calibrated question specifically for ${user1Name} — angle it toward what you notice about them individually, not just the couple.`
@@ -319,7 +321,7 @@ RULES:
     // Generate for user2
     const user2Prompt = [
       `You are speaking to ${user2Name}.`,
-      memoryBriefing ? `What you know about this couple:\n${memoryBriefing}` : null,
+      coupleContext,
       `Recent Spark answers this week:\n${recentContext}`,
       user2TierContext,
       `Generate a Thursday observation and calibrated question specifically for ${user2Name} — angle it toward what you notice about them individually, not just the couple.`
