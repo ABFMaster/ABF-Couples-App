@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import FlirtSheet from '@/components/FlirtSheet'
 import FlirtCard from '@/components/FlirtCard'
 import SparkCard from '@/components/SparkCard'
 import BetCard from '@/components/BetCard'
@@ -21,7 +20,6 @@ export default function Dashboard() {
   const [userName, setUserName]       = useState('there')
   const [couple, setCouple]           = useState(null)
   const [partnerName, setPartnerName] = useState('your partner')
-  const [flirtSheetOpen, setFlirtSheetOpen] = useState(false)
   const [partnerId, setPartnerId]     = useState(null)
   const [daysTogether, setDaysTogether] = useState(0)
 
@@ -479,40 +477,7 @@ export default function Dashboard() {
 
         </div>
 
-        {/* SECTION 5 — FLIRTS */}
-        <div style={{ padding: '0 16px', marginTop: 22 }}>
-          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 9, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#C4AA87', margin: 0, marginBottom: 10 }}>
-            Send a flirt
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <button
-              onClick={() => setFlirtSheetOpen(true)}
-              style={{ background: '#fff', borderRadius: 14, padding: 14, border: '1px solid #EDE4D8', textAlign: 'left', cursor: 'pointer' }}
-            >
-              <div style={{ width: 8, height: 8, borderRadius: 2, background: '#7A8C7E', marginBottom: 8 }} />
-              <p style={{ fontSize: 13, color: '#1C1410', fontFamily: "'DM Sans', sans-serif", margin: 0, marginBottom: 3 }}>Send a song</p>
-              <p style={{ fontSize: 10, color: '#C4AA87', fontFamily: "'DM Sans', sans-serif", margin: 0 }}>What you're thinking of</p>
-            </button>
-            <button
-              onClick={() => setFlirtSheetOpen(true)}
-              style={{ background: '#fff', borderRadius: 14, padding: 14, border: '1px solid #EDE4D8', textAlign: 'left', cursor: 'pointer' }}
-            >
-              <div style={{ width: 8, height: 8, borderRadius: 2, background: '#C4714A', marginBottom: 8 }} />
-              <p style={{ fontSize: 13, color: '#1C1410', fontFamily: "'DM Sans', sans-serif", margin: 0, marginBottom: 3 }}>Send a prompt</p>
-              <p style={{ fontSize: 10, color: '#C4AA87', fontFamily: "'DM Sans', sans-serif", margin: 0 }}>Start a conversation</p>
-            </button>
-          </div>
-        </div>
-
       </div>
-
-      <FlirtSheet
-        isOpen={flirtSheetOpen}
-        onClose={() => setFlirtSheetOpen(false)}
-        partnerName={partnerName}
-        partnerId={partnerId}
-        userId={user?.id}
-      />
     </div>
   )
 }
