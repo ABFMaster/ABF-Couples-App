@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import FlirtSheet from '@/components/FlirtSheet'
+import FlirtCard from '@/components/FlirtCard'
 import SparkCard from '@/components/SparkCard'
 import BetCard from '@/components/BetCard'
 import RitualCard from '@/components/RitualCard'
@@ -399,6 +400,16 @@ export default function Dashboard() {
             session={session}
           />
         )}
+
+        {/* SECTION 3.7 — FLIRT CARD */}
+        <FlirtCard
+          userId={user?.id}
+          coupleId={couple?.id}
+          partnerId={partnerId}
+          partnerName={partnerName}
+          userName={userName}
+          session={session}
+        />
 
         {/* SECTION 4 — DAYS TOGETHER + MEMORY */}
         <div style={{ padding: '0 16px' }}>
