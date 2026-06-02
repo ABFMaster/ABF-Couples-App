@@ -234,7 +234,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   )
 
   const AddressSide = ({ toName, stampSealed, stampProgress, onStampDown, onStampUp, showReaction }) => (
-    <div style={{ width: 140, flexShrink: 0, padding: '4px 10px 12px', borderLeft: '0.5px solid #D4C4A8', position: 'relative' }}>
+    <div style={{ width: 120, flexShrink: 0, padding: '4px 10px 12px', borderLeft: '0.5px solid #D4C4A8', position: 'relative' }}>
       {/* TO label */}
       <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 2, color: '#B0A898', marginBottom: 4 }}>TO</div>
       <div style={{ borderBottom: '0.5px solid #D4C4A8', paddingBottom: 4, marginBottom: 6 }}>
@@ -244,7 +244,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
       <div style={{ borderBottom: '0.5px solid #E8E0D4', marginBottom: 12, height: 12 }} />
 
       {/* Stamp */}
-      <div style={{ position: 'absolute', bottom: 10, right: 10 }}>
+      <div style={{ position: 'absolute', top: 8, right: 10 }}>
         <div
           onPointerDown={onStampDown}
           onPointerUp={onStampUp}
@@ -601,7 +601,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
             </div>
 
             {/* Address side with Mail it stamp */}
-            <div style={{ width: 140, flexShrink: 0, padding: '4px 10px 12px', borderLeft: '0.5px solid #D4C4A8', position: 'relative' }}>
+            <div style={{ width: 120, flexShrink: 0, padding: '4px 10px 12px', borderLeft: '0.5px solid #D4C4A8', position: 'relative' }}>
               <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 2, color: '#B0A898', marginBottom: 4 }}>TO</div>
               <div style={{ borderBottom: '0.5px solid #D4C4A8', paddingBottom: 4, marginBottom: 6 }}>
                 <span style={{ fontFamily: 'Georgia, serif', fontSize: 16, color: '#2A2420' }}>{partnerName}</span>
@@ -610,7 +610,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
               <div style={{ borderBottom: '0.5px solid #E8E0D4', marginBottom: 12, height: 12 }} />
 
               {/* Stamp — becomes Mail it button when content ready */}
-              <div style={{ position: 'absolute', bottom: 10, right: 10 }}>
+              <div style={{ position: 'absolute', top: 8, right: 10 }}>
                 <div
                   onClick={canSend ? handleSend : undefined}
                   style={{
