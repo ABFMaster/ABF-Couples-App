@@ -138,6 +138,10 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
             </div>
           </div>
         )
+      case 'gif':
+        return (
+          <img src={flirt.content} style={{ width: '100%', maxHeight: 280, objectFit: 'cover', display: 'block', borderRadius: 0 }} alt="GIF" />
+        )
       case 'photo':
         return (
           <img src={flirt.content} style={{ width: '100%', maxHeight: 280, objectFit: 'cover', display: 'block' }} alt="flirt photo" />
@@ -166,7 +170,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
     const hasUnseen = unseenCount > 0
 
     return (
-      <div style={{ margin: '0 16px 16px' }}>
+      <div>
         <style>{`
           @keyframes sealPulse {
             0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(201,169,110,0.4); }
@@ -178,21 +182,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
           }
         `}</style>
 
-        <div
-          onClick={() => hasUnseen ? setView('stack') : setView('drop')}
-          style={{
-            background: 'white',
-            border: '0.5px solid #E8E0D8',
-            borderRadius: 16,
-            padding: '20px 18px 24px',
-            cursor: 'pointer',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 12,
-            position: 'relative'
-          }}
-        >
+        <div style={{ margin: '0 16px 16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, position: 'relative' }} onClick={() => hasUnseen ? setView('stack') : setView('drop')}>
           {/* Partner name label */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{
@@ -379,6 +369,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   // DROP SHEET
   if (view === 'drop') {
     const types = [
+      { key: 'gif', label: 'GIF', placeholder: 'Search for a GIF...' },
       { key: 'song', label: 'Song', placeholder: 'Paste a Spotify link...' },
       { key: 'word', label: 'Word', placeholder: `One word for ${partnerName}...`, maxLength: 20 },
       { key: 'photo', label: 'Photo', placeholder: null },
@@ -494,7 +485,28 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
           </div>
         )}
 
-        {dropType && dropType !== 'photo' && dropType !== 'song' && (
+        {dropType === 'gif' && (
+          <div style={{ padding: '16px 18px' }}>
+            <button onClick={() => { setDropType(null); setContent('') }} style={{ background: 'none', border: 'none', fontSize: 12, color: '#B0A8A0', cursor: 'pointer', padding: '0 0 12px', display: 'block' }}>← GIF</button>
+            <input
+              value={content}
+              onChange={e => setContent(e.target.value)}
+              placeholder="Paste a GIPHY or Tenor link..."
+              style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.5px solid #E8E0D8', fontSize: 15, background: 'transparent', outline: 'none', boxSizing: 'border-box', color: '#1A1A1A' }}
+              autoFocus
+            />
+            {content && content.includes('giphy') || content && content.includes('tenor') ? (
+              <div style={{ marginTop: 12 }}>
+                <img src={content} style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 10 }} alt="GIF preview" onError={() => {}} />
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+                  <button onClick={handleSend} disabled={!content.trim() || sending} style={{ background: '#C4694F', color: 'white', border: 'none', padding: '10px 24px', borderRadius: 100, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>{sending ? 'Dropping...' : 'Drop it'}</button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        {dropType && dropType !== 'photo' && dropType !== 'song' && dropType !== 'gif' && (
           <div style={{ padding: '16px 18px' }}>
             <button onClick={() => { setDropType(null); setContent('') }} style={{ background: 'none', border: 'none', fontSize: 12, color: '#B0A8A0', cursor: 'pointer', padding: '0 0 12px', display: 'block' }}>← {selected?.label}</button>
             {dropType === 'word' ? (
@@ -639,6 +651,8 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                     ? (f.metadata?.track_name || 'Song')
                     : f.type === 'found'
                     ? (f.metadata?.title || f.metadata?.domain || 'Link')
+                    : f.type === 'gif'
+                    ? 'GIF'
                     : f.type === 'photo'
                     ? 'Photo'
                     : f.content.substring(0, 40)

@@ -22,7 +22,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const validTypes = ['song', 'photo', 'word', 'found', 'memory']
+    const validTypes = ['song', 'photo', 'word', 'found', 'memory', 'gif']
     if (!validTypes.includes(type)) {
       return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
     }
