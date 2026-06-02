@@ -42,7 +42,7 @@ export default function Dashboard() {
 
   const todayName = new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long' })
   const params = typeof window !== 'undefined' ? window.location.search : ''
-  const showSpark = ['Monday', 'Tuesday'].includes(todayName) || params.includes('spark=true')
+  const showSpark = todayName === 'Monday' || params.includes('spark=true')
   const showBet = todayName === 'Tuesday' || params.includes('bet=true')
   const showNotice = todayName === 'Wednesday' || params.includes('notice=true')
   const showThursday = todayName === 'Thursday' || params.includes('thursday=true')
