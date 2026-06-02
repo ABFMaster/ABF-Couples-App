@@ -1,24 +1,32 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 export default function FlirtCard({ userId, coupleId, partnerId, partnerName, userName, session }) {
   const [unopened, setUnopened] = useState([])
   const [sent, setSent] = useState([])
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState('home') // home | drop | stack | sent
+  const [view, setView] = useState('home')
   const [dropType, setDropType] = useState(null)
   const [content, setContent] = useState('')
   const [sending, setSending] = useState(false)
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [reacting, setReacting] = useState(false)
   const [spotifyQuery, setSpotifyQuery] = useState('')
   const [spotifyResults, setSpotifyResults] = useState([])
   const [spotifySearching, setSpotifySearching] = useState(false)
   const [selectedTrack, setSelectedTrack] = useState(null)
+  const [gifQuery, setGifQuery] = useState('')
+  const [gifResults, setGifResults] = useState([])
+  const [gifSearching, setGifSearching] = useState(false)
+  const [holdProgress, setHoldProgress] = useState(0)
+  const [holdComplete, setHoldComplete] = useState(false)
+  const [reactionSaved, setReactionSaved] = useState(null)
   const fileInputRef = useRef(null)
   const spotifyTimeout = useRef(null)
+  const gifTimeout = useRef(null)
+  const holdInterval = useRef(null)
+  const holdStart = useRef(null)
 
-  const fetchInbox = async () => {
+  const fetchInbox = useCallback(async () => {
     if (!session || !coupleId) return
     try {
       const res = await fetch(`/api/flirts/inbox?coupleId=${coupleId}`, {
@@ -29,20 +37,38 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
       setSent(data.sent || [])
     } catch {}
     setLoading(false)
-  }
+  }, [session, coupleId])
 
-  useEffect(() => { fetchInbox() }, [session, coupleId])
+  useEffect(() => { fetchInbox() }, [fetchInbox])
 
   const current = view === 'stack' ? unopened[currentIndex] : null
 
   useEffect(() => {
     if (view === 'stack' && current && !current.opened_at) {
-      handleOpen(current)
+      fetch('/api/flirts/open', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ flirtId: current.id })
+      }).catch(() => {})
+      setUnopened(prev => prev.map(f => f.id === current.id ? { ...f, opened_at: new Date().toISOString() } : f))
     }
   }, [view, currentIndex, unopened.length])
 
+  useEffect(() => {
+    if (current?.reaction) {
+      setReactionSaved(current.reaction)
+      setHoldComplete(true)
+      setHoldProgress(current.reaction === 'needed' ? 100 : current.reaction === 'felt' ? 55 : 20)
+    } else {
+      setReactionSaved(null)
+      setHoldComplete(false)
+      setHoldProgress(0)
+    }
+  }, [current?.id])
+
   const handleSend = async () => {
-    if (!content.trim() || sending) return
+    if ((!content.trim() && dropType !== 'song') || sending) return
+    if (dropType === 'song' && !selectedTrack) return
     setSending(true)
     try {
       await fetch('/api/flirts/send', {
@@ -52,8 +78,8 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
           coupleId,
           receiverId: partnerId,
           type: dropType,
-          content,
-          metadata: dropType === 'song' && selectedTrack ? {
+          content: dropType === 'song' ? selectedTrack.spotifyUrl : content.trim(),
+          metadata: dropType === 'song' ? {
             track_name: selectedTrack.name,
             artist: selectedTrack.artist,
             album_art: selectedTrack.albumArt,
@@ -64,39 +90,58 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
       })
       setContent('')
       setDropType(null)
-      setView('home')
       setSelectedTrack(null)
       setSpotifyQuery('')
       setSpotifyResults([])
+      setGifQuery('')
+      setGifResults([])
+      setView('home')
       await fetchInbox()
     } catch {}
     setSending(false)
   }
 
-  const handleOpen = async (flirt) => {
-    if (flirt.opened_at) return
-    try {
-      await fetch('/api/flirts/open', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ flirtId: flirt.id })
-      })
-      setUnopened(prev => prev.map(f => f.id === flirt.id ? { ...f, opened_at: new Date().toISOString() } : f))
-    } catch {}
+  const startHold = () => {
+    if (reactionSaved || holdComplete) return
+    holdStart.current = Date.now()
+    setHoldProgress(0)
+    holdInterval.current = setInterval(() => {
+      const elapsed = Date.now() - holdStart.current
+      const progress = Math.min((elapsed / 800) * 100, 100)
+      setHoldProgress(progress)
+      if (progress >= 100) {
+        clearInterval(holdInterval.current)
+        setHoldComplete(true)
+        saveReaction('needed')
+      }
+    }, 16)
   }
 
-  const handleReact = async (flirt, reaction) => {
-    if (reacting || flirt.reaction) return
-    setReacting(true)
+  const endHold = () => {
+    if (reactionSaved || holdComplete) return
+    clearInterval(holdInterval.current)
+    const elapsed = Date.now() - holdStart.current
+    if (elapsed < 100) {
+      setHoldProgress(20)
+      saveReaction('seen')
+    } else if (elapsed < 800) {
+      const progress = Math.min((elapsed / 800) * 100, 100)
+      setHoldProgress(progress >= 40 ? 55 : 20)
+      saveReaction(elapsed >= 300 ? 'felt' : 'seen')
+    }
+  }
+
+  const saveReaction = async (reaction) => {
+    if (!current || reactionSaved) return
+    setReactionSaved(reaction)
     try {
       await fetch('/api/flirts/react', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ flirtId: flirt.id, reaction })
+        body: JSON.stringify({ flirtId: current.id, reaction })
       })
-      setUnopened(prev => prev.map(f => f.id === flirt.id ? { ...f, reaction, reacted_at: new Date().toISOString() } : f))
+      setUnopened(prev => prev.map(f => f.id === current.id ? { ...f, reaction } : f))
     } catch {}
-    setReacting(false)
   }
 
   const formatTimeAgo = (dateStr) => {
@@ -113,56 +158,196 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
     switch (flirt.type) {
       case 'word':
         return (
-          <div style={{ textAlign: 'center', padding: '32px 20px' }}>
-            <p style={{ fontFamily: 'Georgia, serif', fontSize: 32, color: '#1A1A1A', margin: 0, lineHeight: 1.3 }}>{flirt.content}</p>
+          <div style={{ padding: '0 0 8px' }}>
+            <p style={{ fontFamily: 'Georgia, serif', fontSize: 16, color: '#2A2420', margin: 0, lineHeight: 1.7 }}>{flirt.content}</p>
           </div>
         )
       case 'memory':
         return (
-          <div style={{ padding: '24px 20px' }}>
-            <p style={{ fontFamily: 'Georgia, serif', fontSize: 18, color: '#1A1A1A', margin: 0, lineHeight: 1.6, fontStyle: 'italic' }}>"{flirt.content}"</p>
+          <div style={{ padding: '0 0 8px' }}>
+            <p style={{ fontFamily: 'Georgia, serif', fontSize: 14, color: '#2A2420', margin: 0, lineHeight: 1.7, fontStyle: 'italic' }}>"{flirt.content}"</p>
           </div>
         )
       case 'song':
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '20px' }}>
-            {flirt.metadata?.album_art && (
-              <img src={flirt.metadata.album_art} style={{ width: 64, height: 64, borderRadius: 8, flexShrink: 0 }} alt="album art" />
-            )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 0 8px' }}>
+            {flirt.metadata?.album_art && <img src={flirt.metadata.album_art} style={{ width: 48, height: 48, borderRadius: 4, flexShrink: 0 }} alt="" />}
             <div>
-              <p style={{ fontSize: 15, fontWeight: 600, color: '#1A1A1A', margin: '0 0 4px' }}>{flirt.metadata?.track_name || flirt.content}</p>
-              <p style={{ fontSize: 13, color: '#6B6560', margin: 0 }}>{flirt.metadata?.artist}</p>
-              {flirt.metadata?.track_url && (
-                <a href={flirt.metadata.track_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#C4694F', textDecoration: 'none', display: 'block', marginTop: 6 }}>Open in Spotify →</a>
-              )}
+              <p style={{ fontSize: 14, fontWeight: 600, color: '#2A2420', margin: '0 0 2px' }}>{flirt.metadata?.track_name || flirt.content}</p>
+              <p style={{ fontSize: 12, color: '#6B6560', margin: 0 }}>{flirt.metadata?.artist}</p>
+              {flirt.metadata?.track_url && <a href={flirt.metadata.track_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#C4694F', textDecoration: 'none', display: 'block', marginTop: 4 }}>Open in Spotify →</a>}
             </div>
           </div>
         )
-      case 'gif':
-        return (
-          <img src={flirt.content} style={{ width: '100%', maxHeight: 280, objectFit: 'cover', display: 'block', borderRadius: 0 }} alt="GIF" />
-        )
       case 'photo':
-        return (
-          <img src={flirt.content} style={{ width: '100%', maxHeight: 280, objectFit: 'cover', display: 'block' }} alt="flirt photo" />
-        )
+        return <img src={flirt.content} style={{ width: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 4, marginBottom: 8 }} alt="" />
+      case 'gif':
+        return <img src={flirt.content} style={{ width: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 4, marginBottom: 8 }} alt="GIF" />
       case 'found':
         return (
-          <a href={flirt.content} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textDecoration: 'none', padding: '16px 18px' }}>
-            {flirt.metadata?.image && (
-              <img src={flirt.metadata.image} style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 8, marginBottom: 10 }} alt="preview" />
-            )}
-            <p style={{ fontSize: 14, fontWeight: 600, color: '#1A1A1A', margin: '0 0 4px', lineHeight: 1.4 }}>{flirt.metadata?.title || flirt.content}</p>
-            {flirt.metadata?.description && <p style={{ fontSize: 12, color: '#6B6560', margin: '0 0 6px', lineHeight: 1.4 }}>{flirt.metadata.description}</p>}
+          <a href={flirt.content} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textDecoration: 'none', padding: '0 0 8px' }}>
+            {flirt.metadata?.image && <img src={flirt.metadata.image} style={{ width: '100%', height: 80, objectFit: 'cover', borderRadius: 4, marginBottom: 6 }} alt="" />}
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#2A2420', margin: '0 0 2px', lineHeight: 1.4 }}>{flirt.metadata?.title || flirt.content}</p>
             <p style={{ fontSize: 11, color: '#B0A8A0', margin: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{flirt.metadata?.domain}</p>
           </a>
         )
       default:
-        return <p style={{ padding: '20px', color: '#1A1A1A' }}>{flirt.content}</p>
+        return <p style={{ fontSize: 14, color: '#2A2420', margin: '0 0 8px' }}>{flirt.content}</p>
     }
   }
 
   if (loading) return null
+
+  const POSTCARD_STYLES = `
+    @keyframes stampPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+    }
+    @keyframes inkFill {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  `
+
+  const PostcardShell = ({ children, onClick, sealed }) => (
+    <div onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default', position: 'relative', margin: '0 0 16px' }}>
+      <style>{POSTCARD_STYLES}</style>
+      <div style={{
+        background: sealed ? '#FDF8F0' : '#FAFAF7',
+        border: `1px solid ${sealed ? '#D4C4A8' : '#DDD5C8'}`,
+        borderRadius: 6,
+        overflow: 'hidden',
+        position: 'relative'
+      }}>
+        {/* Inner border */}
+        <div style={{ position: 'absolute', inset: 5, border: `0.5px solid ${sealed ? '#EAE0CC' : '#EEE8DC'}`, borderRadius: 3, pointerEvents: 'none', zIndex: 0 }} />
+        {/* POSTCARD label */}
+        <div style={{ padding: '8px 12px 0', position: 'relative', zIndex: 1 }}>
+          <span style={{ fontSize: 7, fontWeight: 700, letterSpacing: 3, color: '#C8B8A0' }}>POSTCARD</span>
+        </div>
+        {/* Content + address layout */}
+        <div style={{ display: 'flex', position: 'relative', zIndex: 1 }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  )
+
+  const AddressSide = ({ toName, stampSealed, stampProgress, onStampDown, onStampUp, showReaction }) => (
+    <div style={{ width: 140, flexShrink: 0, padding: '4px 10px 12px', borderLeft: '0.5px solid #D4C4A8', position: 'relative' }}>
+      {/* TO label */}
+      <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 2, color: '#B0A898', marginBottom: 4 }}>TO</div>
+      <div style={{ borderBottom: '0.5px solid #D4C4A8', paddingBottom: 4, marginBottom: 6 }}>
+        <span style={{ fontFamily: 'Georgia, serif', fontSize: 16, color: '#2A2420' }}>{toName}</span>
+      </div>
+      <div style={{ borderBottom: '0.5px solid #E8E0D4', marginBottom: 4, height: 12 }} />
+      <div style={{ borderBottom: '0.5px solid #E8E0D4', marginBottom: 12, height: 12 }} />
+
+      {/* Stamp */}
+      <div style={{ position: 'absolute', bottom: 10, right: 10 }}>
+        <div
+          onPointerDown={onStampDown}
+          onPointerUp={onStampUp}
+          onPointerLeave={onStampUp}
+          style={{
+            width: 40,
+            height: 46,
+            position: 'relative',
+            cursor: showReaction && !reactionSaved ? 'pointer' : 'default',
+            animation: stampSealed ? 'stampPulse 2.5s ease-in-out infinite' : 'none',
+            userSelect: 'none',
+            WebkitUserSelect: 'none'
+          }}
+        >
+          {/* Stamp body */}
+          <div style={{
+            width: 40,
+            height: 46,
+            borderRadius: 2,
+            background: stampSealed ? '#C9A96E' : (stampProgress > 0 ? '#C9A96E' : '#F5F0E8'),
+            border: stampSealed ? '2px dashed rgba(255,255,255,0.5)' : '1.5px dashed #D4C4A8',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 3,
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            {/* Progress fill overlay */}
+            {!stampSealed && stampProgress > 0 && (
+              <div style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: `${stampProgress}%`,
+                background: '#C9A96E',
+                transition: 'height 0.05s linear'
+              }} />
+            )}
+            <span style={{ fontSize: 7, fontWeight: 700, letterSpacing: 1, color: stampSealed ? '#FDF8F0' : (stampProgress > 30 ? '#FDF8F0' : '#C8BFB0'), position: 'relative', zIndex: 1 }}>ABF</span>
+            <div style={{
+              width: 14,
+              height: 14,
+              borderRadius: '50%',
+              background: stampSealed ? 'rgba(255,255,255,0.2)' : 'none',
+              border: stampSealed ? 'none' : `1px solid ${stampProgress > 30 ? 'rgba(255,255,255,0.5)' : '#D4C4A8'}`,
+              position: 'relative',
+              zIndex: 1
+            }}>
+              <div style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: stampSealed ? '#FDF8F0' : (stampProgress > 30 ? 'rgba(255,255,255,0.8)' : 'transparent'),
+                margin: '2px auto',
+                position: 'relative',
+                zIndex: 1
+              }} />
+            </div>
+          </div>
+
+          {/* Postmark overlay */}
+          {(stampSealed || stampProgress > 0) && (
+            <div style={{
+              position: 'absolute',
+              top: -4,
+              left: -8,
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              border: `1px solid rgba(196,105,79,${stampSealed ? 0.5 : Math.min(stampProgress / 100 * 0.8, 0.8)})`,
+              pointerEvents: 'none'
+            }}>
+              <div style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '90%',
+                height: '0.5px',
+                background: `rgba(196,105,79,${stampSealed ? 0.4 : Math.min(stampProgress / 100 * 0.6, 0.6)})`
+              }} />
+            </div>
+          )}
+        </div>
+        {showReaction && !reactionSaved && (
+          <div style={{ fontSize: 8, color: '#C9A96E', textAlign: 'center', marginTop: 3, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>hold</div>
+        )}
+      </div>
+    </div>
+  )
+
+  const RuledLines = ({ count = 6, children }) => (
+    <div style={{ flex: 1, padding: '4px 12px 12px', position: 'relative', minHeight: 120 }}>
+      {[...Array(count)].map((_, i) => (
+        <div key={i} style={{ borderBottom: '0.5px solid #EEE8DC', height: i === 0 ? 24 : 20, position: 'relative' }}>
+          {i === 0 && children}
+        </div>
+      ))}
+    </div>
+  )
 
   // HOME STATE
   if (view === 'home') {
@@ -170,425 +355,377 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
     const hasUnseen = unseenCount > 0
 
     return (
-      <div style={{ margin: '0 0 16px' }}>
-        <style>{`
-          @keyframes sealPulse {
-            0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
-            50% { opacity: 0.7; transform: translateX(-50%) scale(1.2); }
-          }
-          @keyframes envelopeFloat {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-3px); }
-          }
-        `}</style>
-
-        <div
-          onClick={() => hasUnseen ? setView('stack') : setView('drop')}
-          style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}
-        >
-          <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#C9A96E', textTransform: 'uppercase' }}>
-            {hasUnseen ? `From ${partnerName}` : `Flirt with ${partnerName}`}
-          </span>
-
-          <div style={{ width: '100%', position: 'relative' }}>
-            <div style={{ position: 'relative', animation: hasUnseen ? 'envelopeFloat 3s ease-in-out infinite' : 'none' }}>
-
-              {/* Stack layers */}
-              {unseenCount > 2 && (
-                <svg width="100%" height="140" style={{ position: 'absolute', top: -10, left: 6, zIndex: 0 }} viewBox="0 0 320 140">
-                  <rect x="0" y="0" width="320" height="140" rx="8" fill="#E8DDD0" stroke="#D4C8B8" strokeWidth="0.5"/>
-                </svg>
-              )}
-              {unseenCount > 1 && (
-                <svg width="100%" height="140" style={{ position: 'absolute', top: -5, left: 3, zIndex: 1 }} viewBox="0 0 320 140">
-                  <rect x="0" y="0" width="320" height="140" rx="8" fill="#EDE4D8" stroke="#D8CCBA" strokeWidth="0.5"/>
-                </svg>
-              )}
-
-              {/* Main envelope SVG */}
-              <svg width="100%" height="140" viewBox="0 0 320 140" style={{ position: 'relative', zIndex: 2, display: 'block' }}>
-                {/* Bottom left fold */}
-                <path d="M 0 140 L 0 75 L 130 140 Z" fill="#EDE8DE" stroke="#E0D8CC" strokeWidth="0.5"/>
-
-                {/* Bottom right fold */}
-                <path d="M 320 140 L 320 75 L 190 140 Z" fill="#EDE8DE" stroke="#E0D8CC" strokeWidth="0.5"/>
-
-                {/* Bottom center fold line */}
-                <path d="M 0 140 L 160 105 L 320 140" fill="none" stroke="#D8D0C4" strokeWidth="0.5"/>
-
-                {hasUnseen ? (
-                  /* Sealed flap — pointing down */
-                  <path d="M 0 0 L 320 0 L 160 78 Z" fill="#EDE0C8" stroke="#D4C4A8" strokeWidth="0.5"/>
-                ) : (
-                  /* Open flap — pointing up, rotated */
-                  <path d="M 0 0 L 320 0 L 160 65 Z" fill="#F0EBE0" stroke="#E0D4C0" strokeWidth="0.5" transform="rotate(180 160 34)"/>
-                )}
-
-                {/* Empty state text */}
-                {!hasUnseen && (
-                  <>
-                    <text x="160" y="82" textAnchor="middle" fill="#C0B8B0" fontSize="12" fontFamily="Georgia, serif" fontStyle="italic">leave something</text>
-                    <text x="160" y="100" textAnchor="middle" fill="#C0B8B0" fontSize="12" fontFamily="Georgia, serif" fontStyle="italic">for {partnerName}...</text>
-                  </>
-                )}
-              </svg>
-
-              {/* Wax seal */}
-              <div style={{
-                position: 'absolute',
-                top: hasUnseen ? 64 : 'auto',
-                bottom: hasUnseen ? 'auto' : 30,
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: 20,
-                height: 20,
-                borderRadius: '50%',
-                background: '#C9A96E',
-                zIndex: 10,
-                boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-                animation: hasUnseen ? 'sealPulse 2.5s ease-in-out infinite' : 'none'
-              }}>
-                {unseenCount > 1 && (
-                  <div style={{
-                    position: 'absolute',
-                    top: -8,
-                    right: -8,
-                    width: 18,
-                    height: 18,
-                    borderRadius: '50%',
-                    background: '#C4694F',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: 'white'
-                  }}>{unseenCount}</div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {!hasUnseen && sent.length > 0 && (
-            <button
-              onClick={e => { e.stopPropagation(); setView('sent') }}
-              style={{ background: 'none', border: 'none', fontSize: 11, color: '#B0A8A0', cursor: 'pointer', padding: 0, letterSpacing: '0.04em' }}
-            >view sent →</button>
-          )}
-        </div>
-      </div>
-    )
-  }
-
-  // DROP SHEET
-  if (view === 'drop') {
-    const types = [
-      { key: 'gif', label: 'GIF', placeholder: 'Search for a GIF...' },
-      { key: 'song', label: 'Song', placeholder: 'Paste a Spotify link...' },
-      { key: 'word', label: 'Word', placeholder: `One word for ${partnerName}...`, maxLength: 20 },
-      { key: 'photo', label: 'Photo', placeholder: null },
-      { key: 'memory', label: 'Memory', placeholder: 'Something worth remembering...', maxLength: 120 },
-      { key: 'found', label: 'Found', placeholder: 'Paste a URL...' },
-    ]
-    const selected = types.find(t => t.key === dropType)
-
-    return (
-      <div style={{ margin: '0 16px 16px', background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, overflow: 'hidden' }}>
-        <div style={{ padding: '14px 18px', borderBottom: '0.5px solid #E8E0D8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#C9A96E' }} />
-            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: '#C9A96E', textTransform: 'uppercase' }}>Flirt with {partnerName}</span>
-          </div>
-          <button onClick={() => { setView('home'); setDropType(null); setContent(''); setSelectedTrack(null); setSpotifyQuery(''); setSpotifyResults([]) }} style={{ background: 'none', border: 'none', fontSize: 20, color: '#B0A8A0', cursor: 'pointer', padding: 0 }}>×</button>
-        </div>
-
-        {!dropType && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: '#E8E0D8' }}>
-            {types.map((t, index) => (
-              <button
-                key={t.key}
-                onClick={() => setDropType(t.key)}
-                style={{
-                  padding: '20px 16px',
-                  background: 'white',
-                  border: 'none',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  fontSize: 15,
-                  color: '#1A1A1A',
-                  fontFamily: 'Georgia, serif',
-                  gridColumn: index === types.length - 1 && types.length % 2 !== 0 ? '1 / -1' : undefined
-                }}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {dropType === 'song' && (
-          <div style={{ padding: '16px 18px' }}>
-            <button onClick={() => { setDropType(null); setContent(''); setSpotifyResults([]); setSelectedTrack(null) }} style={{ background: 'none', border: 'none', fontSize: 12, color: '#B0A8A0', cursor: 'pointer', padding: '0 0 12px', display: 'block' }}>← Song</button>
-
-            {!selectedTrack ? (
-              <div>
-                <input
-                  value={spotifyQuery}
-                  onChange={e => {
-                    setSpotifyQuery(e.target.value)
-                    clearTimeout(spotifyTimeout.current)
-                    if (e.target.value.length > 2) {
-                      setSpotifySearching(true)
-                      spotifyTimeout.current = setTimeout(async () => {
-                        try {
-                          const res = await fetch(`/api/spotify/search?q=${encodeURIComponent(e.target.value)}`, {
-                            headers: { 'Authorization': `Bearer ${session.access_token}` }
-                          })
-                          const data = await res.json()
-                          setSpotifyResults(data.tracks || [])
-                        } catch {}
-                        setSpotifySearching(false)
-                      }, 400)
-                    } else {
-                      setSpotifyResults([])
-                      setSpotifySearching(false)
-                    }
-                  }}
-                  placeholder="Search for a song..."
-                  style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.5px solid #E8E0D8', fontSize: 15, background: 'transparent', outline: 'none', boxSizing: 'border-box', color: '#1A1A1A' }}
-                  autoFocus
-                />
-                {spotifySearching && <p style={{ fontSize: 12, color: '#B0A8A0', marginTop: 8 }}>Searching...</p>}
-                {spotifyResults.length > 0 && (
-                  <div style={{ marginTop: 8, maxHeight: 240, overflowY: 'auto' }}>
-                    {spotifyResults.slice(0, 6).map(track => (
-                      <div
-                        key={track.id}
-                        onClick={() => {
-                          setSelectedTrack(track)
-                          setContent(track.spotifyUrl)
-                          setSpotifyResults([])
-                        }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: '0.5px solid #F0EAE2', cursor: 'pointer' }}
-                      >
-                        {track.albumArtSmall && <img src={track.albumArtSmall} style={{ width: 40, height: 40, borderRadius: 4, flexShrink: 0 }} alt="" />}
-                        <div>
-                          <p style={{ fontSize: 14, color: '#1A1A1A', margin: '0 0 2px', fontWeight: 500 }}>{track.name}</p>
-                          <p style={{ fontSize: 12, color: '#6B6560', margin: 0 }}>{track.artist}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '0.5px solid #E8E0D8', marginBottom: 16 }}>
-                  {selectedTrack.albumArt && <img src={selectedTrack.albumArt} style={{ width: 52, height: 52, borderRadius: 6, flexShrink: 0 }} alt="" />}
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 15, fontWeight: 600, color: '#1A1A1A', margin: '0 0 3px' }}>{selectedTrack.name}</p>
-                    <p style={{ fontSize: 13, color: '#6B6560', margin: 0 }}>{selectedTrack.artist}</p>
-                  </div>
-                  <button onClick={() => { setSelectedTrack(null); setContent(''); setSpotifyQuery('') }} style={{ background: 'none', border: 'none', fontSize: 12, color: '#B0A8A0', cursor: 'pointer' }}>Change</button>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button onClick={handleSend} disabled={sending} style={{ background: '#C4694F', color: 'white', border: 'none', padding: '10px 24px', borderRadius: 100, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>{sending ? 'Dropping...' : 'Drop it'}</button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {dropType === 'gif' && (
-          <div style={{ padding: '16px 18px' }}>
-            <button onClick={() => { setDropType(null); setContent('') }} style={{ background: 'none', border: 'none', fontSize: 12, color: '#B0A8A0', cursor: 'pointer', padding: '0 0 12px', display: 'block' }}>← GIF</button>
-            <input
-              value={content}
-              onChange={e => setContent(e.target.value)}
-              placeholder="Paste a GIPHY or Tenor link..."
-              style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.5px solid #E8E0D8', fontSize: 15, background: 'transparent', outline: 'none', boxSizing: 'border-box', color: '#1A1A1A' }}
-              autoFocus
-            />
-            {content && content.includes('giphy') || content && content.includes('tenor') ? (
-              <div style={{ marginTop: 12 }}>
-                <img src={content} style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 10 }} alt="GIF preview" onError={() => {}} />
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
-                  <button onClick={handleSend} disabled={!content.trim() || sending} style={{ background: '#C4694F', color: 'white', border: 'none', padding: '10px 24px', borderRadius: 100, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>{sending ? 'Dropping...' : 'Drop it'}</button>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        )}
-
-        {dropType && dropType !== 'photo' && dropType !== 'song' && dropType !== 'gif' && (
-          <div style={{ padding: '16px 18px' }}>
-            <button onClick={() => { setDropType(null); setContent('') }} style={{ background: 'none', border: 'none', fontSize: 12, color: '#B0A8A0', cursor: 'pointer', padding: '0 0 12px', display: 'block' }}>← {selected?.label}</button>
-            {dropType === 'word' ? (
-              <input
-                value={content}
-                onChange={e => setContent(e.target.value)}
-                placeholder={selected?.placeholder}
-                maxLength={selected?.maxLength}
-                style={{ width: '100%', padding: '12px 0', border: 'none', borderBottom: '0.5px solid #E8E0D8', fontSize: 28, fontFamily: 'Georgia, serif', color: '#1A1A1A', background: 'transparent', outline: 'none', boxSizing: 'border-box' }}
-                autoFocus
-              />
-            ) : (
-              <textarea
-                value={content}
-                onChange={e => setContent(e.target.value)}
-                placeholder={selected?.placeholder}
-                maxLength={selected?.maxLength}
-                rows={dropType === 'memory' ? 3 : 2}
-                style={{ width: '100%', padding: '10px 0', border: 'none', borderBottom: '0.5px solid #E8E0D8', fontSize: 15, fontFamily: dropType === 'memory' ? 'Georgia, serif' : 'system-ui', color: '#1A1A1A', background: 'transparent', outline: 'none', resize: 'none', boxSizing: 'border-box' }}
-                autoFocus
-              />
-            )}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-              <button
-                onClick={handleSend}
-                disabled={!content.trim() || sending}
-                style={{ background: content.trim() ? '#C4694F' : '#E8E0D8', color: 'white', border: 'none', padding: '10px 24px', borderRadius: 100, fontSize: 14, fontWeight: 500, cursor: content.trim() ? 'pointer' : 'default', transition: 'background 0.15s' }}
-              >{sending ? 'Dropping...' : `Drop it`}</button>
-            </div>
-          </div>
-        )}
-
-        {dropType === 'photo' && (
-          <div style={{ padding: '16px 18px' }}>
-            <button onClick={() => setDropType(null)} style={{ background: 'none', border: 'none', fontSize: 12, color: '#B0A8A0', cursor: 'pointer', padding: '0 0 12px', display: 'block' }}>← Photo</button>
-            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={async e => {
-              const file = e.target.files?.[0]
-              if (!file) return
-              try {
-                const { createClient } = await import('@supabase/supabase-js')
-                const sb = createClient(
-                  process.env.NEXT_PUBLIC_SUPABASE_URL,
-                  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-                  { global: { headers: { Authorization: `Bearer ${session.access_token}` } } }
-                )
-                const path = `flirts/${userId}/${Date.now()}_${file.name.replace(/\s/g, '_')}`
-                const { data, error } = await sb.storage.from('photos').upload(path, file, { upsert: true })
-                if (error) { console.error('Upload error:', error); return }
-                const { data: urlData } = sb.storage.from('photos').getPublicUrl(path)
-                setContent(urlData.publicUrl)
-              } catch (err) {
-                console.error('Photo upload error:', err)
-              }
-            }} />
-            {!content ? (
-              <button onClick={() => fileInputRef.current?.click()} style={{ width: '100%', padding: '32px', border: '0.5px dashed #E8E0D8', borderRadius: 10, background: '#FFF8F4', cursor: 'pointer', fontSize: 14, color: '#B0A8A0' }}>
-                Tap to choose a photo
-              </button>
-            ) : (
-              <div>
-                <img src={content} style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 10 }} alt="preview" />
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12 }}>
-                  <button onClick={() => setContent('')} style={{ background: 'none', border: 'none', fontSize: 13, color: '#B0A8A0', cursor: 'pointer' }}>Change</button>
-                  <button onClick={handleSend} disabled={sending} style={{ background: '#C4694F', color: 'white', border: 'none', padding: '10px 24px', borderRadius: 100, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>{sending ? 'Dropping...' : 'Drop it'}</button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  // STACK VIEW — receiver seeing flirts
-  if (view === 'stack') {
-    const allFlirts = unopened
-    if (!current) return null
-
-    return (
-      <div style={{ margin: '0 16px 16px', background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, overflow: 'hidden' }}>
-        <div style={{ padding: '12px 18px', borderBottom: '0.5px solid #E8E0D8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#C9A96E' }} />
-            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: '#C9A96E', textTransform: 'uppercase' }}>
-              From {partnerName} {allFlirts.length > 1 ? `· ${currentIndex + 1} of ${allFlirts.length}` : ''}
-            </span>
-          </div>
-          <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', fontSize: 20, color: '#B0A8A0', cursor: 'pointer', padding: 0 }}>×</button>
-        </div>
-
-        {renderFlirtContent(current)}
-
-        <div style={{ padding: '12px 18px', borderTop: '0.5px solid #E8E0D8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 11, color: '#B0A8A0' }}>{formatTimeAgo(current.created_at)}</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            {allFlirts.length > 1 && (
-              <div style={{ display: 'flex', gap: 8 }}>
-                {currentIndex > 0 && <button onClick={() => setCurrentIndex(i => i - 1)} style={{ background: 'none', border: 'none', fontSize: 13, color: '#B0A8A0', cursor: 'pointer' }}>← prev</button>}
-                {currentIndex < allFlirts.length - 1 && <button onClick={() => setCurrentIndex(i => i + 1)} style={{ background: 'none', border: 'none', fontSize: 13, color: '#B0A8A0', cursor: 'pointer' }}>next →</button>}
-              </div>
-            )}
-            {/* Gold dot reaction */}
-            <button
-              onClick={() => !current.reaction && handleReact(current, 'seen')}
-              onDoubleClick={() => !current.reaction && handleReact(current, 'felt')}
-              onContextMenu={e => { e.preventDefault(); !current.reaction && handleReact(current, 'needed') }}
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: '50%',
-                background: current.reaction ? '#C9A96E' : 'transparent',
-                border: `2px solid ${current.reaction ? '#C9A96E' : '#E8E0D8'}`,
-                cursor: current.reaction ? 'default' : 'pointer',
-                transition: 'all 0.2s',
-                flexShrink: 0
-              }}
-              title={current.reaction ? current.reaction : 'tap to react'}
-            />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // SENT VIEW
-  if (view === 'sent') {
-    return (
-      <div style={{ margin: '0 16px 16px', background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, overflow: 'hidden' }}>
-        <div style={{ padding: '12px 18px', borderBottom: '0.5px solid #E8E0D8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#C9A96E' }} />
-            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: '#C9A96E', textTransform: 'uppercase' }}>Sent</span>
-          </div>
-          <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', fontSize: 20, color: '#B0A8A0', cursor: 'pointer', padding: 0 }}>×</button>
-        </div>
-        <div style={{ padding: '8px 0' }}>
-          {sent.map(f => (
-            <div key={f.id} style={{ padding: '12px 18px', borderBottom: '0.5px solid #F0EAE2', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <span style={{ fontSize: 13, color: '#1A1A1A', fontFamily: f.type === 'word' || f.type === 'memory' ? 'Georgia, serif' : 'system-ui' }}>
-                  {f.type === 'song'
-                    ? (f.metadata?.track_name || 'Song')
-                    : f.type === 'found'
-                    ? (f.metadata?.title || f.metadata?.domain || 'Link')
-                    : f.type === 'gif'
-                    ? 'GIF'
-                    : f.type === 'photo'
-                    ? 'Photo'
-                    : f.content.substring(0, 40)
-                  }
+      <PostcardShell onClick={() => hasUnseen ? setView('stack') : setView('drop')} sealed={hasUnseen}>
+        {/* Message side */}
+        <div style={{ flex: 1, padding: '4px 12px 12px', position: 'relative', minHeight: 120 }}>
+          {[...Array(6)].map((_, i) => (
+            <div key={i} style={{ borderBottom: `0.5px solid ${hasUnseen ? '#EAE0CC' : '#EEE8DC'}`, height: i === 0 ? 28 : 20 }}>
+              {i === 0 && (
+                <span style={{ fontFamily: 'Georgia, serif', fontSize: 12, color: hasUnseen ? '#C9A96E' : '#C8BFB0', fontStyle: 'italic' }}>
+                  {hasUnseen ? `from ${partnerName} —` : `write something for ${partnerName}...`}
                 </span>
-                <span style={{ fontSize: 11, color: '#B0A8A0', display: 'block', marginTop: 2 }}>{formatTimeAgo(f.created_at)}</span>
-              </div>
-              <div style={{
-                width: 20,
-                height: 20,
-                borderRadius: '50%',
-                background: f.reaction ? '#C9A96E' : 'transparent',
-                border: `1.5px solid ${f.reaction ? '#C9A96E' : '#E8E0D8'}`,
-                flexShrink: 0
-              }} />
+              )}
+              {i === 1 && hasUnseen && (
+                <span style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: '#C4B89A', fontStyle: 'italic' }}>tap to open</span>
+              )}
             </div>
           ))}
+          {!hasUnseen && sent.length > 0 && (
+            <button onClick={e => { e.stopPropagation(); setView('sent') }} style={{ position: 'absolute', bottom: 8, left: 12, background: 'none', border: 'none', fontSize: 10, color: '#B0A8A0', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>view sent →</button>
+          )}
         </div>
-        <div style={{ padding: '14px 18px' }}>
-          <button onClick={() => setView('drop')} style={{ width: '100%', padding: '12px', background: '#FFF8F4', border: '0.5px solid #E8E0D8', borderRadius: 10, fontSize: 14, color: '#C4694F', cursor: 'pointer', fontFamily: 'Georgia, serif' }}>
-            Flirt with {partnerName} →
-          </button>
+        {/* Address side */}
+        <AddressSide toName={hasUnseen ? userName : partnerName} stampSealed={hasUnseen} stampProgress={0} />
+      </PostcardShell>
+    )
+  }
+
+  // DROP STATE — writing on the postcard
+  if (view === 'drop') {
+    const types = ['SONG', 'WORD', 'PHOTO', 'GIF', 'FOUND', 'MEMORY']
+    const canSend = dropType === 'song' ? !!selectedTrack : !!content.trim()
+
+    return (
+      <div style={{ margin: '0 0 16px' }}>
+        <style>{POSTCARD_STYLES}</style>
+        <div style={{ background: '#FAFAF7', border: '1px solid #DDD5C8', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
+          <div style={{ position: 'absolute', inset: 5, border: '0.5px solid #EEE8DC', borderRadius: 3, pointerEvents: 'none', zIndex: 0 }} />
+          <div style={{ padding: '8px 12px 0', position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 7, fontWeight: 700, letterSpacing: 3, color: '#C8B8A0' }}>POSTCARD</span>
+            <button onClick={() => { setView('home'); setDropType(null); setContent('') }} style={{ background: 'none', border: 'none', fontSize: 18, color: '#B0A8A0', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
+          </div>
+
+          <div style={{ display: 'flex', position: 'relative', zIndex: 1 }}>
+            {/* Message side */}
+            <div style={{ flex: 1, padding: '4px 12px 12px' }}>
+              {/* Type selector */}
+              <div style={{ borderBottom: '0.5px solid #EEE8DC', paddingBottom: 6, marginBottom: 4, display: 'flex', flexWrap: 'wrap', gap: '2px 0' }}>
+                {types.map((t, i) => (
+                  <span key={t}>
+                    <span
+                      onClick={() => { setDropType(t.toLowerCase()); setContent(''); setSelectedTrack(null); setSpotifyResults([]); setGifResults([]) }}
+                      style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: dropType === t.toLowerCase() ? '#C9A96E' : '#C0B4A4', cursor: 'pointer', textDecoration: dropType === t.toLowerCase() ? 'underline' : 'none', textUnderlineOffset: 2 }}
+                    >{t}</span>
+                    {i < types.length - 1 && <span style={{ fontSize: 9, color: '#DDD5C8', margin: '0 4px' }}>·</span>}
+                  </span>
+                ))}
+              </div>
+
+              {/* Input area — transforms by type */}
+              <div style={{ minHeight: 100 }}>
+                {!dropType && (
+                  <div style={{ paddingTop: 8 }}>
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} style={{ borderBottom: '0.5px solid #EEE8DC', height: 20 }} />
+                    ))}
+                    <p style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: '#D0C8BC', fontStyle: 'italic', margin: '6px 0 0' }}>choose what to send above...</p>
+                  </div>
+                )}
+
+                {/* WORD / MEMORY */}
+                {(dropType === 'word' || dropType === 'memory') && (
+                  <div style={{ position: 'relative' }}>
+                    <textarea
+                      value={content}
+                      onChange={e => setContent(e.target.value)}
+                      placeholder={dropType === 'word' ? `say something to ${partnerName}...` : 'a memory worth sending...'}
+                      rows={5}
+                      maxLength={dropType === 'word' ? 200 : 300}
+                      autoFocus
+                      style={{
+                        width: '100%',
+                        background: 'transparent',
+                        border: 'none',
+                        outline: 'none',
+                        resize: 'none',
+                        fontFamily: 'Georgia, serif',
+                        fontSize: dropType === 'word' ? 15 : 13,
+                        color: '#2A2420',
+                        lineHeight: '20px',
+                        padding: '2px 0',
+                        boxSizing: 'border-box',
+                        backgroundImage: 'repeating-linear-gradient(transparent, transparent 19px, #EEE8DC 19px, #EEE8DC 20px)',
+                        backgroundSize: '100% 20px'
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* SONG */}
+                {dropType === 'song' && !selectedTrack && (
+                  <div>
+                    <input
+                      value={spotifyQuery}
+                      onChange={e => {
+                        setSpotifyQuery(e.target.value)
+                        clearTimeout(spotifyTimeout.current)
+                        if (e.target.value.length > 2) {
+                          setSpotifySearching(true)
+                          spotifyTimeout.current = setTimeout(async () => {
+                            try {
+                              const res = await fetch(`/api/spotify/search?q=${encodeURIComponent(e.target.value)}`, {
+                                headers: { 'Authorization': `Bearer ${session.access_token}` }
+                              })
+                              const data = await res.json()
+                              setSpotifyResults(data.tracks || [])
+                            } catch {}
+                            setSpotifySearching(false)
+                          }, 400)
+                        } else { setSpotifyResults([]); setSpotifySearching(false) }
+                      }}
+                      placeholder="search for a song..."
+                      autoFocus
+                      style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: '0.5px solid #C9A96E', outline: 'none', fontFamily: 'Georgia, serif', fontSize: 13, color: '#2A2420', padding: '4px 0', boxSizing: 'border-box' }}
+                    />
+                    {spotifySearching && <p style={{ fontSize: 11, color: '#B0A8A0', margin: '4px 0', fontStyle: 'italic' }}>searching...</p>}
+                    <div style={{ maxHeight: 100, overflowY: 'auto' }}>
+                      {spotifyResults.slice(0, 4).map(track => (
+                        <div key={track.id} onClick={() => { setSelectedTrack(track); setContent(track.spotifyUrl) }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '0.5px solid #EEE8DC', cursor: 'pointer' }}>
+                          {track.albumArtSmall && <img src={track.albumArtSmall} style={{ width: 28, height: 28, borderRadius: 3, flexShrink: 0 }} alt="" />}
+                          <div>
+                            <p style={{ fontSize: 12, fontWeight: 500, color: '#2A2420', margin: 0 }}>{track.name}</p>
+                            <p style={{ fontSize: 11, color: '#8A8078', margin: 0 }}>{track.artist}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {dropType === 'song' && selectedTrack && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '0.5px solid #EEE8DC' }}>
+                    {selectedTrack.albumArt && <img src={selectedTrack.albumArt} style={{ width: 40, height: 40, borderRadius: 4, flexShrink: 0 }} alt="" />}
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: '#2A2420', margin: 0 }}>{selectedTrack.name}</p>
+                      <p style={{ fontSize: 11, color: '#8A8078', margin: 0 }}>{selectedTrack.artist}</p>
+                    </div>
+                    <button onClick={() => { setSelectedTrack(null); setContent(''); setSpotifyQuery('') }} style={{ background: 'none', border: 'none', fontSize: 11, color: '#B0A8A0', cursor: 'pointer' }}>change</button>
+                  </div>
+                )}
+
+                {/* GIF */}
+                {dropType === 'gif' && !content && (
+                  <div>
+                    <input
+                      value={gifQuery}
+                      onChange={e => {
+                        setGifQuery(e.target.value)
+                        clearTimeout(gifTimeout.current)
+                        if (e.target.value.length > 1) {
+                          setGifSearching(true)
+                          gifTimeout.current = setTimeout(async () => {
+                            try {
+                              const res = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=GlVGYHkr3WSBnllca54iNt0yFbjz7L65&q=${encodeURIComponent(e.target.value)}&limit=6&rating=g`)
+                              const data = await res.json()
+                              setGifResults(data.data || [])
+                            } catch {}
+                            setGifSearching(false)
+                          }, 400)
+                        } else { setGifResults([]); setGifSearching(false) }
+                      }}
+                      placeholder="search for a GIF..."
+                      autoFocus
+                      style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: '0.5px solid #C9A96E', outline: 'none', fontFamily: 'Georgia, serif', fontSize: 13, color: '#2A2420', padding: '4px 0', boxSizing: 'border-box' }}
+                    />
+                    {gifSearching && <p style={{ fontSize: 11, color: '#B0A8A0', margin: '4px 0', fontStyle: 'italic' }}>searching...</p>}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4, marginTop: 4 }}>
+                      {gifResults.slice(0, 6).map(gif => (
+                        <img
+                          key={gif.id}
+                          src={gif.images.fixed_height_small.url}
+                          onClick={() => setContent(gif.images.original.url)}
+                          style={{ width: '100%', height: 56, objectFit: 'cover', borderRadius: 3, cursor: 'pointer' }}
+                          alt=""
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {dropType === 'gif' && content && (
+                  <div style={{ position: 'relative' }}>
+                    <img src={content} style={{ width: '100%', maxHeight: 100, objectFit: 'cover', borderRadius: 4 }} alt="" />
+                    <button onClick={() => setContent('')} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', border: 'none', color: 'white', borderRadius: '50%', width: 20, height: 20, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                  </div>
+                )}
+
+                {/* PHOTO */}
+                {dropType === 'photo' && !content && (
+                  <div>
+                    <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={async e => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      try {
+                        const { createClient } = await import('@supabase/supabase-js')
+                        const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, { global: { headers: { Authorization: `Bearer ${session.access_token}` } } })
+                        const path = `flirts/${userId}/${Date.now()}_${file.name.replace(/\s/g, '_')}`
+                        const { data } = await sb.storage.from('photos').upload(path, file, { upsert: true })
+                        if (data) {
+                          const { data: urlData } = sb.storage.from('photos').getPublicUrl(path)
+                          setContent(urlData.publicUrl)
+                        }
+                      } catch {}
+                    }} />
+                    <button onClick={() => fileInputRef.current?.click()} style={{ width: '100%', padding: '20px 0', background: 'transparent', border: '0.5px dashed #D4C4A8', borderRadius: 4, fontSize: 12, color: '#B0A8A0', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic', marginTop: 4 }}>tap to choose a photo</button>
+                  </div>
+                )}
+
+                {dropType === 'photo' && content && (
+                  <div style={{ position: 'relative' }}>
+                    <img src={content} style={{ width: '100%', maxHeight: 100, objectFit: 'cover', borderRadius: 4 }} alt="" />
+                    <button onClick={() => setContent('')} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', border: 'none', color: 'white', borderRadius: '50%', width: 20, height: 20, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                  </div>
+                )}
+
+                {/* FOUND */}
+                {dropType === 'found' && (
+                  <div>
+                    <input
+                      value={content}
+                      onChange={e => setContent(e.target.value)}
+                      placeholder="paste a link..."
+                      autoFocus
+                      style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: '0.5px solid #C9A96E', outline: 'none', fontFamily: 'Georgia, serif', fontSize: 13, color: '#2A2420', padding: '4px 0', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                )}
+
+                {/* MEMORY — timeline picker placeholder */}
+                {dropType === 'memory' && !content && (
+                  <div style={{ paddingTop: 4 }}>
+                    <p style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: '#C9A96E', fontStyle: 'italic', margin: '0 0 6px' }}>pick a memory from your timeline</p>
+                    <p style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: '#B0A8A0', fontStyle: 'italic', margin: 0 }}>timeline picker coming soon...</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Address side with Mail it stamp */}
+            <div style={{ width: 140, flexShrink: 0, padding: '4px 10px 12px', borderLeft: '0.5px solid #D4C4A8', position: 'relative' }}>
+              <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 2, color: '#B0A898', marginBottom: 4 }}>TO</div>
+              <div style={{ borderBottom: '0.5px solid #D4C4A8', paddingBottom: 4, marginBottom: 6 }}>
+                <span style={{ fontFamily: 'Georgia, serif', fontSize: 16, color: '#2A2420' }}>{partnerName}</span>
+              </div>
+              <div style={{ borderBottom: '0.5px solid #E8E0D4', marginBottom: 4, height: 12 }} />
+              <div style={{ borderBottom: '0.5px solid #E8E0D4', marginBottom: 12, height: 12 }} />
+
+              {/* Stamp — becomes Mail it button when content ready */}
+              <div style={{ position: 'absolute', bottom: 10, right: 10 }}>
+                <div
+                  onClick={canSend ? handleSend : undefined}
+                  style={{
+                    width: 40,
+                    height: 46,
+                    borderRadius: 2,
+                    background: canSend ? '#C9A96E' : '#F5F0E8',
+                    border: canSend ? '2px dashed rgba(255,255,255,0.5)' : '1.5px dashed #D4C4A8',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 3,
+                    cursor: canSend ? 'pointer' : 'default',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <span style={{ fontSize: 7, fontWeight: 700, letterSpacing: 1, color: canSend ? '#FDF8F0' : '#C8BFB0' }}>ABF</span>
+                  <div style={{ width: 14, height: 14, borderRadius: '50%', background: canSend ? 'rgba(255,255,255,0.2)' : 'none', border: canSend ? 'none' : '1px solid #D4C4A8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: canSend ? '#FDF8F0' : 'transparent' }} />
+                  </div>
+                </div>
+                <div style={{ fontSize: 8, color: canSend ? '#C9A96E' : '#C8BFB0', textAlign: 'center', marginTop: 3, fontFamily: 'Georgia, serif', fontStyle: 'italic', transition: 'color 0.2s' }}>
+                  {sending ? 'sending...' : canSend ? 'mail it' : 'stamp'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // STACK STATE — reading received postcard
+  if (view === 'stack' && current) {
+    return (
+      <div style={{ margin: '0 0 16px' }}>
+        <style>{POSTCARD_STYLES}</style>
+        <div style={{ background: '#FDF8F0', border: '1px solid #D4C4A8', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
+          <div style={{ position: 'absolute', inset: 5, border: '0.5px solid #EAE0CC', borderRadius: 3, pointerEvents: 'none', zIndex: 0 }} />
+          <div style={{ padding: '8px 12px 0', position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 7, fontWeight: 700, letterSpacing: 3, color: '#C8B8A0' }}>POSTCARD</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {unopened.length > 1 && (
+                <span style={{ fontSize: 10, color: '#B0A8A0', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>{currentIndex + 1} of {unopened.length}</span>
+              )}
+              <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', fontSize: 18, color: '#B0A8A0', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', position: 'relative', zIndex: 1 }}>
+            {/* Message side */}
+            <div style={{ flex: 1, padding: '4px 12px 12px' }}>
+              <div style={{ borderBottom: '0.5px solid #EAE0CC', paddingBottom: 4, marginBottom: 2 }}>
+                <span style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: '#C9A96E', fontStyle: 'italic' }}>from {partnerName} —</span>
+                <span style={{ fontFamily: 'Georgia, serif', fontSize: 10, color: '#B0A8A0', fontStyle: 'italic', marginLeft: 8 }}>{formatTimeAgo(current.created_at)}</span>
+              </div>
+
+              {/* Content on ruled lines */}
+              <div style={{ paddingTop: 6, backgroundImage: 'repeating-linear-gradient(transparent, transparent 19px, #EAE0CC 19px, #EAE0CC 20px)', backgroundSize: '100% 20px', minHeight: 80 }}>
+                {renderFlirtContent(current)}
+              </div>
+
+              {unopened.length > 1 && (
+                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                  {currentIndex > 0 && <button onClick={() => setCurrentIndex(i => i - 1)} style={{ background: 'none', border: 'none', fontSize: 11, color: '#B0A8A0', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic', padding: 0 }}>← prev</button>}
+                  {currentIndex < unopened.length - 1 && <button onClick={() => setCurrentIndex(i => i + 1)} style={{ background: 'none', border: 'none', fontSize: 11, color: '#B0A8A0', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic', padding: 0 }}>next →</button>}
+                </div>
+              )}
+            </div>
+
+            {/* Address side with hold-to-react stamp */}
+            <AddressSide
+              toName={userName}
+              stampSealed={false}
+              stampProgress={holdProgress}
+              onStampDown={startHold}
+              onStampUp={endHold}
+              showReaction={true}
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // SENT STATE
+  if (view === 'sent') {
+    return (
+      <div style={{ margin: '0 0 16px' }}>
+        <style>{POSTCARD_STYLES}</style>
+        <div style={{ background: '#FAFAF7', border: '1px solid #DDD5C8', borderRadius: 6, overflow: 'hidden' }}>
+          <div style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '0.5px solid #EEE8DC' }}>
+            <span style={{ fontSize: 7, fontWeight: 700, letterSpacing: 3, color: '#C8B8A0' }}>SENT</span>
+            <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', fontSize: 18, color: '#B0A8A0', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
+          </div>
+          {sent.map(f => (
+            <div key={f.id} style={{ padding: '10px 12px', borderBottom: '0.5px solid #EEE8DC', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <span style={{ fontSize: 13, color: '#2A2420', fontFamily: f.type === 'word' || f.type === 'memory' ? 'Georgia, serif' : 'system-ui' }}>
+                  {f.type === 'song' ? (f.metadata?.track_name || 'Song') : f.type === 'found' ? (f.metadata?.title || f.metadata?.domain || 'Link') : f.type === 'photo' ? 'Photo' : f.type === 'gif' ? 'GIF' : f.content?.substring(0, 40)}
+                </span>
+                <span style={{ fontSize: 11, color: '#B0A8A0', display: 'block', marginTop: 2, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>{formatTimeAgo(f.created_at)}</span>
+              </div>
+              {/* Stamp reaction indicator */}
+              <div style={{ width: 28, height: 32, borderRadius: 2, background: f.reaction ? '#C9A96E' : '#F5F0E8', border: f.reaction ? '1.5px dashed rgba(255,255,255,0.5)' : '1px dashed #D4C4A8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: f.reaction ? '#FDF8F0' : 'transparent', border: f.reaction ? 'none' : '1px solid #D4C4A8' }} />
+              </div>
+            </div>
+          ))}
+          <div style={{ padding: '12px' }}>
+            <button onClick={() => setView('drop')} style={{ width: '100%', padding: '10px', background: '#FFF8F4', border: '0.5px solid #E8E0D8', borderRadius: 8, fontSize: 13, color: '#C4694F', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>
+              send another →
+            </button>
+          </div>
         </div>
       </div>
     )
