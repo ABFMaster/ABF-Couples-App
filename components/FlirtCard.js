@@ -207,17 +207,14 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
 
               {/* Main envelope SVG */}
               <svg width="100%" height="140" viewBox="0 0 320 140" style={{ position: 'relative', zIndex: 2, display: 'block' }}>
-                {/* Envelope body */}
-                <rect x="0" y="0" width="320" height="140" rx="8" fill={hasUnseen ? "#FDF8F2" : "#FAFAF8"} stroke={hasUnseen ? "#D4C4A8" : "#E8E0D8"} strokeWidth="0.5"/>
-
                 {/* Bottom left fold */}
-                <path d="M 0 140 L 0 55 L 152 100 Z" fill="#EDE8DE" stroke="#E0D8CC" strokeWidth="0.5"/>
+                <path d="M 0 140 L 0 75 L 130 140 Z" fill="#EDE8DE" stroke="#E0D8CC" strokeWidth="0.5"/>
 
                 {/* Bottom right fold */}
-                <path d="M 320 140 L 320 55 L 168 100 Z" fill="#EDE8DE" stroke="#E0D8CC" strokeWidth="0.5"/>
+                <path d="M 320 140 L 320 75 L 190 140 Z" fill="#EDE8DE" stroke="#E0D8CC" strokeWidth="0.5"/>
 
                 {/* Bottom center fold line */}
-                <path d="M 0 140 L 160 95 L 320 140" fill="none" stroke="#D8D0C4" strokeWidth="0.5"/>
+                <path d="M 0 140 L 160 105 L 320 140" fill="none" stroke="#D8D0C4" strokeWidth="0.5"/>
 
                 {hasUnseen ? (
                   /* Sealed flap — pointing down */
