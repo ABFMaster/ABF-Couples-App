@@ -162,72 +162,216 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
 
   // HOME STATE
   if (view === 'home') {
-    const hasUnopened = unopened.length > 0
-    const hasUnseen = unopened.filter(f => !f.opened_at).length > 0
     const unseenCount = unopened.filter(f => !f.opened_at).length
+    const hasUnseen = unseenCount > 0
 
     return (
       <div style={{ margin: '0 16px 16px' }}>
+        <style>{`
+          @keyframes sealPulse {
+            0%, 100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(201,169,110,0.4); }
+            50% { transform: scale(1.15); opacity: 0.85; box-shadow: 0 0 0 6px rgba(201,169,110,0); }
+          }
+          @keyframes envelopeFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-2px); }
+          }
+        `}</style>
+
         <div
-          onClick={() => hasUnopened ? setView('stack') : setView('drop')}
+          onClick={() => hasUnseen ? setView('stack') : setView('drop')}
           style={{
-            background: hasUnseen ? '#1C1F3A' : 'white',
-            border: hasUnseen ? 'none' : '0.5px solid #E8E0D8',
+            background: 'white',
+            border: '0.5px solid #E8E0D8',
             borderRadius: 16,
-            padding: '14px 18px',
+            padding: '20px 18px 24px',
             cursor: 'pointer',
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            transition: 'background 0.3s'
+            gap: 12,
+            position: 'relative'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
-              background: '#C9A96E',
-              flexShrink: 0,
-              animation: hasUnseen ? 'pulse 2s infinite' : 'none'
-            }} />
+          {/* Partner name label */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{
-              fontSize: 14,
-              color: hasUnseen ? 'white' : '#6B6560',
-              fontFamily: 'Georgia, serif',
-              fontStyle: hasUnseen ? 'italic' : 'normal'
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.1em',
+              color: '#C9A96E',
+              textTransform: 'uppercase'
             }}>
-              {hasUnseen
-                ? `${partnerName} left something for you.`
-                : `Flirt with ${partnerName}.`
-              }
+              {hasUnseen ? `From ${partnerName}` : `Flirt with ${partnerName}`}
             </span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+
+          {/* Envelope object */}
+          <div style={{
+            position: 'relative',
+            width: 180,
+            height: 120,
+            animation: hasUnseen ? 'envelopeFloat 3s ease-in-out infinite' : 'none'
+          }}>
+            {/* Stack shadows for multiple flirts */}
             {unseenCount > 1 && (
+              <>
+                <div style={{
+                  position: 'absolute',
+                  width: 180,
+                  height: 120,
+                  background: '#F0E8DC',
+                  borderRadius: 8,
+                  top: -6,
+                  left: 4,
+                  border: '0.5px solid #E0D4C4',
+                  zIndex: 1
+                }} />
+                {unseenCount > 2 && (
+                  <div style={{
+                    position: 'absolute',
+                    width: 180,
+                    height: 120,
+                    background: '#EDE4D6',
+                    borderRadius: 8,
+                    top: -12,
+                    left: 8,
+                    border: '0.5px solid #DDD0BC',
+                    zIndex: 0
+                  }} />
+                )}
+              </>
+            )}
+
+            {/* Main envelope body */}
+            <div style={{
+              position: 'absolute',
+              width: 180,
+              height: 120,
+              background: hasUnseen ? '#FDF8F2' : '#FAFAF8',
+              borderRadius: 8,
+              border: `0.5px solid ${hasUnseen ? '#D4C4A8' : '#E8E0D8'}`,
+              zIndex: 2,
+              overflow: 'hidden',
+              top: 0,
+              left: 0
+            }}>
+
+              {/* Envelope flap — triangle pointing down for sealed, up for open */}
               <div style={{
-                width: 20,
-                height: 20,
-                borderRadius: '50%',
-                background: '#C9A96E',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 11,
-                fontWeight: 700,
-                color: 'white'
-              }}>{unseenCount}</div>
-            )}
-            {!hasUnseen && sent.length > 0 && (
-              <button
-                onClick={e => { e.stopPropagation(); setView('sent') }}
-                style={{ background: 'none', border: 'none', fontSize: 12, color: '#B0A8A0', cursor: 'pointer', padding: 0 }}
-              >sent</button>
-            )}
-            <span style={{ color: hasUnseen ? 'rgba(255,255,255,0.4)' : '#B0A8A0', fontSize: 18 }}>›</span>
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: 0,
+                height: 0,
+                borderLeft: '90px solid transparent',
+                borderRight: '90px solid transparent',
+                borderTop: hasUnseen
+                  ? `52px solid ${unseenCount > 1 ? '#EDE0C8' : '#EDE8DE'}`
+                  : 'none',
+                borderBottom: !hasUnseen
+                  ? `52px solid #F0EBE2`
+                  : 'none',
+                zIndex: 3
+              }} />
+
+              {/* Bottom fold lines */}
+              <div style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                width: 0,
+                height: 0,
+                borderLeft: '90px solid #EDE8DE',
+                borderRight: '90px solid transparent',
+                borderBottom: '48px solid transparent',
+                zIndex: 3
+              }} />
+              <div style={{
+                position: 'absolute',
+                bottom: 0,
+                right: 0,
+                width: 0,
+                height: 0,
+                borderRight: '90px solid #EDE8DE',
+                borderLeft: '90px solid transparent',
+                borderBottom: '48px solid transparent',
+                zIndex: 3
+              }} />
+
+              {/* Empty state text inside envelope */}
+              {!hasUnseen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  textAlign: 'center',
+                  zIndex: 4,
+                  marginTop: 8
+                }}>
+                  <span style={{
+                    fontSize: 12,
+                    color: '#B0A8A0',
+                    fontFamily: 'Georgia, serif',
+                    fontStyle: 'italic'
+                  }}>leave something...</span>
+                </div>
+              )}
+            </div>
+
+            {/* Wax seal — gold dot on flap fold */}
+            <div style={{
+              position: 'absolute',
+              top: hasUnseen ? 38 : 'auto',
+              bottom: hasUnseen ? 'auto' : 38,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: 18,
+              height: 18,
+              borderRadius: '50%',
+              background: '#C9A96E',
+              zIndex: 5,
+              animation: hasUnseen ? 'sealPulse 2.5s ease-in-out infinite' : 'none',
+              boxShadow: hasUnseen ? '0 1px 4px rgba(0,0,0,0.15)' : 'none'
+            }}>
+              {/* Badge count */}
+              {unseenCount > 1 && (
+                <div style={{
+                  position: 'absolute',
+                  top: -8,
+                  right: -8,
+                  width: 18,
+                  height: 18,
+                  borderRadius: '50%',
+                  background: '#C4694F',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: 'white'
+                }}>{unseenCount}</div>
+              )}
+            </div>
           </div>
+
+          {/* Sent indicator */}
+          {!hasUnseen && sent.length > 0 && (
+            <button
+              onClick={e => { e.stopPropagation(); setView('sent') }}
+              style={{
+                background: 'none',
+                border: 'none',
+                fontSize: 11,
+                color: '#B0A8A0',
+                cursor: 'pointer',
+                padding: 0,
+                letterSpacing: '0.04em'
+              }}
+            >view sent →</button>
+          )}
         </div>
-        <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }`}</style>
       </div>
     )
   }
