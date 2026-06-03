@@ -307,7 +307,10 @@ function AssessmentContent() {
 
           {/* Module header card */}
           <div style={{ background: '#1C1410', borderRadius: 16, padding: '28px 24px', marginBottom: 32 }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>{currentModule.icon}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 20 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#C4AA87', flexShrink: 0 }} />
+              <span style={{ fontSize: 10, fontFamily: "'DM Sans', sans-serif", letterSpacing: '0.2em', color: '#C4AA87', fontWeight: 500 }}>NORA</span>
+            </div>
             <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 28, fontWeight: 400, color: '#FAF6F0', margin: '0 0 8px' }}>
               {currentModule.title}
             </h1>
@@ -326,7 +329,7 @@ function AssessmentContent() {
             onClick={() => setModuleIntroShown(true)}
             style={{ width: '100%', background: '#C4714A', color: '#FAF6F0', border: 'none', borderRadius: 12, padding: 16, fontSize: 15, fontFamily: "'DM Sans', sans-serif", fontWeight: 500, cursor: 'pointer' }}
           >
-            Begin
+            I'm ready →
           </button>
 
           {/* Attribution */}
