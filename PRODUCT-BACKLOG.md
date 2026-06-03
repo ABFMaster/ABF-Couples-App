@@ -1,66 +1,203 @@
-# ABF Product Backlog — Updated 2026-05-14
+# ABF Product Backlog — Updated 2026-06-03
 
-## FLIRTS
-### Shipped
-- [x] Postcard redesign — full postcard UI, type selector, Spotify search, GIF search, photo upload, OG preview, Mail it CTA, hold-to-react stamp, sent view 2026-06-02
-- [x] New flirts table — clean schema, flirts_legacy preserved
-- [x] Four API routes — inbox, send, open, react
-- [x] Old FlirtSheet removed
+## HOW TO USE THIS BACKLOG
+- Sprints are sequenced — work top to bottom within each sprint
+- Parked items are real ideas, not dead ones — revisit at the right time
+- Any idea mentioned in session gets a one-liner added before the session closes
+- Test accounts: use matt+test@ email for onboarding work, never test on primary accounts
 
-### Backlog
-- [ ] Stamp visual polish — dotted border reads as stamp but needs perforation refinement. Research CSS/SVG perforation patterns.
-- [ ] Memory type — Timeline picker integration. User selects a memory from their Timeline to send as a flirt.
-- [ ] GIF search — currently uses public Giphy API key, needs proper key management
-- [ ] Reaction system — hold-to-react working, consider A/B test with users
-- [ ] Nora reads flirt content — FLIRT_SENT signal passes content/metadata to updateNoraMemory for pattern observation
+---
 
-## BUGS — ACTIVE (found in testing, fix before beta)
-- [x] Spark reaction (Made me Smile, Keep It Coming) never persists — local state only, never saved to DB — FIXED 2026-05-19
-- [x] Nora home prompt showing wrong content on wrong days — Bet/Ritual copy appearing on incorrect days — FIXED force-dynamic 2026-05-14, hero card rewritten 2026-05-19
+## SPRINT 1 — ONBOARDING OVERHAUL (BETA GATE)
+Nothing ships to strangers until this sprint is done. A new couple needs to land, feel Nora's presence immediately, complete setup, and feel like the app already knows them before they hit the dashboard.
+
+### 1A — Test Infrastructure (do first)
+- [ ] Create dedicated test Supabase accounts (matt+test@, cass+test@) for onboarding work — never test onboarding on primary accounts
+- [ ] Confirm test accounts can be fully reset without affecting Matt/Cass production data
+
+### 1B — Visual Unification
+- [ ] Assessment page visual pass — currently Tailwind/coral (#E8614D), needs to match ABF warm aesthetic (#FAF6F0, #C4714A, Cormorant Garamond headers, DM Sans body)
+- [ ] Ranking question UX — replace <select> dropdowns with drag-and-drop or tap-to-rank interaction (mobile-first)
+- [ ] Welcome carousel — add Nora's Day, The Bet, The Notice, Weekly Reflection to feature cards (currently only 4 features shown)
+- [ ] Confirm /nora-avatar.svg asset exists and renders correctly
+- [ ] Partner invite flow redesign — what Partner 2 sees is the conversion moment, needs to be beautiful and compelling
+
+### 1C — Nora Voice In Onboarding
+- [ ] Nora frames every step — she introduces herself, contextualizes the assessment, reacts to completion. Zero form-collection energy.
+- [ ] Assessment intro — Nora explains why she's asking, not just what she's asking
+- [ ] Assessment completion — Nora reacts to results with one specific observation before routing to dashboard
+- [ ] Remove the two empty isOnboarding blocks (lines 183-184, 266-267 in assessment/page.js) — implement or delete
+
+### 1D — Important Dates Capture
+- [ ] Add important dates step to onboarding — "When did you meet?", "First date?", "First kiss?", "Anniversary?" — each answer auto-creates a timeline_event row with correct event_type
+- [ ] Wire date capture to Timeline — entries appear immediately in the Timeline tab
+- [ ] These dates become the first seeds of Nora's memory — wire to updateNoraMemory with SIGNAL_TYPES.TIMELINE_EVENT
+
+### 1E — Photo Anchors
+- [ ] Add photo prompt step to onboarding — "Where did you have your first date?", "Where did you meet?" → fetch via Places API or user upload
+- [ ] Store as permanent couple visual identity anchors in Supabase Storage
+- [ ] Use throughout app — dashboard ambient visuals, Timeline entries, Nora context
+- [ ] If user skips photo, gracefully defer — "You can add this later in your Timeline"
+
+### 1F — Data Wiring (assessment data actually feeds Nora)
+- [ ] completeAssessment calls updateNoraMemory — assessment completion is a high-signal event, Nora should know immediately
+- [ ] Hero card calls getNoraBriefing — currently reads nora_memory directly but skips assessment data entirely
+- [ ] attachment_style and conflict_style reliably written to user_profiles on assessment completion (currently sometimes missing — manually patched in SQL)
+- [ ] Hobbies and date preferences wired into Nora context — collected during onboarding, currently never read by any Nora prompt
+- [ ] Assessment questions Gottman/EFT grounded — current conflict style and attachment capture is thin. Requires a dedicated content sprint with research. Do not rush this.
+
+### 1G — Solo User Arc (minimum viable)
+- [ ] When Partner 2 hasn't joined yet, Partner 1 needs real value — not a blank state
+- [ ] Nora speaks to the individual meaningfully in this state — "I'm getting to know you while you wait"
+- [ ] Relationship Room foundation — Partner 1 can start building the couple's visual identity solo (photo anchors, important dates) before Partner 2 joins
+- [ ] Partner invite flow — Nora helps draft the invite, shows Partner 2 what the coupled experience looks like
+
+---
+
+## SPRINT 2 — NORA SIGNAL INTEGRITY
+Nora needs to be eating everything she should be eating. Until this sprint is done, Nora will feel generic to new couples who haven't built history yet.
+
+### 2A — Flirt Signal Gaps
+- [ ] FLIRT_SENT does not increment signal counts — Nora Arc never learns from flirt behavior. Add FLIRT_SENT to INDIVIDUAL_SIGNAL_WEIGHTS and COUPLE_SIGNAL_WEIGHTS.
+- [ ] FLIRT_RECEIVED signal type doesn't exist — reactions don't feed Nora at all. Create FLIRT_RECEIVED signal, call updateNoraMemory from flirts/react route.
+- [ ] couple_notes blind to all flirt activity — FLIRT_SENT absent from SHARED_SIGNALS. Add and define couple-level lens.
+- [ ] Both user notes currently update from sender perspective only — receiver gets notes written about a flirt they didn't send. Audit whether this is intentional or a latent bug.
+
+### 2B — Timeline Signal Gaps
+- [ ] Game Room sessions (non-Rabbit Hole modes) don't create timeline_events — Hot Take, The Challenge, The Call completions should auto-create entries
+- [ ] conversation event_type exists in config but no insert path creates it — wire or remove
+- [ ] song event_type in timeline config is orphaned — songs come through as shared_item with item_subtype=song, not event_type=song. Align config with reality or build the insert path.
+- [ ] Flirt songs sent — no timeline wire. Decide: should a sent song flirt create a timeline entry?
+
+### 2C — Nora Vision Commentary (backlogged feature)
+- [ ] When a flirt with an image is sent (photo type, or memory type with image_url), make a proper Anthropic vision API call with the image as a content block
+- [ ] Nora actually sees the photo and writes a specific observation into user notes
+- [ ] Prerequisite: confirm Supabase Storage photo URLs are publicly accessible (required for Anthropic vision API)
+- [ ] This is the correct long-term fix — image URLs as text strings in prompts (now sanitized) was never the right approach
+
+### 2D — Assessment → Memory Wire
+- [ ] Assessment completion should fire updateNoraMemory with full profile data as a PROFILE_UPDATE signal
+- [ ] Couples debrief completion should fire a couple-level signal
+- [ ] Structured facts from couple_notes.structured_facts not surfacing in hero card — audit and wire
+
+---
+
+## SPRINT 3 — POLISH & FUNCTIONAL CLEANUP
+Every screen a stranger touches needs to feel intentional. Nothing janky, nothing confusing.
+
+### 3A — Active Bugs (fix before beta)
 - [ ] Location images not always showing on date banners and Next Up card
-- [ ] Ritual "We did it" not showing progress on Us page after completion
-- [x] No Nora verdict on Spark — FIXED: removed await from all push/send calls, verified working 2026-05-13
-- [x] Push delivery logging — push_log table built, all 18 peer-to-peer routes labeled, all 6 cron routes labeled 2026-05-21
-- [x] Multi-device push — last device wins fix deployed 2026-05-21
-- [x] Spark reaction UX — tapping a reaction closes tabs instead of highlighting selection. Cannot change reaction after first tap. Needs persistent selected state with visual highlight.
-- [x] Spark submit button no loading state — "Share my answer" shows no feedback for 2-3 seconds after tap
-- [x] Nora hero card wrong day content — force-dynamic fix deployed 2026-05-14, FIXED 2026-05-19
-- [ ] Bet verdict tone — misreads self-deprecating humor as vulnerability (Cass: "I am already my mother" read as confession not self-aware humor). Needs prompt tuning.
 - [ ] Ritual card resets to pre-state on page reload — shows checkin buttons again after completion
-- [x] Weekly Reflection not triggering — hour gate removed, day gate moved to call site 2026-05-21
-- [ ] Nora standalone synthesis cron route missing — Sunday synthesis will 404, build before 2026-05-25
-- [x] Push wrong person name — FIXED 2026-05-19 (per-user reengagement copy), verify Wednesday
-- [x] Nora privacy leak — FIXED 2026-05-19 (NORA_CONVERSATION excluded from couple_notes, couple_notes cleared)
-- [ ] Google Cloud free trial ended — Places API breaks in 30 days, upgrade required URGENT
+- [ ] Ritual "We did it" not showing progress on Us page after completion
+- [ ] Bet verdict tone — misreads self-deprecating humor as vulnerability. Needs prompt tuning.
+- [ ] Google Cloud free trial ended — Places API breaks in 30 days. Upgrade required. URGENT.
+- [ ] Nora standalone synthesis cron route — build before Sunday synthesis 404s
 
-## BETA READINESS (do first)
-- [x] Onboarding flow visual pass — onboarding/page.js, onboarding/welcome/page.js
-- [x] Connect page visual pass — app/connect/page.js
-- [x] Dead page audit and cleanup — mixtape, timeline, partner-insights, learn, results, settings
-- [x] dates/[id] visual pass — date detail page matches builder aesthetic
-- [x] Privacy communication — onboarding screen, How Nora works in settings, first-session acknowledgment
-- [x] Push delivery logging — full visibility into all push attempts
-- [ ] Full end-to-end test session with Cass — every game mode, every daily activity
-- [x] Remove cron diagnostic logs after push confirmed working
-- [ ] Run Nora memory test after 2 weeks real usage
-- [x] Nora hero card — memory-powered pre/post modes, hero_cache, auto-invalidation
-- [x] Me tab — Notebook, Practices, synthesis card, nav renamed
+### 3B — Nora Voice Quality Pass
+- [ ] Reduce response restatement — Nora echoes back what the user said before adding anything
+- [ ] Vary entry points — too many responses start the same way
+- [ ] Cut affirmation formula — substance before validation, not after
+- [ ] Closing questions should open new territory, not summarize what was just said
+- [ ] Verdict quality pass — Nora addresses couple as a unit in verdicts. Needs a layer speaking to what each individual's choices reveal specifically.
 
-## NORA STANDALONE — LAUNCHED 2026-05-19
-- Live: https://nora-app-mauve.vercel.app
-- Repo: ABFMaster/Nora-App
-- Supabase: nora-standalone project
-- Status: functional, ready for friends/family test group
-- Pending: synthesis cron route, feedback verification
-- Invite message: drafted and ready to send
-- Test group: Cass + 2-5 friends/family, direct send
+### 3C — Weekly Rhythm Visual Pass
+- [ ] Weekly Reflection page — outdated design, needs full redesign
+- [ ] Weekly Reflection history — no history page exists, users can't see past reflections
+- [ ] Timeline polish — design pass across all card layouts and event types
+- [ ] Trips polish — detail page needs visual pass
 
-## IMAGE EXPANSION
-- [x] Place photo permanent storage — Supabase Storage bucket 'date-photos', lib/place-photo.js, wired into date builder and edit page, backfill script run 2026-05-14
-- [ ] Relationship Room — onboarding photo prompts ("Where did you meet?", "Your first date?"), source via Places API or user upload, store as couple visual identity anchors. Solo user arc: build before partner joins.
-- [ ] Next Up card photo — show first stop photo on dashboard Next Up card when date is planned
-- [ ] Date suggestion cards — surface real place photos on Ideas for You Two suggestion cards
-- [ ] Image expansion sprint — surface permanent place photos anywhere a visual anchor elevates experience
+### 3D — Stamp Perforation Polish
+- [ ] FlirtCard stamp visual — reads as stamp but needs perforation refinement. Research CSS/SVG perforation patterns.
+
+---
+
+## SPRINT 4 — FULL CASS END-TO-END TEST
+Nothing moves to external beta until this passes.
+
+- [ ] Every game mode — Hot Take, Rabbit Hole, The Challenge (all sub-modes), The Call
+- [ ] Every daily card — Spark, Bet, The Notice, Nora's Day, Ritual, Game Room, Weekly Reflection
+- [ ] Flirts — send/receive all 6 types (song, word, photo, gif, found, memory), reactions
+- [ ] Nora — ai-coach full conversation, hero card pre/post modes
+- [ ] Timeline — add event, view, filter
+- [ ] Date Night — build a date, view it, complete it, add to Timeline
+- [ ] Us tab — all sections, Ahead list, shared items
+- [ ] Me tab — Notebook, Practices, settings
+- [ ] Push notifications — confirm all cron and peer-to-peer pushes fire correctly
+- [ ] Onboarding — full flow on test account from landing to dashboard
+
+---
+
+## GAME ROOM — UNBUILT MODES
+### The Remake
+- [ ] Designed, not built — own sprint, paired with Us page redesign
+- [ ] Pulls from couple's shared history (Timeline, flirts, dates) and recreates or reacts to it
+- [ ] Needs onboarding data (important dates, photo anchors) to work well — do after Sprint 1
+
+### The Hunt
+- [ ] Designed, not built
+- [ ] Hybrid of Option B (Nora sends you somewhere specific based on what she knows) and Option C (mild challenge outside comfort zone — self-expansion effect)
+- [ ] Uses Maps API, couple's location history, and relationship memory
+- [ ] Needs photo capture — best on native app, deferred until App Store sprint
+
+### Rank UX Fix
+- [ ] The Challenge → Rank mode: mechanic and DB working correctly, UI doesn't communicate the two-round reconciliation clearly. Users confused about what's happening between rounds.
+
+---
+
+## NORA INTELLIGENCE — DEEPER FEATURES
+These are designed and validated in product thinking. Build after core signal integrity is solid.
+
+### Tension Intelligence Arc (three-sprint arc)
+- [ ] Sprint 1 — Silent signal detection: Nora notices disengagement patterns (one partner stops answering, short answers after long ones, topic avoidance) without surfacing anything to the couple
+- [ ] Sprint 2 — Gentle surface: "I noticed you both dropped off after X. Is that something you'd want to talk through?" Mutual opt-in only. Both responses respected.
+- [ ] Sprint 3 — Nora-guided post-tension conversation: structured but not scripted. Nora holds context, opens conversation, follows couple's lead.
+- [ ] Sprint 4 — Four Horsemen detection: criticism, contempt, defensiveness, stonewalling patterns across sessions
+
+### Repair / Rupture Mechanic
+- [ ] "Rough patch" mode — private signal either partner can send to Nora
+- [ ] Post-conflict Nora check-in — not intrusive, not diagnostic, just present
+- [ ] Repair prompt library: specific to conflict type, attachment pairing, what was surfaced. Draws from Gottman repair attempt research.
+- [ ] This is also a Trojan horse for Nora chat habit formation
+
+### Individual Wellbeing Pulse
+- [ ] Weekly one-word check-in before Spark reveal — "Before we get into this — how are you doing? One word."
+- [ ] Free text, no scale, no emoji picker
+- [ ] If word is heavy (exhausted, anxious, disconnected) Nora adjusts session tone
+- [ ] Partner never sees it. Feeds nora_memory as individual wellbeing signal.
+
+### Shared Meaning / Us in 5 Years
+- [ ] Builds over time via Sunday Reflection prompts — monthly/quarterly/yearly cadence
+- [ ] Starts broad ("Where do you see yourselves?"), gets specific over time ("We live in Austin with 2 dogs...")
+- [ ] Becomes a living document Nora references when making suggestions
+- [ ] Not a form — emerges from conversation
+
+### Love Language Expression Tracking
+- [ ] Nora notices when flirts, dates, or gestures align with partner's love language
+- [ ] Lightweight prompt: suggest expression in partner's love language when relevant
+- [ ] Signal feeds nora_memory — Nora learns what expressions land vs. miss
+
+### Gratitude Send
+- [ ] Lightweight flirt-adjacent mechanic — quick organic acknowledgment, not "Nora said send this"
+- [ ] Could live in Flirts as a type, or as a standalone moment mechanic
+- [ ] No AI generation — user writes it, Nora notices it happened
+
+### Nora Named Address Unlock
+- [ ] Post-beta feature. Nora earns right to address individuals by name as couple history deepens.
+- [ ] Grounded in Terry Real framework.
+- [ ] Boolean flag Nora sets herself in nora_memory when confident enough in individual read.
+- [ ] Not built until beta validates memory depth.
+
+---
+
+## RELATIONSHIP ROOM (IMAGE EXPANSION)
+- [ ] Onboarding photo prompts — "Where did you meet?", "Your first date?" → Places API fetch or user upload → stored as permanent couple visual identity anchors
+- [ ] Photo bucket — dedicated upload space in Us tab, no event required, just "photos of us"
+- [ ] Nora pulls contextually — surfaces a photo from two summers ago tied to today's Spark or a specific memory
+- [ ] Next Up card photo — show first stop photo on dashboard when date is planned
+- [ ] Date suggestion cards — surface real place photos on Ideas for You Two cards
+- [ ] Timeline entries get richer visual treatment when photo anchors exist
+
+---
 
 ## SPRINT K — DATE NIGHT (in progress)
 - [ ] K2: Nora intelligence layer — vibe selection from couple_notes, "why this" one-liner per suggestion
@@ -69,250 +206,75 @@
 - [ ] K3: In-moment photo capture tied to stop
 - [ ] K3: Post-date Nora synthesis
 - [ ] K4: Co-creation — partner can suggest/add stops before date locks
-- [ ] nearbysearch → Places API New migration (watchlist — works now, will break eventually)
+- [ ] nearbysearch → Places API New migration (works now, will break eventually)
 - [ ] Backfill photo_url on custom_dates stops
-- [ ] Wire FLIRT_SENT on individual send after Flirts redesign
+- [ ] Google Cloud billing upgrade — free trial ended, Places API breaks in 30 days URGENT
 
-### Google Maps Platform Upgrades (Cloud Next 2026)
-These were announced at Google Cloud Next and are directly relevant to Date Night's roadmap.
+---
 
-**New PlaceTypes (~200 new granular categories)**
-- What it is: granular place types like specific cuisine, activity types, venue specifics — far more precise than current broad types (restaurant, bar, park)
-- Why it matters: Nora's date suggestions become more specific. Instead of "restaurant" she can suggest "izakaya" or "rooftop bar" or "jazz club" — categories that match couple interests
-- What to wire: Update CATEGORY_TO_GOOGLE_TYPE map in dates/suggestions/route.js and CATEGORY_CHIPS in dates/custom/page.js to use new granular types. Map couple interests from game room onboarding to specific place types for Nora intelligence layer
-- Priority: K2 — wire during Nora intelligence layer sprint
-- Effort: Medium — mapping exercise + API update
+## WEEKLY RHYTHM — REMAINING GAPS
+- [ ] Bet questions categorization — add category field (preferences/likely/reactions/confessions) to all 120 questions in lib/bet-questions.js. question_category column exists in bets table, nullable.
+- [ ] Spark State B individual Nora insight — deployed, needs real-world validation with new couples
+- [ ] Bet State B individual Nora insight — deployed, needs real-world validation
+- [ ] Love language flirt mode — Nora suggests expression in partner's love language when relevant
 
-**Search Along Route**
-- What it is: discover points of interest along a route between origin and destination, up to 13 waypoints
-- Why it matters: in-date experience — "you're heading to the concert, here's a dinner stop 10 minutes off your route" — this is the composable date architecture we designed
-- What to wire: new /api/dates/along-route endpoint using Grounding with Google Maps, called when a date has 2+ stops with geo coordinates. Surface in date detail view as "stops along your way" suggestions
-- Priority: K3 — in-date experience sprint
-- Effort: Medium-High — new route, new UI surface in dates/[id]/page.js
-
-**Grounding Lite via MCP (Google Maps MCP server)**
-- What it is: lightweight MCP integration giving AI agents access to Places, Routes, and Weather data
-- Why it matters: Nora date concept — instead of pre-fetching suggestions, Nora calls Google Maps as a tool during date planning. "Find me a jazz bar within 10 minutes of the venue" becomes a real-time tool call
-- What to wire: integrate Google Maps MCP server into /api/dates/suggestions route, allow Nora to make live tool calls for date planning rather than static category fetches
-- Priority: K2/K3 — evaluate during Nora date concept sprint
-- Effort: High — architectural change to how suggestions work
-
-**3D Maps / Abstract Basemaps**
-- What it is: photorealistic 3D maps with brand customization, toggleable between 3D and abstract views
-- Why it matters: date detail page and builder map strip could be significantly more visually compelling — showing the date route in 3D would make the "building a date" feeling tangible
-- What to wire: replace current flat Google Maps embed in dates/custom/page.js map strip and dates/[id]/page.js static map with 3D Maps for JavaScript. Apply ABF warm color palette as custom basemap
-- Priority: Post-K3 — polish sprint after core date functionality complete
-- Effort: Medium — SDK swap + styling
-
-**Places UI Kit**
-- What it is: ready-to-use component library powered by Google Maps Places data — pre-built place cards, search UI, etc.
-- Why it matters: could replace our custom NearbyCard component with Google's native place presentation — photos, hours, ratings, reviews all built in
-- What to wire: evaluate as replacement for NearbyCard in dates/custom/page.js. If visual quality exceeds current custom cards, swap out. If not, use only specific data fields
-- Priority: K2 evaluation — assess during Nora picks panel polish
-- Effort: Low-Medium — component evaluation and potential swap
-
-**Overall Date Night UX note:**
-These APIs don't fix UX — they enrich content. The current builder UX is functional but the discovery surface lacks depth and the detail pages lack the immersive quality that makes a date feel exciting before it happens. The right order: fix UX architecture first (K2/K3), then layer in richer map and place data to elevate the visual experience. 3D maps and Places UI Kit are polish that amplifies good UX — they cannot substitute for it.
+---
 
 ## SINGLE USER ARC
-- [ ] Nora individual insight in Spark State B — deployed, needs real-world validation
-- [ ] Nora individual insight in Bet State B — deployed, needs real-world validation
-- [ ] Solo experience when Partner 2 hasn't joined yet — Partner 1 needs value before couple is formed
-- [ ] Asymmetric engagement handling — when one partner consistently engages less, Nora adapts tone not content
+- [ ] Partner 2 hasn't joined — Partner 1 gets real value, not a blank state (see Sprint 1G)
+- [ ] Asymmetric engagement — when one partner consistently engages less, Nora adapts tone not content
+- [ ] Solo Nora session quality — Nora should feel useful and specific even without couple data
 
-## WEEKLY RHYTHM
-- [x] Monday — Spark
-- [x] Tuesday — The Bet
-- [x] Wednesday — The Notice (appreciation/gratitude, evening reveal)
-- [x] Thursday — Nora's Day (private observation, evening reveal)
-- [x] Friday — Ritual
-- [x] Saturday — Game Room
-- [x] Sunday — Weekly Reflection
-All days confirmed firing correctly in push_log.
+---
 
-## WEEKLY RHYTHM REDESIGN
-- [ ] Tuesday: Hot Take lite — async, simultaneous delivery, both get same questions
-- [ ] Thursday: Nora gap prompt — memory-powered question, fallback hierarchy (full memory → question bank → generic)
-- [ ] Individual wellbeing pulse — one word before Spark reveal, feeds Nora context
-- [ ] Love language flirt mode — flirt generator suggests expression in partner's love language
-- [ ] Weekly Reflection — rebuilt and live. Nora draws from Sparks, Bets, rituals, dates, nora_memory. Sunday cron generation. "Talk to Nora" handoff. Past reflections archive. Run Nora memory test after 2 weeks real usage to validate reflection quality.
+## API AUTH HARDENING (pre-launch)
+- [ ] 56 unprotected routes identified — audit and add Bearer JWT auth + force-dynamic to all
+- [ ] /api/assessment/insight has no auth guard — fix
+- [ ] Systematic pass: every new route must have force-dynamic, Bearer JWT auth, console.error in catch
 
-## ONBOARDING & TUTORIAL DESIGN SPRINT
-Status: Designed, not built. Requires dedicated session before implementation.
-
-### Core Philosophy (locked)
-- Nora is the guide — not tooltips, not carousels, not explainer screens
-- Education happens at moment of value, not upfront
-- Users go from "this seems cool" to "holy shit she can do that?" through experience
-- Nora never announces her own progression ("I know you better now") — she demonstrates it
-- Progression is felt, not named
-
-### Tutorial/Walkthrough Design (locked direction, not built)
-- No feature carousel upfront
-- No tooltip overlays
-- Contextual education: after first Spark reveal, after first Bet, etc — Nora delivers one sentence contextualizing what just happened
-- First week is a guided experience with Nora as narrator
-- Mock up before building — design first
-
-### Nora Introduction — Open Question
-How do we elegantly introduce Nora's abilities without scaring users?
-- She should be quiet about what she's doing (established principle)
-- But there is room to hint at her capabilities early — needs design
-- Balance: enough to spark curiosity, not enough to feel invasive
-- "This seems cool" → "holy shit she can do that?" arc
-- Needs dedicated design work before implementation
-
-### Daily Rhythm Introduction (direction locked)
-- Introduce several things on Day 1: Spark, Ritual, Game Room, Reflection
-- Expand on others as they arrive: Bet introduced Tuesday, Notice introduced Wednesday, Nora's Day introduced Thursday
-- Each new feature gets a Nora contextual introduction on first encounter
-
-### Day 1 vs Day 30 Hero Card (open)
-- Day 1: Nora is just getting started — curious, warm, building the picture
-- Day 30: Relationship is built, Nora is trusted counsel
-- Exact language and design to be determined in design sprint
-- Core principle: the progression is felt through specificity, not announced
-
-### The "Aha Moment" (open — requires design sprint)
-- Goal: first holy shit moment by Day 7 for engaged couples
-- Requires multiple moving parts working together
-- Nora's tier system, signal accumulation, hero card specificity all contribute
-- Need to design the guaranteed path to this moment
-- Questions to answer in design sprint:
-  - What is the specific moment we're designing toward?
-  - What has to happen in the first week to guarantee it?
-  - How do we design for it without making it feel manufactured?
-
-### Nora Arc Progression (open — requires design sprint)
-- Individual arc: 0-5 discovery, 6-15 pattern recognition, 16+ earned intimacy
-- Couple arc: 0-7 new together, 8-20 building context, 21+ deep familiarity
-- Signal definitions and thresholds locked (see NORA INTELLIGENCE section)
-- Tier context blocks drafted, reviewed against Voss/Gadney/Van Dam
-- Implementation ready pending design sprint sign-off
-
-### Pre-Build Checklist
-- [ ] Mock up tutorial flow
-- [ ] Design Nora introduction language for onboarding
-- [ ] Design Day 1 hero card language
-- [ ] Design contextual education sentences for each feature first-encounter
-- [ ] Define and design the guaranteed Day 7 aha moment path
-- [ ] Sign off on tier context blocks before implementation
-
-## NORA INTELLIGENCE
-- [x] Nora architecture unification — NORA_VOICE powers all surfaces 2026-05-21
-- [x] Verdict quality pass — all 7 routes have memory context, names used, find what they didn't say 2026-05-21
-- [ ] Nora named address unlock — post-beta, boolean flag Nora sets herself when confident enough
-- [ ] Four Horsemen detection — Tension Intelligence Arc Sprint 4
-- [ ] Weekly reflection data quality — system claims week-long observation but only 2 data points fed
-- [ ] Nora memory data flow audit — verify all signals accumulating correctly
-- [ ] Re-run Nora memory quality test after 2 weeks real usage
-- [x] Nora Relationship Arc — tier system live, signal counting, getNoraTierContext wired into ai-coach/hero card/Thursday 2026-06-01
-- [x] Nora hero card prompt pass — PRE mode rewritten, singular you enforced 2026-05-19
-- [x] Bet verdict prompt tuning — surgical ambiguity guard added, BET_REVEAL memory lens updated 2026-05-19
-
-## ALWAYS BE FEEDING — REMAINING GAPS
-- [ ] Wire FLIRT_SENT on individual flirt send (post Flirts redesign)
-- [ ] Manual timeline events via API routes (AddEventModal, date night write, Rabbit Hole) — currently client-side direct writes, low priority
-
-## NEW FEATURES — DESIGNED, NOT BUILT
-- [ ] Repair + rupture mechanic — private signal to Nora "things feel off", adjusts week's prompts silently
-- [ ] The Dream — shared meaning build on Us page, grows over time via Sunday Reflection prompts
-- [ ] Gratitude send — "Send a moment", free text, push notification, no AI, pure signal
-- [ ] Notice — one tap "I noticed you today" with optional one line, repurposes flirt infrastructure
-- [ ] Replay — Nora resurfaces past Been moment "Still true?" one tap yes/no
-- [ ] After Dark — locked section, mutual opt-in, full design sprint when core product validated
-- [ ] Individual wellbeing pulse — one word before Spark reveal, partner never sees it
-
-## TENSION INTELLIGENCE ARC
-- [ ] Sprint 1: Pre-game tier framing with mutual opt-in
-- [ ] Sprint 2: Silent signal detection (skip, stall, abandon tagged to question tier)
-- [ ] Sprint 3: Post-session Nora bridge for disengagement
-- [ ] Sprint 4: Four Horsemen detection in Nora chat
-
-## ENGAGEMENT & RETENTION
-- [ ] Personalized re-engagement push — deployed, validate effectiveness after beta
-- [ ] Peer-to-peer Spark invite — deployed, validate usage after beta
-- [ ] Game Room as re-engagement tool — Nora suggests game when couple goes quiet on Sparks
-- [ ] Push subscription deduplication on registration — prevent cross-account testing conflicts
-
-## PRE-BETA HARDENING (mostly done)
-- [x] Beta invite gate
-- [x] In-app feedback button
-- [x] Data deletion flow (App Store compliant)
-- [x] All push/send callers authenticated
-- [x] force-dynamic on cron route
-- [ ] GoTrueClient singleton — console warning, low priority
-- [ ] Invite-only signup fully tested end-to-end with real new user
+---
 
 ## PRE-APP STORE
-- [ ] Privacy policy
-- [ ] Terms of service
-- [ ] App Store assets — screenshots, description, preview video
-- [ ] iOS push notification permission flow language
-- [ ] Native app build (Expo/React Native or PWA wrapper)
-- [ ] Data deletion flow verification on App Store review
-- [ ] Solo user arc complete before App Store submission
+- [ ] App Store assets — icon, screenshots, preview video
+- [ ] Privacy Policy — public URL required for App Store submission
+- [ ] App Store description copy
+- [ ] TestFlight setup for beta distribution
+- [ ] Native push notification upgrade — PWA push works but native is more reliable
+- [ ] Photo capture for The Hunt — camera access, native app only
 
-## FLIRTS REDESIGN
-- [ ] Feature feels thin — full product discussion needed
-- [ ] Nora connection not designed
-- [ ] Love language flirt mode (lightweight addition to existing generator)
-- [ ] Gratitude send mechanism (could fold into flirts)
+---
 
 ## MONETIZATION (post-beta)
-- [ ] Define free vs paid tiers
-- [ ] Natural paywall moment — when does couple feel "we don't want to lose this"?
-- [ ] Subscription trigger design
-- [ ] After Dark as premium tier consideration
+- [ ] Pricing model decision — subscription tiers vs. one-time
+- [ ] After Dark — separate premium experience, mutual opt-in gate, own design sprint
+- [ ] Paywall placement — what's free, what's paid, how Nora's depth is the upsell
 
-## PARKING LOT — IDEAS
-- [ ] Nora named address unlock — post-beta feature
-- [ ] CAH licensing consideration
-- [ ] Photo bucket / biometric integration
-- [ ] Physical Bet card game
-- [ ] Weekly Reflection history view — /reflections page
-- [ ] Bet question categories — 120 questions need category field
-- [ ] Us in 5 Years / The Dream — designed above
-- [ ] Sexual intimacy / After Dark — product decision locked
-- [ ] Joint couple Nora session — both partners in same Nora conversation simultaneously. Review previous design conversations before building.
-- [ ] Nora context handoff system — universal pattern for launching Nora from any surface (reflection, verdict, Spark reveal, date debrief) with pre-loaded context. Nora opens conversation, not user.
-- [ ] Push delivery logging — log send attempts, endpoint, response code to push_log table
-- [ ] Us/Now dynamic presence sprint — day-aware, activity-aware content surfacing. Nora card responds to what happened this week not just the schedule.
-- [ ] Nora Relationship Arc — therapist-informed rapport building across first 3 weeks
+---
+
+## PARKING LOT — REAL IDEAS, NOT DEAD
+- [ ] CAH Licensing Partnership — Cards Against Humanity x ABF. Their cards, our couples data, Nora as host. Personalized by conflict/attachment pairing. Target when 1,000+ active couples.
+- [ ] The Bet — physical card game version. Print-on-demand once mechanic validated in-app.
+- [ ] Biometric integration — HRV as Nora signal for stress/arousal context. Native app only.
+- [ ] Learn hub — article feed, books, podcasts. Content curation feature. Revisit post-beta.
+- [ ] Dream Trip — shelf properly, let Ahead handle travel for now. Revisit when photo/memory richer.
+- [ ] Giphy production key — blocked externally, follow up when ready for App Store.
+
+---
 
 ## TECHNICAL DEBT
-- [ ] GoTrueClient multiple instances — parked
-- [ ] nearbysearch deprecation watchlist
-- [ ] Dead pages: mixtape, timeline, partner-insights, learn, results, settings — audit and delete
-- [ ] Cron diagnostic logs — remove after push confirmed working
-- [x] conversation-starters route has no auth guard (any caller can trigger)
-- [x] Multi-device push deduplication — last device wins 2026-05-21
-- [x] Push route labels — all 18 peer-to-peer + 6 cron call sites labeled 2026-05-21
-- [ ] window.location usage in dashboard/page.js and us/page.js — should use useSearchParams with Suspense wrapper
-- [ ] relationship_points written directly from client components (FlirtView, FlirtComposer) — should go through API route
-- [ ] Pre-App Store hardening sprint — add Bearer JWT auth to all 56 unprotected API routes
-- [x] force-dynamic missing from all API routes — FIXED 2026-05-14, added to all 68 routes
-- [ ] New API route checklist — every new route must include: export const dynamic = 'force-dynamic', Bearer JWT auth, console.error in catch only (no console.log)
-- [ ] Nora standalone cron route — build /api/cron/scheduled-tasks in Nora-App before Sunday 2026-05-25
-- [ ] hero_cache type constraint — onConflict updated to user_id,cache_date,type everywhere
-- [ ] Google Places API key documentation — three keys exist with unclear ownership. Document: NEXT_PUBLIC_GOOGLE_PLACES_API_KEY (browser/Maps JS, referrer-restricted), GOOGLE_PLACES_API_KEY (unknown), GOOGLE_PLACES_SERVER_KEY (server-side, unrestricted, use for Places API calls)
+- [ ] Dead code audit — remove any remaining orphaned components, unused routes, dead TODO comments
+- [ ] Schema cleanup — attachment_assessments and conflict_assessments tables orphaned (learn/ removed). Drop or keep?
+- [ ] Test data scrub — remove Matt/Cass test sessions from DB before external beta
+- [ ] Stale emoji in Idea card titles — display sanitization pass
+- [ ] Game Room day label hardcoded "Saturday" — should be dynamic
+- [ ] cta_label/cta_href/pills from heroData — never rendered, remove or wire
+- [ ] GoTrueClient singleton warning — low priority but clean up before App Store
+- [ ] Flirt retention policy — GIFs/ephemeral types: 90-day delete. Permanent counter on couples table never decremented. Implement before scale.
+
+---
 
 ## SECURITY — PRE-SCALE
-Items that are acceptable at beta scale but must be addressed before public launch or significant user growth.
-
-### Requires Supabase Pro Plan
-- [ ] Prevent use of leaked passwords — enable HaveIBeenPwned password checking in Auth → Attack Protection. Requires Pro plan upgrade.
-
-### Requires attention before 100+ users
-- [ ] Public bucket listing — date-photos, photos, timeline-photos, trip-photos buckets allow clients to enumerate all files. Tighten SELECT policies to prevent listing while keeping object URL access. Low risk at beta scale.
-- [ ] Authenticated SECURITY DEFINER functions — 9 functions callable by signed-in users via REST API. Currently acceptable as these are intentional features, but should be audited and moved to SECURITY INVOKER where possible before public launch.
-
-### Completed
-- [x] Anon SECURITY DEFINER functions — revoked anon execute on 12 functions 2026-05-27
-- [x] Google Cloud upgrade — paid account, Places API safe 2026-05-22
-
-### October 30, 2026 deadline
-- [ ] Supabase public schema grants — new tables in public schema will require explicit GRANT statements. Run Security Advisor before October 30 and add explicit grants to table-creation flow.
-
-## PRODUCT CONCEPTS — FUTURE
-- [ ] Nora Clinical — B2B therapist tool. Patient uses Nora between sessions, therapist reads synthesized notes. Requires HIPAA compliance, BAA, separate consent architecture. Strong market signal. Do not build until ABF is launched and generating revenue. Research: Therachat as competitor reference.
+- [ ] 12 SECURITY DEFINER functions with anon execute revoked — done. Document what was changed.
+- [ ] RLS audit — confirm all tables have appropriate policies before external users
+- [ ] API auth hardening — 56 unprotected routes (see above)
+- [ ] Signed URL expiry — confirm photo URLs in Supabase Storage don't expire (must be public bucket)
