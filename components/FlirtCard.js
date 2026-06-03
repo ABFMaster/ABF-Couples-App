@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 
 export default function FlirtCard({ userId, coupleId, partnerId, partnerName, userName, session }) {
   const [unopened, setUnopened] = useState([])
+  const [received, setReceived] = useState([])
   const [sent, setSent] = useState([])
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState('home')
@@ -34,6 +35,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
       })
       const data = await res.json()
       setUnopened(data.unopened || [])
+      setReceived([...(data.unopened || []), ...(data.opened || [])])
       setSent(data.sent || [])
     } catch {}
     setLoading(false)
@@ -41,7 +43,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
 
   useEffect(() => { fetchInbox() }, [fetchInbox])
 
-  const current = view === 'stack' ? unopened[currentIndex] : null
+  const current = view === 'stack' ? received[currentIndex] : null
 
   useEffect(() => {
     if (view === 'stack' && current && !current.opened_at) {
@@ -50,9 +52,10 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
         body: JSON.stringify({ flirtId: current.id })
       }).catch(() => {})
+      setReceived(prev => prev.map(f => f.id === current.id ? { ...f, opened_at: new Date().toISOString() } : f))
       setUnopened(prev => prev.map(f => f.id === current.id ? { ...f, opened_at: new Date().toISOString() } : f))
     }
-  }, [view, currentIndex, unopened.length])
+  }, [view, currentIndex, received.length])
 
   useEffect(() => {
     if (current?.reaction) {
@@ -234,35 +237,23 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   )
 
   const AddressSide = ({ toName, stampSealed, stampProgress, onStampDown, onStampUp, showReaction }) => (
-    <div style={{ width: 120, flexShrink: 0, padding: '4px 10px 12px', borderLeft: '0.5px solid #D4C4A8', position: 'relative' }}>
-      {/* TO label */}
-      <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 2, color: '#B0A898', marginBottom: 4 }}>TO</div>
-      <div style={{ borderBottom: '0.5px solid #D4C4A8', paddingBottom: 4, marginBottom: 6 }}>
-        <span style={{ fontFamily: 'Georgia, serif', fontSize: 16, color: '#2A2420' }}>{toName}</span>
-      </div>
-      <div style={{ borderBottom: '0.5px solid #E8E0D4', marginBottom: 4, height: 12 }} />
-      <div style={{ borderBottom: '0.5px solid #E8E0D4', marginBottom: 12, height: 12 }} />
-
-      {/* Stamp */}
-      <div style={{ position: 'absolute', top: 8, right: 10 }}>
+    <div style={{ width: 120, flexShrink: 0, padding: '6px 8px 12px', borderLeft: '0.5px solid #D4C4A8', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+      {/* Top row: TO label left, stamp right */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+        <div>
+          <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 2, color: '#B0A898', marginBottom: 3 }}>TO</div>
+          <div style={{ fontFamily: 'Georgia, serif', fontSize: 15, color: '#2A2420' }}>{toName}</div>
+        </div>
+        {/* Stamp top right */}
         <div
           onPointerDown={onStampDown}
           onPointerUp={onStampUp}
           onPointerLeave={onStampUp}
-          style={{
-            width: 40,
-            height: 46,
-            position: 'relative',
-            cursor: showReaction && !reactionSaved ? 'pointer' : 'default',
-            animation: stampSealed ? 'stampPulse 2.5s ease-in-out infinite' : 'none',
-            userSelect: 'none',
-            WebkitUserSelect: 'none'
-          }}
+          style={{ cursor: showReaction && !reactionSaved ? 'pointer' : 'default', userSelect: 'none', WebkitUserSelect: 'none', flexShrink: 0 }}
         >
-          {/* Stamp body */}
           <div style={{
-            width: 40,
-            height: 46,
+            width: 36,
+            height: 42,
             borderRadius: 2,
             background: stampSealed ? '#C9A96E' : (stampProgress > 0 ? '#C9A96E' : '#F5F0E8'),
             border: stampSealed ? '2px dashed rgba(255,255,255,0.5)' : '1.5px dashed #D4C4A8',
@@ -272,70 +263,31 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
             justifyContent: 'center',
             gap: 3,
             position: 'relative',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            animation: stampSealed ? 'stampPulse 2.5s ease-in-out infinite' : 'none'
           }}>
-            {/* Progress fill overlay */}
             {!stampSealed && stampProgress > 0 && (
-              <div style={{
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: `${stampProgress}%`,
-                background: '#C9A96E',
-                transition: 'height 0.05s linear'
-              }} />
+              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${stampProgress}%`, background: '#C9A96E', transition: 'height 0.05s linear' }} />
             )}
-            <span style={{ fontSize: 7, fontWeight: 700, letterSpacing: 1, color: stampSealed ? '#FDF8F0' : (stampProgress > 30 ? '#FDF8F0' : '#C8BFB0'), position: 'relative', zIndex: 1 }}>ABF</span>
-            <div style={{
-              width: 14,
-              height: 14,
-              borderRadius: '50%',
-              background: stampSealed ? 'rgba(255,255,255,0.2)' : 'none',
-              border: stampSealed ? 'none' : `1px solid ${stampProgress > 30 ? 'rgba(255,255,255,0.5)' : '#D4C4A8'}`,
-              position: 'relative',
-              zIndex: 1
-            }}>
-              <div style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: stampSealed ? '#FDF8F0' : (stampProgress > 30 ? 'rgba(255,255,255,0.8)' : 'transparent'),
-                margin: '2px auto',
-                position: 'relative',
-                zIndex: 1
-              }} />
+            <span style={{ fontSize: 6, fontWeight: 700, letterSpacing: 1, color: stampSealed || stampProgress > 30 ? '#FDF8F0' : '#C8BFB0', position: 'relative', zIndex: 1 }}>ABF</span>
+            <div style={{ width: 12, height: 12, borderRadius: '50%', border: `1px solid ${stampSealed || stampProgress > 30 ? 'rgba(255,255,255,0.5)' : '#D4C4A8'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 1 }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: stampSealed || stampProgress > 50 ? '#FDF8F0' : 'transparent' }} />
             </div>
           </div>
-
-          {/* Postmark overlay */}
-          {(stampSealed || stampProgress > 0) && (
-            <div style={{
-              position: 'absolute',
-              top: -4,
-              left: -8,
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              border: `1px solid rgba(196,105,79,${stampSealed ? 0.5 : Math.min(stampProgress / 100 * 0.8, 0.8)})`,
-              pointerEvents: 'none'
-            }}>
-              <div style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '90%',
-                height: '0.5px',
-                background: `rgba(196,105,79,${stampSealed ? 0.4 : Math.min(stampProgress / 100 * 0.6, 0.6)})`
-              }} />
-            </div>
-          )}
+          {showReaction && !reactionSaved && <div style={{ fontSize: 7, color: '#C9A96E', textAlign: 'center', marginTop: 2, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>hold</div>}
+          {stampSealed && <div style={{ fontSize: 7, color: '#C9A96E', textAlign: 'center', marginTop: 2, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>sealed</div>}
         </div>
-        {showReaction && !reactionSaved && (
-          <div style={{ fontSize: 8, color: '#C9A96E', textAlign: 'center', marginTop: 3, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>hold</div>
-        )}
       </div>
+      {/* Ruled lines below */}
+      <div style={{ borderBottom: '0.5px solid #E0D8CC', marginBottom: 6, marginTop: 4 }} />
+      <div style={{ borderBottom: '0.5px solid #E0D8CC', marginBottom: 6 }} />
+      <div style={{ borderBottom: '0.5px solid #E0D8CC' }} />
+      {/* Postmark */}
+      {(stampSealed || stampProgress > 0) && (
+        <div style={{ position: 'absolute', top: 28, left: 8, width: 28, height: 28, borderRadius: '50%', border: `1px solid rgba(196,105,79,${Math.min((stampProgress || 100) / 100 * 0.6, 0.6)})`, pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '80%', height: '0.5px', background: `rgba(196,105,79,0.4)` }} />
+        </div>
+      )}
     </div>
   )
 
@@ -645,7 +597,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   }
 
   // STACK STATE — reading received postcard
-  if (view === 'stack' && current) {
+  if (view === 'stack' && current && received.length > 0) {
     return (
       <div style={{ margin: '0 0 16px' }}>
         <style>{POSTCARD_STYLES}</style>
@@ -654,8 +606,8 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
           <div style={{ padding: '8px 12px 0', position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 7, fontWeight: 700, letterSpacing: 3, color: '#C8B8A0' }}>POSTCARD</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              {unopened.length > 1 && (
-                <span style={{ fontSize: 10, color: '#B0A8A0', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>{currentIndex + 1} of {unopened.length}</span>
+              {received.length > 1 && (
+                <span style={{ fontSize: 10, color: '#B0A8A0', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>{currentIndex + 1} of {received.length}</span>
               )}
               <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', fontSize: 18, color: '#B0A8A0', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
             </div>
@@ -674,10 +626,10 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                 {renderFlirtContent(current)}
               </div>
 
-              {unopened.length > 1 && (
+              {received.length > 1 && (
                 <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
                   {currentIndex > 0 && <button onClick={() => setCurrentIndex(i => i - 1)} style={{ background: 'none', border: 'none', fontSize: 11, color: '#B0A8A0', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic', padding: 0 }}>← prev</button>}
-                  {currentIndex < unopened.length - 1 && <button onClick={() => setCurrentIndex(i => i + 1)} style={{ background: 'none', border: 'none', fontSize: 11, color: '#B0A8A0', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic', padding: 0 }}>next →</button>}
+                  {currentIndex < received.length - 1 && <button onClick={() => setCurrentIndex(i => i + 1)} style={{ background: 'none', border: 'none', fontSize: 11, color: '#B0A8A0', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic', padding: 0 }}>next →</button>}
                 </div>
               )}
             </div>
@@ -708,16 +660,20 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
             <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', fontSize: 18, color: '#B0A8A0', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
           </div>
           {sent.map(f => (
-            <div key={f.id} style={{ padding: '10px 12px', borderBottom: '0.5px solid #EEE8DC', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <span style={{ fontSize: 13, color: '#2A2420', fontFamily: f.type === 'word' || f.type === 'memory' ? 'Georgia, serif' : 'system-ui' }}>
-                  {f.type === 'song' ? (f.metadata?.track_name || 'Song') : f.type === 'found' ? (f.metadata?.title || f.metadata?.domain || 'Link') : f.type === 'photo' ? 'Photo' : f.type === 'gif' ? 'GIF' : f.content?.substring(0, 40)}
-                </span>
-                <span style={{ fontSize: 11, color: '#B0A8A0', display: 'block', marginTop: 2, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>{formatTimeAgo(f.created_at)}</span>
+            <div key={f.id} style={{ padding: '10px 12px', borderBottom: '0.5px solid #EEE8DC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 1.5, color: '#C9A96E', textTransform: 'uppercase', marginBottom: 2 }}>{f.type}</div>
+                <div style={{ fontSize: 13, color: '#2A2420', fontFamily: f.type === 'word' || f.type === 'memory' ? 'Georgia, serif' : 'system-ui', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {f.type === 'song' ? (f.metadata?.track_name || 'Song') : f.type === 'found' ? (f.metadata?.title || f.metadata?.domain || 'Link') : f.type === 'photo' ? 'Photo' : f.type === 'gif' ? 'GIF' : f.content?.substring(0, 60)}
+                </div>
+                <div style={{ fontSize: 10, color: '#B0A8A0', fontFamily: 'Georgia, serif', fontStyle: 'italic', marginTop: 2 }}>{formatTimeAgo(f.created_at)}</div>
               </div>
               {/* Stamp reaction indicator */}
-              <div style={{ width: 28, height: 32, borderRadius: 2, background: f.reaction ? '#C9A96E' : '#F5F0E8', border: f.reaction ? '1.5px dashed rgba(255,255,255,0.5)' : '1px dashed #D4C4A8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <div style={{ width: 10, height: 10, borderRadius: '50%', background: f.reaction ? '#FDF8F0' : 'transparent', border: f.reaction ? 'none' : '1px solid #D4C4A8' }} />
+              <div style={{ width: 32, height: 38, borderRadius: 2, background: f.reaction ? '#C9A96E' : '#F5F0E8', border: f.reaction ? '1.5px dashed rgba(255,255,255,0.5)' : '1px dashed #D4C4A8', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, flexShrink: 0 }}>
+                <span style={{ fontSize: 5, fontWeight: 700, letterSpacing: 1, color: f.reaction ? '#FDF8F0' : '#C8BFB0' }}>ABF</span>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: f.reaction ? 'rgba(255,255,255,0.2)' : 'transparent', border: `1px solid ${f.reaction ? 'rgba(255,255,255,0.5)' : '#D4C4A8'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: f.reaction ? '#FDF8F0' : 'transparent' }} />
+                </div>
               </div>
             </div>
           ))}
