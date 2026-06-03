@@ -315,7 +315,7 @@ function AssessmentContent() {
               {currentModule.title}
             </h1>
             <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: 'rgba(250,246,240,0.7)', lineHeight: 1.5, margin: 0 }}>
-              {currentModule.description}
+              {currentModule.noraIntro || currentModule.description}
             </p>
           </div>
 
@@ -364,6 +364,13 @@ function AssessmentContent() {
           <p style={{ fontSize: 10, fontFamily: "'DM Sans', sans-serif", letterSpacing: '0.15em', color: '#8B7355', textTransform: 'uppercase', marginBottom: 12, marginTop: 0 }}>
             {currentModule.shortTitle} · {currentQuestionIndex + 1} of {moduleQuestions.length}
           </p>
+
+          {/* Framing line — first question only */}
+          {isFirstQuestion && (
+            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: '#8B7355', fontStyle: 'italic', lineHeight: 1.5, marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid #E8DDD0', marginTop: 0 }}>
+              There are no right answers here. Go with what's actually true for you, not what sounds good. The more honest you are, the more useful I become.
+            </p>
+          )}
 
           {/* Question text */}
           <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 22, fontWeight: 400, color: '#1C1410', lineHeight: 1.4, marginBottom: 32, marginTop: 0 }}>
