@@ -622,7 +622,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                           <div key={ev.id} onClick={() => { setSelectedMemory(ev); setMetadata({ event_id: ev.id, event_type: ev.event_type, title: ev.title, description: ev.description, event_date: ev.event_date, image_url: ev.image_url || ev.photo_urls?.[0] || null }) }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderBottom: '0.5px solid #EEE8DC', cursor: 'pointer' }}>
                             <div style={{ flexShrink: 0 }}>
                               {(ev.photo_urls?.[0] || ev.image_url) ? (
-                                <img src={ev.image_url || ev.photo_urls[0]} style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 4 }} alt="" />
+                                <img src={ev.photo_urls?.[0] || ev.image_url} style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 4 }} alt="" />
                               ) : (
                                 <MemoryEventIcon event_type={ev.event_type} size={28} />
                               )}
@@ -642,7 +642,11 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                   <div style={{ paddingTop: 4 }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0', borderBottom: '0.5px solid #EEE8DC' }}>
                       <div style={{ flexShrink: 0 }}>
-                        <MemoryEventIcon event_type={selectedMemory.event_type} size={32} />
+                        {(selectedMemory.photo_urls?.[0] || selectedMemory.image_url) ? (
+                          <img src={selectedMemory.photo_urls?.[0] || selectedMemory.image_url} style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 4 }} alt="" />
+                        ) : (
+                          <MemoryEventIcon event_type={selectedMemory.event_type} size={32} />
+                        )}
                       </div>
                       <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ fontFamily: 'Georgia, serif', fontSize: 13, color: '#2A2420' }}>{selectedMemory.title}</div>
