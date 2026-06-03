@@ -213,7 +213,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   `
 
   const PostcardShell = ({ children, onClick, sealed }) => (
-    <div onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default', position: 'relative', margin: '0 0 16px' }}>
+    <div onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default', position: 'relative', margin: '0 16px 16px' }}>
       <style>{POSTCARD_STYLES}</style>
       <div style={{
         background: sealed ? '#FDF8F0' : '#FAFAF7',
@@ -338,7 +338,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
     const canSend = dropType === 'song' ? !!selectedTrack : !!content.trim()
 
     return (
-      <div style={{ margin: '0 0 16px' }}>
+      <div style={{ margin: '0 16px 16px' }}>
         <style>{POSTCARD_STYLES}</style>
         <div style={{ background: '#FAFAF7', border: '1px solid #DDD5C8', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
           <div style={{ position: 'absolute', inset: 5, border: '0.5px solid #EEE8DC', borderRadius: 3, pointerEvents: 'none', zIndex: 0 }} />
@@ -599,7 +599,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   // STACK STATE — reading received postcard
   if (view === 'stack' && current && received.length > 0) {
     return (
-      <div style={{ margin: '0 0 16px' }}>
+      <div style={{ margin: '0 16px 16px' }}>
         <style>{POSTCARD_STYLES}</style>
         <div style={{ background: '#FDF8F0', border: '1px solid #D4C4A8', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
           <div style={{ position: 'absolute', inset: 5, border: '0.5px solid #EAE0CC', borderRadius: 3, pointerEvents: 'none', zIndex: 0 }} />
@@ -652,7 +652,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   // SENT STATE
   if (view === 'sent') {
     return (
-      <div style={{ margin: '0 0 16px' }}>
+      <div style={{ margin: '0 16px 16px' }}>
         <style>{POSTCARD_STYLES}</style>
         <div style={{ background: '#FAFAF7', border: '1px solid #DDD5C8', borderRadius: 6, overflow: 'hidden' }}>
           <div style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '0.5px solid #EEE8DC' }}>
