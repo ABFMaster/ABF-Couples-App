@@ -251,32 +251,25 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
           onPointerLeave={onStampUp}
           style={{ cursor: showReaction && !reactionSaved ? 'pointer' : 'default', userSelect: 'none', WebkitUserSelect: 'none', flexShrink: 0 }}
         >
-          <svg width="36" height="42" viewBox="0 0 36 42" style={{ display: 'block' }}>
-            <defs>
-              <mask id="stampMask">
-                <rect width="36" height="42" fill="white"/>
-                {[0,4,8,12,16,20,24,28,32,36].map(x => (
-                  <circle key={`t${x}`} cx={x} cy={0} r={2} fill="black"/>
-                ))}
-                {[0,4,8,12,16,20,24,28,32,36].map(x => (
-                  <circle key={`b${x}`} cx={x} cy={42} r={2} fill="black"/>
-                ))}
-                {[0,4,8,12,16,20,24,28,32,36,40].map(y => (
-                  <circle key={`l${y}`} cx={0} cy={y} r={2} fill="black"/>
-                ))}
-                {[0,4,8,12,16,20,24,28,32,36,40].map(y => (
-                  <circle key={`r${y}`} cx={36} cy={y} r={2} fill="black"/>
-                ))}
-              </mask>
-            </defs>
-            <rect width="36" height="42" fill={stampSealed ? '#C9A96E' : (stampProgress > 0 ? '#C9A96E' : '#F0EBE0')} mask="url(#stampMask)"/>
-            {!stampSealed && stampProgress > 0 && (
-              <rect y={42 - (42 * stampProgress / 100)} width="36" height={42 * stampProgress / 100} fill="#C9A96E" mask="url(#stampMask)"/>
-            )}
-            <text x="18" y="16" textAnchor="middle" fontFamily="system-ui" fontSize="6" fontWeight="700" letterSpacing="1" fill={stampSealed || stampProgress > 30 ? '#FDF8F0' : '#C8BFB0'}>ABF</text>
-            <circle cx="18" cy="28" r="6" fill={stampSealed || stampProgress > 50 ? 'rgba(255,255,255,0.2)' : 'none'} stroke={stampSealed || stampProgress > 30 ? 'rgba(255,255,255,0.5)' : '#D4C4A8'} strokeWidth="1"/>
-            <circle cx="18" cy="28" r="3" fill={stampSealed || stampProgress > 50 ? '#FDF8F0' : 'transparent'}/>
-          </svg>
+          <div style={{ width: 36, height: 42, position: 'relative', flexShrink: 0 }}>
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: 1,
+              border: `2px dotted ${stampSealed ? '#B8943A' : (stampProgress > 0 ? '#B8943A' : '#C8BFB0')}`,
+              background: stampSealed ? '#C9A96E' : (stampProgress > 0 ? '#C9A96E' : '#F0EBE0'),
+              overflow: 'hidden'
+            }}>
+              {!stampSealed && stampProgress > 0 && (
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${stampProgress}%`, background: '#C9A96E', transition: 'height 0.05s linear' }} />
+              )}
+              <div style={{ position: 'absolute', inset: 3, border: `0.5px solid ${stampSealed || stampProgress > 20 ? 'rgba(255,255,255,0.4)' : 'rgba(180,168,150,0.4)'}`, borderRadius: 1 }} />
+              <div style={{ position: 'absolute', top: 7, left: 0, right: 0, textAlign: 'center', fontSize: 6, fontWeight: 700, letterSpacing: 1, color: stampSealed || stampProgress > 30 ? '#FDF8F0' : '#B0A898', fontFamily: 'system-ui', zIndex: 1 }}>ABF</div>
+              <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', width: 14, height: 14, borderRadius: '50%', border: `1px solid ${stampSealed || stampProgress > 30 ? 'rgba(255,255,255,0.5)' : '#C8BFB0'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: stampSealed || stampProgress > 50 ? '#FDF8F0' : 'transparent' }} />
+              </div>
+            </div>
+          </div>
           {showReaction && !reactionSaved && <div style={{ fontSize: 7, color: '#C9A96E', textAlign: 'center', marginTop: 2, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>hold</div>}
           {stampSealed && <div style={{ fontSize: 7, color: '#C9A96E', textAlign: 'center', marginTop: 2, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>sealed</div>}
         </div>
@@ -566,29 +559,22 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
 
               {/* Stamp — becomes Mail it button when content ready */}
               <div style={{ position: 'absolute', top: 8, right: 10 }}>
-                <svg width="36" height="42" viewBox="0 0 36 42" style={{ display: 'block', cursor: canSend ? 'pointer' : 'default' }} onClick={canSend ? handleSend : undefined}>
-                  <defs>
-                    <mask id="dropStampMask">
-                      <rect width="36" height="42" fill="white"/>
-                      {[0,4,8,12,16,20,24,28,32,36].map(x => (
-                        <circle key={`t${x}`} cx={x} cy={0} r={2} fill="black"/>
-                      ))}
-                      {[0,4,8,12,16,20,24,28,32,36].map(x => (
-                        <circle key={`b${x}`} cx={x} cy={42} r={2} fill="black"/>
-                      ))}
-                      {[0,4,8,12,16,20,24,28,32,36,40].map(y => (
-                        <circle key={`l${y}`} cx={0} cy={y} r={2} fill="black"/>
-                      ))}
-                      {[0,4,8,12,16,20,24,28,32,36,40].map(y => (
-                        <circle key={`r${y}`} cx={36} cy={y} r={2} fill="black"/>
-                      ))}
-                    </mask>
-                  </defs>
-                  <rect width="36" height="42" fill={canSend ? '#C9A96E' : '#F0EBE0'} mask="url(#dropStampMask)"/>
-                  <text x="18" y="16" textAnchor="middle" fontFamily="system-ui" fontSize="6" fontWeight="700" letterSpacing="1" fill={canSend ? '#FDF8F0' : '#C8BFB0'}>ABF</text>
-                  <circle cx="18" cy="28" r="6" fill={canSend ? 'rgba(255,255,255,0.2)' : 'none'} stroke={canSend ? 'rgba(255,255,255,0.5)' : '#D4C4A8'} strokeWidth="1"/>
-                  <circle cx="18" cy="28" r="3" fill={canSend ? '#FDF8F0' : 'transparent'}/>
-                </svg>
+                <div onClick={canSend ? handleSend : undefined} style={{ width: 36, height: 42, position: 'relative', flexShrink: 0, cursor: canSend ? 'pointer' : 'default' }}>
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    borderRadius: 1,
+                    border: `2px dotted ${canSend ? '#B8943A' : '#C8BFB0'}`,
+                    background: canSend ? '#C9A96E' : '#F0EBE0',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{ position: 'absolute', inset: 3, border: `0.5px solid ${canSend ? 'rgba(255,255,255,0.4)' : 'rgba(180,168,150,0.4)'}`, borderRadius: 1 }} />
+                    <div style={{ position: 'absolute', top: 7, left: 0, right: 0, textAlign: 'center', fontSize: 6, fontWeight: 700, letterSpacing: 1, color: canSend ? '#FDF8F0' : '#B0A898', fontFamily: 'system-ui', zIndex: 1 }}>ABF</div>
+                    <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', width: 14, height: 14, borderRadius: '50%', border: `1px solid ${canSend ? 'rgba(255,255,255,0.5)' : '#C8BFB0'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: canSend ? '#FDF8F0' : 'transparent' }} />
+                    </div>
+                  </div>
+                </div>
                 <div style={{ fontSize: 8, color: canSend ? '#C9A96E' : '#C8BFB0', textAlign: 'center', marginTop: 3, fontFamily: 'Georgia, serif', fontStyle: 'italic', transition: 'color 0.2s' }}>
                   {sending ? 'sending...' : canSend ? 'mail it' : 'stamp'}
                 </div>
@@ -672,21 +658,22 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                 </div>
                 <div style={{ fontSize: 10, color: '#B0A8A0', fontFamily: 'Georgia, serif', fontStyle: 'italic', marginTop: 2 }}>{formatTimeAgo(f.created_at)}</div>
               </div>
-              <svg width="24" height="28" viewBox="0 0 36 42" style={{ display: 'block', flexShrink: 0 }}>
-                <defs>
-                  <mask id={`sentStamp${f.id}`}>
-                    <rect width="36" height="42" fill="white"/>
-                    {[0,6,12,18,24,30,36].map(x => (<circle key={`t${x}`} cx={x} cy={0} r={2} fill="black"/>))}
-                    {[0,6,12,18,24,30,36].map(x => (<circle key={`b${x}`} cx={x} cy={42} r={2} fill="black"/>))}
-                    {[0,6,12,18,24,30,36,42].map(y => (<circle key={`l${y}`} cx={0} cy={y} r={2} fill="black"/>))}
-                    {[0,6,12,18,24,30,36,42].map(y => (<circle key={`r${y}`} cx={36} cy={y} r={2} fill="black"/>))}
-                  </mask>
-                </defs>
-                <rect width="36" height="42" fill={f.reaction ? '#C9A96E' : '#F0EBE0'} mask={`url(#sentStamp${f.id})`}/>
-                <text x="18" y="16" textAnchor="middle" fontFamily="system-ui" fontSize="6" fontWeight="700" letterSpacing="1" fill={f.reaction ? '#FDF8F0' : '#C8BFB0'}>ABF</text>
-                <circle cx="18" cy="28" r="5" fill="none" stroke={f.reaction ? 'rgba(255,255,255,0.5)' : '#D4C4A8'} strokeWidth="1"/>
-                <circle cx="18" cy="28" r="2.5" fill={f.reaction ? '#FDF8F0' : 'transparent'}/>
-              </svg>
+              <div style={{ width: 28, height: 34, position: 'relative', flexShrink: 0 }}>
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  borderRadius: 1,
+                  border: `2px dotted ${f.reaction ? '#B8943A' : '#C8BFB0'}`,
+                  background: f.reaction ? '#C9A96E' : '#F0EBE0',
+                  overflow: 'hidden'
+                }}>
+                  <div style={{ position: 'absolute', inset: 3, border: `0.5px solid ${f.reaction ? 'rgba(255,255,255,0.4)' : 'rgba(180,168,150,0.4)'}`, borderRadius: 1 }} />
+                  <div style={{ position: 'absolute', top: 5, left: 0, right: 0, textAlign: 'center', fontSize: 5, fontWeight: 700, letterSpacing: 1, color: f.reaction ? '#FDF8F0' : '#B0A898', fontFamily: 'system-ui', zIndex: 1 }}>ABF</div>
+                  <div style={{ position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)', width: 11, height: 11, borderRadius: '50%', border: `1px solid ${f.reaction ? 'rgba(255,255,255,0.5)' : '#C8BFB0'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
+                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: f.reaction ? '#FDF8F0' : 'transparent' }} />
+                  </div>
+                </div>
+              </div>
             </div>
           ))}
           <div style={{ padding: '12px' }}>
