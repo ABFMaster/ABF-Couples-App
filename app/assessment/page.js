@@ -13,6 +13,8 @@ import {
 // Filter out standalone modules (e.g. attachment_style) from the main assessment flow
 const MAIN_MODULES = ASSESSMENT_MODULES.filter(m => !m.standalone)
 
+const SPIN = `@keyframes spin { to { transform: rotate(360deg) } }`
+
 function AssessmentContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -130,8 +132,6 @@ function AssessmentContent() {
       await saveProgress()
     } else {
       // Assessment complete - pass current answers to avoid race condition
-      // The current question's answer is already in state, but we pass it explicitly
-      // to ensure it's included even if React hasn't re-rendered yet
       const currentAnswer = answers[currentQuestion?.id]
       await completeAssessment(currentQuestion?.id, currentAnswer)
     }
@@ -180,9 +180,6 @@ function AssessmentContent() {
     setIsSubmitting(true)
     setSaveError(null)
 
-    if (isOnboarding) {
-    }
-
     try {
       // Merge current answer to avoid race condition where state hasn't updated yet
       const finalAnswers = {
@@ -216,7 +213,6 @@ function AssessmentContent() {
 
       // Single database operation - either update or insert with ALL data
       if (existingAssessment) {
-        // Update existing assessment with all data at once
         const { error } = await supabase
           .from('relationship_assessments')
           .update({
@@ -230,7 +226,6 @@ function AssessmentContent() {
         if (error) throw error
 
       } else if (user && couple) {
-        // Insert with couple_id when couple exists
         const { error } = await supabase
           .from('relationship_assessments')
           .insert({
@@ -263,8 +258,6 @@ function AssessmentContent() {
       }
 
       // Redirect ONLY after save is confirmed complete (no throw above)
-      if (isOnboarding) {
-      }
       router.push(isOnboarding ? '/onboarding?step=3' : '/assessment/results')
 
     } catch (err) {
@@ -278,94 +271,69 @@ function AssessmentContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent mx-auto mb-4"></div>
-          <p className="text-[#6B7280] text-lg">Loading assessment...</p>
-        </div>
+      <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <style>{SPIN}</style>
+        <div style={{ width: 36, height: 36, borderRadius: '50%', border: '2px solid #C4714A', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
       </div>
     )
   }
 
+  // Shared header bar
+  const headerBar = (
+    <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {isOnboarding ? (
+        <span style={{ fontSize: 10, fontFamily: "'DM Sans', sans-serif", letterSpacing: '0.15em', color: '#8B7355', textTransform: 'uppercase' }}>
+          Step 2 of 4 — Assessment
+        </span>
+      ) : (
+        <div />
+      )}
+      <button
+        onClick={() => router.push(isOnboarding ? '/onboarding' : '/dashboard')}
+        style={{ background: 'none', border: 'none', fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: '#8B7355', cursor: 'pointer', padding: 0 }}
+      >
+        Exit
+      </button>
+    </div>
+  )
+
   // Module Intro Screen
   if (!moduleIntroShown && currentModule) {
     return (
-      <div className="min-h-screen bg-[#F8F6F3]">
-        {/* Progress bar */}
-        <div className="fixed top-0 left-0 right-0 h-1 bg-[#E5E2DD] z-50">
-          <div
-            className="h-full bg-gradient-to-r from-[#E8614D] to-[#C44A38] transition-all duration-500"
-            style={{ width: `${progressPercentage}%` }}
-          />
-        </div>
+      <div style={{ minHeight: '100vh', background: '#FAF6F0' }}>
+        <style>{SPIN}</style>
+        {headerBar}
+        <div style={{ padding: '24px 24px 120px' }}>
 
-        <div className="max-w-2xl mx-auto px-4 py-12">
-          {/* Onboarding step indicator */}
-          {isOnboarding && (
-            <div className="text-center mb-4">
-              <span className="inline-block bg-coral-100 text-coral-700 text-xs font-semibold px-3 py-1 rounded-full tracking-wide">
-                STEP 2 OF 4 — ASSESSMENT
-              </span>
-            </div>
-          )}
+          {/* Module header card */}
+          <div style={{ background: '#1C1410', borderRadius: 16, padding: '28px 24px', marginBottom: 32 }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>{currentModule.icon}</div>
+            <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 28, fontWeight: 400, color: '#FAF6F0', margin: '0 0 8px' }}>
+              {currentModule.title}
+            </h1>
+            <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: 'rgba(250,246,240,0.7)', lineHeight: 1.5, margin: 0 }}>
+              {currentModule.description}
+            </p>
+          </div>
 
-          {/* Back button */}
+          {/* Progress text */}
+          <p style={{ fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: '#8B7355', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 24, marginTop: 0 }}>
+            Question 1 of {moduleQuestions.length}
+          </p>
+
+          {/* Begin button */}
           <button
-            onClick={() => router.push(isOnboarding ? '/onboarding' : '/dashboard')}
-            className="flex items-center gap-2 text-[#6B7280] hover:text-[#2D3648] mb-8 transition-colors"
+            onClick={() => setModuleIntroShown(true)}
+            style={{ width: '100%', background: '#C4714A', color: '#FAF6F0', border: 'none', borderRadius: 12, padding: 16, fontSize: 15, fontFamily: "'DM Sans', sans-serif", fontWeight: 500, cursor: 'pointer' }}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            <span>Exit Assessment</span>
+            Begin
           </button>
 
-          {/* Module card */}
-          <div className="bg-white rounded-3xl shadow-lg overflow-hidden">
-            {/* Header */}
-            <div className={`bg-gradient-to-r ${currentModule.color} p-8 text-white`}>
-              <div className="flex items-center gap-2 text-white/80 text-sm mb-4">
-                <span>Module {currentModuleIndex + 1} of {MAIN_MODULES.length}</span>
-              </div>
-              <div className="text-6xl mb-4">{currentModule.icon}</div>
-              <h1 className="text-3xl font-bold mb-2">{currentModule.title}</h1>
-            </div>
+          {/* Attribution */}
+          <p style={{ fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: '#8B7355', textAlign: 'center', marginTop: 24, lineHeight: 1.6 }}>
+            {ASSESSMENT_ATTRIBUTION}
+          </p>
 
-            {/* Description */}
-            <div className="p-8">
-              <p className="text-[#6B7280] text-lg leading-relaxed mb-8">
-                {currentModule.description}
-              </p>
-
-              <div className="flex items-center justify-between">
-                <span className="text-[#9CA3AF] text-sm">
-                  {moduleQuestions.length} questions in this section
-                </span>
-                <button
-                  onClick={() => setModuleIntroShown(true)}
-                  className="bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-8 py-4 rounded-full font-bold text-lg hover:opacity-90 transition-opacity shadow-lg"
-                >
-                  Begin
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Module indicators */}
-          <div className="flex justify-center gap-2 mt-8">
-            {MAIN_MODULES.map((mod, idx) => (
-              <div
-                key={mod.id}
-                className={`w-3 h-3 rounded-full transition-all ${
-                  idx === currentModuleIndex
-                    ? 'bg-[#E8614D] scale-125'
-                    : idx < currentModuleIndex
-                    ? 'bg-[#E8614D]/50'
-                    : 'bg-[#E5E2DD]'
-                }`}
-              />
-            ))}
-          </div>
         </div>
       </div>
     )
@@ -373,155 +341,118 @@ function AssessmentContent() {
 
   // Question Screen
   if (currentQuestion) {
+    const isFirstQuestion = currentModuleIndex === 0 && currentQuestionIndex === 0
+    const isLastQuestion = currentModuleIndex === MAIN_MODULES.length - 1 && currentQuestionIndex === moduleQuestions.length - 1
+    const proceed = canProceed()
+
     return (
-      <div className="min-h-screen bg-[#F8F6F3]">
+      <div style={{ minHeight: '100vh', background: '#FAF6F0' }}>
+        <style>{SPIN}</style>
+        {headerBar}
+
         {/* Progress bar */}
-        <div className="fixed top-0 left-0 right-0 h-1 bg-[#E5E2DD] z-50">
-          <div
-            className="h-full bg-gradient-to-r from-[#E8614D] to-[#C44A38] transition-all duration-500"
-            style={{ width: `${progressPercentage}%` }}
-          />
+        <div style={{ width: '100%', height: 3, background: '#E8DDD0', marginBottom: 32 }}>
+          <div style={{ height: '100%', background: '#C4714A', borderRadius: 2, width: `${progressPercentage}%`, transition: 'width 0.3s' }} />
         </div>
 
-        <div className="max-w-2xl mx-auto px-4 py-12">
-          {/* Onboarding step indicator */}
-          {isOnboarding && (
-            <div className="text-center mb-4">
-              <span className="inline-block bg-coral-100 text-coral-700 text-xs font-semibold px-3 py-1 rounded-full tracking-wide">
-                STEP 2 OF 4 — ASSESSMENT
-              </span>
+        <div style={{ padding: '0 24px 120px' }}>
+
+          {/* Module label */}
+          <p style={{ fontSize: 10, fontFamily: "'DM Sans', sans-serif", letterSpacing: '0.15em', color: '#8B7355', textTransform: 'uppercase', marginBottom: 12, marginTop: 0 }}>
+            {currentModule.shortTitle} · {currentQuestionIndex + 1} of {moduleQuestions.length}
+          </p>
+
+          {/* Question text */}
+          <h2 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 22, fontWeight: 400, color: '#1C1410', lineHeight: 1.4, marginBottom: 32, marginTop: 0 }}>
+            {currentQuestion.question}
+          </h2>
+
+          {/* Scale / Choice options */}
+          {(currentQuestion.type === 'scale' || currentQuestion.type === 'choice') && (
+            <div>
+              {currentQuestion.options.map(option => {
+                const isSelected = answers[currentQuestion.id] === option.value
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => handleAnswer(currentQuestion.id, option.value)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      width: '100%',
+                      marginBottom: 10,
+                      padding: '14px 18px',
+                      borderRadius: 10,
+                      border: `1.5px solid ${isSelected ? '#C4714A' : '#E8DDD0'}`,
+                      background: isSelected ? '#FDF8F4' : '#FFFFFF',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontSize: 14,
+                      color: '#1C1410',
+                      lineHeight: 1.4,
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    {currentQuestion.type === 'scale' && (
+                      <span style={{ fontSize: 11, color: '#8B7355', flexShrink: 0, minWidth: 16 }}>{option.value}</span>
+                    )}
+                    <span>{option.label}</span>
+                  </button>
+                )
+              })}
             </div>
           )}
 
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-full ${currentModule.bgColor} flex items-center justify-center`}>
-                <span className="text-xl">{currentModule.icon}</span>
-              </div>
-              <div>
-                <p className={`text-sm font-medium ${currentModule.textColor}`}>
-                  {currentModule.shortTitle}
-                </p>
-                <p className="text-[#9CA3AF] text-sm">
-                  Question {currentQuestionIndex + 1} of {moduleQuestions.length}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => router.push(isOnboarding ? '/onboarding' : '/dashboard')}
-              className="text-[#9CA3AF] hover:text-[#6B7280] text-sm transition-colors"
-            >
-              Save & Exit
-            </button>
-          </div>
+          {/* Ranking */}
+          {currentQuestion.type === 'ranking' && (
+            <RankingQuestion
+              question={currentQuestion}
+              value={answers[currentQuestion.id] || {}}
+              onChange={(rankings) => handleRankingAnswer(currentQuestion.id, rankings)}
+            />
+          )}
 
-          {/* Question card */}
-          <div className="bg-white rounded-2xl shadow-sm p-8 border border-[#E5E2DD] mb-8">
-            <h2 className="text-2xl font-bold text-[#2D3648] mb-8 leading-relaxed">
-              {currentQuestion.question}
-            </h2>
+          {/* Save error */}
+          {saveError && (
+            <p style={{ fontSize: 12, fontFamily: "'DM Sans', sans-serif", color: '#C4714A', textAlign: 'center', padding: 8, marginBottom: 12 }}>
+              {saveError}
+            </p>
+          )}
 
-            {/* Answer options based on question type */}
-            {currentQuestion.type === 'scale' || currentQuestion.type === 'choice' ? (
-              <div className="space-y-3">
-                {currentQuestion.options.map((option) => {
-                  const isSelected = answers[currentQuestion.id] === option.value
-                  return (
-                    <button
-                      key={option.value}
-                      onClick={() => handleAnswer(currentQuestion.id, option.value)}
-                      className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                        isSelected
-                          ? 'border-[#E8614D] bg-[#FDF6EF]'
-                          : 'border-[#E5E2DD] hover:border-[#E8614D]/50 hover:bg-[#F8F6F3]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div
-                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                            isSelected
-                              ? 'border-[#E8614D] bg-[#E8614D]'
-                              : 'border-[#E5E2DD]'
-                          }`}
-                        >
-                          {isSelected && (
-                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
-                        </div>
-                        <span className={`text-lg ${isSelected ? 'text-[#2D3648] font-medium' : 'text-[#6B7280]'}`}>
-                          {option.label}
-                        </span>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            ) : currentQuestion.type === 'ranking' ? (
-              <RankingQuestion
-                question={currentQuestion}
-                value={answers[currentQuestion.id] || {}}
-                onChange={(rankings) => handleRankingAnswer(currentQuestion.id, rankings)}
-              />
-            ) : null}
-          </div>
+        </div>
 
-          {/* Navigation */}
-          <div className="flex items-center justify-between">
+        {/* Fixed bottom nav */}
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#FAF6F0', borderTop: '1px solid #E8DDD0', padding: '16px 24px', display: 'flex', gap: 12 }}>
+          {!isFirstQuestion && (
             <button
               onClick={handlePrevious}
-              disabled={currentModuleIndex === 0 && currentQuestionIndex === 0}
-              className="flex items-center gap-2 text-[#6B7280] hover:text-[#2D3648] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              style={{ flex: 1, padding: 14, border: '1.5px solid #E8DDD0', borderRadius: 10, background: 'transparent', fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: '#6B5D4F', cursor: 'pointer' }}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              <span>Previous</span>
+              Previous
             </button>
-
-            <button
-              onClick={handleNext}
-              disabled={!canProceed() || isSubmitting}
-              className="flex items-center gap-2 bg-gradient-to-r from-[#E8614D] to-[#C44A38] text-white px-6 py-3 rounded-full font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-            >
-              {isSubmitting ? (
-                <>
-                  <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  <span>Saving...</span>
-                </>
-              ) : currentModuleIndex === MAIN_MODULES.length - 1 &&
-                currentQuestionIndex === moduleQuestions.length - 1 ? (
-                <>
-                  <span>See Results</span>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </>
-              ) : (
-                <>
-                  <span>Next</span>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Save error (onboarding mode) */}
-          {saveError && (
-            <div className="mt-4 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl text-center">
-              {saveError}
-            </div>
           )}
-
-          {/* Attribution */}
-          <p className="text-center text-[#9CA3AF] text-xs mt-12">
-            {ASSESSMENT_ATTRIBUTION}
-          </p>
+          <button
+            onClick={handleNext}
+            disabled={!proceed || isSubmitting}
+            style={{
+              flex: 2,
+              padding: 14,
+              background: (!proceed || isSubmitting) ? '#E8DDD0' : '#C4714A',
+              color: (!proceed || isSubmitting) ? '#8B7355' : '#FAF6F0',
+              border: 'none',
+              borderRadius: 10,
+              fontFamily: "'DM Sans', sans-serif",
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: (!proceed || isSubmitting) ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {isSubmitting ? 'Saving...' : isLastQuestion ? 'See Results' : 'Next'}
+          </button>
         </div>
+
       </div>
     )
   }
@@ -534,11 +465,9 @@ export default function AssessmentPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#F8F6F3] flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#E8614D] border-t-transparent mx-auto mb-4" />
-            <p className="text-[#6B7280] text-lg">Loading assessment...</p>
-          </div>
+        <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <style>{SPIN}</style>
+          <div style={{ width: 36, height: 36, borderRadius: '50%', border: '2px solid #C4714A', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
         </div>
       }
     >
@@ -547,7 +476,7 @@ export default function AssessmentPage() {
   )
 }
 
-// Ranking Question Component
+// Ranking Question Component — tap-to-rank
 function RankingQuestion({ question, value, onChange }) {
   const [rankings, setRankings] = useState(value)
 
@@ -557,63 +486,73 @@ function RankingQuestion({ question, value, onChange }) {
     return () => clearTimeout(timer)
   }, [question.id, value])
 
-  const handleRankChange = (optionValue, rank) => {
-    const newRankings = { ...rankings }
+  const handleTap = (optionValue) => {
+    const currentRank = rankings[optionValue]
 
-    // Remove any existing assignment of this rank
-    Object.keys(newRankings).forEach(key => {
-      if (newRankings[key] === rank) {
-        delete newRankings[key]
-      }
-    })
-
-    // Assign new rank
-    if (rank) {
-      newRankings[optionValue] = rank
+    if (currentRank !== undefined) {
+      // Remove rank and shift all higher ranks down by one
+      const newRankings = {}
+      Object.entries(rankings).forEach(([key, rank]) => {
+        if (key === optionValue) return
+        newRankings[key] = rank > currentRank ? rank - 1 : rank
+      })
+      setRankings(newRankings)
+      onChange(newRankings)
     } else {
-      delete newRankings[optionValue]
+      // Assign next available rank
+      const nextRank = Object.keys(rankings).length + 1
+      const newRankings = { ...rankings, [optionValue]: nextRank }
+      setRankings(newRankings)
+      onChange(newRankings)
     }
-
-    setRankings(newRankings)
-    onChange(newRankings)
   }
-
-  const getRank = (optionValue) => rankings[optionValue] || null
 
   return (
     <div>
-      <p className="text-[#6B7280] text-sm mb-4">
-        Rank these from 1 (most important) to {question.options.length} (least important)
-      </p>
-      <div className="space-y-3">
-        {question.options.map((option) => {
-          const rank = getRank(option.value)
-          return (
-            <div
-              key={option.value}
-              className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
-                rank ? 'border-[#E8614D] bg-[#FDF6EF]' : 'border-[#E5E2DD]'
-              }`}
-            >
-              <select
-                value={rank || ''}
-                onChange={(e) => handleRankChange(option.value, e.target.value ? parseInt(e.target.value) : null)}
-                className="w-16 h-10 text-center rounded-lg border border-[#E5E2DD] bg-white text-[#2D3648] font-semibold focus:outline-none focus:border-[#E8614D]"
-              >
-                <option value="">-</option>
-                {question.options.map((_, idx) => (
-                  <option key={idx + 1} value={idx + 1}>
-                    {idx + 1}
-                  </option>
-                ))}
-              </select>
-              <span className={`flex-1 ${rank ? 'text-[#2D3648] font-medium' : 'text-[#6B7280]'}`}>
-                {option.label}
-              </span>
+      {question.options.map(option => {
+        const rank = rankings[option.value]
+        const isRanked = rank !== undefined
+        return (
+          <div
+            key={option.value}
+            onClick={() => handleTap(option.value)}
+            style={{
+              padding: '14px 18px',
+              borderRadius: 10,
+              border: `1.5px solid ${isRanked ? '#C4714A' : '#E8DDD0'}`,
+              background: isRanked ? '#FDF8F4' : '#FFFFFF',
+              marginBottom: 8,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              cursor: 'pointer',
+            }}
+          >
+            <div style={{
+              width: 28,
+              height: 28,
+              borderRadius: '50%',
+              background: isRanked ? '#C4714A' : '#F5F0EA',
+              color: isRanked ? '#FAF6F0' : '#8B7355',
+              fontSize: isRanked ? 13 : 11,
+              fontWeight: isRanked ? 600 : 400,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              fontFamily: "'DM Sans', sans-serif",
+            }}>
+              {isRanked ? rank : '—'}
             </div>
-          )
-        })}
-      </div>
+            <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: '#1C1410' }}>
+              {option.label}
+            </span>
+          </div>
+        )
+      })}
+      <p style={{ fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: '#8B7355', fontStyle: 'italic', marginTop: 8 }}>
+        Tap to rank in order of preference. Tap again to remove.
+      </p>
     </div>
   )
 }
