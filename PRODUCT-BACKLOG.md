@@ -1,5 +1,19 @@
 # ABF Product Backlog — Updated 2026-05-14
 
+## FLIRTS
+### Shipped
+- [x] Postcard redesign — full postcard UI, type selector, Spotify search, GIF search, photo upload, OG preview, Mail it CTA, hold-to-react stamp, sent view 2026-06-02
+- [x] New flirts table — clean schema, flirts_legacy preserved
+- [x] Four API routes — inbox, send, open, react
+- [x] Old FlirtSheet removed
+
+### Backlog
+- [ ] Stamp visual polish — dotted border reads as stamp but needs perforation refinement. Research CSS/SVG perforation patterns.
+- [ ] Memory type — Timeline picker integration. User selects a memory from their Timeline to send as a flirt.
+- [ ] GIF search — currently uses public Giphy API key, needs proper key management
+- [ ] Reaction system — hold-to-react working, consider A/B test with users
+- [ ] Nora reads flirt content — FLIRT_SENT signal passes content/metadata to updateNoraMemory for pattern observation
+
 ## BUGS — ACTIVE (found in testing, fix before beta)
 - [x] Spark reaction (Made me Smile, Keep It Coming) never persists — local state only, never saved to DB — FIXED 2026-05-19
 - [x] Nora home prompt showing wrong content on wrong days — Bet/Ritual copy appearing on incorrect days — FIXED force-dynamic 2026-05-14, hero card rewritten 2026-05-19
@@ -106,6 +120,16 @@ These APIs don't fix UX — they enrich content. The current builder UX is funct
 - [ ] Solo experience when Partner 2 hasn't joined yet — Partner 1 needs value before couple is formed
 - [ ] Asymmetric engagement handling — when one partner consistently engages less, Nora adapts tone not content
 
+## WEEKLY RHYTHM
+- [x] Monday — Spark
+- [x] Tuesday — The Bet
+- [x] Wednesday — The Notice (appreciation/gratitude, evening reveal)
+- [x] Thursday — Nora's Day (private observation, evening reveal)
+- [x] Friday — Ritual
+- [x] Saturday — Game Room
+- [x] Sunday — Weekly Reflection
+All days confirmed firing correctly in push_log.
+
 ## WEEKLY RHYTHM REDESIGN
 - [ ] Tuesday: Hot Take lite — async, simultaneous delivery, both get same questions
 - [ ] Thursday: Nora gap prompt — memory-powered question, fallback hierarchy (full memory → question bank → generic)
@@ -175,14 +199,14 @@ How do we elegantly introduce Nora's abilities without scaring users?
 - [ ] Sign off on tier context blocks before implementation
 
 ## NORA INTELLIGENCE
-- [x] Nora architecture unification — NORA_VOICE powers all surfaces, assessment data wired into ai-coach, buildCoachSystem, getMemoryBriefing rename 2026-05-21
+- [x] Nora architecture unification — NORA_VOICE powers all surfaces 2026-05-21
 - [x] Verdict quality pass — all 7 routes have memory context, names used, find what they didn't say 2026-05-21
 - [ ] Nora named address unlock — post-beta, boolean flag Nora sets herself when confident enough
 - [ ] Four Horsemen detection — Tension Intelligence Arc Sprint 4
 - [ ] Weekly reflection data quality — system claims week-long observation but only 2 data points fed
 - [ ] Nora memory data flow audit — verify all signals accumulating correctly
 - [ ] Re-run Nora memory quality test after 2 weeks real usage
-- [ ] Nora Relationship Arc Sprint — research therapist rapport-building with new couples. Redesign hero card prompt to progress: Week 1 warm curiosity → Week 2 first pattern observations → Week 3+ earned specificity. "Holy shit she sees us" moment by day 7.
+- [x] Nora Relationship Arc — tier system live, signal counting, getNoraTierContext wired into ai-coach/hero card/Thursday 2026-06-01
 - [x] Nora hero card prompt pass — PRE mode rewritten, singular you enforced 2026-05-19
 - [x] Bet verdict prompt tuning — surgical ambiguity guard added, BET_REVEAL memory lens updated 2026-05-19
 
@@ -289,3 +313,6 @@ Items that are acceptable at beta scale but must be addressed before public laun
 
 ### October 30, 2026 deadline
 - [ ] Supabase public schema grants — new tables in public schema will require explicit GRANT statements. Run Security Advisor before October 30 and add explicit grants to table-creation flow.
+
+## PRODUCT CONCEPTS — FUTURE
+- [ ] Nora Clinical — B2B therapist tool. Patient uses Nora between sessions, therapist reads synthesized notes. Requires HIPAA compliance, BAA, separate consent architecture. Strong market signal. Do not build until ABF is launched and generating revenue. Research: Therachat as competitor reference.
