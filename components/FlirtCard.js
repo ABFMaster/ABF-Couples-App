@@ -237,7 +237,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   )
 
   const AddressSide = ({ toName, stampSealed, stampProgress, onStampDown, onStampUp, showReaction }) => (
-    <div style={{ width: 120, flexShrink: 0, padding: '6px 8px 12px', borderLeft: '0.5px solid #D4C4A8', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ width: 120, flexShrink: 0, padding: '6px 8px 12px', borderLeft: '0.5px solid #D4C4A8', position: 'relative', display: 'flex', flexDirection: 'column', minHeight: 160 }}>
       {/* Top row: TO label left, stamp right */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
         <div>
@@ -251,29 +251,32 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
           onPointerLeave={onStampUp}
           style={{ cursor: showReaction && !reactionSaved ? 'pointer' : 'default', userSelect: 'none', WebkitUserSelect: 'none', flexShrink: 0 }}
         >
-          <div style={{
-            width: 36,
-            height: 42,
-            borderRadius: 2,
-            background: stampSealed ? '#C9A96E' : (stampProgress > 0 ? '#C9A96E' : '#F5F0E8'),
-            border: stampSealed ? '2px dashed rgba(255,255,255,0.5)' : '1.5px dashed #D4C4A8',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 3,
-            position: 'relative',
-            overflow: 'hidden',
-            animation: stampSealed ? 'stampPulse 2.5s ease-in-out infinite' : 'none'
-          }}>
+          <svg width="36" height="42" viewBox="0 0 36 42" style={{ display: 'block' }}>
+            <defs>
+              <mask id="stampMask">
+                <rect width="36" height="42" fill="white"/>
+                {[0,4,8,12,16,20,24,28,32,36].map(x => (
+                  <circle key={`t${x}`} cx={x} cy={0} r={2} fill="black"/>
+                ))}
+                {[0,4,8,12,16,20,24,28,32,36].map(x => (
+                  <circle key={`b${x}`} cx={x} cy={42} r={2} fill="black"/>
+                ))}
+                {[0,4,8,12,16,20,24,28,32,36,40].map(y => (
+                  <circle key={`l${y}`} cx={0} cy={y} r={2} fill="black"/>
+                ))}
+                {[0,4,8,12,16,20,24,28,32,36,40].map(y => (
+                  <circle key={`r${y}`} cx={36} cy={y} r={2} fill="black"/>
+                ))}
+              </mask>
+            </defs>
+            <rect width="36" height="42" fill={stampSealed ? '#C9A96E' : (stampProgress > 0 ? '#C9A96E' : '#F0EBE0')} mask="url(#stampMask)"/>
             {!stampSealed && stampProgress > 0 && (
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${stampProgress}%`, background: '#C9A96E', transition: 'height 0.05s linear' }} />
+              <rect y={42 - (42 * stampProgress / 100)} width="36" height={42 * stampProgress / 100} fill="#C9A96E" mask="url(#stampMask)"/>
             )}
-            <span style={{ fontSize: 6, fontWeight: 700, letterSpacing: 1, color: stampSealed || stampProgress > 30 ? '#FDF8F0' : '#C8BFB0', position: 'relative', zIndex: 1 }}>ABF</span>
-            <div style={{ width: 12, height: 12, borderRadius: '50%', border: `1px solid ${stampSealed || stampProgress > 30 ? 'rgba(255,255,255,0.5)' : '#D4C4A8'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 1 }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: stampSealed || stampProgress > 50 ? '#FDF8F0' : 'transparent' }} />
-            </div>
-          </div>
+            <text x="18" y="16" textAnchor="middle" fontFamily="system-ui" fontSize="6" fontWeight="700" letterSpacing="1" fill={stampSealed || stampProgress > 30 ? '#FDF8F0' : '#C8BFB0'}>ABF</text>
+            <circle cx="18" cy="28" r="6" fill={stampSealed || stampProgress > 50 ? 'rgba(255,255,255,0.2)' : 'none'} stroke={stampSealed || stampProgress > 30 ? 'rgba(255,255,255,0.5)' : '#D4C4A8'} strokeWidth="1"/>
+            <circle cx="18" cy="28" r="3" fill={stampSealed || stampProgress > 50 ? '#FDF8F0' : 'transparent'}/>
+          </svg>
           {showReaction && !reactionSaved && <div style={{ fontSize: 7, color: '#C9A96E', textAlign: 'center', marginTop: 2, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>hold</div>}
           {stampSealed && <div style={{ fontSize: 7, color: '#C9A96E', textAlign: 'center', marginTop: 2, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>sealed</div>}
         </div>
@@ -309,7 +312,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
     return (
       <PostcardShell onClick={() => hasUnseen ? setView('stack') : setView('drop')} sealed={hasUnseen}>
         {/* Message side */}
-        <div style={{ flex: 1, padding: '4px 12px 12px', position: 'relative', minHeight: 120 }}>
+        <div style={{ flex: 1, padding: '4px 12px 12px', position: 'relative', minHeight: 160 }}>
           {[...Array(6)].map((_, i) => (
             <div key={i} style={{ borderBottom: `0.5px solid ${hasUnseen ? '#EAE0CC' : '#EEE8DC'}`, height: i === 0 ? 28 : 20 }}>
               {i === 0 && (
@@ -563,28 +566,29 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
 
               {/* Stamp — becomes Mail it button when content ready */}
               <div style={{ position: 'absolute', top: 8, right: 10 }}>
-                <div
-                  onClick={canSend ? handleSend : undefined}
-                  style={{
-                    width: 40,
-                    height: 46,
-                    borderRadius: 2,
-                    background: canSend ? '#C9A96E' : '#F5F0E8',
-                    border: canSend ? '2px dashed rgba(255,255,255,0.5)' : '1.5px dashed #D4C4A8',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 3,
-                    cursor: canSend ? 'pointer' : 'default',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  <span style={{ fontSize: 7, fontWeight: 700, letterSpacing: 1, color: canSend ? '#FDF8F0' : '#C8BFB0' }}>ABF</span>
-                  <div style={{ width: 14, height: 14, borderRadius: '50%', background: canSend ? 'rgba(255,255,255,0.2)' : 'none', border: canSend ? 'none' : '1px solid #D4C4A8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: canSend ? '#FDF8F0' : 'transparent' }} />
-                  </div>
-                </div>
+                <svg width="36" height="42" viewBox="0 0 36 42" style={{ display: 'block', cursor: canSend ? 'pointer' : 'default' }} onClick={canSend ? handleSend : undefined}>
+                  <defs>
+                    <mask id="dropStampMask">
+                      <rect width="36" height="42" fill="white"/>
+                      {[0,4,8,12,16,20,24,28,32,36].map(x => (
+                        <circle key={`t${x}`} cx={x} cy={0} r={2} fill="black"/>
+                      ))}
+                      {[0,4,8,12,16,20,24,28,32,36].map(x => (
+                        <circle key={`b${x}`} cx={x} cy={42} r={2} fill="black"/>
+                      ))}
+                      {[0,4,8,12,16,20,24,28,32,36,40].map(y => (
+                        <circle key={`l${y}`} cx={0} cy={y} r={2} fill="black"/>
+                      ))}
+                      {[0,4,8,12,16,20,24,28,32,36,40].map(y => (
+                        <circle key={`r${y}`} cx={36} cy={y} r={2} fill="black"/>
+                      ))}
+                    </mask>
+                  </defs>
+                  <rect width="36" height="42" fill={canSend ? '#C9A96E' : '#F0EBE0'} mask="url(#dropStampMask)"/>
+                  <text x="18" y="16" textAnchor="middle" fontFamily="system-ui" fontSize="6" fontWeight="700" letterSpacing="1" fill={canSend ? '#FDF8F0' : '#C8BFB0'}>ABF</text>
+                  <circle cx="18" cy="28" r="6" fill={canSend ? 'rgba(255,255,255,0.2)' : 'none'} stroke={canSend ? 'rgba(255,255,255,0.5)' : '#D4C4A8'} strokeWidth="1"/>
+                  <circle cx="18" cy="28" r="3" fill={canSend ? '#FDF8F0' : 'transparent'}/>
+                </svg>
                 <div style={{ fontSize: 8, color: canSend ? '#C9A96E' : '#C8BFB0', textAlign: 'center', marginTop: 3, fontFamily: 'Georgia, serif', fontStyle: 'italic', transition: 'color 0.2s' }}>
                   {sending ? 'sending...' : canSend ? 'mail it' : 'stamp'}
                 </div>
@@ -668,13 +672,21 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                 </div>
                 <div style={{ fontSize: 10, color: '#B0A8A0', fontFamily: 'Georgia, serif', fontStyle: 'italic', marginTop: 2 }}>{formatTimeAgo(f.created_at)}</div>
               </div>
-              {/* Stamp reaction indicator */}
-              <div style={{ width: 32, height: 38, borderRadius: 2, background: f.reaction ? '#C9A96E' : '#F5F0E8', border: f.reaction ? '1.5px dashed rgba(255,255,255,0.5)' : '1px dashed #D4C4A8', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, flexShrink: 0 }}>
-                <span style={{ fontSize: 5, fontWeight: 700, letterSpacing: 1, color: f.reaction ? '#FDF8F0' : '#C8BFB0' }}>ABF</span>
-                <div style={{ width: 10, height: 10, borderRadius: '50%', background: f.reaction ? 'rgba(255,255,255,0.2)' : 'transparent', border: `1px solid ${f.reaction ? 'rgba(255,255,255,0.5)' : '#D4C4A8'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: f.reaction ? '#FDF8F0' : 'transparent' }} />
-                </div>
-              </div>
+              <svg width="24" height="28" viewBox="0 0 36 42" style={{ display: 'block', flexShrink: 0 }}>
+                <defs>
+                  <mask id={`sentStamp${f.id}`}>
+                    <rect width="36" height="42" fill="white"/>
+                    {[0,6,12,18,24,30,36].map(x => (<circle key={`t${x}`} cx={x} cy={0} r={2} fill="black"/>))}
+                    {[0,6,12,18,24,30,36].map(x => (<circle key={`b${x}`} cx={x} cy={42} r={2} fill="black"/>))}
+                    {[0,6,12,18,24,30,36,42].map(y => (<circle key={`l${y}`} cx={0} cy={y} r={2} fill="black"/>))}
+                    {[0,6,12,18,24,30,36,42].map(y => (<circle key={`r${y}`} cx={36} cy={y} r={2} fill="black"/>))}
+                  </mask>
+                </defs>
+                <rect width="36" height="42" fill={f.reaction ? '#C9A96E' : '#F0EBE0'} mask={`url(#sentStamp${f.id})`}/>
+                <text x="18" y="16" textAnchor="middle" fontFamily="system-ui" fontSize="6" fontWeight="700" letterSpacing="1" fill={f.reaction ? '#FDF8F0' : '#C8BFB0'}>ABF</text>
+                <circle cx="18" cy="28" r="5" fill="none" stroke={f.reaction ? 'rgba(255,255,255,0.5)' : '#D4C4A8'} strokeWidth="1"/>
+                <circle cx="18" cy="28" r="2.5" fill={f.reaction ? '#FDF8F0' : 'transparent'}/>
+              </svg>
             </div>
           ))}
           <div style={{ padding: '12px' }}>
