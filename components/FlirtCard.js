@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { supabase } from '@/lib/supabase'
 
 export default function FlirtCard({ userId, coupleId, partnerId, partnerName, userName, session }) {
   const [unopened, setUnopened] = useState([])
@@ -21,6 +22,11 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   const [holdProgress, setHoldProgress] = useState(0)
   const [holdComplete, setHoldComplete] = useState(false)
   const [reactionSaved, setReactionSaved] = useState(null)
+  const [timelineEvents, setTimelineEvents] = useState([])
+  const [timelineLoading, setTimelineLoading] = useState(false)
+  const [timelineFilter, setTimelineFilter] = useState('all')
+  const [selectedMemory, setSelectedMemory] = useState(null)
+  const [metadata, setMetadata] = useState(null)
   const fileInputRef = useRef(null)
   const spotifyTimeout = useRef(null)
   const gifTimeout = useRef(null)
@@ -42,6 +48,24 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   }, [session, coupleId])
 
   useEffect(() => { fetchInbox() }, [fetchInbox])
+
+  const fetchTimeline = useCallback(async () => {
+    if (!coupleId) return
+    setTimelineLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('timeline_events')
+        .select('id, event_type, title, description, event_date, photo_urls, image_url, item_subtype, artist')
+        .eq('couple_id', coupleId)
+        .order('event_date', { ascending: false })
+      if (!error && data) setTimelineEvents(data)
+    } catch {}
+    setTimelineLoading(false)
+  }, [coupleId])
+
+  useEffect(() => {
+    if (dropType === 'memory' && timelineEvents.length === 0) fetchTimeline()
+  }, [dropType, timelineEvents.length, fetchTimeline])
 
   const current = view === 'stack' ? received[currentIndex] : null
 
@@ -70,8 +94,9 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   }, [current?.id])
 
   const handleSend = async () => {
-    if ((!content.trim() && dropType !== 'song') || sending) return
+    if ((!content.trim() && dropType !== 'song' && dropType !== 'memory') || sending) return
     if (dropType === 'song' && !selectedTrack) return
+    if (dropType === 'memory' && !selectedMemory) return
     setSending(true)
     try {
       await fetch('/api/flirts/send', {
@@ -81,19 +106,21 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
           coupleId,
           receiverId: partnerId,
           type: dropType,
-          content: dropType === 'song' ? selectedTrack.spotifyUrl : content.trim(),
+          content: dropType === 'song' ? selectedTrack.spotifyUrl : dropType === 'memory' ? (selectedMemory?.title || 'a memory') : content.trim(),
           metadata: dropType === 'song' ? {
             track_name: selectedTrack.name,
             artist: selectedTrack.artist,
             album_art: selectedTrack.albumArt,
             preview_url: selectedTrack.previewUrl,
             track_url: selectedTrack.spotifyUrl
-          } : undefined
+          } : dropType === 'memory' ? metadata : undefined
         })
       })
       setContent('')
       setDropType(null)
       setSelectedTrack(null)
+      setSelectedMemory(null)
+      setMetadata(null)
       setSpotifyQuery('')
       setSpotifyResults([])
       setGifQuery('')
@@ -157,6 +184,31 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
     return `${days}d ago`
   }
 
+  const MemoryEventIcon = ({ event_type, size = 40 }) => {
+    const base = { width: size, height: size, viewBox: '0 0 40 40', fill: 'none', stroke: '#8B7355', strokeWidth: '1.5', strokeLinecap: 'round', strokeLinejoin: 'round' }
+    switch (event_type) {
+      case 'first_date':
+        return <svg {...base}><path d="M13 30v-8M10 13h6l-3 9"/><line x1="11" y1="30" x2="15" y2="30"/><path d="M27 30v-8M24 13h6l-3 9"/><line x1="25" y1="30" x2="29" y2="30"/><line x1="17" y1="10" x2="20" y2="8"/><line x1="23" y1="10" x2="20" y2="8"/></svg>
+      case 'first_kiss':
+        return <svg {...base}><path d="M8 20q4-6 12-3 8-3 12 3-4 8-12 8-8 0-12-8z"/><path d="M15 20q2.5 2.5 5 0 2.5 2.5 5 0" strokeWidth="1"/></svg>
+      case 'anniversary':
+        return <svg {...base}><path d="M20 28l-10-9.5a5.5 5.5 0 1 1 10-4.5 5.5 5.5 0 1 1 10 4.5z"/><circle cx="30" cy="10" r="1.5" fill="#8B7355" stroke="none"/></svg>
+      case 'milestone':
+        return <svg {...base}><circle cx="20" cy="17" r="9"/><path d="M15 26l-2.5 5m15-5 2.5 5m-11.5 0h7"/></svg>
+      case 'trip':
+        return <svg {...base}><path d="M6 30l9-17 4 8 5-14 10 23"/><circle cx="29" cy="10" r="2.5"/></svg>
+      case 'date_night':
+        return <svg {...base}><path d="M22 10a9 9 0 1 1-8 13A6.5 6.5 0 0 0 22 10z"/><path d="M31 8l.8 2 2 .7-2 .8-.8 2-.8-2-2-.7 2-.8z" fill="#8B7355" stroke="none"/></svg>
+      case 'achievement':
+        return <svg {...base}><path d="M14 10h12v10a6 6 0 0 1-12 0z"/><path d="M14 15h-4a4 4 0 0 0 4 4m12-4h4a4 4 0 0 1-4 4"/><line x1="20" y1="26" x2="20" y2="30"/><line x1="15" y1="30" x2="25" y2="30"/></svg>
+      case 'shared_item':
+        return <svg {...base}><circle cx="20" cy="20" r="13"/><path d="M16 14l12 6-12 6z"/></svg>
+      case 'custom':
+      default:
+        return <svg {...base}><path d="M20 8l2.5 9.5 9.5 2.5-9.5 2.5-2.5 9.5-2.5-9.5-9.5-2.5 9.5-2.5z"/></svg>
+    }
+  }
+
   const renderFlirtContent = (flirt) => {
     switch (flirt.type) {
       case 'word':
@@ -167,8 +219,17 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
         )
       case 'memory':
         return (
-          <div style={{ padding: '0 0 8px' }}>
-            <p style={{ fontFamily: 'Georgia, serif', fontSize: 14, color: '#2A2420', margin: 0, lineHeight: 1.7, fontStyle: 'italic' }}>"{flirt.content}"</p>
+          <div style={{ display: 'flex', flexDirection: 'column', padding: '0 0 8px' }}>
+            {(flirt.metadata?.photo_url || flirt.metadata?.image_url) ? (
+              <img src={flirt.metadata.photo_url || flirt.metadata.image_url} style={{ width: '100%', maxHeight: 180, objectFit: 'cover', borderRadius: 4, marginBottom: 8 }} alt="" />
+            ) : (
+              <div style={{ width: '100%', padding: 16, background: '#F5F0E8', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                <MemoryEventIcon event_type={flirt.metadata?.event_type} size={56} />
+              </div>
+            )}
+            <p style={{ fontSize: 13, fontWeight: 500, color: '#2C2C2C', margin: '0 0 4px' }}>{flirt.metadata?.title || flirt.content}</p>
+            {flirt.metadata?.event_date && <p style={{ fontSize: 11, color: '#8B7355', margin: '0 0 4px' }}>{new Date(flirt.metadata.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>}
+            {flirt.metadata?.description && <p style={{ fontSize: 11, color: '#6B6B6B', fontStyle: 'italic', margin: 0 }}>{flirt.metadata.description}</p>}
           </div>
         )
       case 'song':
@@ -210,6 +271,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
       from { opacity: 0; }
       to { opacity: 1; }
     }
+    .fc-mem-chips::-webkit-scrollbar { display: none; }
   `
 
   const PostcardShell = ({ children, onClick, sealed }) => (
@@ -331,7 +393,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   // DROP STATE — writing on the postcard
   if (view === 'drop') {
     const types = ['SONG', 'WORD', 'PHOTO', 'GIF', 'FOUND', 'MEMORY']
-    const canSend = dropType === 'song' ? !!selectedTrack : !!content.trim()
+    const canSend = dropType === 'song' ? !!selectedTrack : dropType === 'memory' ? !!selectedMemory : !!content.trim()
 
     return (
       <div style={{ margin: '0 16px 16px' }}>
@@ -351,7 +413,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                 {types.map((t, i) => (
                   <span key={t}>
                     <span
-                      onClick={() => { setDropType(t.toLowerCase()); setContent(''); setSelectedTrack(null); setSpotifyResults([]); setGifResults([]) }}
+                      onClick={() => { setDropType(t.toLowerCase()); setContent(''); setSelectedTrack(null); setSelectedMemory(null); setMetadata(null); setSpotifyResults([]); setGifResults([]) }}
                       style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: dropType === t.toLowerCase() ? '#C9A96E' : '#C0B4A4', cursor: 'pointer', textDecoration: dropType === t.toLowerCase() ? 'underline' : 'none', textUnderlineOffset: 2 }}
                     >{t}</span>
                     {i < types.length - 1 && <span style={{ fontSize: 9, color: '#DDD5C8', margin: '0 4px' }}>·</span>}
@@ -371,14 +433,14 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                 )}
 
                 {/* WORD / MEMORY */}
-                {(dropType === 'word' || dropType === 'memory') && (
+                {dropType === 'word' && (
                   <div style={{ position: 'relative' }}>
                     <textarea
                       value={content}
                       onChange={e => setContent(e.target.value)}
-                      placeholder={dropType === 'word' ? `say something to ${partnerName}...` : 'a memory worth sending...'}
+                      placeholder={`say something to ${partnerName}...`}
                       rows={5}
-                      maxLength={dropType === 'word' ? 200 : 300}
+                      maxLength={200}
                       autoFocus
                       style={{
                         width: '100%',
@@ -387,7 +449,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                         outline: 'none',
                         resize: 'none',
                         fontFamily: 'Georgia, serif',
-                        fontSize: dropType === 'word' ? 15 : 13,
+                        fontSize: 15,
                         color: '#2A2420',
                         lineHeight: '20px',
                         padding: '2px 0',
@@ -538,11 +600,53 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                   </div>
                 )}
 
-                {/* MEMORY — timeline picker placeholder */}
-                {dropType === 'memory' && !content && (
+                {/* MEMORY — timeline picker */}
+                {dropType === 'memory' && !selectedMemory && (
                   <div style={{ paddingTop: 4 }}>
-                    <p style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: '#C9A96E', fontStyle: 'italic', margin: '0 0 6px' }}>pick a memory from your timeline</p>
-                    <p style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: '#B0A8A0', fontStyle: 'italic', margin: 0 }}>timeline picker coming soon...</p>
+                    {/* Filter chips */}
+                    <div className="fc-mem-chips" style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 6, scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                      {['all', 'trip', 'date_night', 'milestone', 'anniversary', 'first_date', 'first_kiss', 'achievement', 'custom'].map(f => (
+                        <button key={f} onClick={() => setTimelineFilter(f)} style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, letterSpacing: 0.8, padding: '3px 8px', borderRadius: 20, border: `1px solid ${timelineFilter === f ? '#C9A96E' : '#D4C4A8'}`, background: timelineFilter === f ? '#C9A96E' : 'transparent', color: timelineFilter === f ? '#FDF8F0' : '#B0A8A0', cursor: 'pointer', fontFamily: 'system-ui' }}>
+                          {f === 'all' ? 'ALL' : f.replace('_', ' ').toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                    {/* List */}
+                    <div style={{ maxHeight: 140, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0 }}>
+                      {timelineLoading ? (
+                        <p style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: '#B0A8A0', fontStyle: 'italic', margin: '8px 0' }}>loading...</p>
+                      ) : (() => {
+                        const filtered = timelineFilter === 'all' ? timelineEvents : timelineEvents.filter(e => e.event_type === timelineFilter)
+                        if (filtered.length === 0) return <p style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: '#B0A8A0', fontStyle: 'italic', margin: '8px 0' }}>no memories yet</p>
+                        return filtered.map(ev => (
+                          <div key={ev.id} onClick={() => { setSelectedMemory(ev); setMetadata({ event_id: ev.id, event_type: ev.event_type, title: ev.title, description: ev.description, event_date: ev.event_date, image_url: ev.image_url || (ev.photo_urls?.[0] ?? null) }) }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderBottom: '0.5px solid #EEE8DC', cursor: 'pointer' }}>
+                            <div style={{ flexShrink: 0 }}>
+                              <MemoryEventIcon event_type={ev.event_type} size={28} />
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontFamily: 'Georgia, serif', fontSize: 12, color: '#2A2420', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</div>
+                              {ev.event_date && <div style={{ fontSize: 9, color: '#B0A8A0', fontFamily: 'system-ui', marginTop: 1 }}>{new Date(ev.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>}
+                            </div>
+                          </div>
+                        ))
+                      })()}
+                    </div>
+                  </div>
+                )}
+                {/* MEMORY — selected state */}
+                {dropType === 'memory' && selectedMemory && (
+                  <div style={{ paddingTop: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0', borderBottom: '0.5px solid #EEE8DC' }}>
+                      <div style={{ flexShrink: 0 }}>
+                        <MemoryEventIcon event_type={selectedMemory.event_type} size={32} />
+                      </div>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontFamily: 'Georgia, serif', fontSize: 13, color: '#2A2420' }}>{selectedMemory.title}</div>
+                        {selectedMemory.event_date && <div style={{ fontSize: 9, color: '#B0A8A0', fontFamily: 'system-ui', marginTop: 1 }}>{new Date(selectedMemory.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>}
+                        {selectedMemory.description && <div style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: '#6B5E52', marginTop: 4, fontStyle: 'italic', lineHeight: 1.4 }}>{selectedMemory.description.length > 80 ? selectedMemory.description.slice(0, 80) + '…' : selectedMemory.description}</div>}
+                      </div>
+                    </div>
+                    <button onClick={() => { setSelectedMemory(null); setMetadata(null) }} style={{ marginTop: 6, fontSize: 9, fontWeight: 700, letterSpacing: 0.8, color: '#B0A8A0', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'system-ui' }}>CHANGE</button>
                   </div>
                 )}
               </div>
