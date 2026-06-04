@@ -58,6 +58,11 @@ export async function POST(request) {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' })
 
+    await supabase
+      .from('hero_cache')
+      .delete()
+      .eq('user_id', userId)
+
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('[seed-memory] error:', error)

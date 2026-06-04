@@ -157,6 +157,23 @@ const ritualCompletedThisWeek = !!completion?.completed
     const myPersonNotes = myNotes?.notes || null
     const noraReaction  = feature?.mine?.nora_reaction || null
 
+    let assessmentContext = null
+    if (!myPersonNotes && !coupleNotes) {
+      const { data: profileData } = await supabase
+        .from('user_profiles')
+        .select('attachment_style, conflict_style, love_language_primary, display_name')
+        .eq('user_id', userId)
+        .single()
+
+      if (profileData?.attachment_style || profileData?.conflict_style) {
+        assessmentContext = [
+          profileData.attachment_style ? `Attachment: ${profileData.attachment_style}` : null,
+          profileData.conflict_style ? `Conflict style: ${profileData.conflict_style}` : null,
+          profileData.love_language_primary ? `Love expression: ${profileData.love_language_primary}` : null,
+        ].filter(Boolean).join(', ')
+      }
+    }
+
     // ── PART 4: Dates + pills + weather ──────────────────────────────────────
     const nowIso = new Date().toISOString()
     const [{ data: planDates }, { data: customDates }] = await Promise.all([
@@ -294,12 +311,13 @@ const ritualCompletedThisWeek = !!completion?.completed
     if (mode === 'pre') {
       const isNewUser = !myPersonNotes && !coupleNotes && !structuredFacts
       const PRE_SYSTEM_PROMPT = isNewUser
-        ? `You are Nora — a warm, sharp relationship guide. This person has just joined. You don't know them yet beyond what their assessment revealed. Write one sentence (max 18 words) that feels like a genuine, specific welcome. Reference something true about how they just showed up in the assessment — their attachment pattern, how they handle conflict, or how they give love. Make them feel like they've arrived somewhere that actually sees them. Never start with Hey or Hi. No exclamation points. No generic warmth. One sentence that could only be said to this specific person.`
+        ? `You are Nora — a warm, sharp relationship guide. This person has just joined. You don't know them yet beyond what their assessment revealed. Write one sentence (max 18 words) that feels like a genuine, specific welcome. You have just read their assessment. Write directly to them — use 'you', never their name, never third person. Say something specific about what you learned: how they attach, how they fight, how they love. One sentence that could only be said to this exact person. Make them feel like they've arrived somewhere that actually sees them. Never start with Hey or Hi. No exclamation points. No generic warmth.`
         : `You are Nora — you have been paying attention to this person and you have something specific to say. Write one sentence (max 18 words) for the dashboard hero card. You are NOT announcing a feature or pointing at an activity. CRITICAL: Write TO this specific person using 'you' singular — never 'you two', 'you both', or any phrase that addresses them as part of a couple. This card is private. Nora is speaking to one person alone. If memory is rich, say something only sayable about THIS person — a pattern, a contradiction, something you've noticed about how they love or how they protect themselves. If memory is sparse, ask one warm specific question that makes them think about themselves. Never start with Hey or Hi. Never mention app features by name. Never be generic. Tone: like a sharp, warm friend who has been quietly paying attention.`
       const systemPrompt = [PRE_SYSTEM_PROMPT, tierContext].filter(Boolean).join('\n\n')
 
       const userPrompt = [
         `User's name: ${name}`,
+        assessmentContext ? `What their assessment revealed: ${assessmentContext}` : null,
         `Partner's name: ${partnerName}`,
         ritualContext ? `Today's context: ${ritualContext}` : null,
         myPersonNotes ? `What I know about ${name}: ${myPersonNotes.slice(0, 300)}` : null,
