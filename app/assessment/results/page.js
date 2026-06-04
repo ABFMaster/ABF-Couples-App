@@ -28,7 +28,7 @@ export default function AssessmentResults() {
 
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('display_name, partner_id, couple_id')
+        .select('display_name, couple_id')
         .eq('user_id', user.id)
         .single()
 
@@ -69,24 +69,34 @@ export default function AssessmentResults() {
 
       let partnerData = null
       let partnerProfile = null
-      if (profile.partner_id) {
-        const { data: pp } = await supabase
-          .from('user_profiles')
-          .select('name')
-          .eq('user_id', profile.partner_id)
+      if (profile?.couple_id) {
+        const { data: coupleData } = await supabase
+          .from('couples')
+          .select('user1_id, user2_id')
+          .eq('id', profile.couple_id)
           .single()
-        partnerProfile = pp
-        if (partnerProfile) setPartnerName(partnerProfile.name || 'Your partner')
 
-        const { data: partnerAss } = await supabase
-          .from('relationship_assessments')
-          .select('*')
-          .eq('user_id', profile.partner_id)
-          .not('completed_at', 'is', null)
-          .order('completed_at', { ascending: false })
-          .limit(1)
-          .single()
-        if (partnerAss) { setPartnerAssessment(partnerAss); partnerData = partnerAss }
+        const partnerId = coupleData?.user1_id === user.id ? coupleData?.user2_id : coupleData?.user1_id
+
+        if (partnerId) {
+          const { data: pp } = await supabase
+            .from('user_profiles')
+            .select('name')
+            .eq('user_id', partnerId)
+            .single()
+          partnerProfile = pp
+          if (partnerProfile) setPartnerName(partnerProfile.name || 'Your partner')
+
+          const { data: partnerAss } = await supabase
+            .from('relationship_assessments')
+            .select('*')
+            .eq('user_id', partnerId)
+            .not('completed_at', 'is', null)
+            .order('completed_at', { ascending: false })
+            .limit(1)
+            .single()
+          if (partnerAss) { setPartnerAssessment(partnerAss); partnerData = partnerAss }
+        }
       }
 
       setLoading(false)
