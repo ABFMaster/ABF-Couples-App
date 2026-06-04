@@ -39,21 +39,19 @@ export default function AssessmentResults() {
         setUserName('You')
       }
 
-      // Check sessionStorage first to avoid race condition
-      let cachedAssessment = null
+      let assessmentData = null
       try {
         const cached = sessionStorage.getItem('abf_assessment_results')
         if (cached) {
-          cachedAssessment = JSON.parse(cached)
+          assessmentData = JSON.parse(cached)
           sessionStorage.removeItem('abf_assessment_results')
+          console.log('[Results] cached assessment: found')
         }
       } catch(e) {}
 
-      console.log('[Results] cached assessment:', cachedAssessment ? 'found' : 'not found')
-      if (cachedAssessment) {
-        setAssessment(cachedAssessment)
-      } else {
-        const { data: myAssessment } = await supabase
+      if (!assessmentData) {
+        console.log('[Results] cached assessment: not found')
+        const { data: dbAssessment } = await supabase
           .from('relationship_assessments')
           .select('*')
           .eq('user_id', user.id)
@@ -62,10 +60,12 @@ export default function AssessmentResults() {
           .limit(1)
           .single()
 
-        console.log('[Results] DB assessment:', myAssessment?.id)
-        if (!myAssessment) { console.log('[Results] redirecting to:', '/assessment'); router.push('/assessment'); return }
-        setAssessment(myAssessment)
+        console.log('[Results] DB assessment:', dbAssessment?.id)
+        if (!dbAssessment) { router.push('/assessment'); return }
+        assessmentData = dbAssessment
       }
+
+      setAssessment(assessmentData)
 
       let partnerData = null
       let partnerProfile = null
@@ -102,7 +102,7 @@ export default function AssessmentResults() {
       setLoading(false)
 
       // Generate Nora's personal summary
-      const answers = myAssessment.answers || {}
+      const answers = assessmentData.answers || {}
       const attachmentRes = scoreAttachmentStyle(answers)
       const conflictRes = scoreConflictStyle(answers)
       const loveRes = generateModuleInsights('love_expression', filterAnswers(answers, ['le_1','le_2','le_3']))
