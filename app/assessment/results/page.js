@@ -33,8 +33,11 @@ export default function AssessmentResults() {
         .single()
 
       console.log('[Results] profile:', profile)
-      if (!profile) { console.log('[Results] redirecting to:', '/dashboard'); router.push('/dashboard'); return }
-      setUserName(profile.display_name || 'You')
+      if (profile) {
+        setUserName(profile.display_name || 'You')
+      } else {
+        setUserName('You')
+      }
 
       // Check sessionStorage first to avoid race condition
       let cachedAssessment = null
