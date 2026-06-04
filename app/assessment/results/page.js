@@ -34,17 +34,31 @@ export default function AssessmentResults() {
       if (!profile) { router.push('/dashboard'); return }
       setUserName(profile.name || 'You')
 
-      const { data: myAssessment } = await supabase
-        .from('relationship_assessments')
-        .select('*')
-        .eq('user_id', user.id)
-        .not('completed_at', 'is', null)
-        .order('completed_at', { ascending: false })
-        .limit(1)
-        .single()
+      // Check sessionStorage first to avoid race condition
+      let cachedAssessment = null
+      try {
+        const cached = sessionStorage.getItem('abf_assessment_results')
+        if (cached) {
+          cachedAssessment = JSON.parse(cached)
+          sessionStorage.removeItem('abf_assessment_results')
+        }
+      } catch(e) {}
 
-      if (!myAssessment) { router.push('/assessment'); return }
-      setAssessment(myAssessment)
+      if (cachedAssessment) {
+        setAssessment(cachedAssessment)
+      } else {
+        const { data: myAssessment } = await supabase
+          .from('relationship_assessments')
+          .select('*')
+          .eq('user_id', user.id)
+          .not('completed_at', 'is', null)
+          .order('completed_at', { ascending: false })
+          .limit(1)
+          .single()
+
+        if (!myAssessment) { router.push('/assessment'); return }
+        setAssessment(myAssessment)
+      }
 
       let partnerData = null
       let partnerProfile = null

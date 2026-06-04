@@ -273,6 +273,14 @@ function AssessmentContent() {
       }
 
       // Redirect ONLY after save is confirmed complete (no throw above)
+      try {
+        sessionStorage.setItem('abf_assessment_results', JSON.stringify({
+          answers: finalAnswers,
+          results,
+          completed_at: completedAt
+        }))
+      } catch(e) {}
+
       router.push('/assessment/results')
 
     } catch (err) {
