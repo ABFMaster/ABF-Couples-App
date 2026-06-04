@@ -20,9 +20,11 @@ export default function AssessmentResults() {
 
   useEffect(() => {
     async function load() {
+      console.log('[Results] load function fired')
       try {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError || !user) { router.push('/login'); return }
+      console.log('[Results] auth user:', user?.id)
+      if (authError || !user) { console.log('[Results] redirecting to:', '/login'); router.push('/login'); return }
 
       const { data: profile } = await supabase
         .from('user_profiles')
@@ -30,8 +32,8 @@ export default function AssessmentResults() {
         .eq('user_id', user.id)
         .single()
 
-      console.log('[AssessmentResults] profile:', profile)
-      if (!profile) { router.push('/dashboard'); return }
+      console.log('[Results] profile:', profile)
+      if (!profile) { console.log('[Results] redirecting to:', '/dashboard'); router.push('/dashboard'); return }
       setUserName(profile.display_name || 'You')
 
       // Check sessionStorage first to avoid race condition
@@ -44,6 +46,7 @@ export default function AssessmentResults() {
         }
       } catch(e) {}
 
+      console.log('[Results] cached assessment:', cachedAssessment ? 'found' : 'not found')
       if (cachedAssessment) {
         setAssessment(cachedAssessment)
       } else {
@@ -56,7 +59,8 @@ export default function AssessmentResults() {
           .limit(1)
           .single()
 
-        if (!myAssessment) { router.push('/assessment'); return }
+        console.log('[Results] DB assessment:', myAssessment?.id)
+        if (!myAssessment) { console.log('[Results] redirecting to:', '/assessment'); router.push('/assessment'); return }
         setAssessment(myAssessment)
       }
 
