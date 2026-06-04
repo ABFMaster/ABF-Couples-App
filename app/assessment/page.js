@@ -224,6 +224,11 @@ function AssessmentContent() {
           .eq('id', existingAssessment.id)
 
         if (error) throw error
+        fetch('/api/assessment/seed-memory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, coupleId: couple?.id || null, answers: finalAnswers, results })
+        }).catch(err => console.error('[Assessment] Memory seed failed:', err))
 
       } else if (user && couple) {
         const { error } = await supabase
@@ -237,6 +242,11 @@ function AssessmentContent() {
           })
 
         if (error) throw error
+        fetch('/api/assessment/seed-memory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, coupleId: couple?.id || null, answers: finalAnswers, results })
+        }).catch(err => console.error('[Assessment] Memory seed failed:', err))
 
       } else if (user && isOnboarding) {
         // Onboarding path: no couple yet — save without couple_id so the
@@ -251,6 +261,11 @@ function AssessmentContent() {
           })
 
         if (error) throw error
+        fetch('/api/assessment/seed-memory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, coupleId: couple?.id || null, answers: finalAnswers, results })
+        }).catch(err => console.error('[Assessment] Memory seed failed:', err))
 
       } else {
         // No user or no couple and not in onboarding — shouldn't happen, log it
@@ -258,7 +273,7 @@ function AssessmentContent() {
       }
 
       // Redirect ONLY after save is confirmed complete (no throw above)
-      router.push(isOnboarding ? '/onboarding?step=3' : '/assessment/results')
+      router.push('/assessment/results')
 
     } catch (err) {
       console.error('[Assessment] Error completing assessment:', err)
