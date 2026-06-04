@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 import { updateNoraMemory } from '@/lib/nora-memory'
+import { scoreAttachmentStyle, scoreConflictStyle, generateModuleInsights } from '@/lib/relationship-questions'
 
 export const dynamic = 'force-dynamic'
+
+const filterAnswers = (answers, keys) =>
+  Object.fromEntries(Object.entries(answers || {}).filter(([k]) => keys.includes(k)))
 
 export async function POST(request) {
   try {
@@ -32,6 +37,26 @@ export async function POST(request) {
       signalType: 'PROFILE_UPDATE',
       inputData
     })
+
+    // Parse scores and write back to user_profiles
+    const attachmentResult = scoreAttachmentStyle(answers)
+    const conflictResult = scoreConflictStyle(answers)
+    const loveResult = generateModuleInsights('love_expression', filterAnswers(answers, ['le_1', 'le_2', 'le_3']))
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
+
+    await supabase.from('user_profiles').upsert({
+      user_id: userId,
+      attachment_style: attachmentResult.primary,
+      attachment_anxiety_score: attachmentResult.anxietyScore,
+      attachment_avoidance_score: attachmentResult.avoidanceScore,
+      conflict_style: conflictResult.primary,
+      love_language_primary: loveResult.primary,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' })
 
     return NextResponse.json({ ok: true })
   } catch (error) {

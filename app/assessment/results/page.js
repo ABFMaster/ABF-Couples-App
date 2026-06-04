@@ -26,13 +26,13 @@ export default function AssessmentResults() {
 
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('name, partner_id, couple_id')
+        .select('display_name, partner_id, couple_id')
         .eq('user_id', user.id)
         .single()
 
       console.log('[AssessmentResults] profile:', profile)
       if (!profile) { router.push('/dashboard'); return }
-      setUserName(profile.name || 'You')
+      setUserName(profile.display_name || 'You')
 
       // Check sessionStorage first to avoid race condition
       let cachedAssessment = null

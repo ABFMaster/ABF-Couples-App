@@ -26,12 +26,19 @@ export default function SignupPage() {
     }
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data: signUpData, error } = await supabase.auth.signUp({
         email,
         password,
         options: { data: { first_name: name } }
       })
       if (error) throw error
+      if (signUpData?.user) {
+        supabase.from('user_profiles').upsert({
+          user_id: signUpData.user.id,
+          display_name: name.trim(),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' }).then(() => {}).catch(() => {})
+      }
       router.push('/onboarding')
     } catch (error) {
       setError(error.message)
