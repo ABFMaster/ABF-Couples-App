@@ -283,7 +283,7 @@ export default function AssessmentResults() {
       {/* CTA */}
       <div style={{ padding: '32px 24px 0' }}>
         <button
-          onClick={() => router.push('/ai-coach')}
+          onClick={() => router.push('/dashboard')}
           style={{ width: '100%', background: '#C4714A', color: '#FAF6F0', border: 'none', borderRadius: 12, padding: 16, fontSize: 15, fontFamily: 'DM Sans, sans-serif', fontWeight: 500, cursor: 'pointer', marginBottom: 10 }}>
           Talk to Nora →
         </button>

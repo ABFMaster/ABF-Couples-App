@@ -210,7 +210,7 @@ function OnboardingFlow() {
         .maybeSingle()
 
       if (assessment) {
-        setStep(3)
+        router.push('/dashboard')
         return
       }
 
