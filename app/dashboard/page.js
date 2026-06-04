@@ -27,6 +27,7 @@ export default function Dashboard() {
   const [memoryLoading, setMemoryLoading] = useState(true)
 
   const [session, setSession]         = useState(null)
+  const [isSolo, setIsSolo]           = useState(false)
   const [heroData, setHeroData]       = useState(null)
   const [heroLoading, setHeroLoading] = useState(true)
   const [weather, setWeather]         = useState(null)
@@ -65,7 +66,11 @@ export default function Dashboard() {
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
         .maybeSingle()
 
-      if (!coupleData) { router.push('/connect'); return }
+      if (!coupleData) {
+        setIsSolo(true)
+        setLoading(false)
+        return
+      }
       setCouple(coupleData)
 
       const partnerId = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id
@@ -397,6 +402,18 @@ export default function Dashboard() {
             partnerName={partnerName}
             session={session}
           />
+        )}
+
+        {isSolo && (
+          <div style={{ margin: '0 20px 20px', padding: '20px', background: '#FFFFFF', borderRadius: 16, border: '1px solid #E8DDD0' }}>
+            <div style={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.12em', color: '#8B7355', textTransform: 'uppercase', marginBottom: 8 }}>BRING THEM IN</div>
+            <p style={{ fontSize: 15, fontFamily: 'Cormorant Garamond, Georgia, serif', color: '#1C1410', lineHeight: 1.5, margin: '0 0 16px' }}>Share a code with your partner and Nora can start seeing you both.</p>
+            <button
+              onClick={() => router.push('/connect')}
+              style={{ width: '100%', background: '#1C1410', color: '#FAF6F0', border: 'none', borderRadius: 10, padding: '13px 16px', fontSize: 13, fontFamily: 'DM Sans, sans-serif', fontWeight: 500, cursor: 'pointer' }}>
+              Get your connect code →
+            </button>
+          </div>
         )}
 
         {/* SECTION 3.7 — FLIRT CARD */}

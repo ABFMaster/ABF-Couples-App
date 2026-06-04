@@ -616,6 +616,13 @@ export default function MePage() {
             </button>
 
             <button
+              onClick={() => { setSettingsOpen(false); router.push('/connect') }}
+              style={{ width: '100%', padding: '14px 0', textAlign: 'left', background: 'none', border: 'none', borderTop: '1px solid #F0EBE3', fontSize: 14, fontFamily: "'DM Sans', sans-serif", color: '#C4714A', cursor: 'pointer', marginBottom: 10 }}
+            >
+              Connect with your partner →
+            </button>
+
+            <button
               onClick={() => { setSettingsOpen(false); handleSignOut() }}
               style={{ width: '100%', padding: '14px', borderRadius: 12, background: '#F0EBE3', color: '#6B5A48', fontSize: 14, fontFamily: "'DM Sans', sans-serif", border: 'none', cursor: 'pointer', marginBottom: 10 }}
             >
