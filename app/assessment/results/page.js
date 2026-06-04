@@ -103,7 +103,7 @@ export default function AssessmentResults() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userName: profile.name || 'You',
+            userName: profile?.display_name || 'You',
             attachment: { style: attachmentRes.primary, tagline: attachmentRes.profile.tagline },
             conflict: { style: conflictRes.primary, tagline: conflictRes.profile.tagline },
             love: { primary: loveRes.headline, description: loveRes.description }
