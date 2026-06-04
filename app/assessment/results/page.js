@@ -295,7 +295,7 @@ export default function AssessmentResults() {
           Talk to Nora →
         </button>
         <button
-          onClick={() => router.push('/me')}
+          onClick={() => router.push('/dashboard')}
           style={{ width: '100%', background: 'transparent', border: '1px solid #E8DDD0', borderRadius: 12, padding: 14, fontSize: 13, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', cursor: 'pointer' }}>
           Help Nora know you even better
         </button>

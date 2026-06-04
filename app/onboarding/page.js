@@ -485,26 +485,11 @@ function OnboardingFlow() {
         {step === 2 && (
           <div>
             <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '26px', fontWeight: 400, color: '#1C1208', margin: '0 0 8px' }}>
-              One quick read before you begin.
+              Before I can do anything real for you.
             </h2>
             <p style={{ fontSize: '14px', color: '#7A6A54', margin: '0 0 28px', lineHeight: 1.6 }}>
-              A short assessment helps Nora understand how you communicate and what you need. Takes about 5 minutes.
+              I need about 5 minutes with you. Not to quiz you — to understand how you actually love, how you move through conflict, and what makes you feel seen. Everything after this gets sharper because of it.
             </p>
-
-            <div style={{ background: 'white', borderRadius: '16px', border: '0.5px solid #EDE5D8', padding: '20px', marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {[
-                'Love language insights',
-                'Communication style profile',
-                'Personalised Nora guidance',
-              ].map(item => (
-                <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(196, 113, 74, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2 6 5 9 10 3" stroke="#C4714A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </div>
-                  <p style={{ fontSize: '14px', color: '#5C3D2E', margin: 0 }}>{item}</p>
-                </div>
-              ))}
-            </div>
 
             <button
               onClick={() => router.push('/assessment?onboarding=true')}
@@ -517,7 +502,7 @@ function OnboardingFlow() {
               onClick={() => setStep(3)}
               style={{ width: '100%', marginTop: '12px', padding: '12px', background: 'transparent', color: '#A09080', fontSize: '14px', border: 'none', cursor: 'pointer' }}
             >
-              Skip for now
+              I'll do this later
             </button>
           </div>
         )}
