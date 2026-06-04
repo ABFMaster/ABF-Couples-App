@@ -20,8 +20,9 @@ export default function AssessmentResults() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login'); return }
+      try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) { router.push('/login'); return }
 
       const { data: profile } = await supabase
         .from('user_profiles')
@@ -29,7 +30,8 @@ export default function AssessmentResults() {
         .eq('user_id', user.id)
         .single()
 
-      if (!profile) { router.push('/login'); return }
+      console.log('[AssessmentResults] profile:', profile)
+      if (!profile) { router.push('/dashboard'); return }
       setUserName(profile.name || 'You')
 
       const { data: myAssessment } = await supabase
@@ -115,6 +117,10 @@ export default function AssessmentResults() {
           const insightData = await insightRes.json()
           if (insightData.insight) setCoupleInsight(insightData.insight)
         } catch(e) {}
+      }
+      } catch (err) {
+        console.error('[AssessmentResults] load error:', err)
+        setLoading(false)
       }
     }
     load()
