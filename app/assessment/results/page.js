@@ -183,7 +183,7 @@ export default function AssessmentResults() {
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#C4AA87', flexShrink: 0 }} />
           <span style={{ fontSize: 10, fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.2em', color: '#C4AA87', fontWeight: 500 }}>NORA</span>
         </div>
-        <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 34, fontWeight: 400, color: '#FAF6F0', margin: '0 0 20px', lineHeight: 1.2 }}>Here's what I see.</h1>
+        <h1 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 34, fontWeight: 400, color: '#FAF6F0', margin: '0 0 20px', lineHeight: 1.2 }}>My first read on you.</h1>
         {loadingSummary ? (
           <div style={{ animation: 'pulse 1.5s ease-in-out infinite' }}>
             <div style={{ height: 14, background: 'rgba(250,246,240,0.15)', borderRadius: 4, marginBottom: 10, width: '90%' }} />
@@ -302,7 +302,7 @@ export default function AssessmentResults() {
         <button
           onClick={() => router.push('/dashboard')}
           style={{ width: '100%', background: '#C4714A', color: '#FAF6F0', border: 'none', borderRadius: 12, padding: 16, fontSize: 15, fontFamily: 'DM Sans, sans-serif', fontWeight: 500, cursor: 'pointer', marginBottom: 10 }}>
-          Talk to Nora →
+          I'm ready when you are →
         </button>
         <button
           onClick={() => router.push('/dashboard')}
