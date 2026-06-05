@@ -59,11 +59,17 @@ function AiCoachContent() {
   }, [searchParams, loading]);
 
   useEffect(() => {
-    if (pendingSeed && !loading && messages.length === 0) {
-      setMessages([{ role: 'assistant', content: pendingSeed, id: Date.now() }]);
-      setPendingSeed(null);
+    if (pendingSeed && !loading) {
+      setMessages(prev => [...prev, {
+        id: 'seed-' + Date.now(),
+        role: 'assistant',
+        content: pendingSeed,
+        created_at: new Date().toISOString(),
+        isOpener: true
+      }])
+      setPendingSeed(null)
     }
-  }, [pendingSeed, loading, messages]);
+  }, [pendingSeed, loading]);
 
   useEffect(() => {
     scrollToBottom();
@@ -164,7 +170,7 @@ function AiCoachContent() {
         }]);
       } else {
         // Fall back to server-generated opener
-        await loadOpener(couple.id, session);
+        if (couple?.id) { await loadOpener(couple.id, session); }
       }
     }
 
