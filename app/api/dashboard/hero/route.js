@@ -332,10 +332,7 @@ const ritualCompletedThisWeek = !!completion?.completed
           [{ role: 'user', content: userPrompt }],
           { route: 'dashboard/hero', system: systemPrompt, maxTokens: 200 }
         )
-        const sentences = (response || '').split(/(?<=[.!?])\s+/)
-        const lastSentence = sentences[sentences.length - 1]?.trim()
-        const isQuestion = lastSentence?.endsWith('?')
-        cta_label = isQuestion ? lastSentence : "Tell Nora →"
+        cta_label = "Tell Nora →"
         cta_href = `/ai-coach?seed=${encodeURIComponent(response || '')}`
       } else {
         response = await noraSignal(userPrompt, { route: 'dashboard/hero', system: systemPrompt, maxTokens: 200 })
