@@ -25,6 +25,7 @@ function AiCoachContent() {
   const [dismissedProactivePrompt, setDismissedProactivePrompt] = useState(false);
   const [pendingOpener, setPendingOpener] = useState(null);
   const [sessionType, setSessionType] = useState(null);
+  const [pendingSeed, setPendingSeed] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -47,7 +48,22 @@ function AiCoachContent() {
       // Clear the URL parameter without navigation
       window.history.replaceState({}, '', '/ai-coach');
     }
+    const seedParam = searchParams?.get('seed');
+    if (seedParam && !loading) {
+      const decoded = decodeURIComponent(seedParam);
+      setPendingSeed(decoded);
+      const url = new URL(window.location.href);
+      url.searchParams.delete('seed');
+      window.history.replaceState({}, '', url.toString());
+    }
   }, [searchParams, loading]);
+
+  useEffect(() => {
+    if (pendingSeed && !loading && messages.length === 0) {
+      setMessages([{ role: 'assistant', content: pendingSeed, id: Date.now() }]);
+      setPendingSeed(null);
+    }
+  }, [pendingSeed, loading, messages]);
 
   useEffect(() => {
     scrollToBottom();
@@ -80,12 +96,9 @@ function AiCoachContent() {
       .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
       .maybeSingle();
 
-    if (coupleError || !couple) {
-      router.push('/connect');
-      return;
+    if (couple) {
+      setCoupleId(couple.id);
     }
-
-    setCoupleId(couple.id);
 
     // Fetch check-in patterns for proactive prompt (non-blocking)
     try {
