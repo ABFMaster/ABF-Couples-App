@@ -125,7 +125,7 @@ export async function POST(request) {
         cache_date: todayStr,
         type: 'synthesis',
         message: synthesis,
-        cta_label: 'Talk to Nora',
+        cta_label: 'Tell Nora →',
         cta_href: '/ai-coach',
       },
       { onConflict: 'user_id,cache_date,type' }

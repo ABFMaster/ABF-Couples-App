@@ -189,7 +189,7 @@ export default function WeeklyReflectionPage() {
             router.push('/ai-coach?new=true')
           }}
           style={{ width: '100%', padding: '14px', background: '#C4714A', color: 'white', border: 'none', borderRadius: '14px', fontSize: '14px', fontWeight: 500, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', marginBottom: '16px' }}
-        >Talk to Nora about this →</button>
+        >Tell Nora →</button>
 
         {/* History link */}
         <div style={{ textAlign: 'center' }}>

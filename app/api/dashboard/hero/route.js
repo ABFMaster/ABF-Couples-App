@@ -246,7 +246,7 @@ const ritualCompletedThisWeek = !!completion?.completed
 
     // ── PART 5: Priority + CTA + mode ────────────────────────────────────────
     let priority  = 5
-    let cta_label = 'Talk to Nora'
+    let cta_label = 'Tell Nora →'
     let cta_href  = '/ai-coach'
 
     if (feature && feature.type !== 'ritual') {
@@ -263,13 +263,13 @@ const ritualCompletedThisWeek = !!completion?.completed
         cta_href  = '/dashboard'
       } else if (mineActed && theirsActed) {
         priority  = 3
-        cta_label = 'Talk to Nora'
+        cta_label = 'Tell Nora →'
         cta_href  = '/ai-coach'
       }
     } else if (feature?.type === 'ritual') {
       if (feature.completedThisWeek) {
         priority  = 3
-        cta_label = 'Talk to Nora'
+        cta_label = 'Tell Nora →'
         cta_href  = '/ai-coach'
       } else {
         priority  = 1
@@ -288,7 +288,7 @@ const ritualCompletedThisWeek = !!completion?.completed
 
     if (mode === 'post') {
       if (structuredFacts) {
-        cta_label = 'Talk to Nora'
+        cta_label = 'Tell Nora →'
         cta_href  = '/ai-coach'
       } else {
         cta_label = null

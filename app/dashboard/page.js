@@ -389,7 +389,7 @@ export default function Dashboard() {
             onClick={() => router.push(heroData?.cta_href || '/ai-coach')}
             style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: 'rgba(255,255,255,0.45)', cursor: 'pointer', display: 'block', position: 'relative' }}
           >
-            {heroData?.cta_label || 'Talk to Nora →'}
+            {heroData?.cta_label || 'Tell Nora →'}
           </button>
         </div>
 
