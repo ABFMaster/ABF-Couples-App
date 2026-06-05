@@ -66,10 +66,12 @@ export default function Dashboard() {
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
         .maybeSingle()
 
-      if (!coupleData) {
+      if (!coupleData || !coupleData.connected_at) {
         setIsSolo(true)
-        setLoading(false)
-        return
+        if (!coupleData) {
+          setLoading(false)
+          return
+        }
       }
       setCouple(coupleData)
 

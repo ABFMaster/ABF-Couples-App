@@ -42,7 +42,6 @@ function AiCoachContent() {
 
   // Check for pre-filled prompt from URL
   useEffect(() => {
-    console.log('[seed] effect fired, loading:', loading, 'seed param:', searchParams?.get('seed'))
     const promptParam = searchParams.get('prompt');
     if (promptParam && !loading) {
       setInputMessage(decodeURIComponent(promptParam));
@@ -60,7 +59,6 @@ function AiCoachContent() {
   }, [searchParams, loading]);
 
   useEffect(() => {
-    console.log('[seed] pendingSeed effect fired, pendingSeed:', !!pendingSeed, 'loading:', loading)
     if (pendingSeed && !loading) {
       setMessages(prev => [...prev, {
         id: 'seed-' + Date.now(),
