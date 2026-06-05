@@ -335,7 +335,7 @@ const ritualCompletedThisWeek = !!completion?.completed
         const sentences = (response || '').split(/(?<=[.!?])\s+/)
         const lastSentence = sentences[sentences.length - 1]?.trim()
         const isQuestion = lastSentence?.endsWith('?')
-        cta_label = isQuestion ? lastSentence : "Let's talk about it →"
+        cta_label = isQuestion ? lastSentence : "Tell Nora →"
         cta_href = `/ai-coach?seed=${encodeURIComponent(response || '')}`
       } else {
         response = await noraSignal(userPrompt, { route: 'dashboard/hero', system: systemPrompt, maxTokens: 200 })
