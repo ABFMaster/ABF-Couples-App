@@ -386,10 +386,10 @@ export default function Dashboard() {
               : heroData?.message || `Good ${timeOfDay}, ${userName}.`}
           </p>
           <button
-            onClick={() => router.push('/ai-coach')}
+            onClick={() => router.push(heroData?.cta_href || '/ai-coach')}
             style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: 'rgba(255,255,255,0.45)', cursor: 'pointer', display: 'block', position: 'relative' }}
           >
-            Talk to Nora →
+            {heroData?.cta_label || 'Talk to Nora →'}
           </button>
         </div>
 
