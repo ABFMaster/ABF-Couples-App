@@ -274,10 +274,18 @@ function OnboardingFlow() {
 
         const finalCode = collision ? generateConnectCode() : code
 
-        await supabase.from('couples').insert({
+        const { data: newCouple } = await supabase.from('couples').insert({
           user1_id: uid,
           connect_code: finalCode,
-        })
+        }).select('id').single()
+
+        if (newCouple?.id) {
+          supabase.from('user_profiles').upsert({
+            user_id: uid,
+            couple_id: newCouple.id,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' }).catch(() => {})
+        }
 
         setConnectCode(finalCode)
       }
