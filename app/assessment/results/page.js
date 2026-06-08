@@ -17,6 +17,12 @@ export default function AssessmentResults() {
   const [noraSummary, setNoraSummary] = useState(null)
   const [loadingSummary, setLoadingSummary] = useState(false)
   const [coupleInsight, setCoupleInsight] = useState(null)
+  const [currentUser, setCurrentUser] = useState(null)
+  const [importantDates, setImportantDates] = useState({ met: '', firstDate: '', firstKiss: '', anniversary: '', customDates: [] })
+  const [newCustomLabel, setNewCustomLabel] = useState('')
+  const [newCustomDate, setNewCustomDate] = useState('')
+  const [datesSubmitted, setDatesSubmitted] = useState(false)
+  const [submittingDates, setSubmittingDates] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -25,6 +31,7 @@ export default function AssessmentResults() {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       console.log('[Results] auth user:', user?.id)
       if (authError || !user) { console.log('[Results] redirecting to:', '/login'); router.push('/login'); return }
+      setCurrentUser(user)
 
       const { data: profile } = await supabase
         .from('user_profiles')
@@ -156,6 +163,39 @@ export default function AssessmentResults() {
     }
     load()
   }, [])
+
+  const submitImportantDates = async () => {
+    setSubmittingDates(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      const profileQuery = await supabase.from('user_profiles').select('couple_id').eq('user_id', currentUser?.id).single()
+      const coupleId = profileQuery.data?.couple_id || null
+
+      const dateEntries = [
+        importantDates.met        ? { title: 'When we met',    eventType: 'first_date',  date: importantDates.met }        : null,
+        importantDates.firstDate  ? { title: 'Our first date', eventType: 'first_date',  date: importantDates.firstDate }  : null,
+        importantDates.firstKiss  ? { title: 'Our first kiss', eventType: 'first_kiss',  date: importantDates.firstKiss }  : null,
+        importantDates.anniversary? { title: 'Our anniversary',eventType: 'anniversary', date: importantDates.anniversary }: null,
+        ...importantDates.customDates.map(e => ({ title: e.label, eventType: 'milestone', date: e.date })),
+      ].filter(Boolean)
+
+      await Promise.allSettled(dateEntries.map(entry =>
+        fetch('/api/timeline/event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ coupleId, userId: currentUser?.id, title: entry.title, eventType: entry.eventType, eventDate: entry.date, description: null }),
+        })
+      ))
+
+      setDatesSubmitted(true)
+    } catch (err) {
+      console.error('[Results] submitImportantDates error:', err)
+      setDatesSubmitted(true)
+    } finally {
+      setSubmittingDates(false)
+    }
+  }
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -296,6 +336,91 @@ export default function AssessmentResults() {
           </div>
         )}
       </div>
+
+      {/* IMPORTANT DATES */}
+      {!datesSubmitted ? (
+        <div style={{ padding: '0 24px', marginTop: 8 }}>
+          <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 24, border: '1px solid #E8DDD0' }}>
+            <div style={{ fontSize: 10, fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.15em', color: '#8B7355', marginBottom: 8, textTransform: 'uppercase' }}>Your Story</div>
+            <p style={{ fontSize: 15, fontFamily: 'Cormorant Garamond, Georgia, serif', color: '#1C1410', lineHeight: 1.5, margin: '0 0 20px' }}>Add the dates that matter. I'll use them to build your Timeline and remember them when it counts.</p>
+
+            {[
+              { key: 'met', label: 'When you met' },
+              { key: 'firstDate', label: 'First date' },
+              { key: 'firstKiss', label: 'First kiss' },
+              { key: 'anniversary', label: 'Anniversary' },
+            ].map(({ key, label }) => (
+              <div key={key} style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>{label}</label>
+                <input
+                  type="date"
+                  value={importantDates[key]}
+                  onChange={e => setImportantDates(prev => ({ ...prev, [key]: e.target.value }))}
+                  style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E8DDD0', borderRadius: 8, fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: '#1C1410', background: '#FFFFFF', boxSizing: 'border-box' }}
+                />
+              </div>
+            ))}
+
+            <div style={{ marginTop: 8, marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Add your own</div>
+              <p style={{ fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', fontStyle: 'italic', margin: '0 0 10px' }}>First trip, moved in together, got a pet — anything that matters.</p>
+
+              {importantDates.customDates.map((entry, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, padding: '8px 12px', background: '#FAF6F0', borderRadius: 8 }}>
+                  <span style={{ flex: 1, fontSize: 13, fontFamily: 'DM Sans, sans-serif', color: '#1C1410' }}>{entry.label}</span>
+                  <span style={{ fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#8B7355' }}>{entry.date}</span>
+                  <button onClick={() => setImportantDates(prev => ({ ...prev, customDates: prev.customDates.filter((_, j) => j !== i) }))} style={{ background: 'none', border: 'none', color: '#8B7355', cursor: 'pointer', fontSize: 14, padding: '0 4px' }}>×</button>
+                </div>
+              ))}
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <input
+                  type="text"
+                  placeholder="e.g. First trip together"
+                  value={newCustomLabel}
+                  onChange={e => setNewCustomLabel(e.target.value)}
+                  style={{ flex: 2, padding: '10px 12px', border: '1.5px solid #E8DDD0', borderRadius: 8, fontSize: 13, fontFamily: 'DM Sans, sans-serif', color: '#1C1410', background: '#FFFFFF' }}
+                />
+                <input
+                  type="date"
+                  value={newCustomDate}
+                  onChange={e => setNewCustomDate(e.target.value)}
+                  style={{ flex: 1, padding: '10px 8px', border: '1.5px solid #E8DDD0', borderRadius: 8, fontSize: 13, fontFamily: 'DM Sans, sans-serif', color: '#1C1410', background: '#FFFFFF' }}
+                />
+                <button
+                  onClick={() => {
+                    if (newCustomLabel.trim() && newCustomDate) {
+                      setImportantDates(prev => ({ ...prev, customDates: [...prev.customDates, { label: newCustomLabel.trim(), date: newCustomDate }] }))
+                      setNewCustomLabel('')
+                      setNewCustomDate('')
+                    }
+                  }}
+                  style={{ padding: '10px 14px', background: '#C4714A', color: '#FAF6F0', border: 'none', borderRadius: 8, fontSize: 13, fontFamily: 'DM Sans, sans-serif', cursor: 'pointer' }}
+                >Add</button>
+              </div>
+            </div>
+
+            <button
+              onClick={submitImportantDates}
+              disabled={submittingDates}
+              style={{ width: '100%', background: '#1C1410', color: '#FAF6F0', border: 'none', borderRadius: 10, padding: '13px 16px', fontSize: 14, fontFamily: 'DM Sans, sans-serif', fontWeight: 500, cursor: 'pointer', marginBottom: 10, opacity: submittingDates ? 0.6 : 1 }}>
+              {submittingDates ? 'Saving...' : 'Save these dates →'}
+            </button>
+            <button
+              onClick={() => setDatesSubmitted(true)}
+              style={{ width: '100%', background: 'transparent', border: 'none', padding: '8px', fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', cursor: 'pointer' }}>
+              I'll add these later
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ padding: '0 24px', marginTop: 8 }}>
+          <div style={{ padding: '14px 20px', background: '#F5F0E8', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#C4714A', flexShrink: 0 }} />
+            <span style={{ fontSize: 13, fontFamily: 'DM Sans, sans-serif', color: '#6B5D4F' }}>Your dates are in your Timeline.</span>
+          </div>
+        </div>
+      )}
 
       {/* CTA */}
       <div style={{ padding: '32px 24px 0' }}>
