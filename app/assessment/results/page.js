@@ -26,11 +26,9 @@ export default function AssessmentResults() {
 
   useEffect(() => {
     async function load() {
-      console.log('[Results] load function fired')
       try {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
-      console.log('[Results] auth user:', user?.id)
-      if (authError || !user) { console.log('[Results] redirecting to:', '/login'); router.push('/login'); return }
+      if (authError || !user) { router.push('/login'); return }
       setCurrentUser(user)
 
       const { data: profile } = await supabase
@@ -39,7 +37,6 @@ export default function AssessmentResults() {
         .eq('user_id', user.id)
         .single()
 
-      console.log('[Results] profile:', profile)
       if (profile) {
         setUserName(profile.display_name || 'You')
       } else {
@@ -52,12 +49,10 @@ export default function AssessmentResults() {
         if (cached) {
           assessmentData = JSON.parse(cached)
           sessionStorage.removeItem('abf_assessment_results')
-          console.log('[Results] cached assessment: found')
         }
       } catch(e) {}
 
       if (!assessmentData) {
-        console.log('[Results] cached assessment: not found')
         const { data: dbAssessment } = await supabase
           .from('relationship_assessments')
           .select('*')
@@ -67,7 +62,6 @@ export default function AssessmentResults() {
           .limit(1)
           .single()
 
-        console.log('[Results] DB assessment:', dbAssessment?.id)
         if (!dbAssessment) { router.push('/assessment'); return }
         assessmentData = dbAssessment
       }
@@ -165,24 +159,20 @@ export default function AssessmentResults() {
   }, [])
 
   const submitImportantDates = async () => {
-    console.log('[dates] submitImportantDates fired, currentUser:', currentUser?.id)
     setSubmittingDates(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token
       const profileQuery = await supabase.from('user_profiles').select('couple_id').eq('user_id', currentUser?.id).single()
       const coupleId = profileQuery.data?.couple_id || null
-      console.log('[dates] coupleId from profile:', coupleId)
-
       const dateEntries = [
-        importantDates.met        ? { title: 'When we met',    eventType: 'first_date',  date: importantDates.met }        : null,
+        importantDates.met        ? { title: 'When we met',    eventType: 'milestone',   date: importantDates.met }        : null,
         importantDates.firstDate  ? { title: 'Our first date', eventType: 'first_date',  date: importantDates.firstDate }  : null,
         importantDates.firstKiss  ? { title: 'Our first kiss', eventType: 'first_kiss',  date: importantDates.firstKiss }  : null,
         importantDates.anniversary? { title: 'Our anniversary',eventType: 'anniversary', date: importantDates.anniversary }: null,
         ...importantDates.customDates.map(e => ({ title: e.label, eventType: 'milestone', date: e.date })),
       ].filter(Boolean)
 
-      console.log('[dates] entries to submit:', dateEntries)
       await Promise.allSettled(dateEntries.map(entry =>
         fetch('/api/timeline/event', {
           method: 'POST',
