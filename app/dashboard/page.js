@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import FlirtCard from '@/components/FlirtCard'
@@ -40,6 +40,11 @@ export default function Dashboard() {
   const [bet, setBet]                 = useState(null)
   const [betMine, setBetMine]         = useState(null)
   const [betTheirs, setBetTheirs]     = useState(null)
+
+  const [relationshipPhotos, setRelationshipPhotos]     = useState([])
+  const [uploadingPhotos, setUploadingPhotos]           = useState(false)
+  const [photoUploadComplete, setPhotoUploadComplete]   = useState(false)
+  const photoUploadRef = useRef(null)
 
   const todayName = new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long' })
   const params = typeof window !== 'undefined' ? window.location.search : ''
@@ -246,6 +251,49 @@ export default function Dashboard() {
     } catch {}
   }
 
+  const uploadRelationshipPhoto = async (file) => {
+    if (!file || !user?.id) return
+    try {
+      const { createClient } = await import('@supabase/supabase-js')
+      const sb = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        { global: { headers: { Authorization: `Bearer ${session?.access_token}` } } }
+      )
+      const path = `relationship/${couple?.id || user.id}/${Date.now()}_${file.name.replace(/\s/g, '_')}`
+      await sb.storage.from('photos').upload(path, file, { upsert: true })
+      const { data: urlData } = sb.storage.from('photos').getPublicUrl(path)
+      const publicUrl = urlData.publicUrl
+
+      const token = session?.access_token
+      if (token) {
+        fetch('/api/timeline/event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            coupleId: couple?.id || null,
+            userId: user.id,
+            title: 'A moment from our story',
+            eventType: 'custom',
+            eventDate: new Date().toISOString().split('T')[0],
+            photoUrls: [publicUrl],
+          })
+        }).catch(() => {})
+      }
+
+      setRelationshipPhotos(prev => [...prev, publicUrl])
+    } catch(e) {
+      console.error('Photo upload error:', e)
+    }
+  }
+
+  const handlePhotoFiles = async (files) => {
+    if (!files?.length) return
+    setUploadingPhotos(true)
+    await Promise.allSettled(Array.from(files).map(f => uploadRelationshipPhoto(f)))
+    setUploadingPhotos(false)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F7F4EF] flex items-center justify-center">
@@ -417,6 +465,44 @@ export default function Dashboard() {
             </button>
           </div>
         )}
+
+        {/* SECTION 3.6 — PHOTO UPLOAD */}
+        <div style={{ margin: '0 20px 20px' }}>
+          {!photoUploadComplete ? (
+            <div style={{ padding: '20px', background: '#FFFFFF', borderRadius: 16, border: '1px solid #E8DDD0' }}>
+              <div style={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.12em', color: '#8B7355', textTransform: 'uppercase', marginBottom: 8 }}>YOUR STORY IN PHOTOS</div>
+              <p style={{ fontSize: 15, fontFamily: 'Cormorant Garamond, Georgia, serif', color: '#1C1410', lineHeight: 1.5, margin: '0 0 16px' }}>
+                Add a photo that captures something real about you two. A trip, a moment, a Tuesday.
+              </p>
+              {relationshipPhotos.length > 0 && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                  {relationshipPhotos.map((url, i) => (
+                    <img key={i} src={url} alt="" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8 }} />
+                  ))}
+                </div>
+              )}
+              <input
+                ref={photoUploadRef}
+                type="file"
+                accept="image/*"
+                multiple
+                style={{ display: 'none' }}
+                onChange={e => e.target.files?.length && handlePhotoFiles(Array.from(e.target.files))}
+              />
+              <button
+                onClick={() => photoUploadRef.current?.click()}
+                disabled={uploadingPhotos}
+                style={{ width: '100%', background: uploadingPhotos ? '#E8DDD0' : '#1C1410', color: uploadingPhotos ? '#8B7355' : '#FAF6F0', border: 'none', borderRadius: 10, padding: '13px 16px', fontSize: 13, fontFamily: 'DM Sans, sans-serif', fontWeight: 500, cursor: uploadingPhotos ? 'default' : 'pointer' }}>
+                {uploadingPhotos ? 'Uploading…' : relationshipPhotos.length > 0 ? 'Add more photos →' : 'Add a photo →'}
+              </button>
+            </div>
+          ) : (
+            <div style={{ padding: '12px 16px', background: '#F0EDE8', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 14 }}>📷</span>
+              <span style={{ fontSize: 13, fontFamily: 'DM Sans, sans-serif', color: '#8B7355' }}>Photos added. Nora will remember them.</span>
+            </div>
+          )}
+        </div>
 
         {/* SECTION 3.7 — FLIRT CARD */}
         <FlirtCard
