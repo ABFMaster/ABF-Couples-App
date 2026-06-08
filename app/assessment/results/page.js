@@ -165,12 +165,14 @@ export default function AssessmentResults() {
   }, [])
 
   const submitImportantDates = async () => {
+    console.log('[dates] submitImportantDates fired, currentUser:', currentUser?.id)
     setSubmittingDates(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token
       const profileQuery = await supabase.from('user_profiles').select('couple_id').eq('user_id', currentUser?.id).single()
       const coupleId = profileQuery.data?.couple_id || null
+      console.log('[dates] coupleId from profile:', coupleId)
 
       const dateEntries = [
         importantDates.met        ? { title: 'When we met',    eventType: 'first_date',  date: importantDates.met }        : null,
@@ -180,6 +182,7 @@ export default function AssessmentResults() {
         ...importantDates.customDates.map(e => ({ title: e.label, eventType: 'milestone', date: e.date })),
       ].filter(Boolean)
 
+      console.log('[dates] entries to submit:', dateEntries)
       await Promise.allSettled(dateEntries.map(entry =>
         fetch('/api/timeline/event', {
           method: 'POST',
