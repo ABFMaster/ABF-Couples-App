@@ -19,6 +19,7 @@ function AssessmentContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const isOnboarding = searchParams.get('onboarding') === 'true'
+  const moduleParam = searchParams.get('module')
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState(null)
   const [couple, setCouple] = useState(null)
@@ -68,6 +69,14 @@ function AssessmentContent() {
           if (!existing.completed_at && existing.answers) {
             setAnswers(existing.answers)
           }
+        }
+      }
+
+      if (moduleParam) {
+        const moduleIndex = MAIN_MODULES.findIndex(m => m.id === moduleParam)
+        if (moduleIndex > -1) {
+          setCurrentModuleIndex(moduleIndex)
+          setModuleIntroShown(false)
         }
       }
 
