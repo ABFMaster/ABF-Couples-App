@@ -391,7 +391,7 @@ export default function UsPage() {
                     <div style={{ background: 'white', padding: '16px 18px' }}>
                       <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 400, color: '#1C1410', lineHeight: 1.2, marginBottom: '6px' }}>{event.title}</div>
                       {event.description && <div style={{ fontSize: '12px', fontStyle: 'italic', color: '#8B7355', lineHeight: 1.55, marginBottom: '6px' }}>{event.description.slice(0, 120)}{event.description.length > 120 ? '...' : ''}</div>}
-                      <div style={{ fontSize: '10px', color: '#C4AA87' }}>{event.event_date ? new Date(event.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}</div>
+                      <div style={{ fontSize: '10px', color: '#C4AA87' }}>{event.event_date ? new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}</div>
                     </div>
                   </div>
                 </div>
@@ -568,7 +568,7 @@ export default function UsPage() {
                   {event.description && <div style={{ fontSize: '11px', color: '#8B7355', fontStyle: 'italic', lineHeight: 1.5 }}>{event.description.slice(0, 80)}{event.description.length > 80 ? '...' : ''}</div>}
                 </div>
                 <div style={{ fontSize: '10px', color: '#C4AA87', flexShrink: 0, paddingTop: '2px' }}>
-                  {event.event_date ? new Date(event.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
+                  {event.event_date ? new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
                 </div>
               </div>
             ))}
@@ -716,7 +716,7 @@ export default function UsPage() {
 
               <div style={{ fontSize: '12px', color: '#C4AA87', marginBottom: '20px' }}>
                 {beenDetailItem.event_date
-                  ? new Date(beenDetailItem.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                  ? new Date(beenDetailItem.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
                   : ''}
               </div>
 
