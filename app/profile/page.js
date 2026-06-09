@@ -233,11 +233,14 @@ export default function MePage() {
 
   const uploadProfilePhoto = async (file) => {
     if (!file || !user?.id) return
+    console.log('[profile-photo] starting upload:', file.name)
     try {
       const path = `relationship/${couple?.id || user.id}/${Date.now()}_${file.name.replace(/\s/g, '_')}`
-      await supabase.storage.from('photos').upload(path, file, { upsert: true })
+      const { data } = await supabase.storage.from('photos').upload(path, file, { upsert: true })
+      console.log('[profile-photo] upload result:', data)
       const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path)
       const publicUrl = urlData.publicUrl
+      console.log('[profile-photo] public url:', publicUrl)
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.access_token) {
         fetch('/api/timeline/event', {
@@ -254,6 +257,7 @@ export default function MePage() {
         }).catch(() => {})
       }
       setRelationshipPhotos(prev => [...prev, publicUrl])
+      console.log('[profile-photo] photos state updated')
     } catch(e) {
       console.error('Profile photo upload error:', e)
     }
