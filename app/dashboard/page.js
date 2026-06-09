@@ -254,12 +254,7 @@ export default function Dashboard() {
   const uploadRelationshipPhoto = async (file) => {
     if (!file || !user?.id) return
     try {
-      const { createClient } = await import('@supabase/supabase-js')
-      const sb = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-        { global: { headers: { Authorization: `Bearer ${session?.access_token}` } } }
-      )
+      const sb = supabase
       const path = `relationship/${couple?.id || user.id}/${Date.now()}_${file.name.replace(/\s/g, '_')}`
       await sb.storage.from('photos').upload(path, file, { upsert: true })
       const { data: urlData } = sb.storage.from('photos').getPublicUrl(path)
