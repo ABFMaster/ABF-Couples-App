@@ -146,7 +146,7 @@ export default function Timeline() {
   }
 
   const formatDate = (dateStr) => {
-    const date = new Date(dateStr)
+    const date = new Date(dateStr + 'T12:00:00')
     return date.toLocaleDateString('en-US', {
       month: 'long',
       day: 'numeric',
@@ -172,7 +172,7 @@ export default function Timeline() {
   })
 
   const groupedEvents = filteredEvents.reduce((groups, event) => {
-    const date = new Date(event.event_date)
+    const date = new Date(event.event_date + 'T12:00:00')
     const key = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     if (!groups[key]) groups[key] = []
     groups[key].push(event)
@@ -338,7 +338,7 @@ export default function Timeline() {
                               <span className="text-xl">{c.icon}</span>
                               <p className="font-semibold text-gray-800 text-sm mt-2 line-clamp-1">{e.title}</p>
                               <p className="text-xs text-gray-400 mt-1">
-                                {new Date(e.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                {new Date(e.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                               </p>
                             </button>
                           )
@@ -372,7 +372,7 @@ export default function Timeline() {
                                 </span>
                                 <h3 className="text-white font-bold text-lg leading-tight">{event.title}</h3>
                                 <p className="text-white/70 text-xs mt-0.5">
-                                  {new Date(event.event_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                                  {new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
                                 </p>
                               </div>
                               {event.photo_urls.length > 1 && (
@@ -416,7 +416,7 @@ export default function Timeline() {
                             <p className="text-gray-400 text-xs mt-1 line-clamp-2">{event.description}</p>
                           )}
                           <p className="text-gray-300 text-xs mt-2">
-                            {new Date(event.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            {new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           </p>
                         </div>
                       </div>
