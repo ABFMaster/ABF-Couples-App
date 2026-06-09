@@ -146,6 +146,7 @@ export default function Timeline() {
   }
 
   const formatDate = (dateStr) => {
+    console.log('[date] raw:', dateStr, 'parsed:', new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))
     const date = new Date(dateStr + 'T12:00:00')
     return date.toLocaleDateString('en-US', {
       month: 'long',
