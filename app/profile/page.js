@@ -88,6 +88,7 @@ export default function MePage() {
 
   const [relationshipPhotos, setRelationshipPhotos]       = useState([])
   const [uploadingProfilePhotos, setUploadingProfilePhotos] = useState(false)
+  const [photosSaved, setPhotosSaved]                       = useState(false)
 
   const [importantDates, setImportantDates]   = useState({ met: '', firstDate: '', firstKiss: '', anniversary: '', customDates: [] })
   const [newCustomLabel, setNewCustomLabel]   = useState('')
@@ -181,6 +182,20 @@ export default function MePage() {
         .limit(1)
         .maybeSingle()
       if (data) setDatesSubmitted(true)
+
+      const { data: existingPhotoEvents } = await supabase
+        .from('timeline_events')
+        .select('photo_urls')
+        .eq('couple_id', coupleId)
+        .eq('event_type', 'custom')
+        .not('photo_urls', 'eq', '{}')
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (existingPhotoEvents?.length) {
+        const urls = existingPhotoEvents.flatMap(e => e.photo_urls || []).filter(Boolean)
+        setRelationshipPhotos(urls)
+      }
     } catch {}
   }
 
@@ -249,6 +264,8 @@ export default function MePage() {
     setUploadingProfilePhotos(true)
     await Promise.allSettled(Array.from(files).map(f => uploadProfilePhoto(f)))
     setUploadingProfilePhotos(false)
+    setPhotosSaved(true)
+    setTimeout(() => setPhotosSaved(false), 3000)
   }
 
   // ── Handlers ────────────────────────────────────────────────────────────────
@@ -671,6 +688,9 @@ export default function MePage() {
                 {uploadingProfilePhotos ? 'Uploading...' : '+ Add photos'}
               </button>
             </div>
+            {photosSaved && (
+              <p style={{ fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#7A8C6E', margin: '4px 0 0', textAlign: 'right' }}>Photos saved to your Timeline.</p>
+            )}
             <p style={{ fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', lineHeight: 1.5, margin: '0 0 12px', fontStyle: 'italic' }}>Places you've been, moments you loved, things that remind you of them. Nora will use them throughout the app.</p>
             {relationshipPhotos.length > 0 && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
