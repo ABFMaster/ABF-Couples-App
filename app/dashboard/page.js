@@ -126,7 +126,7 @@ export default function Dashboard() {
         .from('timeline_events')
         .select('id')
         .eq('couple_id', coupleData?.id)
-        .in('event_type', ['milestone', 'anniversary', 'first_date', 'first_kiss'])
+        .in('event_type', ['anniversary', 'first_date', 'first_kiss'])
         .limit(1)
         .maybeSingle()
 
