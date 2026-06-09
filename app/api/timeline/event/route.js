@@ -26,6 +26,18 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    // Check for existing event with same title and couple to prevent duplicates
+    const { data: existing } = await supabase
+      .from('timeline_events')
+      .select('id')
+      .eq('couple_id', coupleId)
+      .eq('title', title)
+      .maybeSingle()
+
+    if (existing) {
+      return NextResponse.json({ success: true, event: existing, deduplicated: true })
+    }
+
     const { data: event, error: insertError } = await supabase
       .from('timeline_events')
       .insert({
