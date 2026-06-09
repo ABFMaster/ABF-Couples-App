@@ -108,6 +108,19 @@ export default function Dashboard() {
 
       ])
 
+      const { data: existingPhotos } = await supabase
+        .from('timeline_events')
+        .select('id')
+        .eq('couple_id', coupleData?.id)
+        .eq('event_type', 'custom')
+        .not('photo_urls', 'eq', '{}')
+        .limit(1)
+        .maybeSingle()
+
+      if (existingPhotos) {
+        setPhotoUploadComplete(true)
+      }
+
       setLoading(false)
     } catch (err) {
       console.error('Dashboard error:', err)
@@ -116,6 +129,12 @@ export default function Dashboard() {
   }, [router])
 
   useEffect(() => { fetchAll() }, [fetchAll])
+
+  useEffect(() => {
+    if (localStorage.getItem('abf_photos_later')) {
+      setPhotoUploadComplete(true)
+    }
+  }, [])
 
   useEffect(() => {
     if (!user?.id || !couple?.id) return
@@ -499,7 +518,7 @@ export default function Dashboard() {
               )}
               {relationshipPhotos.length === 0 && !uploadingPhotos && (
                 <button
-                  onClick={() => setPhotoUploadComplete(true)}
+                  onClick={() => { localStorage.setItem('abf_photos_later', 'true'); setPhotoUploadComplete(true) }}
                   style={{ width: '100%', background: 'transparent', border: 'none', padding: '8px', fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', cursor: 'pointer', marginTop: 4 }}>
                   I'll add photos later
                 </button>
