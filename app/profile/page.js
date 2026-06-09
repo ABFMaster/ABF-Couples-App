@@ -77,6 +77,7 @@ export default function MePage() {
   const [entryContent, setEntryContent]   = useState('')
   const [savingEntry, setSavingEntry]     = useState(false)
   const textareaRef = useRef(null)
+  const profilePhotoInputRef = useRef(null)
 
   // Practices
   const [practices, setPractices]         = useState([])
@@ -84,6 +85,9 @@ export default function MePage() {
   const [newPracticeTitle, setNewPracticeTitle] = useState('')
   const [savingPractice, setSavingPractice] = useState(false)
   const [showDone, setShowDone]           = useState(false)
+
+  const [relationshipPhotos, setRelationshipPhotos]       = useState([])
+  const [uploadingProfilePhotos, setUploadingProfilePhotos] = useState(false)
 
   const [importantDates, setImportantDates]   = useState({ met: '', firstDate: '', firstKiss: '', anniversary: '', customDates: [] })
   const [newCustomLabel, setNewCustomLabel]   = useState('')
@@ -210,6 +214,41 @@ export default function MePage() {
     } finally {
       setSubmittingDates(false)
     }
+  }
+
+  const uploadProfilePhoto = async (file) => {
+    if (!file || !user?.id) return
+    try {
+      const path = `relationship/${couple?.id || user.id}/${Date.now()}_${file.name.replace(/\s/g, '_')}`
+      await supabase.storage.from('photos').upload(path, file, { upsert: true })
+      const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path)
+      const publicUrl = urlData.publicUrl
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        fetch('/api/timeline/event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+          body: JSON.stringify({
+            coupleId: couple?.id || null,
+            userId: user.id,
+            title: file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' '),
+            eventType: 'custom',
+            eventDate: new Date().toISOString().split('T')[0] + 'T12:00:00',
+            photoUrls: [publicUrl],
+          })
+        }).catch(() => {})
+      }
+      setRelationshipPhotos(prev => [...prev, publicUrl])
+    } catch(e) {
+      console.error('Profile photo upload error:', e)
+    }
+  }
+
+  const handleProfilePhotoFiles = async (files) => {
+    if (!files?.length) return
+    setUploadingProfilePhotos(true)
+    await Promise.allSettled(Array.from(files).map(f => uploadProfilePhoto(f)))
+    setUploadingProfilePhotos(false)
   }
 
   // ── Handlers ────────────────────────────────────────────────────────────────
@@ -621,6 +660,36 @@ export default function MePage() {
           <p style={{ fontSize: 13, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', lineHeight: 1.5, margin: 0 }}>
             Important dates live in your Timeline and help Nora know your story.
           </p>
+
+          <div style={{ marginTop: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.12em', color: '#8B7355', textTransform: 'uppercase' }}>PHOTOS</div>
+              <button
+                onClick={() => profilePhotoInputRef.current?.click()}
+                disabled={uploadingProfilePhotos}
+                style={{ fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#C4714A', background: 'none', border: 'none', cursor: 'pointer' }}>
+                {uploadingProfilePhotos ? 'Uploading...' : '+ Add photos'}
+              </button>
+            </div>
+            <p style={{ fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', lineHeight: 1.5, margin: '0 0 12px', fontStyle: 'italic' }}>Places you've been, moments you loved, things that remind you of them. Nora will use them throughout the app.</p>
+            {relationshipPhotos.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
+                {relationshipPhotos.map((url, i) => (
+                  <div key={i} style={{ aspectRatio: '1', borderRadius: 8, overflow: 'hidden', background: '#F5F0E8' }}>
+                    <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                ))}
+              </div>
+            )}
+            <input
+              ref={profilePhotoInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              style={{ display: 'none' }}
+              onChange={e => handleProfilePhotoFiles(e.target.files)}
+            />
+          </div>
         </div>
 
       </div>
