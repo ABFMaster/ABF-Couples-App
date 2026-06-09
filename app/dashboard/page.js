@@ -492,6 +492,20 @@ export default function Dashboard() {
                 style={{ width: '100%', background: uploadingPhotos ? '#E8DDD0' : '#1C1410', color: uploadingPhotos ? '#8B7355' : '#FAF6F0', border: 'none', borderRadius: 10, padding: '13px 16px', fontSize: 13, fontFamily: 'DM Sans, sans-serif', fontWeight: 500, cursor: uploadingPhotos ? 'default' : 'pointer' }}>
                 {uploadingPhotos ? 'Uploading…' : relationshipPhotos.length > 0 ? 'Add more photos →' : 'Add a photo →'}
               </button>
+              {relationshipPhotos.length > 0 && !uploadingPhotos && (
+                <button
+                  onClick={() => setPhotoUploadComplete(true)}
+                  style={{ width: '100%', background: 'transparent', border: 'none', padding: '8px', fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', cursor: 'pointer', marginTop: 4 }}>
+                  Done adding photos
+                </button>
+              )}
+              {relationshipPhotos.length === 0 && !uploadingPhotos && (
+                <button
+                  onClick={() => setPhotoUploadComplete(true)}
+                  style={{ width: '100%', background: 'transparent', border: 'none', padding: '8px', fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', cursor: 'pointer', marginTop: 4 }}>
+                  I'll add photos later
+                </button>
+              )}
             </div>
           ) : (
             <div style={{ padding: '12px 16px', background: '#F0EDE8', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
