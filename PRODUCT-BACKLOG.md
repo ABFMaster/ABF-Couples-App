@@ -1,4 +1,4 @@
-# ABF Product Backlog — Updated 2026-06-03
+# ABF Product Backlog — Updated 2026-06-08
 
 ## HOW TO USE THIS BACKLOG
 - Sprints are sequenced — work top to bottom within each sprint
@@ -10,6 +10,23 @@
 
 ## SPRINT 1 — ONBOARDING OVERHAUL (BETA GATE)
 Nothing ships to strangers until this sprint is done. A new couple needs to land, feel Nora's presence immediately, complete setup, and feel like the app already knows them before they hit the dashboard.
+
+### DONE
+- [x] Assessment visual redesign
+- [x] New assessment framework (3 modules, 10 questions, ECR-S + Gottman)
+- [x] Assessment results page ("My first read on you", personal synthesis)
+- [x] Nora voice in onboarding step 2
+- [x] Assessment → results → dashboard flow fixed
+- [x] Solo user dashboard (isSolo, connect card, no /connect gate)
+- [x] Important dates capture on results page → Timeline
+- [x] Photo upload card on dashboard → Timeline seeding
+- [x] Photo upload persistence (timeline_events check + localStorage)
+- [x] couple_id write-back in prepareStep4
+- [x] "Tell Nora →" standardized across app
+- [x] Seeded Nora chat from hero card (seed param, pendingSeed injection)
+- [x] Hero card new user prompt (noraChat, Esther Perel register, assessment-powered)
+- [x] isNewUser assessment context from user_profiles fallback
+- [x] Hero cache invalidation on assessment completion
 
 ### 1A — Test Infrastructure (do first)
 - [ ] Create dedicated test Supabase accounts (matt+test@, cass+test@) for onboarding work — never test onboarding on primary accounts
@@ -54,38 +71,50 @@ Nothing ships to strangers until this sprint is done. A new couple needs to land
 
 ---
 
-## SPRINT 2 — NORA SIGNAL INTEGRITY
+## SPRINT 2 — COMPLETE YOUR PROFILE + TIMELINE REDESIGN
+
+- [ ] "Complete your profile" catch-up card for Matt and Cass — dashboard card surfacing important dates and photo upload for existing users who predate the new onboarding flow
+- [ ] Timeline redesign sprint — photo entries showing actual photos, event type differentiation, deduplication of photo entries, reflection-focused layout, remove gold gradient treatment
+- [ ] Photo entry titles — use cleaned filename instead of "A moment from our story"
+- [ ] Photo upload entry point post-onboarding — Timeline "+ Add" button should include quick photo upload option
+- [ ] Preferences wired to Nora — hobbies and date_preferences collected during onboarding but never read by any Nora prompt. Wire into getNoraBriefing and hero card context.
+- [ ] Birthday wired to Nora and Timeline — birthday column exists in user_profiles, collected in settings, but never used anywhere. Wire into Nora briefing and create annual Timeline event.
+- [ ] Full Cass end-to-end test — BETA GATE. Every game mode, every daily card, every tab.
+
+---
+
+## SPRINT 3 — NORA SIGNAL INTEGRITY
 Nora needs to be eating everything she should be eating. Until this sprint is done, Nora will feel generic to new couples who haven't built history yet.
 
-### 2A — Flirt Signal Gaps
+### 3A — Flirt Signal Gaps
 - [ ] FLIRT_SENT does not increment signal counts — Nora Arc never learns from flirt behavior. Add FLIRT_SENT to INDIVIDUAL_SIGNAL_WEIGHTS and COUPLE_SIGNAL_WEIGHTS.
 - [ ] FLIRT_RECEIVED signal type doesn't exist — reactions don't feed Nora at all. Create FLIRT_RECEIVED signal, call updateNoraMemory from flirts/react route.
 - [ ] couple_notes blind to all flirt activity — FLIRT_SENT absent from SHARED_SIGNALS. Add and define couple-level lens.
 - [ ] Both user notes currently update from sender perspective only — receiver gets notes written about a flirt they didn't send. Audit whether this is intentional or a latent bug.
 
-### 2B — Timeline Signal Gaps
+### 3B — Timeline Signal Gaps
 - [ ] Game Room sessions (non-Rabbit Hole modes) don't create timeline_events — Hot Take, The Challenge, The Call completions should auto-create entries
 - [ ] conversation event_type exists in config but no insert path creates it — wire or remove
 - [ ] song event_type in timeline config is orphaned — songs come through as shared_item with item_subtype=song, not event_type=song. Align config with reality or build the insert path.
 - [ ] Flirt songs sent — no timeline wire. Decide: should a sent song flirt create a timeline entry?
 
-### 2C — Nora Vision Commentary (backlogged feature)
+### 3C — Nora Vision Commentary (backlogged feature)
 - [ ] When a flirt with an image is sent (photo type, or memory type with image_url), make a proper Anthropic vision API call with the image as a content block
 - [ ] Nora actually sees the photo and writes a specific observation into user notes
 - [ ] Prerequisite: confirm Supabase Storage photo URLs are publicly accessible (required for Anthropic vision API)
 - [ ] This is the correct long-term fix — image URLs as text strings in prompts (now sanitized) was never the right approach
 
-### 2D — Assessment → Memory Wire
+### 3D — Assessment → Memory Wire
 - [ ] Assessment completion should fire updateNoraMemory with full profile data as a PROFILE_UPDATE signal
 - [ ] Couples debrief completion should fire a couple-level signal
 - [ ] Structured facts from couple_notes.structured_facts not surfacing in hero card — audit and wire
 
 ---
 
-## SPRINT 3 — POLISH & FUNCTIONAL CLEANUP
+## SPRINT 4 — POLISH & FUNCTIONAL CLEANUP
 Every screen a stranger touches needs to feel intentional. Nothing janky, nothing confusing.
 
-### 3A — Active Bugs (fix before beta)
+### 4A — Active Bugs (fix before beta)
 - [ ] Location images not always showing on date banners and Next Up card
 - [ ] Ritual card resets to pre-state on page reload — shows checkin buttons again after completion
 - [ ] Ritual "We did it" not showing progress on Us page after completion
@@ -93,25 +122,25 @@ Every screen a stranger touches needs to feel intentional. Nothing janky, nothin
 - [ ] Google Cloud free trial ended — Places API breaks in 30 days. Upgrade required. URGENT.
 - [ ] Nora standalone synthesis cron route — build before Sunday synthesis 404s
 
-### 3B — Nora Voice Quality Pass
+### 4B — Nora Voice Quality Pass
 - [ ] Reduce response restatement — Nora echoes back what the user said before adding anything
 - [ ] Vary entry points — too many responses start the same way
 - [ ] Cut affirmation formula — substance before validation, not after
 - [ ] Closing questions should open new territory, not summarize what was just said
 - [ ] Verdict quality pass — Nora addresses couple as a unit in verdicts. Needs a layer speaking to what each individual's choices reveal specifically.
 
-### 3C — Weekly Rhythm Visual Pass
+### 4C — Weekly Rhythm Visual Pass
 - [ ] Weekly Reflection page — outdated design, needs full redesign
 - [ ] Weekly Reflection history — no history page exists, users can't see past reflections
 - [ ] Timeline polish — design pass across all card layouts and event types
 - [ ] Trips polish — detail page needs visual pass
 
-### 3D — Stamp Perforation Polish
+### 4D — Stamp Perforation Polish
 - [ ] FlirtCard stamp visual — reads as stamp but needs perforation refinement. Research CSS/SVG perforation patterns.
 
 ---
 
-## SPRINT 4 — FULL CASS END-TO-END TEST
+## SPRINT 5 — FULL CASS END-TO-END TEST
 Nothing moves to external beta until this passes.
 
 - [ ] Every game mode — Hot Take, Rabbit Hole, The Challenge (all sub-modes), The Call
@@ -258,6 +287,8 @@ These are designed and validated in product thinking. Build after core signal in
 - [ ] Learn hub — article feed, books, podcasts. Content curation feature. Revisit post-beta.
 - [ ] Dream Trip — shelf properly, let Ahead handle travel for now. Revisit when photo/memory richer.
 - [ ] Giphy production key — blocked externally, follow up when ready for App Store.
+- [ ] Nora Vision Commentary — when a flirt with an image is sent, make a proper Anthropic vision API call. Prerequisite: confirm Supabase Storage photo URLs are publicly accessible.
+- [ ] Therapist Tool (Nora Clinical) — separate product concept. B2B SaaS. Therapist assigns Nora to patient for between-session work. Therapist reads synthesized notes. Requires HIPAA compliance, BAA, explicit consent architecture. Initial positive signal from Cass's therapist. Open dedicated product design chat in ABF project before any code.
 
 ---
 
@@ -270,6 +301,10 @@ These are designed and validated in product thinking. Build after core signal in
 - [ ] cta_label/cta_href/pills from heroData — never rendered, remove or wire
 - [ ] GoTrueClient singleton warning — low priority but clean up before App Store
 - [ ] Flirt retention policy — GIFs/ephemeral types: 90-day delete. Permanent counter on couples table never decremented. Implement before scale.
+- [ ] Multiple GoTrueClient warning — creating new Supabase clients in components instead of using singleton. Audit all components for dynamic createClient calls and replace with singleton.
+- [ ] Photo deduplication — uploading photos creates duplicate timeline_events on repeated uploads. Add deduplication check before insert.
+- [ ] "A moment from our story" generic title — all photo uploads get same title. Use cleaned filename or prompt user for a title.
+- [ ] assessment results page debug logs — confirm all [Results] logs removed before beta
 
 ---
 
