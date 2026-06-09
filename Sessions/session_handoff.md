@@ -112,12 +112,31 @@
 - Cass: 7d1ef6c1-5fac-4ae0-9c04-e73158a1eff0
 - Couple ID: 8230e60f-44ca-4668-be28-06cb32b1b831
 
+## Recent Completions (Sprint 1 — Onboarding Overhaul)
+- Assessment framework replaced — 3 modules (attachment_profile, conflict_profile, love_expression), 10 scenario-based questions, ECR-S attachment scoring, Gottman conflict styles, love expression profile
+- Assessment visual redesign — full ABF aesthetic, tap-to-rank replacing select dropdowns
+- Assessment results page — "My first read on you", personal synthesis via /api/assessment/personal-summary, first-person Nora voice, important dates capture
+- Onboarding flow fixed — assessment always routes to results page, results routes to dashboard, no more step gates blocking new users
+- Solo user dashboard — isSolo detection (no couple row OR unconnected couple), connect card, photo upload card, no /connect redirect
+- couple_id write-back — prepareStep4 now upserts couple_id to user_profiles after couple row creation
+- Photo upload — dashboard card with grid upload, drag-and-drop, Timeline event creation per photo, persistence via timeline_events check + localStorage skip flag
+- Important dates capture — results page section with 4 preset dates + custom dates, feeds timeline_events and Nora memory
+- Seeded Nora chat — hero card CTA passes full observation as ?seed= param, injected as Nora's opening message in ai-coach
+- Hero card new user experience — noraChat model, Esther Perel register, assessment context from user_profiles, isNewUser detection, "Tell Nora →" CTA
+- "Tell Nora →" standardized across all surfaces replacing "Talk to Nora →"
+- Nora image URL sanitization — strips photo URLs from synthesis prompts before they reach Nora
+- Assessment seed-memory route — fires after assessment completion, writes attachment_style/conflict_style/love_language_primary to user_profiles, invalidates hero cache
+- Bob test account — bob@gmail.com used for all new user flow testing
+
 ## Next Session Priorities
-1. Full Cass end-to-end test — BETA GATE
-2. FlirtCard stamp visual polish
-3. Memory type in Flirts — Timeline picker integration
-4. Nora Relationship Arc — monitor signal accumulation
-5. Nora Clinical concept — backlogged for future research
-6. API auth hardening — 56 unprotected routes
-7. Codebase quality audit
-8. App Store assets + Privacy Policy
+1. "Complete your profile" catch-up card — Matt and Cass need important dates and photo upload surfaced on their existing accounts without redoing onboarding
+2. Timeline redesign sprint — photo entries showing actual photos, event type differentiation, deduplication, reflection-focused layout
+3. Full Cass end-to-end test — BETA GATE
+4. Preferences wired to Nora — hobbies and date_preferences never read by any prompt
+5. Birthday wired to Nora and Timeline
+
+## Key Test Accounts
+- Matt: fe1e0be6-4574-4bc1-8c89-9cb1b6bbe870 (coggan11@gmail.com)
+- Cass: 7d1ef6c1-5fac-4ae0-9c04-e73158a1eff0 (cassiwika@gmail.com)
+- Couple: 8230e60f-44ca-4668-be28-06cb32b1b831
+- Bob (test): bob@gmail.com — use for new user flow testing, safe to reset
