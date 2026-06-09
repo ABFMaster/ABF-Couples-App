@@ -256,7 +256,8 @@ export default function Dashboard() {
     try {
       const sb = supabase
       const path = `relationship/${couple?.id || user.id}/${Date.now()}_${file.name.replace(/\s/g, '_')}`
-      await sb.storage.from('photos').upload(path, file, { upsert: true })
+      const { data } = await sb.storage.from('photos').upload(path, file, { upsert: true })
+      console.log('[photo] upload result:', data)
       const { data: urlData } = sb.storage.from('photos').getPublicUrl(path)
       const publicUrl = urlData.publicUrl
 
@@ -277,6 +278,7 @@ export default function Dashboard() {
       }
 
       setRelationshipPhotos(prev => [...prev, publicUrl])
+      console.log('[photo] relationshipPhotos length after set:', relationshipPhotos.length + 1)
     } catch(e) {
       console.error('Photo upload error:', e)
     }
