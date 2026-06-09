@@ -205,6 +205,14 @@ export default function AssessmentResults() {
   const conflictLabels = { volatile: 'Volatile', validating: 'Validating', avoiding: 'Conflict-Avoiding' }
   const conflictColors = { volatile: { bg: '#FDF0EA', color: '#C4714A', border: '#E8C4A0' }, validating: { bg: '#EEF2EC', color: '#7A8C6E', border: '#B8C9B0' }, avoiding: { bg: '#F5F0EA', color: '#8B7355', border: '#D4C4A8' } }
   const loveLabels = { words: 'Words of Affirmation', time: 'Quality Time', touch: 'Physical Touch', service: 'Acts of Service', gifts: 'Thoughtful Gestures' }
+  const loveProfileEmpty = !loveResult.profile || loveResult.profile.every(item => item.percentage === 0)
+  const coupleInsightInvalid = coupleInsight && (
+    coupleInsight.toLowerCase().includes('zero') ||
+    coupleInsight.toLowerCase().includes("didn't complete") ||
+    coupleInsight.toLowerCase().includes('not completed') ||
+    coupleInsight.toLowerCase().includes("didn't fill") ||
+    coupleInsight.toLowerCase().includes('assessment')
+  )
 
   return (
     <div style={{ minHeight: '100vh', background: '#FAF6F0', paddingBottom: 80 }}>
@@ -305,27 +313,64 @@ export default function AssessmentResults() {
           <div style={{ height: 1, background: '#E8DDD0', margin: '16px 0' }} />
           <p style={{ fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: '#6B5D4F', lineHeight: 1.6, margin: '0 0 20px' }}>{loveResult.description}</p>
           <div style={{ fontSize: 9, fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.15em', color: '#8B7355', marginBottom: 12, textTransform: 'uppercase' }}>Your Love Profile</div>
-          {loveResult.profile?.map((item) => (
-            <div key={item.language} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-              <span style={{ fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#6B5D4F', width: 150, flexShrink: 0 }}>{loveLabels[item.language]}</span>
-              <div style={{ flex: 1, height: 6, background: '#F0EBE3', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{ height: '100%', borderRadius: 3, background: item.language === loveResult.primary ? '#C4714A' : '#C4AA87', width: `${item.percentage}%`, transition: 'width 0.6s ease' }} />
-              </div>
-              <span style={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', width: 32, textAlign: 'right' }}>{item.percentage}%</span>
+          {!loveProfileEmpty ? (
+            <>
+              {loveResult.profile?.map((item) => (
+                <div key={item.language} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <span style={{ fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#6B5D4F', width: 150, flexShrink: 0 }}>{loveLabels[item.language]}</span>
+                  <div style={{ flex: 1, height: 6, background: '#F0EBE3', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: 3, background: item.language === loveResult.primary ? '#C4714A' : '#C4AA87', width: `${item.percentage}%`, transition: 'width 0.6s ease' }} />
+                  </div>
+                  <span style={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', width: 32, textAlign: 'right' }}>{item.percentage}%</span>
+                </div>
+              ))}
+              <p style={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', fontStyle: 'italic', marginTop: 8, marginBottom: 0 }}>All five matter. This is just where you start.</p>
+            </>
+          ) : (
+            <div style={{ padding: '16px', background: '#FAF6F0', borderRadius: 8, textAlign: 'center' }}>
+              <p style={{ fontSize: 13, fontFamily: 'DM Sans, sans-serif', color: '#6B5D4F', lineHeight: 1.5, margin: '0 0 12px' }}>Complete this section to see your full love profile.</p>
+              <button
+                onClick={() => router.push('/assessment?module=love_expression')}
+                style={{ background: 'none', border: '1px solid #C4714A', borderRadius: 8, padding: '8px 16px', fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#C4714A', cursor: 'pointer' }}>
+                Complete this section →
+              </button>
             </div>
-          ))}
-          <p style={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', fontStyle: 'italic', marginTop: 8, marginBottom: 0 }}>All five matter. This is just where you start.</p>
+          )}
         </div>
 
         {/* COUPLE INSIGHT */}
-        {coupleInsight && (
-          <div style={{ background: '#1C1410', borderRadius: 16, padding: 24 }}>
+        {(coupleInsight || partnerName) && (
+          <div style={{ background: '#1C1410', borderRadius: 16, padding: 24, margin: '0 24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#C4AA87', flexShrink: 0 }} />
               <span style={{ fontSize: 9, fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.15em', color: '#C4AA87', textTransform: 'uppercase' }}>Nora on your pairing</span>
             </div>
             <h3 style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 22, fontWeight: 400, color: '#FAF6F0', margin: '0 0 12px' }}>Your pairing.</h3>
-            <p style={{ fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: 'rgba(250,246,240,0.8)', lineHeight: 1.75, margin: 0 }}>{coupleInsight}</p>
+            {coupleInsight && !coupleInsightInvalid ? (
+              <p style={{ fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: 'rgba(250,246,240,0.8)', lineHeight: 1.75, margin: 0 }}>{coupleInsight}</p>
+            ) : (
+              <div>
+                <p style={{ fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: 'rgba(250,246,240,0.7)', lineHeight: 1.6, margin: '0 0 16px', fontStyle: 'italic' }}>
+                  {partnerAssessment
+                    ? `I can see your patterns separately. To say something true about you together, I need both assessments to be current.`
+                    : `I can see your patterns. To say something true about you and ${partnerName || 'your partner'} together, I need them to complete their assessment too.`}
+                </p>
+                {!partnerAssessment && partnerName && (
+                  <button
+                    onClick={() => {
+                      const msg = `Hey — I just did something on ABF and I think you should see what Nora says about us together. Can you complete your assessment? ${window.location.origin}/assessment`
+                      if (navigator.share) {
+                        navigator.share({ text: msg })
+                      } else {
+                        navigator.clipboard.writeText(msg)
+                      }
+                    }}
+                    style={{ background: 'rgba(250,246,240,0.1)', border: '1px solid rgba(250,246,240,0.2)', borderRadius: 8, padding: '10px 16px', fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#FAF6F0', cursor: 'pointer' }}>
+                    Remind {partnerName} →
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
