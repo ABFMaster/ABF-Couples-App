@@ -44,6 +44,7 @@ export default function Dashboard() {
   const [relationshipPhotos, setRelationshipPhotos]     = useState([])
   const [uploadingPhotos, setUploadingPhotos]           = useState(false)
   const [photoUploadComplete, setPhotoUploadComplete]   = useState(false)
+  const [showCatchupCard, setShowCatchupCard]           = useState(false)
   const photoUploadRef = useRef(null)
 
   const todayName = new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles', weekday: 'long' })
@@ -121,6 +122,18 @@ export default function Dashboard() {
         setPhotoUploadComplete(true)
       }
 
+      const { data: existingDates } = await supabase
+        .from('timeline_events')
+        .select('id')
+        .eq('couple_id', coupleData?.id)
+        .in('event_type', ['milestone', 'anniversary', 'first_date', 'first_kiss'])
+        .limit(1)
+        .maybeSingle()
+
+      if (!existingDates) {
+        setShowCatchupCard(true)
+      }
+
       setLoading(false)
     } catch (err) {
       console.error('Dashboard error:', err)
@@ -133,6 +146,12 @@ export default function Dashboard() {
   useEffect(() => {
     if (localStorage.getItem('abf_photos_later')) {
       setPhotoUploadComplete(true)
+    }
+    if (localStorage.getItem('abf_photos_done')) {
+      setPhotoUploadComplete(true)
+    }
+    if (localStorage.getItem('abf_catchup_dismissed')) {
+      setShowCatchupCard(false)
     }
   }, [])
 
@@ -511,7 +530,7 @@ export default function Dashboard() {
               </button>
               {relationshipPhotos.length > 0 && !uploadingPhotos && (
                 <button
-                  onClick={() => setPhotoUploadComplete(true)}
+                  onClick={() => { localStorage.setItem('abf_photos_done', 'true'); setPhotoUploadComplete(true); setTimeout(() => setPhotoUploadComplete(false), 3000) }}
                   style={{ width: '100%', background: 'transparent', border: 'none', padding: '8px', fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', cursor: 'pointer', marginTop: 4 }}>
                   Done adding photos
                 </button>
@@ -531,6 +550,28 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
+        {/* SECTION 3.65 — CATCH-UP CARD */}
+        {showCatchupCard && (
+          <div style={{ margin: '0 20px 20px', padding: '20px', background: '#FFFFFF', borderRadius: 16, border: '1px solid #E8DDD0' }}>
+            <div style={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.12em', color: '#8B7355', textTransform: 'uppercase', marginBottom: 8 }}>YOUR STORY</div>
+            <p style={{ fontSize: 15, fontFamily: 'Cormorant Garamond, Georgia, serif', color: '#1C1410', lineHeight: 1.5, margin: '0 0 6px' }}>Add the dates that started everything.</p>
+            <p style={{ fontSize: 13, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', lineHeight: 1.5, margin: '0 0 16px' }}>When you met, your first date, first kiss, anniversary — Nora will use them and so will your Timeline.</p>
+            <button
+              onClick={() => router.push('/assessment/results')}
+              style={{ width: '100%', background: '#1C1410', color: '#FAF6F0', border: 'none', borderRadius: 10, padding: '13px 16px', fontSize: 13, fontFamily: 'DM Sans, sans-serif', fontWeight: 500, cursor: 'pointer', marginBottom: 10 }}>
+              Add your dates →
+            </button>
+            <button
+              onClick={() => {
+                localStorage.setItem('abf_catchup_dismissed', 'true')
+                setShowCatchupCard(false)
+              }}
+              style={{ width: '100%', background: 'transparent', border: 'none', padding: '8px', fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', cursor: 'pointer' }}>
+              I'll do this later
+            </button>
+          </div>
+        )}
 
         {/* SECTION 3.7 — FLIRT CARD */}
         <FlirtCard
