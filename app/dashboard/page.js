@@ -359,7 +359,7 @@ export default function Dashboard() {
         fetch('/api/timeline/event', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ coupleId, userId: user?.id, title: entry.title, eventType: entry.eventType, eventDate: entry.date, description: null }),
+          body: JSON.stringify({ coupleId, userId: user?.id, title: entry.title, eventType: entry.eventType, eventDate: entry.date + 'T12:00:00', description: null }),
         })
       ))
 
