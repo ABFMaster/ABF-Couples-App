@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { getTodayString, getDayOfWeek } from '@/lib/dates'
 
-const BET_DAYS = new Set([3]) // Wednesday
+const BET_DAYS = new Set([2]) // Tuesday
 
 export async function GET(request) {
   try {

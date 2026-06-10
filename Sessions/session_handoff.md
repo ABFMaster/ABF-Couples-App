@@ -128,12 +128,48 @@
 - Assessment seed-memory route — fires after assessment completion, writes attachment_style/conflict_style/love_language_primary to user_profiles, invalidates hero cache
 - Bob test account — bob@gmail.com used for all new user flow testing
 
+## Recent Completions (Session 2026-06-10 — Timeline Redesign + Onboarding Completion)
+
+### Onboarding & Profile
+- Your Story section added to Me tab — persistent important dates entry and photo upload for all users
+- Important dates now feed timeline_events correctly with proper date timezone fix (T12:00:00)
+- Photo upload working from Me tab — Supabase Storage, timeline event creation, grid display
+- couple_id now written back to user_profiles in prepareStep4 — systemic fix
+- Dashboard catch-up card — shows when no first_date/first_kiss/anniversary events exist
+- Inline dates modal on dashboard for existing users
+- Date display timezone fix — all Us tab and Timeline date formatting uses T12:00:00
+
+### Timeline Redesign
+- BEEN tab redesigned — 3 card types: dark milestone cards, photo hero cards, white event cards
+- Photo cards show actual photos with caption overlay
+- Detail view — full screen push navigation, photo/gradient header, Nora block, actions
+- Empty milestone cards prompt users to add missing foundational dates
+- Milestone entry sheet — location autocomplete via Maps SDK, Places photo fetch, save to timeline
+- MEMORY_REFLECTION signal type added to nora-memory.js
+- nora_observation column added to timeline_events table
+- Archive overlay rows now tappable to detail view
+- Detail view z-index fixed (150) to sit above archive (100)
+- Smart photo button label — "Change photo" vs "+ Add photo"
+- Title extraction fixed — place name only, not full address
+- Photo deduplication — same title + couple_id skips insert
+- Date display fixed across Us tab (T12:00:00 append)
+- computeMissingMilestones — detects missing first_date/first_kiss/anniversary
+- Curated BEEN events — milestones first, then photos, then others
+
+### Assessment & Results
+- Assessment results page incomplete states — love profile fallback with deep-link to specific module
+- Couple insight graceful degradation — partner remind button
+- Assessment deep-link — ?module= param jumps to specific module
+- Personal summary prompt improved — no sentence limit, open door closing, 500 maxTokens
+
 ## Next Session Priorities
-1. "Complete your profile" catch-up card — Matt and Cass need important dates and photo upload surfaced on their existing accounts without redoing onboarding
-2. Timeline redesign sprint — photo entries showing actual photos, event type differentiation, deduplication, reflection-focused layout
-3. Full Cass end-to-end test — BETA GATE
-4. Preferences wired to Nora — hobbies and date_preferences never read by any prompt
-5. Birthday wired to Nora and Timeline
+1. Foundation card redesign — cycling card with photo (Places API or user upload), implement in BEEN tab
+2. Full Timeline page — chronological view, replace archive sheet with proper push navigation
+3. Nora random memory surfacing — "Nora surfaced this" card in BEEN tab, pull random non-recent event
+4. Photo titles and date picker during upload — let users name photos and set the date taken
+5. Full Cass end-to-end test — BETA GATE
+6. Preferences wired to Nora — hobbies/date_preferences never read by any prompt
+7. Wire MEMORY_REFLECTION signal — when user taps Tell Nora about this, fire updateNoraMemory
 
 ## Key Test Accounts
 - Matt: fe1e0be6-4574-4bc1-8c89-9cb1b6bbe870 (coggan11@gmail.com)
