@@ -29,7 +29,7 @@ export default function UsPage() {
   const [nextTrip, setNextTrip] = useState(null)
 
   // Archive overlay
-  const [showArchive, setShowArchive] = useState(false)
+  const [showBeenArchive, setShowBeenArchive] = useState(false)
   const [sharedItems, setSharedItems] = useState([])
   const [sharedItemsLoading, setSharedItemsLoading] = useState(true)
   const [activeCategory, setActiveCategory] = useState('All')
@@ -40,17 +40,29 @@ export default function UsPage() {
   const [capturePhotoPreview, setCapturePhotoPreview] = useState(null)
   const [showBeenDetail, setShowBeenDetail] = useState(false)
   const [beenDetailItem, setBeenDetailItem] = useState(null)
+  const [selectedEvent, setSelectedEvent] = useState(null)
+  const [missingMilestones, setMissingMilestones] = useState([])
 
   async function fetchTimelineEvents(coupleId) {
     setTimelineLoading(true)
     const { data: events } = await supabase
       .from('timeline_events')
-      .select('id, title, description, event_date, event_type, created_at, created_by, image_url, item_subtype, artist, source_id')
+      .select('id, title, description, event_date, event_type, created_at, created_by, image_url, item_subtype, artist, source_id, photo_urls, nora_observation')
       .eq('couple_id', coupleId)
       .order('event_date', { ascending: false })
-      .limit(20)
     setTimelineEvents(events || [])
+    computeMissingMilestones(events || [])
     setTimelineLoading(false)
+  }
+
+  const computeMissingMilestones = (events) => {
+    const types = new Set(events.map(e => e.event_type))
+    const missing = []
+    if (!types.has('first_date') && !events.find(e => e.title === 'When we met')) missing.push({ key: 'met', label: 'When you met', eventType: 'milestone', prompt: 'Add the date that started everything.' })
+    if (!types.has('first_date') && !events.find(e => e.title === 'Our first date')) missing.push({ key: 'firstDate', label: 'First date', eventType: 'first_date', prompt: 'When did you go on your first date?' })
+    if (!types.has('first_kiss')) missing.push({ key: 'firstKiss', label: 'First kiss', eventType: 'first_kiss', prompt: 'The moment things changed.' })
+    if (!types.has('anniversary')) missing.push({ key: 'anniversary', label: 'Anniversary', eventType: 'anniversary', prompt: 'Your official date together.' })
+    setMissingMilestones(missing.slice(0, 2))
   }
 
   useEffect(() => {
@@ -348,70 +360,74 @@ export default function UsPage() {
             </div>
           </div>
 
-          {/* Permanent stones */}
-          {timelineLoading ? (
-            <div style={{ padding: '20px', textAlign: 'center' }}>
-              <p style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic', color: '#C4AA87', fontSize: '16px' }}>Loading your timeline...</p>
-            </div>
-          ) : permanentStones.length === 0 ? (
-            <div style={{ background: 'white', borderRadius: '18px', padding: '24px 20px', textAlign: 'center', marginBottom: '12px', border: '1px solid #EDE4D8' }}>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', color: '#1C1410', marginBottom: '8px' }}>Nothing saved yet</div>
-              <div style={{ fontSize: '13px', color: '#8B7355', marginBottom: '16px' }}>Your first memories are waiting to be made.</div>
-              <button onClick={() => router.push('/timeline')} style={{ fontSize: '12px', color: '#8B7355', background: 'none', border: '1px solid #D9CBBA', padding: '8px 18px', borderRadius: '20px', cursor: 'pointer' }}>Add a memory →</button>
-            </div>
-          ) : (
-            permanentStones.slice(0, 3).map(event => (
-              event.event_type === 'shared_item' ? (
-                <div key={event.id} style={{ marginBottom: '12px', cursor: 'pointer' }} onClick={() => openBeenDetail(event, true)}>
-                  <SharedItemCard
-                    item={{
-                      id: event.id,
-                      title: event.title,
-                      type: event.item_subtype,
-                      poster_url: event.image_url,
-                      artwork_url: event.image_url,
-                      artist: event.artist,
-                      note: event.description,
-                      description: event.description,
-                      event_date: event.event_date,
-                      completed: true,
-                    }}
-                    mode="been"
-                    cardHeight={220}
-                    objectPosition={event.item_subtype === 'rich' ? 'top center' : 'center'}
-                  />
+          {/* BEEN TAB — redesigned */}
+          <div>
+            {/* Missing milestone empty state cards — show up to 2 */}
+            {missingMilestones.map(m => (
+              <div key={m.key} onClick={() => router.push('/profile')} style={{ background: '#1C1410', borderRadius: 14, padding: 20, marginBottom: 12, border: '1.5px dashed rgba(196,170,135,0.3)', cursor: 'pointer' }}>
+                <div style={{ fontSize: 10, letterSpacing: '0.15em', color: '#C4AA87', opacity: 0.7, textTransform: 'uppercase', marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}>{m.label}</div>
+                <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 18, color: 'rgba(250,246,240,0.4)', fontWeight: 400, marginBottom: 12 }}>{m.prompt}</div>
+                <div style={{ fontSize: 12, color: '#C4AA87', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'DM Sans, sans-serif' }}>
+                  <span>+</span> Add this date →
                 </div>
-              ) : (
-                <div key={event.id} style={{ marginBottom: '12px' }}>
-                  <div style={{ borderRadius: '18px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(28,20,16,0.08)' }} onClick={() => openBeenDetail(event, false)}>
-                    <div style={{ height: '80px', background: getMoodColor(event.event_type), position: 'relative', display: 'flex', alignItems: 'flex-end', padding: '12px 16px', justifyContent: 'space-between' }}>
-                      <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.12)', padding: '3px 9px', borderRadius: '20px' }}>{getMoodLabel(event.event_type)}</div>
-                      <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.9)', background: 'rgba(255,255,255,0.15)', padding: '3px 9px', borderRadius: '20px' }}>Saved ✦</div>
+              </div>
+            ))}
+
+            {/* Real events — newest first, up to 5 */}
+            {permanentStones.slice(0, 5).map(event => {
+              const isMilestone = ['first_date', 'first_kiss', 'anniversary', 'milestone'].includes(event.event_type)
+              const hasPhoto = event.photo_urls?.length > 0
+              const hasImageUrl = !!event.image_url
+              const primaryPhoto = event.photo_urls?.[0] || event.image_url
+
+              if (isMilestone) {
+                return (
+                  <div key={event.id} onClick={() => setSelectedEvent(event)} style={{ background: '#1C1410', borderRadius: 14, padding: 20, marginBottom: 12, cursor: 'pointer' }}>
+                    <div style={{ fontSize: 10, letterSpacing: '0.15em', color: '#C4AA87', textTransform: 'uppercase', marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}>
+                      {event.event_type === 'first_kiss' ? 'First kiss' : event.event_type === 'first_date' ? 'First date' : event.event_type === 'anniversary' ? 'Anniversary' : 'Milestone'}
                     </div>
-                    <div style={{ background: 'white', padding: '16px 18px' }}>
-                      <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 400, color: '#1C1410', lineHeight: 1.2, marginBottom: '6px' }}>{event.title}</div>
-                      {event.description && <div style={{ fontSize: '12px', fontStyle: 'italic', color: '#8B7355', lineHeight: 1.55, marginBottom: '6px' }}>{event.description.slice(0, 120)}{event.description.length > 120 ? '...' : ''}</div>}
-                      <div style={{ fontSize: '10px', color: '#C4AA87' }}>{event.event_date ? new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}</div>
+                    <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 26, fontWeight: 400, color: '#FAF6F0', marginBottom: 4 }}>{event.title}</div>
+                    <div style={{ fontSize: 12, color: 'rgba(250,246,240,0.5)', fontFamily: 'DM Sans, sans-serif' }}>{new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+                  </div>
+                )
+              }
+
+              if (hasPhoto || hasImageUrl) {
+                return (
+                  <div key={event.id} onClick={() => setSelectedEvent(event)} style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12, position: 'relative', cursor: 'pointer', background: '#E8DDD0' }}>
+                    <img src={primaryPhoto} alt={event.title} style={{ width: '100%', height: 200, objectFit: 'cover', display: 'block' }} />
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 16px', background: 'linear-gradient(to top, rgba(28,20,16,0.8) 0%, transparent 100%)' }}>
+                      <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 18, color: '#FAF6F0', fontWeight: 400 }}>{event.title}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(250,246,240,0.7)', marginTop: 2, fontFamily: 'DM Sans, sans-serif' }}>{new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                     </div>
                   </div>
+                )
+              }
+
+              return (
+                <div key={event.id} onClick={() => setSelectedEvent(event)} style={{ background: '#FFFFFF', borderRadius: 14, padding: 16, marginBottom: 12, border: '1px solid #E8DDD0', cursor: 'pointer' }}>
+                  <div style={{ fontSize: 10, letterSpacing: '0.12em', color: '#8B7355', textTransform: 'uppercase', background: '#F5F0E8', padding: '3px 8px', borderRadius: 20, display: 'inline-block', marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}>
+                    {getMoodLabel(event.event_type)}
+                  </div>
+                  <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 20, color: '#1C1410', fontWeight: 400 }}>{event.title}</div>
+                  {event.description && <div style={{ fontSize: 12, color: '#8B7355', marginTop: 4, lineHeight: 1.5, fontFamily: 'DM Sans, sans-serif' }}>{event.description.slice(0, 100)}{event.description.length > 100 ? '...' : ''}</div>}
+                  <div style={{ fontSize: 11, color: '#8B7355', marginTop: 8, fontFamily: 'DM Sans, sans-serif' }}>{new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
                 </div>
               )
-            ))
-          )}
+            })}
 
-          {/* Divider */}
-          {permanentStones.length > 3 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '8px 0 16px' }}>
-              <div style={{ flex: 1, height: '1px', background: '#EDE4D8' }} />
-              <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87' }}>Still breathing</div>
-              <div style={{ flex: 1, height: '1px', background: '#EDE4D8' }} />
-            </div>
-          )}
+            {permanentStones.length === 0 && missingMilestones.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 20, color: '#8B7355', marginBottom: 8 }}>Your story is just beginning.</div>
+                <div style={{ fontSize: 13, color: '#8B7355', fontFamily: 'DM Sans, sans-serif' }}>Add your first memory to get started.</div>
+              </div>
+            )}
 
-          {/* Archive link */}
-          <div onClick={() => setShowArchive(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px', fontSize: '12px', color: '#8B7355', cursor: 'pointer', border: '1px solid #EDE4D8', borderRadius: '14px', marginTop: '4px' }}>
-            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#D9CBBA' }} />
-            <span>Everything you've built together →</span>
+            {permanentStones.length > 5 && (
+              <div onClick={() => setShowBeenArchive(true)} style={{ textAlign: 'center', padding: 14, fontSize: 12, color: '#8B7355', border: '1px solid #E8DDD0', borderRadius: 10, marginTop: 4, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                Everything you've built together →
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -551,16 +567,86 @@ export default function UsPage() {
         </div>
       )}
 
+      {/* EVENT DETAIL OVERLAY */}
+      {selectedEvent && (
+        <div style={{ position: 'fixed', inset: 0, background: '#FAF6F0', zIndex: 100, overflowY: 'auto' }}>
+          {/* Header — photo or gradient */}
+          <div style={{ position: 'relative', height: 260, background: selectedEvent.photo_urls?.[0] || selectedEvent.image_url ? 'transparent' : 'linear-gradient(135deg, #1C1410 0%, #2D3561 100%)', overflow: 'hidden', flexShrink: 0 }}>
+            {(selectedEvent.photo_urls?.[0] || selectedEvent.image_url) && (
+              <img src={selectedEvent.photo_urls?.[0] || selectedEvent.image_url} alt={selectedEvent.title} style={{ width: '100%', height: 260, objectFit: 'cover', display: 'block' }} />
+            )}
+            {!(selectedEvent.photo_urls?.[0] || selectedEvent.image_url) && (
+              <div style={{ width: '100%', height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ fontSize: 48, opacity: 0.15 }}>♥</div>
+              </div>
+            )}
+            <div style={{ position: 'absolute', top: 16, left: 16 }}>
+              <button onClick={() => setSelectedEvent(null)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(28,20,16,0.5)', border: 'none', color: '#FAF6F0', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>←</button>
+            </div>
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px 20px', background: 'linear-gradient(to top, rgba(28,20,16,0.85) 0%, transparent 100%)' }}>
+              <div style={{ fontSize: 10, letterSpacing: '0.15em', color: '#C4AA87', textTransform: 'uppercase', marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>
+                {selectedEvent.event_type === 'first_kiss' ? 'First kiss' : selectedEvent.event_type === 'first_date' ? 'First date' : selectedEvent.event_type === 'anniversary' ? 'Anniversary' : getMoodLabel(selectedEvent.event_type)}
+              </div>
+              <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 26, color: '#FAF6F0', fontWeight: 400 }}>{selectedEvent.title}</div>
+              <div style={{ fontSize: 12, color: 'rgba(250,246,240,0.6)', marginTop: 4, fontFamily: 'DM Sans, sans-serif' }}>{new Date(selectedEvent.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div style={{ padding: 20 }}>
+            {selectedEvent.description && (
+              <p style={{ fontSize: 14, color: '#6B5D4F', lineHeight: 1.7, marginBottom: 20, fontStyle: 'italic', fontFamily: 'DM Sans, sans-serif' }}>"{selectedEvent.description}"</p>
+            )}
+
+            <div style={{ height: 1, background: '#E8DDD0', marginBottom: 20 }} />
+
+            {/* Nora block */}
+            <div style={{ background: '#1C1410', borderRadius: 14, padding: 18, marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#C4AA87', flexShrink: 0 }} />
+                <div style={{ fontSize: 9, letterSpacing: '0.18em', color: '#C4AA87', textTransform: 'uppercase', fontFamily: 'DM Sans, sans-serif' }}>Nora</div>
+              </div>
+              {selectedEvent.nora_observation ? (
+                <p style={{ fontSize: 13, color: 'rgba(250,246,240,0.8)', lineHeight: 1.6, fontStyle: 'italic', marginBottom: 14, fontFamily: 'DM Sans, sans-serif' }}>{selectedEvent.nora_observation}</p>
+              ) : (
+                <p style={{ fontSize: 13, color: 'rgba(250,246,240,0.5)', lineHeight: 1.6, fontStyle: 'italic', marginBottom: 14, fontFamily: 'DM Sans, sans-serif' }}>I haven't heard about this one yet. Tell me what it meant.</p>
+              )}
+              <button
+                onClick={() => {
+                  const seed = `I want to tell you about a memory: "${selectedEvent.title}" on ${new Date(selectedEvent.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}${selectedEvent.description ? '. ' + selectedEvent.description : ''}. What do you notice?`
+                  router.push('/ai-coach?seed=' + encodeURIComponent(seed))
+                }}
+                style={{ fontSize: 12, color: '#C4AA87', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'DM Sans, sans-serif', padding: 0 }}>
+                Tell Nora about this →
+              </button>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => router.push('/profile')}
+                style={{ flex: 1, padding: 11, border: '1px solid #E8DDD0', borderRadius: 10, fontSize: 12, color: '#6B5D4F', background: '#FFFFFF', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                + Add photo
+              </button>
+              <button
+                style={{ flex: 1, padding: 11, border: '1px solid #E8DDD0', borderRadius: 10, fontSize: 12, color: '#6B5D4F', background: '#FFFFFF', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                Edit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ARCHIVE OVERLAY */}
-      {showArchive && (
+      {showBeenArchive && (
         <div style={{ position: 'fixed', inset: 0, background: '#FAF6F0', zIndex: 100, overflowY: 'auto', maxWidth: '430px', margin: '0 auto' }}>
           <div style={{ padding: '52px 24px 16px', borderBottom: '1px solid #EDE4D8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300 }}>Everything</div>
-            <button onClick={() => setShowArchive(false)} style={{ fontSize: '12px', color: '#8B7355', background: 'none', border: '1px solid #D9CBBA', padding: '6px 14px', borderRadius: '20px', cursor: 'pointer' }}>← Back</button>
+            <button onClick={() => setShowBeenArchive(false)} style={{ fontSize: '12px', color: '#8B7355', background: 'none', border: '1px solid #D9CBBA', padding: '6px 14px', borderRadius: '20px', cursor: 'pointer' }}>← Back</button>
           </div>
           <div style={{ padding: '20px 24px 40px' }}>
             {timelineEvents.map(event => (
-              <div key={event.id} style={{ display: 'flex', gap: '12px', padding: '14px 0', borderBottom: '1px solid #EDE4D8', alignItems: 'flex-start' }}>
+              <div key={event.id} onClick={() => setSelectedEvent(event)} style={{ display: 'flex', gap: '12px', padding: '14px 0', borderBottom: '1px solid #EDE4D8', alignItems: 'flex-start', cursor: 'pointer' }}>
                 <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: getMoodColor(event.event_type), flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '2px' }}>{getMoodLabel(event.event_type)}</div>
