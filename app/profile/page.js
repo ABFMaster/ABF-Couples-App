@@ -248,7 +248,11 @@ export default function MePage() {
           body: JSON.stringify({
             coupleId: coupleId || null,
             userId: user.id,
-            title: file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' '),
+            title: (() => {
+              const cleaned = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ').trim()
+              const isGeneric = /^IMG\s*\d+$/i.test(cleaned) || /^[A-F0-9\s]{10,}$/i.test(cleaned) || cleaned.length < 3
+              return isGeneric ? 'A moment from our story' : cleaned
+            })(),
             eventType: 'custom',
             eventDate: new Date().toISOString().split('T')[0] + 'T12:00:00',
             photoUrls: [publicUrl],
