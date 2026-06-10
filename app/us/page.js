@@ -51,6 +51,7 @@ export default function UsPage() {
   const [milestoneLocationResults, setMilestoneLocationResults] = useState([])
   const [mapsLoaded, setMapsLoaded] = useState(false)
   const [selectedPlaceId, setSelectedPlaceId] = useState(null)
+  const [milestoneLocationName, setMilestoneLocationName] = useState('')
   const milestoneSearchTimeout = useRef(null)
 
   async function fetchTimelineEvents(coupleId) {
@@ -100,6 +101,7 @@ export default function UsPage() {
         setMilestoneLocationResults(suggestions.slice(0, 4).map(s => ({
           place_id: s.placePrediction.placeId,
           description: s.placePrediction.text.text,
+          placeName: s.placePrediction.mainText?.text || s.placePrediction.text.text.split(',')[0],
         })))
       } catch(e) { setMilestoneLocationResults([]) }
     }, 280)
@@ -107,6 +109,7 @@ export default function UsPage() {
 
   const selectMilestonePlace = async (prediction) => {
     setMilestoneLocation(prediction.description)
+    setMilestoneLocationName(prediction.placeName || prediction.description.split(',')[0])
     setSelectedPlaceId(prediction.place_id)
     setMilestoneLocationResults([])
     setMilestonePhotoLoading(true)
@@ -147,7 +150,7 @@ export default function UsPage() {
         body: JSON.stringify({
           coupleId: couple?.id || null,
           userId: user.id,
-          title: milestoneLocation || milestoneSheet.label,
+          title: milestoneLocationName || milestoneLocation || milestoneSheet.label,
           eventType: milestoneSheet.eventType,
           eventDate: milestoneDate + 'T12:00:00',
           photoUrls: permanentPhotoUrl ? [permanentPhotoUrl] : [],
@@ -156,6 +159,7 @@ export default function UsPage() {
 
       setMilestoneSheet(null)
       setMilestoneLocation('')
+      setMilestoneLocationName('')
       setMilestoneDate('')
       setMilestonePhotoUrl(null)
       setSelectedPlaceId(null)
@@ -465,7 +469,7 @@ export default function UsPage() {
           <div>
             {/* Missing milestone empty state cards — show up to 2 */}
             {missingMilestones.map(m => (
-              <div key={m.key} onClick={() => { setMilestoneSheet(m); setMilestoneLocation(''); setMilestoneDate(''); setMilestonePhotoUrl(null); setSelectedPlaceId(null); }} style={{ background: '#1C1410', borderRadius: 14, padding: 20, marginBottom: 12, border: '1.5px dashed rgba(196,170,135,0.3)', cursor: 'pointer' }}>
+              <div key={m.key} onClick={() => { setMilestoneSheet(m); setMilestoneLocation(''); setMilestoneLocationName(''); setMilestoneDate(''); setMilestonePhotoUrl(null); setSelectedPlaceId(null); }} style={{ background: '#1C1410', borderRadius: 14, padding: 20, marginBottom: 12, border: '1.5px dashed rgba(196,170,135,0.3)', cursor: 'pointer' }}>
                 <div style={{ fontSize: 10, letterSpacing: '0.15em', color: '#C4AA87', opacity: 0.7, textTransform: 'uppercase', marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}>{m.label}</div>
                 <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 18, color: 'rgba(250,246,240,0.4)', fontWeight: 400, marginBottom: 12 }}>{m.prompt}</div>
                 <div style={{ fontSize: 12, color: '#C4AA87', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'DM Sans, sans-serif' }}>
@@ -982,6 +986,19 @@ export default function UsPage() {
                 </div>
               </div>
             )}
+            <input type="file" accept="image/*" style={{ display: 'none' }} id="milestonePhotoUpload"
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                const reader = new FileReader()
+                reader.onload = (ev) => setMilestonePhotoUrl(ev.target.result)
+                reader.readAsDataURL(file)
+              }}
+            />
+            <button onClick={() => document.getElementById('milestonePhotoUpload').click()}
+              style={{ width: '100%', padding: '10px', border: '1px solid #E8DDD0', borderRadius: 10, fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#6B5D4F', background: '#FFFFFF', cursor: 'pointer', marginBottom: 12 }}>
+              Upload my own photo instead
+            </button>
 
             {!milestonePhotoUrl && !milestonePhotoLoading && (
               <div style={{ height: 80, background: '#F5F0E8', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12, border: '1.5px dashed #E8DDD0' }}>
