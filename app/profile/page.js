@@ -52,6 +52,7 @@ export default function MePage() {
 
   const [user, setUser]               = useState(null)
   const [session, setSession]         = useState(null)
+  const [coupleId, setCoupleId]       = useState(null)
   const [displayName, setDisplayName] = useState('')
   const [birthday, setBirthday]       = useState('')
   const [anniversary, setAnniversary] = useState('')
@@ -108,7 +109,7 @@ export default function MePage() {
 
       const { data: profile } = await supabase
         .from('user_profiles')
-        .select('display_name, birthday, anniversary, timezone, notification_preferences')
+        .select('display_name, birthday, anniversary, timezone, notification_preferences, couple_id')
         .eq('user_id', session.user.id)
         .maybeSingle()
 
@@ -118,6 +119,7 @@ export default function MePage() {
         setAnniversary(profile.anniversary || '')
         setTimezone(profile.timezone || 'America/Los_Angeles')
         if (profile.notification_preferences) setNotifications(profile.notification_preferences)
+        if (profile.couple_id) setCoupleId(profile.couple_id)
       }
 
       loadExistingDates(session.user.id)
@@ -204,8 +206,6 @@ export default function MePage() {
     try {
       const { data: { session: s } } = await supabase.auth.getSession()
       const token = s?.access_token
-      const profileQuery = await supabase.from('user_profiles').select('couple_id').eq('user_id', user?.id).single()
-      const coupleId = profileQuery.data?.couple_id || null
       const dateEntries = [
         importantDates.met         ? { title: 'When we met',    eventType: 'milestone',   date: importantDates.met }         : null,
         importantDates.firstDate   ? { title: 'Our first date', eventType: 'first_date',  date: importantDates.firstDate }   : null,
@@ -235,19 +235,18 @@ export default function MePage() {
     if (!file || !user?.id) return
     console.log('[profile-photo] starting upload:', file.name)
     try {
-      const path = `relationship/${couple?.id || user.id}/${Date.now()}_${file.name.replace(/\s/g, '_')}`
+      const path = `relationship/${coupleId || user.id}/${Date.now()}_${file.name.replace(/\s/g, '_')}`
       const { data } = await supabase.storage.from('photos').upload(path, file, { upsert: true })
       console.log('[profile-photo] upload result:', data)
       const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path)
       const publicUrl = urlData.publicUrl
       console.log('[profile-photo] public url:', publicUrl)
-      const { data: { session } } = await supabase.auth.getSession()
       if (session?.access_token) {
         fetch('/api/timeline/event', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
           body: JSON.stringify({
-            coupleId: couple?.id || null,
+            coupleId: coupleId || null,
             userId: user.id,
             title: file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' '),
             eventType: 'custom',
