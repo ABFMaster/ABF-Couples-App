@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SharedItemCard from '@/components/SharedItemCard'
@@ -42,6 +42,16 @@ export default function UsPage() {
   const [beenDetailItem, setBeenDetailItem] = useState(null)
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [missingMilestones, setMissingMilestones] = useState([])
+  const [milestoneSheet, setMilestoneSheet] = useState(null)
+  const [milestoneLocation, setMilestoneLocation] = useState('')
+  const [milestoneDate, setMilestoneDate] = useState('')
+  const [milestonePhotoUrl, setMilestonePhotoUrl] = useState(null)
+  const [milestonePhotoLoading, setMilestonePhotoLoading] = useState(false)
+  const [milestoneSaving, setMilestoneSaving] = useState(false)
+  const [milestoneLocationResults, setMilestoneLocationResults] = useState([])
+  const [mapsLoaded, setMapsLoaded] = useState(false)
+  const [selectedPlaceId, setSelectedPlaceId] = useState(null)
+  const milestoneSearchTimeout = useRef(null)
 
   async function fetchTimelineEvents(coupleId) {
     setTimelineLoading(true)
@@ -63,6 +73,97 @@ export default function UsPage() {
     if (!types.has('first_kiss')) missing.push({ key: 'firstKiss', label: 'First kiss', eventType: 'first_kiss', prompt: 'The moment things changed.' })
     if (!types.has('anniversary')) missing.push({ key: 'anniversary', label: 'Anniversary', eventType: 'anniversary', prompt: 'Your official date together.' })
     setMissingMilestones(missing.slice(0, 2))
+  }
+
+  useEffect(() => {
+    if (!milestoneSheet || mapsLoaded || window.google?.maps) {
+      if (window.google?.maps) setMapsLoaded(true)
+      return
+    }
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
+    if (!apiKey) return
+    window.__gmapsMilestoneInit = () => setMapsLoaded(true)
+    const script = document.createElement('script')
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async&callback=__gmapsMilestoneInit`
+    script.async = true
+    document.head.appendChild(script)
+  }, [milestoneSheet])
+
+  const searchMilestoneLocation = async (query) => {
+    if (milestoneSearchTimeout.current) clearTimeout(milestoneSearchTimeout.current)
+    if (!query || query.length < 3) { setMilestoneLocationResults([]); return }
+    milestoneSearchTimeout.current = setTimeout(async () => {
+      if (!window.google?.maps) return
+      try {
+        const { AutocompleteSuggestion } = await window.google.maps.importLibrary('places')
+        const { suggestions } = await AutocompleteSuggestion.fetchAutocompleteSuggestions({ input: query })
+        setMilestoneLocationResults(suggestions.slice(0, 4).map(s => ({
+          place_id: s.placePrediction.placeId,
+          description: s.placePrediction.text.text,
+        })))
+      } catch(e) { setMilestoneLocationResults([]) }
+    }, 280)
+  }
+
+  const selectMilestonePlace = async (prediction) => {
+    setMilestoneLocation(prediction.description)
+    setSelectedPlaceId(prediction.place_id)
+    setMilestoneLocationResults([])
+    setMilestonePhotoLoading(true)
+    try {
+      const { Place } = await window.google.maps.importLibrary('places')
+      const place = new Place({ id: prediction.place_id })
+      await place.fetchFields({ fields: ['photos'] })
+      if (place.photos?.[0]) {
+        const photoUri = place.photos[0].getURI({ maxWidth: 800 })
+        setMilestonePhotoUrl(photoUri)
+      }
+    } catch(e) {}
+    setMilestonePhotoLoading(false)
+  }
+
+  const saveMilestone = async () => {
+    if (!milestoneDate || !milestoneSheet) return
+    setMilestoneSaving(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const { data: { user } } = await supabase.auth.getUser()
+
+      let permanentPhotoUrl = null
+      if (milestonePhotoUrl) {
+        try {
+          const resp = await fetch(milestonePhotoUrl)
+          const blob = await resp.blob()
+          const path = `relationship/${couple?.id || user.id}/${Date.now()}_milestone.jpg`
+          await supabase.storage.from('photos').upload(path, blob, { contentType: 'image/jpeg', upsert: true })
+          const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path)
+          permanentPhotoUrl = urlData.publicUrl
+        } catch(e) {}
+      }
+
+      await fetch('/api/timeline/event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          coupleId: couple?.id || null,
+          userId: user.id,
+          title: milestoneLocation || milestoneSheet.label,
+          eventType: milestoneSheet.eventType,
+          eventDate: milestoneDate + 'T12:00:00',
+          photoUrls: permanentPhotoUrl ? [permanentPhotoUrl] : [],
+        })
+      })
+
+      setMilestoneSheet(null)
+      setMilestoneLocation('')
+      setMilestoneDate('')
+      setMilestonePhotoUrl(null)
+      setSelectedPlaceId(null)
+      if (couple?.id) fetchTimelineEvents(couple.id)
+    } catch(e) {
+      console.error('saveMilestone error:', e)
+    }
+    setMilestoneSaving(false)
   }
 
   useEffect(() => {
@@ -364,7 +465,7 @@ export default function UsPage() {
           <div>
             {/* Missing milestone empty state cards — show up to 2 */}
             {missingMilestones.map(m => (
-              <div key={m.key} onClick={() => router.push('/profile')} style={{ background: '#1C1410', borderRadius: 14, padding: 20, marginBottom: 12, border: '1.5px dashed rgba(196,170,135,0.3)', cursor: 'pointer' }}>
+              <div key={m.key} onClick={() => { setMilestoneSheet(m); setMilestoneLocation(''); setMilestoneDate(''); setMilestonePhotoUrl(null); setSelectedPlaceId(null); }} style={{ background: '#1C1410', borderRadius: 14, padding: 20, marginBottom: 12, border: '1.5px dashed rgba(196,170,135,0.3)', cursor: 'pointer' }}>
                 <div style={{ fontSize: 10, letterSpacing: '0.15em', color: '#C4AA87', opacity: 0.7, textTransform: 'uppercase', marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}>{m.label}</div>
                 <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 18, color: 'rgba(250,246,240,0.4)', fontWeight: 400, marginBottom: 12 }}>{m.prompt}</div>
                 <div style={{ fontSize: 12, color: '#C4AA87', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'DM Sans, sans-serif' }}>
@@ -831,6 +932,69 @@ export default function UsPage() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {milestoneSheet && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', background: 'rgba(28,20,16,0.6)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setMilestoneSheet(null) }}>
+          <div style={{ background: '#FAF6F0', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 22, color: '#1C1410' }}>{milestoneSheet.label}</div>
+              <button onClick={() => setMilestoneSheet(null)} style={{ background: 'none', border: 'none', fontSize: 20, color: '#8B7355', cursor: 'pointer' }}>×</button>
+            </div>
+
+            <div style={{ fontSize: 10, letterSpacing: '0.12em', color: '#8B7355', textTransform: 'uppercase', marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>Where</div>
+            <input type="text" placeholder="Where did this happen?" value={milestoneLocation}
+              onChange={e => { setMilestoneLocation(e.target.value); searchMilestoneLocation(e.target.value) }}
+              style={{ width: '100%', padding: '11px 14px', border: '1.5px solid #E8DDD0', borderRadius: 10, fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: '#1C1410', background: '#FFFFFF', boxSizing: 'border-box', marginBottom: 6 }} />
+
+            {milestoneLocationResults.length > 0 && (
+              <div style={{ background: '#FFFFFF', border: '1px solid #E8DDD0', borderRadius: 10, marginBottom: 12, overflow: 'hidden' }}>
+                {milestoneLocationResults.map((p, i) => (
+                  <div key={p.place_id} onClick={() => selectMilestonePlace(p)}
+                    style={{ padding: '10px 14px', fontSize: 13, fontFamily: 'DM Sans, sans-serif', color: '#1C1410', cursor: 'pointer', borderTop: i > 0 ? '1px solid #F5F0E8' : 'none' }}>
+                    {p.description}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ fontSize: 10, letterSpacing: '0.12em', color: '#8B7355', textTransform: 'uppercase', marginBottom: 6, fontFamily: 'DM Sans, sans-serif', marginTop: 8 }}>When</div>
+            <input type="date" value={milestoneDate} onChange={e => setMilestoneDate(e.target.value)}
+              style={{ width: '100%', padding: '11px 14px', border: '1.5px solid #E8DDD0', borderRadius: 10, fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: '#1C1410', background: '#FFFFFF', boxSizing: 'border-box', marginBottom: 16 }} />
+
+            <div style={{ fontSize: 10, letterSpacing: '0.12em', color: '#8B7355', textTransform: 'uppercase', marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}>Photo</div>
+
+            {milestonePhotoLoading && (
+              <div style={{ height: 100, background: '#F5F0E8', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                <div style={{ fontSize: 12, color: '#8B7355', fontFamily: 'DM Sans, sans-serif' }}>Finding a photo of this place...</div>
+              </div>
+            )}
+
+            {milestonePhotoUrl && !milestonePhotoLoading && (
+              <div style={{ borderRadius: 10, overflow: 'hidden', marginBottom: 12, position: 'relative' }}>
+                <img src={milestonePhotoUrl} alt="Location" style={{ width: '100%', height: 140, objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(28,20,16,0.6)', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontSize: 11, color: 'rgba(250,246,240,0.7)', fontFamily: 'DM Sans, sans-serif' }}>From Google Maps</div>
+                  <button onClick={() => setMilestonePhotoUrl(null)} style={{ fontSize: 11, color: '#C4AA87', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>remove</button>
+                </div>
+              </div>
+            )}
+
+            {!milestonePhotoUrl && !milestonePhotoLoading && (
+              <div style={{ height: 80, background: '#F5F0E8', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12, border: '1.5px dashed #E8DDD0' }}>
+                <div style={{ fontSize: 12, color: '#8B7355', fontFamily: 'DM Sans, sans-serif' }}>
+                  {selectedPlaceId ? 'No photo found for this location' : 'Select a location above to get a photo'}
+                </div>
+              </div>
+            )}
+
+            <button onClick={saveMilestone} disabled={milestoneSaving || !milestoneDate}
+              style={{ width: '100%', background: milestoneSaving || !milestoneDate ? '#E8DDD0' : '#1C1410', color: milestoneSaving || !milestoneDate ? '#8B7355' : '#FAF6F0', border: 'none', borderRadius: 12, padding: 14, fontSize: 14, fontFamily: 'DM Sans, sans-serif', fontWeight: 500, cursor: milestoneSaving || !milestoneDate ? 'not-allowed' : 'pointer' }}>
+              {milestoneSaving ? 'Saving...' : 'Save this moment →'}
+            </button>
           </div>
         </div>
       )}
