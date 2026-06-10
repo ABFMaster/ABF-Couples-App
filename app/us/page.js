@@ -395,7 +395,7 @@ export default function UsPage() {
               if (hasPhoto || hasImageUrl) {
                 return (
                   <div key={event.id} onClick={() => setSelectedEvent(event)} style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12, position: 'relative', cursor: 'pointer', background: '#E8DDD0' }}>
-                    <img src={primaryPhoto} alt={event.title} style={{ width: '100%', height: 200, objectFit: 'cover', display: 'block' }} />
+                    <img src={primaryPhoto} alt={event.title} style={{ width: '100%', height: 200, objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
                     <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 16px', background: 'linear-gradient(to top, rgba(28,20,16,0.8) 0%, transparent 100%)' }}>
                       <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 18, color: '#FAF6F0', fontWeight: 400 }}>{event.title}</div>
                       <div style={{ fontSize: 11, color: 'rgba(250,246,240,0.7)', marginTop: 2, fontFamily: 'DM Sans, sans-serif' }}>{new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
@@ -573,7 +573,7 @@ export default function UsPage() {
           {/* Header — photo or gradient */}
           <div style={{ position: 'relative', height: 260, background: selectedEvent.photo_urls?.[0] || selectedEvent.image_url ? 'transparent' : 'linear-gradient(135deg, #1C1410 0%, #2D3561 100%)', overflow: 'hidden', flexShrink: 0 }}>
             {(selectedEvent.photo_urls?.[0] || selectedEvent.image_url) && (
-              <img src={selectedEvent.photo_urls?.[0] || selectedEvent.image_url} alt={selectedEvent.title} style={{ width: '100%', height: 260, objectFit: 'cover', display: 'block' }} />
+              <img src={selectedEvent.photo_urls?.[0] || selectedEvent.image_url} alt={selectedEvent.title} style={{ width: '100%', height: 260, objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
             )}
             {!(selectedEvent.photo_urls?.[0] || selectedEvent.image_url) && (
               <div style={{ width: '100%', height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
