@@ -674,7 +674,7 @@ export default function UsPage() {
 
       {/* EVENT DETAIL OVERLAY */}
       {selectedEvent && (
-        <div style={{ position: 'fixed', inset: 0, background: '#FAF6F0', zIndex: 100, overflowY: 'auto' }}>
+        <div style={{ position: 'fixed', inset: 0, background: '#FAF6F0', zIndex: 150, overflowY: 'auto' }}>
           {/* Header — photo or gradient */}
           <div style={{ position: 'relative', height: 260, background: selectedEvent.photo_urls?.[0] || selectedEvent.image_url ? 'transparent' : 'linear-gradient(135deg, #1C1410 0%, #2D3561 100%)', overflow: 'hidden', flexShrink: 0 }}>
             {(selectedEvent.photo_urls?.[0] || selectedEvent.image_url) && (
@@ -731,7 +731,7 @@ export default function UsPage() {
               <button
                 onClick={() => router.push('/profile')}
                 style={{ flex: 1, padding: 11, border: '1px solid #E8DDD0', borderRadius: 10, fontSize: 12, color: '#6B5D4F', background: '#FFFFFF', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-                + Add photo
+                {selectedEvent?.photo_urls?.length > 0 || selectedEvent?.image_url ? 'Change photo' : '+ Add photo'}
               </button>
               <button
                 style={{ flex: 1, padding: 11, border: '1px solid #E8DDD0', borderRadius: 10, fontSize: 12, color: '#6B5D4F', background: '#FFFFFF', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
