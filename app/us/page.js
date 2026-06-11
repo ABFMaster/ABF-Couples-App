@@ -43,6 +43,7 @@ export default function UsPage() {
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [missingMilestones, setMissingMilestones] = useState([])
   const [foundationIndex, setFoundationIndex] = useState(0)
+  const [noraSurfacedEvent, setNoraSurfacedEvent] = useState(null)
   const [milestoneSheet, setMilestoneSheet] = useState(null)
   const [milestoneLocation, setMilestoneLocation] = useState('')
   const [milestoneDate, setMilestoneDate] = useState('')
@@ -64,7 +65,16 @@ export default function UsPage() {
       .order('event_date', { ascending: false })
     setTimelineEvents(events || [])
     computeMissingMilestones(events || [])
+    computeNoraSurfaced(events || [])
     setTimelineLoading(false)
+  }
+
+  const computeNoraSurfaced = (events) => {
+    const permanent = events.filter(e => e.event_type !== 'game_echo')
+    if (permanent.length <= 3) { setNoraSurfacedEvent(null); return }
+    const candidates = permanent.slice(3)
+    const random = candidates[Math.floor(Math.random() * candidates.length)]
+    setNoraSurfacedEvent(random)
   }
 
   const computeMissingMilestones = (events) => {
@@ -466,20 +476,31 @@ export default function UsPage() {
       {activeSection === 'been' && (
         <div style={{ padding: '24px 20px' }}>
 
-          {/* Nora callback — placeholder for now */}
-          <div style={{ borderRadius: '18px', overflow: 'hidden', marginBottom: '12px' }}>
-            <div style={{ height: '72px', background: 'linear-gradient(135deg, #6B5020 0%, #C9A84C 50%, #D4BA7A 100%)', position: 'relative', display: 'flex', alignItems: 'flex-end', padding: '12px 16px' }}>
-              <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)' }}>Nora is thinking about you</div>
-            </div>
-            <div style={{ background: 'white', padding: '16px 18px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '6px' }}>
-                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C9A84C' }} />
-                <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C9A84C' }}>Nora surfaced this</div>
+          {noraSurfacedEvent ? (
+            <div onClick={() => setSelectedEvent(noraSurfacedEvent)} style={{ background: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, border: '1px solid #E8DDD0', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#C4AA87', flexShrink: 0 }} />
+                <div style={{ fontSize: 9, letterSpacing: '0.15em', color: '#C4AA87', textTransform: 'uppercase', fontFamily: 'DM Sans, sans-serif' }}>Nora surfaced this</div>
               </div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#1C1410', lineHeight: 1.3, marginBottom: '5px' }}>Your shared life is being written</div>
-              <div style={{ fontSize: '12px', fontStyle: 'italic', color: '#8B7355', lineHeight: 1.55 }}>Every answer, every game, every moment you save — Nora is paying attention. This is where it lives.</div>
+              {(noraSurfacedEvent.photo_urls?.[0] || noraSurfacedEvent.image_url) && (
+                <div style={{ borderRadius: 10, overflow: 'hidden', marginBottom: 10 }}>
+                  <img src={noraSurfacedEvent.photo_urls?.[0] || noraSurfacedEvent.image_url} alt="" style={{ width: '100%', height: 140, objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
+                </div>
+              )}
+              <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 20, color: '#1C1410', marginBottom: 4 }}>{noraSurfacedEvent.title}</div>
+              {noraSurfacedEvent.description && <div style={{ fontSize: 12, color: '#8B7355', fontStyle: 'italic', lineHeight: 1.5, marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>"{noraSurfacedEvent.description}"</div>}
+              <div style={{ fontSize: 11, color: '#C4AA87', fontFamily: 'DM Sans, sans-serif' }}>{new Date(noraSurfacedEvent.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
             </div>
-          </div>
+          ) : (
+            <div style={{ background: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 12, border: '1px solid #E8DDD0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#C4AA87', flexShrink: 0 }} />
+                <div style={{ fontSize: 9, letterSpacing: '0.15em', color: '#C4AA87', textTransform: 'uppercase', fontFamily: 'DM Sans, sans-serif' }}>Nora is watching</div>
+              </div>
+              <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 18, color: '#1C1410', marginBottom: 4 }}>Your shared life is being written.</div>
+              <div style={{ fontSize: 12, color: '#8B7355', fontStyle: 'italic', lineHeight: 1.5, fontFamily: 'DM Sans, sans-serif' }}>Every answer, every game, every moment you save — Nora is paying attention. This is where it lives.</div>
+            </div>
+          )}
 
           {/* BEEN TAB — redesigned */}
           <div>
