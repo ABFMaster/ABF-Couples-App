@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import exifr from 'exifr'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -90,6 +91,9 @@ export default function MePage() {
   const [relationshipPhotos, setRelationshipPhotos]       = useState([])
   const [uploadingProfilePhotos, setUploadingProfilePhotos] = useState(false)
   const [photosSaved, setPhotosSaved]                       = useState(false)
+  const [pendingPhotos, setPendingPhotos] = useState([])
+  const [showPhotoEnrichment, setShowPhotoEnrichment] = useState(false)
+  const [editingPhotoIndex, setEditingPhotoIndex] = useState(null)
 
   const [importantDates, setImportantDates]   = useState({ met: '', firstDate: '', firstKiss: '', anniversary: '', customDates: [] })
   const [newCustomLabel, setNewCustomLabel]   = useState('')
@@ -268,11 +272,71 @@ export default function MePage() {
 
   const handleProfilePhotoFiles = async (files) => {
     if (!files?.length) return
+    const fileArray = Array.from(files)
+
+    const pending = await Promise.all(fileArray.map(async (file) => {
+      const previewUrl = URL.createObjectURL(file)
+      let date = new Date().toISOString().split('T')[0]
+      try {
+        const exif = await exifr.parse(file, ['DateTimeOriginal', 'CreateDate'])
+        const exifDate = exif?.DateTimeOriginal || exif?.CreateDate
+        if (exifDate) {
+          date = new Date(exifDate).toISOString().split('T')[0]
+        }
+      } catch(e) {}
+
+      const cleaned = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ').trim()
+      const isGeneric = /^IMG\s*\d+$/i.test(cleaned) || /^[A-F0-9\s]{10,}$/i.test(cleaned) || cleaned.length < 3
+      const title = isGeneric ? '' : cleaned
+
+      return { file, previewUrl, title, date, uploading: false, uploaded: false, publicUrl: null }
+    }))
+
+    setPendingPhotos(pending)
+    setShowPhotoEnrichment(true)
+  }
+
+  const uploadPendingPhotos = async () => {
     setUploadingProfilePhotos(true)
-    await Promise.allSettled(Array.from(files).map(f => uploadProfilePhoto(f)))
+    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    await Promise.allSettled(pendingPhotos.map(async (photo) => {
+      try {
+        const path = `relationship/${coupleId || user.id}/${Date.now()}_${photo.file.name.replace(/\s/g, '_')}`
+        await supabase.storage.from('photos').upload(path, photo.file, { upsert: true })
+        const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path)
+        const publicUrl = urlData.publicUrl
+
+        const title = photo.title.trim() || 'A moment from our story'
+        const eventDate = photo.date + 'T12:00:00'
+
+        if (session?.access_token) {
+          await fetch('/api/timeline/event', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+            body: JSON.stringify({
+              coupleId: coupleId || null,
+              userId: user.id,
+              title,
+              eventType: 'custom',
+              eventDate,
+              photoUrls: [publicUrl],
+            })
+          })
+        }
+
+        setRelationshipPhotos(prev => [...prev, publicUrl])
+      } catch(e) {
+        console.error('upload error:', e)
+      }
+    }))
+
     setUploadingProfilePhotos(false)
     setPhotosSaved(true)
     setTimeout(() => setPhotosSaved(false), 3000)
+    setShowPhotoEnrichment(false)
+    setPendingPhotos([])
   }
 
   // ── Handlers ────────────────────────────────────────────────────────────────
@@ -900,6 +964,78 @@ export default function MePage() {
       )}
 
       {/* ── DELETE CONFIRM SHEET ──────────────────────────────────────────────── */}
+      {showPhotoEnrichment && pendingPhotos.length > 0 && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', background: 'rgba(28,20,16,0.7)' }}>
+          <div style={{ background: '#FAF6F0', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px', maxHeight: '85vh', overflowY: 'auto' }}>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 22, color: '#1C1410' }}>
+                {pendingPhotos.length === 1 ? 'Name this photo' : `Name your photos (${pendingPhotos.length})`}
+              </div>
+              <button onClick={() => { setShowPhotoEnrichment(false); setPendingPhotos([]) }}
+                style={{ background: 'none', border: 'none', fontSize: 20, color: '#8B7355', cursor: 'pointer' }}>×</button>
+            </div>
+
+            {pendingPhotos.length === 1 ? (
+              <div>
+                <img src={pendingPhotos[0].previewUrl} alt="" style={{ width: '100%', height: 200, objectFit: 'contain', objectPosition: 'center', background: '#1C1410', borderRadius: 12, marginBottom: 16, display: 'block' }} />
+                <div style={{ fontSize: 10, letterSpacing: '0.12em', color: '#8B7355', textTransform: 'uppercase', marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>Title</div>
+                <input type="text" placeholder="What's this moment?" value={pendingPhotos[0].title}
+                  onChange={e => setPendingPhotos(prev => prev.map((p, i) => i === 0 ? { ...p, title: e.target.value } : p))}
+                  style={{ width: '100%', padding: '11px 14px', border: '1.5px solid #E8DDD0', borderRadius: 10, fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: '#1C1410', background: '#FFFFFF', boxSizing: 'border-box', marginBottom: 16 }} />
+                <div style={{ fontSize: 10, letterSpacing: '0.12em', color: '#8B7355', textTransform: 'uppercase', marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>Date taken</div>
+                <input type="date" value={pendingPhotos[0].date}
+                  onChange={e => setPendingPhotos(prev => prev.map((p, i) => i === 0 ? { ...p, date: e.target.value } : p))}
+                  style={{ width: '100%', padding: '11px 14px', border: '1.5px solid #E8DDD0', borderRadius: 10, fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: '#1C1410', background: '#FFFFFF', boxSizing: 'border-box', marginBottom: 20 }} />
+              </div>
+            ) : (
+              <div>
+                <p style={{ fontSize: 12, color: '#8B7355', fontFamily: 'DM Sans, sans-serif', marginBottom: 12, fontStyle: 'italic' }}>Tap a photo to add a title and date. Optional — unnamed photos save as-is.</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 20 }}>
+                  {pendingPhotos.map((photo, idx) => (
+                    <div key={idx} onClick={() => setEditingPhotoIndex(idx)} style={{ position: 'relative', aspectRatio: '1', borderRadius: 8, overflow: 'hidden', cursor: 'pointer', background: '#1C1410' }}>
+                      <img src={photo.previewUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      {photo.title && (
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(28,20,16,0.7)', padding: '4px 6px' }}>
+                          <div style={{ fontSize: 9, color: '#FAF6F0', fontFamily: 'DM Sans, sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{photo.title}</div>
+                        </div>
+                      )}
+                      {!photo.title && (
+                        <div style={{ position: 'absolute', top: 4, right: 4, width: 16, height: 16, borderRadius: '50%', background: 'rgba(28,20,16,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <div style={{ fontSize: 10, color: 'rgba(250,246,240,0.6)' }}>+</div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {editingPhotoIndex !== null && (
+                  <div style={{ background: '#FFFFFF', borderRadius: 12, padding: 16, marginBottom: 16, border: '1px solid #E8DDD0' }}>
+                    <div style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'flex-start' }}>
+                      <img src={pendingPhotos[editingPhotoIndex].previewUrl} alt="" style={{ width: 60, height: 60, objectFit: 'cover', borderRadius: 8, flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <input type="text" placeholder="What's this moment?" value={pendingPhotos[editingPhotoIndex].title}
+                          onChange={e => setPendingPhotos(prev => prev.map((p, i) => i === editingPhotoIndex ? { ...p, title: e.target.value } : p))}
+                          style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #E8DDD0', borderRadius: 8, fontSize: 13, fontFamily: 'DM Sans, sans-serif', color: '#1C1410', background: '#FAF6F0', boxSizing: 'border-box', marginBottom: 8 }} />
+                        <input type="date" value={pendingPhotos[editingPhotoIndex].date}
+                          onChange={e => setPendingPhotos(prev => prev.map((p, i) => i === editingPhotoIndex ? { ...p, date: e.target.value } : p))}
+                          style={{ width: '100%', padding: '8px 12px', border: '1.5px solid #E8DDD0', borderRadius: 8, fontSize: 13, fontFamily: 'DM Sans, sans-serif', color: '#1C1410', background: '#FAF6F0', boxSizing: 'border-box' }} />
+                      </div>
+                    </div>
+                    <button onClick={() => setEditingPhotoIndex(null)} style={{ width: '100%', background: 'none', border: 'none', fontSize: 12, color: '#C4714A', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>Done editing this photo</button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <button onClick={uploadPendingPhotos} disabled={uploadingProfilePhotos}
+              style={{ width: '100%', background: uploadingProfilePhotos ? '#E8DDD0' : '#1C1410', color: uploadingProfilePhotos ? '#8B7355' : '#FAF6F0', border: 'none', borderRadius: 12, padding: 14, fontSize: 14, fontFamily: 'DM Sans, sans-serif', fontWeight: 500, cursor: uploadingProfilePhotos ? 'not-allowed' : 'pointer' }}>
+              {uploadingProfilePhotos ? 'Saving photos...' : `Save ${pendingPhotos.length} photo${pendingPhotos.length > 1 ? 's' : ''} →`}
+            </button>
+          </div>
+        </div>
+      )}
+
       {showDeleteConfirm && (
         <>
           <div onClick={() => setShowDeleteConfirm(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(28,18,8,0.4)', zIndex: 50 }} />
