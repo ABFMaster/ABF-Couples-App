@@ -44,6 +44,14 @@ export default function UsPage() {
   const [missingMilestones, setMissingMilestones] = useState([])
   const [foundationIndex, setFoundationIndex] = useState(0)
   const [noraSurfacedEvent, setNoraSurfacedEvent] = useState(null)
+  const [editSheet, setEditSheet] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editDate, setEditDate] = useState('')
+  const [editSaving, setEditSaving] = useState(false)
+  const [editDeleting, setEditDeleting] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const editPhotoRef = useRef(null)
   const [milestoneSheet, setMilestoneSheet] = useState(null)
   const [milestoneLocation, setMilestoneLocation] = useState('')
   const [milestoneDate, setMilestoneDate] = useState('')
@@ -179,6 +187,75 @@ export default function UsPage() {
       console.error('saveMilestone error:', e)
     }
     setMilestoneSaving(false)
+  }
+
+  const saveEdit = async () => {
+    if (!selectedEvent || editSaving) return
+    setEditSaving(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/timeline/event/update', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          eventId: selectedEvent.id,
+          title: editTitle,
+          description: editDescription,
+          eventDate: editDate ? editDate + 'T12:00:00' : undefined,
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setSelectedEvent({ ...selectedEvent, title: editTitle, description: editDescription, event_date: editDate })
+        setEditSheet(false)
+        if (couple?.id) fetchTimelineEvents(couple.id)
+      }
+    } catch(e) { console.error('saveEdit error:', e) }
+    setEditSaving(false)
+  }
+
+  const deleteEvent = async () => {
+    if (!selectedEvent || editDeleting) return
+    setEditDeleting(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/timeline/event/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ eventId: selectedEvent.id })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setSelectedEvent(null)
+        setEditSheet(false)
+        setDeleteConfirm(false)
+        if (couple?.id) fetchTimelineEvents(couple.id)
+      }
+    } catch(e) { console.error('deleteEvent error:', e) }
+    setEditDeleting(false)
+  }
+
+  const addPhotoToEvent = async (file) => {
+    if (!file || !selectedEvent) return
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const { data: { user } } = await supabase.auth.getUser()
+      const path = `relationship/${couple?.id || user.id}/${Date.now()}_${file.name.replace(/\s/g, '_')}`
+      await supabase.storage.from('photos').upload(path, file, { upsert: true })
+      const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path)
+      const publicUrl = urlData.publicUrl
+      const newPhotoUrls = [...(selectedEvent.photo_urls || []), publicUrl]
+      const res = await fetch('/api/timeline/event/update', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ eventId: selectedEvent.id, photoUrls: newPhotoUrls })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setSelectedEvent({ ...selectedEvent, photo_urls: newPhotoUrls })
+        if (couple?.id) fetchTimelineEvents(couple.id)
+      }
+    } catch(e) { console.error('addPhotoToEvent error:', e) }
   }
 
   useEffect(() => {
@@ -791,8 +868,16 @@ export default function UsPage() {
                 <p style={{ fontSize: 13, color: 'rgba(250,246,240,0.5)', lineHeight: 1.6, fontStyle: 'italic', marginBottom: 14, fontFamily: 'DM Sans, sans-serif' }}>I haven't heard about this one yet. Tell me what it meant.</p>
               )}
               <button
-                onClick={() => {
+                onClick={async () => {
                   const seed = `I want to tell you about a memory: "${selectedEvent.title}" on ${new Date(selectedEvent.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}${selectedEvent.description ? '. ' + selectedEvent.description : ''}. What do you notice?`
+                  const { data: { session } } = await supabase.auth.getSession()
+                  if (session) {
+                    fetch('/api/timeline/event/signal', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+                      body: JSON.stringify({ eventId: selectedEvent.id, title: selectedEvent.title, description: selectedEvent.description, eventDate: selectedEvent.event_date }),
+                    }).catch(() => {})
+                  }
                   router.push('/ai-coach?seed=' + encodeURIComponent(seed))
                 }}
                 style={{ fontSize: 12, color: '#C4AA87', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'DM Sans, sans-serif', padding: 0 }}>
@@ -802,16 +887,28 @@ export default function UsPage() {
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                onClick={() => router.push('/profile')}
-                style={{ flex: 1, padding: 11, border: '1px solid #E8DDD0', borderRadius: 10, fontSize: 12, color: '#6B5D4F', background: '#FFFFFF', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-                {selectedEvent?.photo_urls?.length > 0 || selectedEvent?.image_url ? 'Change photo' : '+ Add photo'}
-              </button>
-              <button
-                style={{ flex: 1, padding: 11, border: '1px solid #E8DDD0', borderRadius: 10, fontSize: 12, color: '#6B5D4F', background: '#FFFFFF', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-                Edit
-              </button>
+              {selectedEvent?.created_by === user?.id && (
+                <button
+                  onClick={() => editPhotoRef.current?.click()}
+                  style={{ flex: 1, padding: 11, border: '1px solid #E8DDD0', borderRadius: 10, fontSize: 12, color: '#6B5D4F', background: '#FFFFFF', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                  {selectedEvent?.photo_urls?.length > 0 || selectedEvent?.image_url ? 'Change photo' : '+ Add photo'}
+                </button>
+              )}
+              {selectedEvent?.created_by === user?.id && (
+                <button
+                  onClick={() => {
+                    setEditTitle(selectedEvent.title || '')
+                    setEditDescription(selectedEvent.description || '')
+                    setEditDate(selectedEvent.event_date || '')
+                    setDeleteConfirm(false)
+                    setEditSheet(true)
+                  }}
+                  style={{ flex: 1, padding: 11, border: '1px solid #E8DDD0', borderRadius: 10, fontSize: 12, color: '#6B5D4F', background: '#FFFFFF', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
+                  Edit
+                </button>
+              )}
             </div>
+            <input ref={editPhotoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) addPhotoToEvent(f) }} />
           </div>
         </div>
       )}
@@ -1156,6 +1253,57 @@ export default function UsPage() {
               style={{ width: '100%', background: milestoneSaving || !milestoneDate ? '#E8DDD0' : '#1C1410', color: milestoneSaving || !milestoneDate ? '#8B7355' : '#FAF6F0', border: 'none', borderRadius: 12, padding: 14, fontSize: 14, fontFamily: 'DM Sans, sans-serif', fontWeight: 500, cursor: milestoneSaving || !milestoneDate ? 'not-allowed' : 'pointer' }}>
               {milestoneSaving ? 'Saving...' : 'Save this moment →'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {editSheet && selectedEvent && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 250, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', background: 'rgba(28,20,16,0.6)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setEditSheet(false) }}>
+          <div style={{ background: '#FAF6F0', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 22, color: '#1C1410' }}>Edit memory</div>
+              <button onClick={() => setEditSheet(false)} style={{ background: 'none', border: 'none', fontSize: 20, color: '#8B7355', cursor: 'pointer' }}>×</button>
+            </div>
+
+            <div style={{ fontSize: 10, letterSpacing: '0.12em', color: '#8B7355', textTransform: 'uppercase', marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>Title</div>
+            <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)}
+              style={{ width: '100%', padding: '11px 14px', border: '1.5px solid #E8DDD0', borderRadius: 10, fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: '#1C1410', background: '#FFFFFF', boxSizing: 'border-box', marginBottom: 16 }} />
+
+            <div style={{ fontSize: 10, letterSpacing: '0.12em', color: '#8B7355', textTransform: 'uppercase', marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>Description</div>
+            <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)}
+              placeholder="What made this moment matter?"
+              style={{ width: '100%', padding: '11px 14px', border: '1.5px solid #E8DDD0', borderRadius: 10, fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: '#1C1410', background: '#FFFFFF', boxSizing: 'border-box', marginBottom: 16, minHeight: 80, resize: 'none' }} />
+
+            <div style={{ fontSize: 10, letterSpacing: '0.12em', color: '#8B7355', textTransform: 'uppercase', marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>Date</div>
+            <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)}
+              style={{ width: '100%', padding: '11px 14px', border: '1.5px solid #E8DDD0', borderRadius: 10, fontSize: 14, fontFamily: 'DM Sans, sans-serif', color: '#1C1410', background: '#FFFFFF', boxSizing: 'border-box', marginBottom: 20 }} />
+
+            <button onClick={saveEdit} disabled={editSaving || !editTitle.trim()}
+              style={{ width: '100%', background: editSaving || !editTitle.trim() ? '#E8DDD0' : '#1C1410', color: editSaving || !editTitle.trim() ? '#8B7355' : '#FAF6F0', border: 'none', borderRadius: 12, padding: 14, fontSize: 14, fontFamily: 'DM Sans, sans-serif', fontWeight: 500, cursor: 'pointer', marginBottom: 12 }}>
+              {editSaving ? 'Saving...' : 'Save changes →'}
+            </button>
+
+            {!deleteConfirm ? (
+              <button onClick={() => setDeleteConfirm(true)}
+                style={{ width: '100%', background: 'transparent', border: '1px solid #E8DDD0', borderRadius: 12, padding: 14, fontSize: 13, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', cursor: 'pointer' }}>
+                Delete this memory
+              </button>
+            ) : (
+              <div style={{ background: '#FDF0EA', borderRadius: 12, padding: 16, textAlign: 'center' }}>
+                <div style={{ fontSize: 13, fontFamily: 'DM Sans, sans-serif', color: '#1C1410', marginBottom: 12 }}>Are you sure? This can't be undone.</div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={() => setDeleteConfirm(false)}
+                    style={{ flex: 1, padding: 12, border: '1px solid #E8DDD0', borderRadius: 10, fontSize: 13, fontFamily: 'DM Sans, sans-serif', color: '#6B5D4F', background: '#FFFFFF', cursor: 'pointer' }}>
+                    Keep it
+                  </button>
+                  <button onClick={deleteEvent} disabled={editDeleting}
+                    style={{ flex: 1, padding: 12, border: 'none', borderRadius: 10, fontSize: 13, fontFamily: 'DM Sans, sans-serif', color: '#FAF6F0', background: '#C4714A', cursor: 'pointer' }}>
+                    {editDeleting ? 'Deleting...' : 'Yes, delete'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
