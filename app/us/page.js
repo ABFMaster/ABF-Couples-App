@@ -42,6 +42,7 @@ export default function UsPage() {
   const [beenDetailItem, setBeenDetailItem] = useState(null)
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [missingMilestones, setMissingMilestones] = useState([])
+  const [foundationIndex, setFoundationIndex] = useState(0)
   const [milestoneSheet, setMilestoneSheet] = useState(null)
   const [milestoneLocation, setMilestoneLocation] = useState('')
   const [milestoneDate, setMilestoneDate] = useState('')
@@ -389,6 +390,21 @@ export default function UsPage() {
   const permanentStones = timelineEvents.filter(e => e.event_type !== 'game_echo')
   const echoes = timelineEvents.filter(e => e.event_type === 'game_echo')
 
+  const foundationEvents = permanentStones.filter(e => ['first_date', 'first_kiss', 'anniversary', 'milestone'].includes(e.event_type))
+  const nonFoundationEvents = permanentStones.filter(e => !['first_date', 'first_kiss', 'anniversary', 'milestone'].includes(e.event_type))
+
+  const allFoundationSlots = [
+    ...foundationEvents,
+    ...missingMilestones.map(m => ({ ...m, isEmpty: true }))
+  ]
+
+  const photos = nonFoundationEvents.filter(e => e.photo_urls?.length > 0 || e.image_url)
+  const others = nonFoundationEvents.filter(e => !e.photo_urls?.length && !e.image_url)
+  const curatedEvents = [
+    ...photos.slice(0, 2),
+    ...others.slice(0, 1)
+  ].slice(0, 3)
+
   // Mood colors per event type
   const moodColors = {
     'rabbit-hole': 'linear-gradient(135deg, #1C1B3A 0%, #2D3561 60%, #3D4878 100%)',
@@ -467,37 +483,74 @@ export default function UsPage() {
 
           {/* BEEN TAB — redesigned */}
           <div>
-            {/* Missing milestone empty state cards — show up to 2 */}
-            {missingMilestones.map(m => (
-              <div key={m.key} onClick={() => { setMilestoneSheet(m); setMilestoneLocation(''); setMilestoneLocationName(''); setMilestoneDate(''); setMilestonePhotoUrl(null); setSelectedPlaceId(null); }} style={{ background: '#1C1410', borderRadius: 14, padding: 20, marginBottom: 12, border: '1.5px dashed rgba(196,170,135,0.3)', cursor: 'pointer' }}>
-                <div style={{ fontSize: 10, letterSpacing: '0.15em', color: '#C4AA87', opacity: 0.7, textTransform: 'uppercase', marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}>{m.label}</div>
-                <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 18, color: 'rgba(250,246,240,0.4)', fontWeight: 400, marginBottom: 12 }}>{m.prompt}</div>
-                <div style={{ fontSize: 12, color: '#C4AA87', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'DM Sans, sans-serif' }}>
-                  <span>+</span> Add this date →
-                </div>
-              </div>
-            ))}
+            {/* Foundation card — cycling milestones + empty slots */}
+            {allFoundationSlots.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                {(() => {
+                  const slot = allFoundationSlots[foundationIndex % allFoundationSlots.length]
+                  const hasPhoto = slot.photo_urls?.[0] || slot.image_url
+                  const photoUrl = slot.photo_urls?.[0] || slot.image_url
 
-            {/* Real events — newest first, up to 5 */}
-            {permanentStones.slice(0, 5).map(event => {
-              const isMilestone = ['first_date', 'first_kiss', 'anniversary', 'milestone'].includes(event.event_type)
-              const hasPhoto = event.photo_urls?.length > 0
-              const hasImageUrl = !!event.image_url
+                  if (slot.isEmpty) {
+                    return (
+                      <div onClick={() => { setMilestoneSheet(slot); setMilestoneLocation(''); setMilestoneDate(''); setMilestonePhotoUrl(null); setSelectedPlaceId(null); }}
+                        style={{ background: '#1C1410', borderRadius: 16, minHeight: 160, padding: 20, border: '1.5px dashed rgba(196,170,135,0.25)', cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div style={{ fontSize: 10, letterSpacing: '0.15em', color: 'rgba(196,170,135,0.5)', textTransform: 'uppercase', fontFamily: 'DM Sans, sans-serif' }}>{slot.label}</div>
+                          {allFoundationSlots.length > 1 && (
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button onClick={(e) => { e.stopPropagation(); setFoundationIndex(i => (i - 1 + allFoundationSlots.length) % allFoundationSlots.length) }}
+                                style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(250,246,240,0.08)', border: 'none', color: 'rgba(250,246,240,0.5)', cursor: 'pointer', fontSize: 12 }}>←</button>
+                              <button onClick={(e) => { e.stopPropagation(); setFoundationIndex(i => (i + 1) % allFoundationSlots.length) }}
+                                style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(250,246,240,0.08)', border: 'none', color: 'rgba(250,246,240,0.5)', cursor: 'pointer', fontSize: 12 }}>→</button>
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 20, color: 'rgba(250,246,240,0.25)', fontStyle: 'italic', margin: '12px 0' }}>{slot.prompt}</div>
+                        <div style={{ fontSize: 12, color: '#C4AA87', fontFamily: 'DM Sans, sans-serif' }}>+ Add this date →</div>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div onClick={() => setSelectedEvent(slot)} style={{ borderRadius: 16, overflow: 'hidden', position: 'relative', cursor: 'pointer', minHeight: 160, background: '#1C1410' }}>
+                      {hasPhoto && <img src={photoUrl} alt={slot.title} style={{ width: '100%', height: 200, objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />}
+                      {!hasPhoto && <div style={{ width: '100%', height: 200, background: 'linear-gradient(135deg, #1C1410 0%, #2D3561 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ fontSize: 48, opacity: 0.1 }}>♥</div></div>}
+                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(28,20,16,0.9) 0%, rgba(28,20,16,0.1) 60%, transparent 100%)' }} />
+                      {allFoundationSlots.length > 1 && (
+                        <div style={{ position: 'absolute', top: 12, right: 12, display: 'flex', gap: 6, zIndex: 2 }}>
+                          <button onClick={(e) => { e.stopPropagation(); setFoundationIndex(i => (i - 1 + allFoundationSlots.length) % allFoundationSlots.length) }}
+                            style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(28,20,16,0.5)', border: 'none', color: 'rgba(250,246,240,0.8)', cursor: 'pointer', fontSize: 12, backdropFilter: 'blur(4px)' }}>←</button>
+                          <button onClick={(e) => { e.stopPropagation(); setFoundationIndex(i => (i + 1) % allFoundationSlots.length) }}
+                            style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(28,20,16,0.5)', border: 'none', color: 'rgba(250,246,240,0.8)', cursor: 'pointer', fontSize: 12, backdropFilter: 'blur(4px)' }}>→</button>
+                        </div>
+                      )}
+                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px 18px', zIndex: 1 }}>
+                        <div style={{ fontSize: 10, letterSpacing: '0.15em', color: '#C4AA87', textTransform: 'uppercase', marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>
+                          {slot.event_type === 'first_kiss' ? 'First kiss' : slot.event_type === 'first_date' ? 'First date' : slot.event_type === 'anniversary' ? 'Anniversary' : 'Milestone'}
+                        </div>
+                        <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 26, color: '#FAF6F0', fontWeight: 400, lineHeight: 1.2 }}>{slot.title}</div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 6 }}>
+                          <div style={{ fontSize: 12, color: 'rgba(250,246,240,0.55)', fontFamily: 'DM Sans, sans-serif' }}>{new Date(slot.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            {allFoundationSlots.map((_, i) => (
+                              <div key={i} style={{ width: i === foundationIndex % allFoundationSlots.length ? 14 : 5, height: 5, borderRadius: 3, background: i === foundationIndex % allFoundationSlots.length ? '#C4AA87' : 'rgba(196,170,135,0.3)', transition: 'width 0.2s' }} />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+            )}
+
+            {/* Curated non-foundation events */}
+            {curatedEvents.map(event => {
+              const hasPhoto = event.photo_urls?.length > 0 || !!event.image_url
               const primaryPhoto = event.photo_urls?.[0] || event.image_url
 
-              if (isMilestone) {
-                return (
-                  <div key={event.id} onClick={() => setSelectedEvent(event)} style={{ background: '#1C1410', borderRadius: 14, padding: 20, marginBottom: 12, cursor: 'pointer' }}>
-                    <div style={{ fontSize: 10, letterSpacing: '0.15em', color: '#C4AA87', textTransform: 'uppercase', marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}>
-                      {event.event_type === 'first_kiss' ? 'First kiss' : event.event_type === 'first_date' ? 'First date' : event.event_type === 'anniversary' ? 'Anniversary' : 'Milestone'}
-                    </div>
-                    <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 26, fontWeight: 400, color: '#FAF6F0', marginBottom: 4 }}>{event.title}</div>
-                    <div style={{ fontSize: 12, color: 'rgba(250,246,240,0.5)', fontFamily: 'DM Sans, sans-serif' }}>{new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
-                  </div>
-                )
-              }
-
-              if (hasPhoto || hasImageUrl) {
+              if (hasPhoto) {
                 return (
                   <div key={event.id} onClick={() => setSelectedEvent(event)} style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12, position: 'relative', cursor: 'pointer', background: '#E8DDD0' }}>
                     <img src={primaryPhoto} alt={event.title} style={{ width: '100%', height: 200, objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
