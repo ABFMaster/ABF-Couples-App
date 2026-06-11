@@ -819,29 +819,99 @@ export default function UsPage() {
       {/* ARCHIVE OVERLAY */}
       {showBeenArchive && (
         <div style={{ position: 'fixed', inset: 0, background: '#FAF6F0', zIndex: 100, overflowY: 'auto', maxWidth: '430px', margin: '0 auto' }}>
-          <div style={{ padding: '52px 24px 16px', borderBottom: '1px solid #EDE4D8', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '28px', fontWeight: 300 }}>Everything</div>
-            <button onClick={() => setShowBeenArchive(false)} style={{ fontSize: '12px', color: '#8B7355', background: 'none', border: '1px solid #D9CBBA', padding: '6px 14px', borderRadius: '20px', cursor: 'pointer' }}>← Back</button>
+          {/* Header */}
+          <div style={{ padding: '52px 20px 16px', borderBottom: '1px solid #E8DDD0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FAF6F0', position: 'sticky', top: 0, zIndex: 10 }}>
+            <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 26, fontWeight: 400, color: '#1C1410' }}>Your story</div>
+            <button onClick={() => setShowBeenArchive(false)} style={{ fontSize: 12, color: '#8B7355', background: 'none', border: '1px solid #E8DDD0', padding: '6px 14px', borderRadius: 20, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>← Back</button>
           </div>
-          <div style={{ padding: '20px 24px 40px' }}>
-            {timelineEvents.map(event => (
-              <div key={event.id} onClick={() => setSelectedEvent(event)} style={{ display: 'flex', gap: '12px', padding: '14px 0', borderBottom: '1px solid #EDE4D8', alignItems: 'flex-start', cursor: 'pointer' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: getMoodColor(event.event_type), flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '2px' }}>{getMoodLabel(event.event_type)}</div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '16px', color: '#1C1410', marginBottom: '2px', lineHeight: 1.2 }}>{event.title}</div>
-                  {event.description && <div style={{ fontSize: '11px', color: '#8B7355', fontStyle: 'italic', lineHeight: 1.5 }}>{event.description.slice(0, 80)}{event.description.length > 80 ? '...' : ''}</div>}
-                </div>
-                <div style={{ fontSize: '10px', color: '#C4AA87', flexShrink: 0, paddingTop: '2px' }}>
-                  {event.event_date ? new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
-                </div>
-              </div>
-            ))}
-            {timelineEvents.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <p style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic', color: '#C4AA87', fontSize: '18px' }}>Nothing saved yet. Your story is just beginning.</p>
-              </div>
-            )}
+
+          {/* Timeline — chronological */}
+          <div style={{ padding: '20px 20px 80px' }}>
+            {(() => {
+              const chronological = [...timelineEvents]
+                .filter(e => e.event_type !== 'game_echo')
+                .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+
+              if (chronological.length === 0) {
+                return (
+                  <div style={{ textAlign: 'center', padding: '60px 0' }}>
+                    <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 20, color: '#8B7355', fontStyle: 'italic' }}>Your story is just beginning.</div>
+                  </div>
+                )
+              }
+
+              const milestoneTypes = ['first_date', 'first_kiss', 'anniversary', 'milestone']
+              let currentYear = null
+              const elements = []
+
+              chronological.forEach((event, idx) => {
+                const eventYear = event.event_date ? new Date(event.event_date + 'T12:00:00').getFullYear() : null
+                const isMilestone = milestoneTypes.includes(event.event_type)
+                const hasPhoto = event.photo_urls?.[0] || event.image_url
+                const photoUrl = event.photo_urls?.[0] || event.image_url
+
+                // Year divider
+                if (eventYear && eventYear !== currentYear) {
+                  currentYear = eventYear
+                  elements.push(
+                    <div key={`year-${eventYear}`} style={{ fontSize: 11, letterSpacing: '0.15em', color: '#8B7355', textTransform: 'uppercase', fontFamily: 'DM Sans, sans-serif', margin: '20px 0 12px', paddingLeft: 52 }}>
+                      {eventYear}
+                    </div>
+                  )
+                }
+
+                elements.push(
+                  <div key={event.id} onClick={() => setSelectedEvent(event)}
+                    style={{ display: 'flex', gap: 12, marginBottom: 16, cursor: 'pointer', alignItems: 'flex-start' }}>
+
+                    {/* Left column — dot + line */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0, width: 40 }}>
+                      <div style={{
+                        width: isMilestone ? 12 : 8,
+                        height: isMilestone ? 12 : 8,
+                        borderRadius: '50%',
+                        background: isMilestone ? '#1C1410' : hasPhoto ? '#C4AA87' : '#C4714A',
+                        marginTop: 4,
+                        flexShrink: 0,
+                        boxShadow: isMilestone ? '0 0 0 3px rgba(28,20,16,0.1)' : 'none'
+                      }} />
+                      {idx < chronological.length - 1 && (
+                        <div style={{ width: 1, flex: 1, minHeight: 20, background: '#E8DDD0', marginTop: 4 }} />
+                      )}
+                    </div>
+
+                    {/* Right column — content */}
+                    <div style={{ flex: 1, minWidth: 0, paddingBottom: 4 }}>
+                      {isMilestone ? (
+                        <div>
+                          <div style={{ fontSize: 9, letterSpacing: '0.12em', color: '#C4AA87', textTransform: 'uppercase', fontFamily: 'DM Sans, sans-serif', marginBottom: 3 }}>
+                            {event.event_type === 'first_kiss' ? 'First kiss' : event.event_type === 'first_date' ? 'First date' : event.event_type === 'anniversary' ? 'Anniversary' : 'Milestone'}
+                          </div>
+                          <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 20, color: '#1C1410', lineHeight: 1.2, marginBottom: 3 }}>{event.title}</div>
+                          <div style={{ fontSize: 11, color: '#8B7355', fontFamily: 'DM Sans, sans-serif' }}>{event.event_date ? new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}</div>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                          {hasPhoto && (
+                            <div style={{ width: 56, height: 56, borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}>
+                              <img src={photoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top' }} />
+                            </div>
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 9, letterSpacing: '0.1em', color: '#8B7355', textTransform: 'uppercase', fontFamily: 'DM Sans, sans-serif', marginBottom: 2 }}>{getMoodLabel(event.event_type)}</div>
+                            <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 17, color: '#1C1410', lineHeight: 1.3, marginBottom: 2 }}>{event.title}</div>
+                            {event.description && <div style={{ fontSize: 11, color: '#8B7355', fontStyle: 'italic', lineHeight: 1.4, fontFamily: 'DM Sans, sans-serif' }}>{event.description.slice(0, 60)}{event.description.length > 60 ? '...' : ''}</div>}
+                            <div style={{ fontSize: 10, color: '#C4AA87', marginTop: 3, fontFamily: 'DM Sans, sans-serif' }}>{event.event_date ? new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })
+
+              return elements
+            })()}
           </div>
         </div>
       )}
