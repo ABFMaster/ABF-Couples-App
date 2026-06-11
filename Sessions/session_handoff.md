@@ -162,14 +162,31 @@
 - Assessment deep-link — ?module= param jumps to specific module
 - Personal summary prompt improved — no sentence limit, open door closing, 500 maxTokens
 
+### Session 2026-06-10 (continued)
+- Timeline edit/delete — edit sheet with title/description/date, ownership-based (created_by), delete with confirmation
+- MEMORY_REFLECTION signal wired — Tell Nora about this fires updateNoraMemory and seeds ai-coach
+- /api/timeline/event/update and /api/timeline/event/delete routes built
+- /api/timeline/event/signal route built
+- Foundation cycling card — replaces static milestone cards, cycles through milestones with photo support, Places API photo fetch
+- Nora surfaced this — random memory card at top of BEEN, replaces static placeholder
+- Full Timeline page — chronological dot-and-line, year groupings, thumbnails, milestone treatment
+- Detail view photo — object-fit contain, dark background, full image visible, title moved below photo
+- Date Night timeline — falls back to stop hero photo when no manual photo uploaded
+- BET_DAYS fix — corrected to Tuesday (2), stops Wednesday 404 console flood
+- Photo upload persistence — localStorage flags for done/skip
+- Catch-up card detection fix — milestone only (not generic milestone type)
+- Milestone entry sheet — location autocomplete, Places photo, save to timeline
+- Add/Change photo on timeline entries — file upload wired to update route
+- Duplicate timeline event prevention — same title + couple_id deduplication
+
 ## Next Session Priorities
-1. Foundation card redesign — cycling card with photo (Places API or user upload), implement in BEEN tab
-2. Full Timeline page — chronological view, replace archive sheet with proper push navigation
-3. Nora random memory surfacing — "Nora surfaced this" card in BEEN tab, pull random non-recent event
-4. Photo titles and date picker during upload — let users name photos and set the date taken
+1. Photo title and date picker during upload — when uploading photos, prompt for title and actual date taken
+2. Focal point / photo positioning — backlogged, needed for native app sprint
+3. Preferences wired to Nora — hobbies/date_preferences never read by any prompt
+4. Wire assessment catch-up for Matt and Cass — both need attachment/conflict scores updated
 5. Full Cass end-to-end test — BETA GATE
-6. Preferences wired to Nora — hobbies/date_preferences never read by any prompt
-7. Wire MEMORY_REFLECTION signal — when user taps Tell Nora about this, fire updateNoraMemory
+6. Timeline shared items display — movies/shows/songs need proper type labels and artwork
+7. Photo titles cleanup — "A moment from our story" generic titles need user tagging
 
 ## Key Test Accounts
 - Matt: fe1e0be6-4574-4bc1-8c89-9cb1b6bbe870 (coggan11@gmail.com)
