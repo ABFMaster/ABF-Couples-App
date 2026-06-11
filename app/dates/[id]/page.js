@@ -280,7 +280,7 @@ export default function DateDetailPage({ params }) {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ coupleId: date.couple_id, userId: currentUserId, eventType: 'date_night', title: date.title, description: description || null, eventDate: date.date_time || date.created_at, photoUrls: timelinePhoto ? [timelinePhoto] : [] }),
+        body: JSON.stringify({ coupleId: date.couple_id, userId: currentUserId, eventType: 'date_night', title: date.title, description: description || null, eventDate: date.date_time || date.created_at, photoUrls: timelinePhoto ? [timelinePhoto] : getHeroPhoto(date.stops, date.id) ? [getHeroPhoto(date.stops, date.id)] : [] }),
       })
 
       setAddedToTimeline(true)
