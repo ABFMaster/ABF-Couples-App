@@ -827,9 +827,9 @@ export default function UsPage() {
       {selectedEvent && (
         <div style={{ position: 'fixed', inset: 0, background: '#FAF6F0', zIndex: 150, overflowY: 'auto' }}>
           {/* Header — photo or gradient */}
-          <div style={{ position: 'relative', height: 260, background: selectedEvent.photo_urls?.[0] || selectedEvent.image_url ? 'transparent' : 'linear-gradient(135deg, #1C1410 0%, #2D3561 100%)', overflow: 'hidden', flexShrink: 0 }}>
+          <div style={{ position: 'relative', height: 260, background: selectedEvent.photo_urls?.[0] || selectedEvent.image_url ? '#1C1410' : 'linear-gradient(135deg, #1C1410 0%, #2D3561 100%)', overflow: 'hidden', flexShrink: 0 }}>
             {(selectedEvent.photo_urls?.[0] || selectedEvent.image_url) && (
-              <img src={selectedEvent.photo_urls?.[0] || selectedEvent.image_url} alt={selectedEvent.title} style={{ width: '100%', height: 260, objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
+              <img src={selectedEvent.photo_urls?.[0] || selectedEvent.image_url} alt={selectedEvent.title} style={{ width: '100%', height: 260, objectFit: 'contain', objectPosition: 'center center', display: 'block' }} />
             )}
             {!(selectedEvent.photo_urls?.[0] || selectedEvent.image_url) && (
               <div style={{ width: '100%', height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
