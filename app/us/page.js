@@ -839,17 +839,15 @@ export default function UsPage() {
             <div style={{ position: 'absolute', top: 16, left: 16 }}>
               <button onClick={() => setSelectedEvent(null)} style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(28,20,16,0.5)', border: 'none', color: '#FAF6F0', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>←</button>
             </div>
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '16px 20px', background: 'linear-gradient(to top, rgba(28,20,16,0.85) 0%, transparent 100%)' }}>
-              <div style={{ fontSize: 10, letterSpacing: '0.15em', color: '#C4AA87', textTransform: 'uppercase', marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>
-                {selectedEvent.event_type === 'first_kiss' ? 'First kiss' : selectedEvent.event_type === 'first_date' ? 'First date' : selectedEvent.event_type === 'anniversary' ? 'Anniversary' : getMoodLabel(selectedEvent.event_type)}
-              </div>
-              <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 26, color: '#FAF6F0', fontWeight: 400 }}>{selectedEvent.title}</div>
-              <div style={{ fontSize: 12, color: 'rgba(250,246,240,0.6)', marginTop: 4, fontFamily: 'DM Sans, sans-serif' }}>{new Date(selectedEvent.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
-            </div>
           </div>
 
           {/* Body */}
           <div style={{ padding: 20 }}>
+            <div style={{ fontSize: 10, letterSpacing: '0.15em', color: '#C4AA87', textTransform: 'uppercase', marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>
+              {selectedEvent.event_type === 'first_kiss' ? 'First kiss' : selectedEvent.event_type === 'first_date' ? 'First date' : selectedEvent.event_type === 'anniversary' ? 'Anniversary' : getMoodLabel(selectedEvent.event_type)}
+            </div>
+            <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 26, color: '#1C1410', fontWeight: 400, marginBottom: 4 }}>{selectedEvent.title}</div>
+            <div style={{ fontSize: 12, color: '#8B7355', marginBottom: 20, fontFamily: 'DM Sans, sans-serif' }}>{new Date(selectedEvent.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
             {selectedEvent.description && (
               <p style={{ fontSize: 14, color: '#6B5D4F', lineHeight: 1.7, marginBottom: 20, fontStyle: 'italic', fontFamily: 'DM Sans, sans-serif' }}>"{selectedEvent.description}"</p>
             )}
