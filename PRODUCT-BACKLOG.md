@@ -73,9 +73,9 @@ Nothing ships to strangers until this sprint is done. A new couple needs to land
 
 ## SPRINT 2 — COMPLETE YOUR PROFILE + TIMELINE REDESIGN
 
-- [ ] "Complete your profile" catch-up card for Matt and Cass — dashboard card surfacing important dates and photo upload for existing users who predate the new onboarding flow
-- [ ] Timeline redesign sprint — photo entries showing actual photos, event type differentiation, deduplication of photo entries, reflection-focused layout, remove gold gradient treatment
-- [ ] Photo entry titles — use cleaned filename instead of "A moment from our story"
+- [x] "Complete your profile" catch-up card for Matt and Cass — dashboard card surfacing important dates and photo upload for existing users who predate the new onboarding flow
+- [x] Timeline redesign sprint — photo entries showing actual photos, event type differentiation, deduplication of photo entries, reflection-focused layout, remove gold gradient treatment
+- [x] Photo entry titles — enrichment sheet with EXIF
 - [ ] Photo upload entry point post-onboarding — Timeline "+ Add" button should include quick photo upload option
 - [ ] Preferences wired to Nora — hobbies and date_preferences collected during onboarding but never read by any Nora prompt. Wire into getNoraBriefing and hero card context.
 - [ ] Birthday wired to Nora and Timeline — birthday column exists in user_profiles, collected in settings, but never used anywhere. Wire into Nora briefing and create annual Timeline event.

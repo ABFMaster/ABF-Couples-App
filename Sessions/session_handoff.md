@@ -179,14 +179,32 @@
 - Add/Change photo on timeline entries — file upload wired to update route
 - Duplicate timeline event prevention — same title + couple_id deduplication
 
+### Session 2026-06-11 completions
+- Timeline edit/delete routes built — /api/timeline/event/update (PATCH) and /api/timeline/event/delete (DELETE), ownership-based via created_by
+- Edit sheet wired in detail view — title, description, date, delete with confirmation, ownership-gated
+- Add/Change photo on timeline entries — file upload wired to update route
+- MEMORY_REFLECTION signal wired — Tell Nora about this fires updateNoraMemory and seeds ai-coach with event context
+- /api/timeline/event/signal route built
+- Photo upload enrichment — title + date picker with EXIF auto-fill on Me tab, single and multi-photo flows
+- exifr library installed and wired
+- Detail view photo — object-fit contain with dark background, full image visible, title moved below photo
+- Date Night timeline — falls back to stop hero photo when no manual photo uploaded
+- BET_DAYS fix — corrected to Tuesday (2)
+- Milestone entry sheet — location autocomplete via Maps SDK, Places photo fetch, permanent storage, save to timeline
+- Foundation cycling card — replaces static milestone cards, cycles milestones with photo support
+- Nora surfaced this — random memory card at top of BEEN, replaces static placeholder
+- Full Timeline page — chronological dot-and-line, year groupings, thumbnails, milestone treatment
+- Shared ownership model decided — creator owns entries, both partners can add their own milestone versions
+
 ## Next Session Priorities
-1. Photo title and date picker during upload — when uploading photos, prompt for title and actual date taken
-2. Focal point / photo positioning — backlogged, needed for native app sprint
-3. Preferences wired to Nora — hobbies/date_preferences never read by any prompt
-4. Wire assessment catch-up for Matt and Cass — both need attachment/conflict scores updated
-5. Full Cass end-to-end test — BETA GATE
-6. Timeline shared items display — movies/shows/songs need proper type labels and artwork
-7. Photo titles cleanup — "A moment from our story" generic titles need user tagging
+1. Nora Vision Commentary — investigate Supabase Storage public URL accessibility, then build Anthropic vision API call for photo flirts
+2. Preferences wired to Nora — hobbies/date_preferences never read by any prompt, wire into getNoraBriefing
+3. Birthday wired to Nora and Timeline
+4. FLIRT signal gaps — FLIRT_SENT not incrementing, FLIRT_RECEIVED doesn't exist, couple_notes blind to flirt activity
+5. Shared items display in Timeline — movies/shows/songs need proper type labels and artwork
+6. Ritual card reset bug — shows checkin buttons again after page reload
+7. Full Cass end-to-end test — BETA GATE
+8. Google Cloud billing — confirm upgraded to paid account before Places API breaks
 
 ## Key Test Accounts
 - Matt: fe1e0be6-4574-4bc1-8c89-9cb1b6bbe870 (coggan11@gmail.com)
