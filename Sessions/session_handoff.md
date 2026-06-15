@@ -196,15 +196,35 @@
 - Full Timeline page — chronological dot-and-line, year groupings, thumbnails, milestone treatment
 - Shared ownership model decided — creator owns entries, both partners can add their own milestone versions
 
+### Session 2026-06-15 completions
+- ABF-CONSTITUTION.md created and committed to repo root — governing document for all product, engineering, and design decisions
+- Google Cloud billing confirmed — paid account since May 22, Places API safe
+- Ritual card reset bug — investigated, no live bug found, data and logic correct. Monitor in production during Cass end-to-end test
+- Preferences wired to Nora — hobbies and date_preferences added to ai-coach profile select (both userProfile and partnerProfile) and added to getNoraBriefing THEIR PREFERENCES block. Confirmed working via Nora response referencing music and date style accurately
+- Birthday wired to Nora — birthday added to ai-coach profile select and getNoraBriefing preferences block. Matt's birthday (1974-08-08) confirmed in DB. Cass to enter hers in /profile settings
+- Past trip surfacing as "coming up" — Nora surfaced a completed coast trip as upcoming. Trip status not being updated after date passes. Investigate in polish sprint.
+
+### Architecture decisions made this session
+- ABF Constitution established — see ABF-CONSTITUTION.md at repo root. All product decisions filter through it.
+- Confidence-gated expression model defined — Nora's tier system now governs HOW she expresses knowledge, not just what she knows. Discovery: questions only. Pattern Recognition: tentative naming. Earned Intimacy: direct reflection.
+- Five memory layers defined — individual, couple, relationship intelligence, shared learning, product knowledge. Current couple_notes blob is the starting point. Schema design sprint required before building.
+- Skills architecture confirmed — orchestrator + specialized skills. Five wrapper functions are the seeds. Refactor sprint required.
+- Solo user arc mapped — every ABF surface categorized as solo-ready, needs adaptation, or couple-only. Sprint ready when prioritized.
+- Signal registry approach confirmed — all signal gaps to be fixed systematically in one sprint, not ad hoc.
+
+### Known issues / parked
+- Flirt signal gaps — FLIRT_SENT not incrementing counters, FLIRT_RECEIVED does not exist, couple_notes blind to flirt activity, userId routing bug writes both users notes from sender perspective only. Deferred to signal registry sprint.
+- Assessment to memory wire — deferred to signal registry sprint for same reason.
+- Past trip status not updating after date passes — investigate in polish sprint.
+- Nora voice pass — deferred until after confidence-gated tier system prompt work is complete. Tuning prompts before architecture changes is wasted work.
+
 ## Next Session Priorities
-1. Nora Vision Commentary — investigate Supabase Storage public URL accessibility, then build Anthropic vision API call for photo flirts
-2. Preferences wired to Nora — hobbies/date_preferences never read by any prompt, wire into getNoraBriefing
-3. Birthday wired to Nora and Timeline
-4. FLIRT signal gaps — FLIRT_SENT not incrementing, FLIRT_RECEIVED doesn't exist, couple_notes blind to flirt activity
-5. Shared items display in Timeline — movies/shows/songs need proper type labels and artwork
-6. Ritual card reset bug — shows checkin buttons again after page reload
-7. Full Cass end-to-end test — BETA GATE
-8. Google Cloud billing — confirm upgraded to paid account before Places API breaks
+1. Signal registry sprint — map every user action to signal type, weight, and memory target. Fix all gaps systematically: FLIRT_SENT counters, FLIRT_RECEIVED, assessment to memory wire, userId routing bug, Game Room completions. No more ad hoc signal wiring.
+2. Memory layer schema design — no code, decisions only. Define the five-layer schema before anything else is built on top of couple_notes. One session, one output: a schema document.
+3. Confidence-gated expression — wire tier system into Nora expression mode across buildCoachSystem() and the five wrapper functions. Discovery questions only, Pattern Recognition tentative, Earned Intimacy direct.
+4. Nora Vision Commentary — investigate Supabase Storage public URL accessibility, then Anthropic vision API call for photo flirts.
+5. Shared items display in Timeline — movies/shows/songs need proper type labels and artwork.
+6. Full Cass end-to-end test — BETA GATE. Do not ship to external users until this passes.
 
 ## Key Test Accounts
 - Matt: fe1e0be6-4574-4bc1-8c89-9cb1b6bbe870 (coggan11@gmail.com)
