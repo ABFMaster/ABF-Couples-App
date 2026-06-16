@@ -198,6 +198,7 @@ You are speaking directly to ${partnerName}. React to both answers but speak TO 
 
       updateNoraMemory({
         coupleId,
+        userId: user.id,
         signalType: SIGNAL_TYPES.SPARK_REVEAL,
         inputData: {
           question: sparkRow.question,

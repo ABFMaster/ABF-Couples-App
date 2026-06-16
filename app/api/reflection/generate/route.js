@@ -222,6 +222,7 @@ Return only the JSON object. No markdown, no explanation, no wrapper text.`
 
     updateNoraMemory({
       coupleId,
+      userId,
       signalType: SIGNAL_TYPES.WEEKLY_REFLECTION,
       inputData: {
         opening,

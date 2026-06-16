@@ -227,6 +227,7 @@ You are speaking directly to ${partnerName}. React to what the predictions and a
 
         updateNoraMemory({
           coupleId: resolvedCoupleId,
+          userId,
           signalType: SIGNAL_TYPES.BET_REVEAL,
           inputData: {
             question: betRow.question,
