@@ -30,6 +30,29 @@ export async function POST(request) {
       .eq('id', flirtId)
       .eq('receiver_id', user.id)
 
+    // Fetch flirt to get coupleId and senderId for signal
+    const { data: flirt } = await supabase
+      .from('flirts')
+      .select('couple_id, sender_id, type, content')
+      .eq('id', flirtId)
+      .maybeSingle()
+
+    if (flirt) {
+      try {
+        const { updateNoraMemory, SIGNAL_TYPES } = await import('@/lib/nora-memory')
+        await updateNoraMemory({
+          coupleId: flirt.couple_id,
+          userId: user.id,
+          signalType: SIGNAL_TYPES.FLIRT_RECEIVED,
+          inputData: {
+            type: flirt.type,
+            content: flirt.content,
+            reaction,
+          },
+        })
+      } catch {}
+    }
+
     return NextResponse.json({ success: true })
 
   } catch (err) {
