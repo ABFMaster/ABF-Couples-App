@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { updateNoraMemory } from '@/lib/nora-memory'
+import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { scoreAttachmentStyle, scoreConflictStyle, generateModuleInsights } from '@/lib/relationship-questions'
 
 export const dynamic = 'force-dynamic'
@@ -34,7 +34,7 @@ export async function POST(request) {
     await updateNoraMemory({
       userId,
       coupleId,
-      signalType: 'PROFILE_UPDATE',
+      signalType: SIGNAL_TYPES.ASSESSMENT_COMPLETE,
       inputData
     })
 
