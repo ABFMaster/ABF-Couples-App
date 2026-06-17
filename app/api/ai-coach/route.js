@@ -309,7 +309,6 @@ export async function POST(request) {
     const claimsBlock = coupleRow
       ? (await getSurfaceableClaims(coupleId, coupleRow.user1_id, coupleRow.user2_id, uName, pName)).promptBlock
       : ''
-    console.log('[ai-coach][TEST] claimsBlock content:', claimsBlock)
     const contextBlock = [contextString, assessmentBriefing, memoryBriefing, tierContext, claimsBlock, activityNote, dynamicOpenerNote, sessionFocusNote].filter(Boolean).join('\n\n')
 
     const fullSystemPrompt = buildCoachSystem(
