@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { buildCoachContext, formatContextForPrompt, getRecentActivity, getConversationHistory } from '@/lib/ai-coach-context';
-import { getNoraMemory, updateNoraMemory, maybeUpdateNoraMemory, shouldUpdateMemory, getMemoryBriefing, SIGNAL_TYPES } from '@/lib/nora-memory'
+import { getNoraMemory, updateNoraMemory, maybeUpdateNoraMemory, shouldUpdateMemory, getMemoryBriefing, getSurfaceableClaims, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { noraChat, buildCoachSystem } from '@/lib/nora'
 import { getNoraBriefing, getNoraTierContext } from '@/lib/nora-knowledge'
 
@@ -224,12 +224,14 @@ export async function POST(request) {
     // ── NORA BRIEFING ──────────────────────────────────────────────
     let userProfile = null;
     let partnerProfile = null;
+    let coupleRow = null;
     try {
-      const { data: coupleRow } = await supabase
+      const { data: coupleRowResult } = await supabase
         .from('couples')
         .select('user1_id, user2_id')
         .eq('id', coupleId)
         .maybeSingle();
+      coupleRow = coupleRowResult;
       const partnerId = coupleRow
         ? (coupleRow.user1_id === user.id ? coupleRow.user2_id : coupleRow.user1_id)
         : null;
@@ -304,8 +306,10 @@ export async function POST(request) {
     const individualSignals = noraMemory?.individual_signal_count || 0
     const coupleSignals = noraMemory?.couple_signal_count || 0
     const tierContext = getNoraTierContext(individualSignals, coupleSignals, uName, pName)
-
-    const contextBlock = [contextString, assessmentBriefing, memoryBriefing, tierContext, activityNote, dynamicOpenerNote, sessionFocusNote].filter(Boolean).join('\n\n')
+    const claimsBlock = coupleRow
+      ? (await getSurfaceableClaims(coupleId, coupleRow.user1_id, coupleRow.user2_id, uName, pName)).promptBlock
+      : ''
+    const contextBlock = [contextString, assessmentBriefing, memoryBriefing, tierContext, claimsBlock, activityNote, dynamicOpenerNote, sessionFocusNote].filter(Boolean).join('\n\n')
 
     const fullSystemPrompt = buildCoachSystem(
       CLINICAL_KNOWLEDGE,
