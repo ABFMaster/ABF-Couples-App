@@ -197,7 +197,9 @@ CREATE TABLE nora_claims (
     CHECK (confidence >= 0 AND confidence <= 1),
   supporting_signal_count integer DEFAULT 1,
   status text DEFAULT 'active' 
-    CHECK (status IN ('active','challenged','confirmed','corrected','retired')),
+    CHECK (status IN ('active','challenged','confirmed','dormant','retired')),
+  correction_count integer DEFAULT 0,
+  dormant_linked_claim_id uuid REFERENCES nora_claims(id),
   user_response text,
   user_responded_at timestamptz,
   source_signal_type text,
@@ -208,10 +210,20 @@ CREATE INDEX idx_nora_claims_couple
   ON nora_claims(couple_id, status, confidence);
 CREATE INDEX idx_nora_claims_user 
   ON nora_claims(user_id, status);
+CREATE INDEX idx_nora_claims_dormant_link 
+  ON nora_claims(dormant_linked_claim_id);
 ```
 
 Claim types: attachment_pattern, conflict_pattern, love_expression, 
 relational_dynamic, growth_edge, repair_pattern, trajectory
+
+Status values: active (default, available per confidence tier rules), 
+challenged (confidence reduced, no correction offered, can recover), 
+confirmed (confidence increased, remains surfaceable), 
+dormant (corrected once — never directly resurfaced, exists only as 
+linkage context for a future independent claim), 
+retired (corrected a second time after resurfacing — permanently 
+excluded from this claim_type for this person).
 
 Confidence thresholds map directly to tier expression model above.
 
