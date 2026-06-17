@@ -41,71 +41,41 @@
 
 ---
 
-## Known Bugs — To Fix in Signal Registry Sprint
+## Signal Registry Sprint — COMPLETE (closed June 16-17, 2026)
 
-### Bug 1 — userId routing bug (affects all individual signals)
-**Root cause:** `updateNoraMemory` sets `updateUser1 = true` and `updateUser2 = updateUser1` for all individual signals. The `userId` parameter is passed in but never used to determine whose notes to update. Result: both users' notes get written from the acting user's signal data, regardless of who performed the action.
+All bugs identified in this registry have been fixed, deployed, and verified in production.
 
-**Fix:** Replace the static `updateUser1/updateUser2` logic with userId-based routing:
-- If `userId === couple.user1_id` → update user1 notes only
-- If `userId === couple.user2_id` → update user2 notes only
-- If `userId` is null (shared signal) → update both
+### Bug 1 — userId routing bug — FIXED
+`updateNoraMemory` now routes individual notes updates based on `userId` matching `couple.user1_id` or `couple.user2_id`, rather than updating both users unconditionally. Shared signals (DATE_COMPLETED, TIMELINE_EVENT, SHARED_ITEM_COMPLETED, RITUAL_CHECKIN) update both regardless of userId, as they have no single actor.
 
-**Affected signals:** All individual signals — NORA_CONVERSATION, SPARK_REVEAL, BET_REVEAL, WEEKLY_REFLECTION, GAME_ROOM_DEBRIEF, NOTEBOOK_ENTRY, PRACTICE_ADDED, PRACTICE_UPDATED, FLIRT_SENT, MEMORY_REFLECTION
+Audit performed across all call sites confirmed three signals were missing `userId` entirely: SPARK_REVEAL, BET_REVEAL, and NORA_CONVERSATION. All three fixed. Every other individual signal call site (FLIRT_SENT, NOTEBOOK_ENTRY, PRACTICE_ADDED, PRACTICE_UPDATED, MEMORY_REFLECTION, DATE_COMPLETED, TIMELINE_EVENT) was already passing userId correctly.
 
----
+### Bug 2 — Missing weights on live signals — FIXED
+DATE_COMPLETED, TIMELINE_EVENT, MEMORY_REFLECTION, and FLIRT_SENT now have individual and/or couple weights as specified in the target registry below. SHARED_ITEM_COMPLETED now has a couple weight.
 
-### Bug 2 — Missing weights on live signals
-These signals fire and write notes but never increment counters. Tier system doesn't learn from them.
+### Bug 3 — FLIRT_RECEIVED missing entirely — FIXED
+Added to SIGNAL_TYPES, both weight maps, the individual synthesis lens, and wired into `/api/flirts/react/route.js` to fire on reaction with the receiver's userId.
 
-| Signal | Should have individual weight | Should have couple weight |
-|---|---|---|
-| DATE_COMPLETED | 1 | 2 |
-| TIMELINE_EVENT | 1 | 1 |
-| SHARED_ITEM_COMPLETED | 0 | 1 |
-| MEMORY_REFLECTION | 1 | 0 |
-| FLIRT_SENT | 1 | 1 |
+### Bug 4 — Assessment to memory wire missing — FIXED
+Added ASSESSMENT_COMPLETE to SIGNAL_TYPES, both weight maps, and the synthesis lens. Fixed the dead `'PROFILE_UPDATE'` string literal in `/api/assessment/seed-memory/route.js` that was firing a signal type matching nothing in the registry — replaced with the proper `SIGNAL_TYPES.ASSESSMENT_COMPLETE` constant.
 
----
+### Bug 5 — FLIRT_SENT couple notes blind — FIXED
+FLIRT_SENT and FLIRT_RECEIVED added to SHARED_SIGNALS. Couple notes now update on flirt activity.
 
-### Bug 3 — FLIRT_RECEIVED missing entirely
-No signal type, no weight, no synthesis lens, no call in the react route.
+### Additional fix — nora_signals table wired (Architecture Doc Step 2)
+`nora_signals` table created with RLS enabled. Every `updateNoraMemory` call now logs a raw signal event (couple_id, user_id, signal_type, input_data, created_at) before synthesis proceeds. Two production bugs caught and fixed during this work: an incorrectly chained `.catch()` on the Supabase query builder (replaced with proper try/await), and missing userId on NORA_CONVERSATION signal calls (same pattern as Bug 1, caught by direct testing rather than static audit).
 
-**Required additions:**
-- Add `FLIRT_RECEIVED: 'flirt_received'` to SIGNAL_TYPES
-- Individual weight: 1 (receiver only)
-- Couple weight: 1
-- Updates individual notes: receiver only
-- Updates couple notes: yes
-- Add synthesis lens: "Focus on what the receiver's reaction reveals about how this person receives love and desire — what landed, what moved them, what they did with it."
-- Add call to `updateNoraMemory` in `/api/flirts/react/route.js` after reaction is saved
+### Verification performed
+All fixes confirmed via direct production testing — Nora conversation, Spark, Bet, and flirt reactions triggered live and verified against `nora_signals` and `nora_memory` tables showing correct signal_type, userId attribution, and counter increments. No fix was marked complete without DB-level confirmation.
 
----
+### What this sprint did NOT touch
+- nora_claims table — not yet built, deferred to corrigibility design session (see ABF-NORA-ARCHITECTURE.md Step 6)
+- Claim extraction pipeline — not yet built
+- Skills refactor — not yet built
 
-### Bug 4 — Assessment → memory wire missing
-Assessment completion is the highest-signal onboarding event. It fires nothing.
+This registry document remains the authoritative signal reference. Any new signal type added to ABF must be added here first, with weights and routing behavior specified, before implementation.
 
-**Required addition:**
-- Add `ASSESSMENT_COMPLETE: 'assessment_complete'` to SIGNAL_TYPES
-- Individual weight: 3 (highest single signal — full profile data)
-- Couple weight: 2 (if both assessed)
-- Updates individual notes: acting user only
-- Updates couple notes: only if both partners have completed assessment
-- Synthesis lens: "Full profile synthesis. Use attachment scores, conflict style, love language, and flooding data to build the most complete opening hypothesis possible. This is the foundation everything else builds on."
-- Add call in `/api/assessment/seed-memory/route.js`
-
----
-
-### Bug 5 — FLIRT_SENT couple notes blind
-FLIRT_SENT not in SHARED_SIGNALS. Nora never learns about flirt activity at the couple level.
-
-**Fix:** Add FLIRT_SENT and FLIRT_RECEIVED to SHARED_SIGNALS array.
-
----
-
-## Target Registry — Post Sprint
-
-This is what the registry should look like after the signal registry sprint is complete.
+## Target Registry — Current State
 
 | Signal | Individual Weight | Couple Weight | Notes layer | userId routing |
 |---|---|---|---|---|
@@ -218,15 +188,15 @@ Full couple dynamic synthesis from combined profiles. Establish the baseline hyp
 
 ---
 
-## Signal Registry Sprint — Execution Order
+## Signal Registry Sprint — Execution Order — COMPLETE
 
-1. Fix userId routing bug in `updateNoraMemory` — this affects everything, fix first
-2. Add missing weights for DATE_COMPLETED, TIMELINE_EVENT, SHARED_ITEM_COMPLETED, MEMORY_REFLECTION, FLIRT_SENT
-3. Add FLIRT_RECEIVED to SIGNAL_TYPES, weights, lenses, and react route
-4. Add ASSESSMENT_COMPLETE to SIGNAL_TYPES, weights, lenses, and seed-memory route
-5. Add FLIRT_SENT and FLIRT_RECEIVED to SHARED_SIGNALS
-6. Test each fix independently before stacking
-7. Verify signal counts incrementing correctly in DB after each fix
+1. Fix userId routing bug in `updateNoraMemory` — this affects everything, fix first ✅
+2. Add missing weights for DATE_COMPLETED, TIMELINE_EVENT, SHARED_ITEM_COMPLETED, MEMORY_REFLECTION, FLIRT_SENT ✅
+3. Add FLIRT_RECEIVED to SIGNAL_TYPES, weights, lenses, and react route ✅
+4. Add ASSESSMENT_COMPLETE to SIGNAL_TYPES, weights, lenses, and seed-memory route ✅
+5. Add FLIRT_SENT and FLIRT_RECEIVED to SHARED_SIGNALS ✅
+6. Test each fix independently before stacking ✅
+7. Verify signal counts incrementing correctly in DB after each fix ✅
 
 ---
 
