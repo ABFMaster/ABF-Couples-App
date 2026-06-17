@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { buildCoachContext, formatContextForPrompt, getRecentActivity, getConversationHistory } from '@/lib/ai-coach-context';
-import { getNoraMemory, updateNoraMemory, maybeUpdateNoraMemory, shouldUpdateMemory, getMemoryBriefing, getSurfaceableClaims, SIGNAL_TYPES } from '@/lib/nora-memory'
+import { getNoraMemory, updateNoraMemory, maybeUpdateNoraMemory, shouldUpdateMemory, getMemoryBriefing, getSurfaceableClaims, classifyClaimResponse, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { noraChat, buildCoachSystem } from '@/lib/nora'
 import { getNoraBriefing, getNoraTierContext } from '@/lib/nora-knowledge'
 
@@ -206,6 +206,36 @@ export async function POST(request) {
       activeConversationId = newConversation.id;
     }
 
+    // ── CLASSIFY RESPONSE TO PREVIOUSLY SURFACED CLAIMS ─────────────
+    // If the last turn surfaced claims, check if this message confirms,
+    // challenges, or corrects one of them — before generating the new response.
+    try {
+      const { data: convRow } = await supabase
+        .from('ai_conversations')
+        .select('pending_surfaced_claim_ids')
+        .eq('id', activeConversationId)
+        .maybeSingle();
+      const pendingClaimIds = convRow?.pending_surfaced_claim_ids;
+      if (pendingClaimIds && pendingClaimIds.length > 0) {
+        const { data: lastAssistantMsg } = await supabase
+          .from('ai_messages')
+          .select('content')
+          .eq('conversation_id', activeConversationId)
+          .eq('role', 'assistant')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (lastAssistantMsg?.content) {
+          classifyClaimResponse({
+            coupleId,
+            surfacedClaimIds: pendingClaimIds,
+            noraMessage: lastAssistantMsg.content,
+            userMessage: message.trim(),
+          }).catch(() => {});
+        }
+      }
+    } catch {}
+
     // ── SAVE USER MESSAGE ──────────────────────────────────────────
     const { error: userMsgError } = await supabase
       .from('ai_messages')
@@ -309,9 +339,11 @@ export async function POST(request) {
     const isUser1 = coupleRow ? user.id === coupleRow.user1_id : true
     const individualSignals = isUser1 ? user1IndividualSignals : user2IndividualSignals
     const tierContext = getNoraTierContext(individualSignals, coupleSignals, uName, pName)
-    const claimsBlock = coupleRow
-      ? (await getSurfaceableClaims(coupleId, coupleRow.user1_id, coupleRow.user2_id, uName, pName, user1IndividualSignals, user2IndividualSignals)).promptBlock
-      : ''
+    const claimsResult = coupleRow
+      ? await getSurfaceableClaims(coupleId, coupleRow.user1_id, coupleRow.user2_id, uName, pName, user1IndividualSignals, user2IndividualSignals)
+      : { promptBlock: '', surfacedClaimIds: [] }
+    const claimsBlock = claimsResult.promptBlock
+    const thisTurnSurfacedClaimIds = claimsResult.surfacedClaimIds
     const contextBlock = [contextString, assessmentBriefing, memoryBriefing, tierContext, claimsBlock, activityNote, dynamicOpenerNote, sessionFocusNote].filter(Boolean).join('\n\n')
 
     const fullSystemPrompt = buildCoachSystem(
@@ -384,6 +416,14 @@ export async function POST(request) {
       const { count } = await incrementWeeklyUsage(supabase, user.id);
       messagesRemaining = Math.max(0, FREE_TIER_WEEKLY_LIMIT - (count ?? FREE_TIER_WEEKLY_LIMIT));
     }
+
+    // ── PERSIST SURFACED CLAIMS FOR NEXT TURN'S CLASSIFICATION ──────
+    supabase
+      .from('ai_conversations')
+      .update({ pending_surfaced_claim_ids: thisTurnSurfacedClaimIds || [] })
+      .eq('id', activeConversationId)
+      .then(() => {})
+      .catch(() => {});
 
     return NextResponse.json({
       success: true,
