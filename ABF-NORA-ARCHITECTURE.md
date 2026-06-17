@@ -246,11 +246,56 @@ Discovery: shape questions invisibly.
 Pattern Recognition: tentative surface with humility.
 Earned Intimacy: direct reflection when trust is sufficient.
 
-### Step 6 — Corrigibility surface
-Product design decision required before code.
-What does the UI look like when Nora surfaces a claim?
-How does a user confirm, challenge, or correct it?
-How does the correction propagate to the memory layer?
+### Step 6 — Corrigibility surface — DESIGNED (June 17, 2026)
+
+Grounded in clinical research on therapeutic "working through" and client resistance to interpretation (psychoanalytic working-through literature; positioning theory research on therapist response to client resistance; stance-alignment research on counselor response to pushback). Three findings shaped this design: corrections are not single resolved events but an ongoing process across multiple encounters; therapists facing resistance ground renewed interpretation in fresh observable behavior rather than re-asserting the original claim; and the correct stance toward pushback is active alignment with the client's self-understanding, never neutral non-engagement or defensiveness.
+
+**There is no dedicated UI screen.** This was considered and rejected. A browsable "what Nora thinks about you" surface violates the constitutional principle that memory serves awareness and is not itself the product — it would turn Nora's understanding into a profile page, inviting comparison and scrutiny that works against the relational framing. Corrigibility is a conversational behavior, not a feature with its own nav item.
+
+**Correction always originates in conversation.** When Nora surfaces a claim (tentative at Pattern Recognition tier, direct at Earned Intimacy tier), the API route tags that turn with the claim_id being surfaced. The user's next message is run through a fast Haiku classifier:
+
+CONFIRMED — user agrees, recognizes themselves in it
+CHALLENGED — user disagrees without offering an alternative explanation
+CORRECTED — user disagrees AND offers their own explanation
+NEUTRAL — user did not engage with the claim, conversation moved on
+
+If NEUTRAL, nothing happens. This keeps the cost of the check negligible on the common case.
+
+**State transitions on classification:**
+
+CONFIRMED → confidence +0.10, claim stays active, can surface again later.
+
+CHALLENGED → confidence -0.25, claim stays active (not dormant). Nothing was disproven, just not confirmed — a softer signal than correction. The claim needs new signals to climb back to a surfaceable threshold. Nora's immediate next response aligns with the user's pushback rather than defending the original observation.
+
+CORRECTED → the original claim moves to a new status: dormant. Dormant claims are never deleted and never surfaced again as-is — they exist only as context for a possible future independent claim of the same claim_type. A second Haiku call extracts the user's stated self-understanding into a new claim:
+
+  claim_type: same as original
+  claim_text: user's stated explanation
+  confidence: 0.75 starting point — self-reported claims are privileged over inferred ones since the person is the authority on their own internal experience, but not treated as infallible, since self-report has its own blind spots.
+
+**Resurfacing a dormant-linked pattern.** If new independent signals later support the same claim_type for that person, Nora does not resurface the dormant claim directly. A fresh claim is extracted through the normal pipeline, requiring the same minimum signal count and confidence threshold as any new claim. The dormant claim is used for exactly one purpose: shaping the framing when the new claim is eventually surfaced.
+
+Required framing components, all three mandatory:
+1. Acknowledge the history honestly — "I noticed something like this once before, and you told me that wasn't quite it."
+2. Ground the new claim in genuinely new specific evidence — never "I still think I was right."
+3. Explicitly leave room for a second correction — "Worth a look, or am I still off base?"
+
+**Permanent retirement.** If the user corrects this resurfaced claim a second time, this specific claim_type is retired permanently for this person — Nora does not attempt this framing again. Continuing to return to it a third time crosses from good therapeutic practice into not listening.
+
+**Full state model:**
+active (confidence <0.50)        → shapes questions invisibly, never surfaced
+active (confidence 0.50-0.69)    → invisible, building toward surfaceable
+active (confidence 0.70-0.84)    → tentative surface eligible
+active (confidence 0.85+)        → direct reflection eligible
+↓ user responds to a surfaced claim
+confirmed   → confidence +0.10, remains active
+challenged  → confidence -0.25, remains active, needs new signals
+corrected   → original claim → dormant (permanent unless retired)
+new claim created from correction, starts at 0.75
+↓ if claim_type independently re-earned later
+dormant claim referenced once in resurfacing framing → new claim created fresh
+↓ if corrected again
+retired permanently for this claim_type + this person
 
 ### Step 7 — Skills refactor
 Formalize the five wrapper functions into explicit skills with 
