@@ -303,11 +303,14 @@ export async function POST(request) {
 
     const memoryBriefing = noraBriefing || null
 
-    const individualSignals = noraMemory?.individual_signal_count || 0
+    const user1IndividualSignals = noraMemory?.user1_individual_signal_count || 0
+    const user2IndividualSignals = noraMemory?.user2_individual_signal_count || 0
     const coupleSignals = noraMemory?.couple_signal_count || 0
+    const isUser1 = coupleRow ? user.id === coupleRow.user1_id : true
+    const individualSignals = isUser1 ? user1IndividualSignals : user2IndividualSignals
     const tierContext = getNoraTierContext(individualSignals, coupleSignals, uName, pName)
     const claimsBlock = coupleRow
-      ? (await getSurfaceableClaims(coupleId, coupleRow.user1_id, coupleRow.user2_id, uName, pName)).promptBlock
+      ? (await getSurfaceableClaims(coupleId, coupleRow.user1_id, coupleRow.user2_id, uName, pName, user1IndividualSignals, user2IndividualSignals)).promptBlock
       : ''
     const contextBlock = [contextString, assessmentBriefing, memoryBriefing, tierContext, claimsBlock, activityNote, dynamicOpenerNote, sessionFocusNote].filter(Boolean).join('\n\n')
 

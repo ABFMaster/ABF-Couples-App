@@ -142,16 +142,17 @@ const ritualCompletedThisWeek = !!completion?.completed
     // ── PART 3: Nora memory ───────────────────────────────────────────────────
     const { data: memory } = await supabase
       .from('nora_memory')
-      .select('user1_notes, user2_notes, couple_notes, individual_signal_count, couple_signal_count')
+      .select('user1_notes, user2_notes, couple_notes, user1_individual_signal_count, user2_individual_signal_count, couple_signal_count')
       .eq('couple_id', coupleId)
       .limit(1)
       .maybeSingle()
 
-    const individualSignals = memory?.individual_signal_count || 0
+    const isUser1 = couple?.user1_id === userId
+    const individualSignals = isUser1 ? (memory?.user1_individual_signal_count || 0) : (memory?.user2_individual_signal_count || 0)
     const coupleSignals = memory?.couple_signal_count || 0
     const tierContext = getNoraTierContext(individualSignals, coupleSignals, userName, partnerName)
 
-    const myNotes       = couple?.user1_id === userId ? memory?.user1_notes : memory?.user2_notes
+    const myNotes       = isUser1 ? memory?.user1_notes : memory?.user2_notes
     const coupleNotes   = memory?.couple_notes?.notes || null
     const structuredFacts = memory?.couple_notes?.structured_facts || null
     const myPersonNotes = myNotes?.notes || null

@@ -284,10 +284,11 @@ async function processThursdayGeneration(couple, user1, user2) {
       ? `What Nora knows about this couple:\n${noraMemory.couple_notes.notes}`
       : null
 
-    const individualSignals1 = noraMemory?.individual_signal_count || 0
+    const user1IndividualSignals = noraMemory?.user1_individual_signal_count || 0
+    const user2IndividualSignals = noraMemory?.user2_individual_signal_count || 0
     const coupleSignals = noraMemory?.couple_signal_count || 0
-    const user1TierContext = getNoraTierContext(individualSignals1, coupleSignals, user1Name, user2Name)
-    const user2TierContext = getNoraTierContext(individualSignals1, coupleSignals, user2Name, user1Name)
+    const user1TierContext = getNoraTierContext(user1IndividualSignals, coupleSignals, user1Name, user2Name)
+    const user2TierContext = getNoraTierContext(user2IndividualSignals, coupleSignals, user2Name, user1Name)
 
     const recentContext = recentSparks?.map(s => {
       const responses = s.spark_responses?.map(r => {
