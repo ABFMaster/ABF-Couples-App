@@ -352,6 +352,7 @@ export async function POST(request) {
 
     updateNoraMemory({
       coupleId,
+      userId: user.id,
       signalType: SIGNAL_TYPES.NORA_CONVERSATION,
       inputData: { messages: updatedMessages },
     }).catch(() => {})
@@ -362,6 +363,7 @@ export async function POST(request) {
         if (meaningful) {
           updateNoraMemory({
             coupleId,
+            userId: user.id,
             signalType: SIGNAL_TYPES.NORA_CONVERSATION,
             inputData: { messages: lastTwoMessages, midSession: true },
           }).catch(() => {})
