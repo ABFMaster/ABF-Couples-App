@@ -309,9 +309,61 @@ dormant claim referenced once in resurfacing framing → new claim created fresh
 ↓ if corrected again
 retired permanently for this claim_type + this person
 
-### Step 7 — Skills refactor
-Formalize the five wrapper functions into explicit skills with 
-documented context slices. Each skill receives only what it needs.
+### Step 7 — COMPLETE (June 17-18, 2026)
+
+The skills refactor was completed as a two-part pass.
+
+Part 1 — Verified the five wrapper functions in lib/nora.js already
+satisfied the orchestrator + specialized skills pattern in structure.
+noraChat, noraReact, noraVerdict, noraGenerate, noraSignal are each
+thin, purpose-specific wrappers delegating to one shared core
+(noraCall), with their own model, token budget, and context defaults.
+NORA_VOICE is correctly injected into every surface except noraSignal
+(intentional — signal calls are internal classification, never
+user-facing). No structural changes needed here.
+
+Part 2 — Completed the actual design intent: documented context
+contracts enforced at every call site. A full audit of all 29 Nora
+call sites revealed most surfaces were not receiving the claims layer
+or tier context the architecture specified. Fixed in a comprehensive
+pass covering every Tier 1 and Game Room surface.
+
+Surfaces receiving full stack (notes + tier + claims):
+- ai-coach (conversation) — wired during Steps 3-5
+- dashboard/hero
+- cron/scheduled-tasks (Thursday Nora's Day, per-person)
+- spark/respond (both partners' reactions)
+- reflection/generate (weekly reflection)
+- game-room/generate-debrief (Rabbit Hole)
+- game-room/hunt/debrief (Hunt)
+- game-room/hot-take/summary-insight (Hot Take)
+- game-room/call/verdict (The Call)
+- game-room/challenge/memory/verdict (Memory Challenge)
+- game-room/challenge/submit (Challenge)
+- game-room/challenge/rank/finalize (Rank)
+
+Surfaces confirmed correct as-is (memory-free by design):
+- All noraGenerate call sites (date ideas, flirt generation, game
+  prompts) — pure content generation, not relational reflection.
+- assessment/insight, bet/respond, game-room/nora-nudge — correctly
+  minimal given their role in the product.
+
+Shared helper added: getFullNoraContext(coupleId, actingUserId,
+actingUserName, otherUserName) in lib/nora-memory.js — single entry
+point for any surface needing the full stack, replaces ad-hoc
+context assembly that caused these gaps.
+
+Bugs caught during this audit and fixed:
+- reflection/generate was writing to non-existent 'summary' and
+  'updated_at' columns — weekly reflections had never reached Nora's
+  memory. Fixed to 'memory_summary' and 'last_updated'.
+- individual_signal_count was a single shared column — tier system
+  couldn't distinguish per-person earned trust. Split into
+  user1_individual_signal_count and user2_individual_signal_count,
+  backfilled, and updated across all four read/write sites.
+- Variable name mismatches (couple vs coupleData vs couple.id) in
+  Game Room routes caused silent failures in claims fetching.
+  Fixed per-route during the audit pass.
 
 ---
 
