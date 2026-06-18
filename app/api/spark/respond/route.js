@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
+import { updateNoraMemory, SIGNAL_TYPES, getFullNoraContext } from '@/lib/nora-memory'
 import { noraReact } from '@/lib/nora'
 
 export async function POST(request) {
@@ -123,7 +123,7 @@ Write exactly one sentence, maximum 18 words. Speak directly to ${currentUserNam
     // Step 10: Generate Nora reaction if both have answered
     if (bothAnswered) {
       // Step 10a: Fetch couple profile context
-      const [{ data: myFullProfile }, { data: partnerFullProfile }, { data: noraMemory }] = await Promise.all([
+      const [{ data: myFullProfile }, { data: partnerFullProfile }, myFullContext, partnerFullContext] = await Promise.all([
         supabase
           .from('user_profiles')
           .select('love_language_primary, attachment_style, conflict_style')
@@ -134,19 +134,18 @@ Write exactly one sentence, maximum 18 words. Speak directly to ${currentUserNam
           .select('love_language_primary, attachment_style, conflict_style')
           .eq('user_id', partnerId)
           .maybeSingle(),
-        supabase
-          .from('nora_memory')
-          .select('memory_summary')
-          .eq('couple_id', coupleId)
-          .maybeSingle(),
+        getFullNoraContext(coupleId, user.id, currentUserName, partnerName),
+        getFullNoraContext(coupleId, partnerId, partnerName, currentUserName),
       ])
 
       // Step 10c: Build prompt and call Anthropic
       const myContext = [myFullProfile?.love_language_primary, myFullProfile?.attachment_style].filter(Boolean).join(', ')
       const partnerContext = [partnerFullProfile?.love_language_primary, partnerFullProfile?.attachment_style].filter(Boolean).join(', ')
-
-      const memoryLine = noraMemory?.memory_summary
-        ? `\nWhat Nora knows about them: ${noraMemory.memory_summary}`
+      const memoryLine = myFullContext.fullContextBlock
+        ? `\nWhat Nora knows: ${myFullContext.fullContextBlock}`
+        : ''
+      const partnerMemoryLine = partnerFullContext.fullContextBlock
+        ? `\nWhat Nora knows: ${partnerFullContext.fullContextBlock}`
         : ''
 
       const userPrompt = `The Spark question was: ${sparkRow.question}
@@ -163,7 +162,7 @@ You are speaking directly to ${currentUserName}. React to both answers but speak
 ${partnerName} answered: ${partnerResponse.response_text}
 ${currentUserName} answered: ${responseText}
 
-Their profiles: ${partnerName} is ${partnerContext}. ${currentUserName} is ${myContext}.${memoryLine}
+Their profiles: ${partnerName} is ${partnerContext}. ${currentUserName} is ${myContext}.${partnerMemoryLine}
 
 You are speaking directly to ${partnerName}. React to both answers but speak TO ${partnerName} — not about them. Be specific to what they actually said.`
 
