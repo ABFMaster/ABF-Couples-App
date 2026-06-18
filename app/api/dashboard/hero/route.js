@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraSignal, noraChat } from '@/lib/nora'
 import { getNoraTierContext } from '@/lib/nora-knowledge'
+import { getSurfaceableClaims } from '@/lib/nora-memory'
 import { getTodayString, getDayOfWeek, getDateDayLabel, getWeekStart } from '@/lib/dates'
 
 export async function GET(request) {
@@ -148,7 +149,9 @@ const ritualCompletedThisWeek = !!completion?.completed
       .maybeSingle()
 
     const isUser1 = couple?.user1_id === userId
-    const individualSignals = isUser1 ? (memory?.user1_individual_signal_count || 0) : (memory?.user2_individual_signal_count || 0)
+    const user1Signals = memory?.user1_individual_signal_count || 0
+    const user2Signals = memory?.user2_individual_signal_count || 0
+    const individualSignals = isUser1 ? user1Signals : user2Signals
     const coupleSignals = memory?.couple_signal_count || 0
     const tierContext = getNoraTierContext(individualSignals, coupleSignals, userName, partnerName)
 
@@ -156,6 +159,10 @@ const ritualCompletedThisWeek = !!completion?.completed
     const coupleNotes   = memory?.couple_notes?.notes || null
     const structuredFacts = memory?.couple_notes?.structured_facts || null
     const myPersonNotes = myNotes?.notes || null
+    const claimsResult = (couple?.user1_id && couple?.user2_id)
+      ? await getSurfaceableClaims(coupleId, couple.user1_id, couple.user2_id, isUser1 ? userName : partnerName, isUser1 ? partnerName : userName, user1Signals, user2Signals)
+      : { promptBlock: '' }
+    const claimsBlock = claimsResult.promptBlock || null
     const noraReaction  = feature?.mine?.nora_reaction || null
 
     let assessmentContext = null
@@ -324,6 +331,7 @@ const ritualCompletedThisWeek = !!completion?.completed
         myPersonNotes ? `What I know about ${name}: ${myPersonNotes.slice(0, 300)}` : null,
         coupleNotes   ? `What I know about this couple: ${coupleNotes.slice(0, 400)}` : null,
         structuredFacts ? `Structured observations: ${JSON.stringify(structuredFacts)}` : null,
+        claimsBlock,
         `Write one sentence that says something specific about this person or couple. Make it feel like you've been paying attention.`,
       ].filter(Boolean).join('\n')
 
@@ -363,6 +371,7 @@ Do not label which mode you chose. Do not explain. Just write it. Never start wi
         myPersonNotes   ? `What I know about ${name}: ${myPersonNotes.slice(0, 300)}` : null,
         coupleNotes     ? `What I know about this couple: ${coupleNotes.slice(0, 400)}` : null,
         structuredFacts ? `Structured observations: ${JSON.stringify(structuredFacts)}` : null,
+        claimsBlock,
         `Choose the mode that will land hardest for this specific couple right now. Write it.`,
       ].filter(Boolean).join('\n')
 
