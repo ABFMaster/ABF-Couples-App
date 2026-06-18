@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { getWeekStart } from '@/lib/dates'
 import { noraReact } from '@/lib/nora'
-import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
+import { updateNoraMemory, SIGNAL_TYPES, getFullNoraContext } from '@/lib/nora-memory'
 
 export async function POST(request) {
   try {
@@ -86,7 +86,11 @@ export async function POST(request) {
         .select('display_name, hobbies, date_preferences, stress_response, preferred_checkin_time')
         .eq('couple_id', coupleId),
     ])
-
+    const { data: coupleRowForContext } = await supabase
+      .from('couples')
+      .select('user1_id, user2_id')
+      .eq('id', coupleId)
+      .maybeSingle()
     const { data: weekDates } = await supabase
       .from('custom_dates')
       .select('title, status, date_time, created_at')
@@ -98,6 +102,12 @@ export async function POST(request) {
     // STEP 4 — Build context string
     const profile1 = userProfiles?.[0]
     const profile2 = userProfiles?.[1]
+    const [user1FullContext, user2FullContext] = coupleRowForContext
+      ? await Promise.all([
+          getFullNoraContext(coupleId, coupleRowForContext.user1_id, profile1?.display_name || 'Partner 1', profile2?.display_name || 'Partner 2'),
+          getFullNoraContext(coupleId, coupleRowForContext.user2_id, profile2?.display_name || 'Partner 2', profile1?.display_name || 'Partner 1'),
+        ])
+      : [{ fullContextBlock: '' }, { fullContextBlock: '' }]
 
     const sparkLines = (sparkResponses || [])
       .map(r => `- Spark: "${r.sparks?.question || 'unknown'}" → Response: "${r.response}"`)
@@ -120,7 +130,9 @@ export async function POST(request) {
       })
       .join('\n')
 
-    const memoryContext = noraMemory?.summary || ''
+    const memoryContext = [noraMemory?.memory_summary, user1FullContext.fullContextBlock, user2FullContext.fullContextBlock]
+      .filter(Boolean)
+      .join('\n\n')
 
     const profileContext = [profile1, profile2]
       .filter(Boolean)
@@ -233,16 +245,18 @@ Return only the JSON object. No markdown, no explanation, no wrapper text.`
     }).catch(() => {})
 
     // STEP 8 — Fire-and-forget nora_memory update
+    // Fixed: was writing to non-existent 'summary'/'updated_at' columns.
+    // Real columns are 'memory_summary' and 'last_updated'.
     const memoryUpdate = `Week of ${weekStart}: ${pattern}`
     supabase
       .from('nora_memory')
       .upsert(
         {
           couple_id: coupleId,
-          summary: noraMemory?.summary
-            ? `${noraMemory.summary}\n${memoryUpdate}`
+          memory_summary: noraMemory?.memory_summary
+            ? `${noraMemory.memory_summary}\n${memoryUpdate}`
             : memoryUpdate,
-          updated_at: now,
+          last_updated: now,
         },
         { onConflict: 'couple_id' }
       )
