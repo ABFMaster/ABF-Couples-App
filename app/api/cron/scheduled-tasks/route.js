@@ -5,7 +5,7 @@ import { getSparkQuestion } from '@/lib/spark-questions'
 import { getBetQuestion } from '@/lib/bet-questions'
 import { getTodayString, getDayOfWeek } from '@/lib/dates'
 import { noraGenerate, noraChat } from '@/lib/nora'
-import { getNoraMemory, getMemoryBriefing } from '@/lib/nora-memory'
+import { getNoraMemory, getMemoryBriefing, getSurfaceableClaims } from '@/lib/nora-memory'
 import { getNoraTierContext } from '@/lib/nora-knowledge'
 
 const supabase = createClient(
@@ -289,6 +289,12 @@ async function processThursdayGeneration(couple, user1, user2) {
     const coupleSignals = noraMemory?.couple_signal_count || 0
     const user1TierContext = getNoraTierContext(user1IndividualSignals, coupleSignals, user1Name, user2Name)
     const user2TierContext = getNoraTierContext(user2IndividualSignals, coupleSignals, user2Name, user1Name)
+    const [user1ClaimsResult, user2ClaimsResult] = await Promise.all([
+      getSurfaceableClaims(couple.id, couple.user1_id, couple.user2_id, user1Name, user2Name, user1IndividualSignals, user2IndividualSignals),
+      getSurfaceableClaims(couple.id, couple.user2_id, couple.user1_id, user2Name, user1Name, user2IndividualSignals, user1IndividualSignals),
+    ])
+    const user1ClaimsBlock = user1ClaimsResult.promptBlock || null
+    const user2ClaimsBlock = user2ClaimsResult.promptBlock || null
 
     const recentContext = recentSparks?.map(s => {
       const responses = s.spark_responses?.map(r => {
@@ -316,6 +322,7 @@ RULES:
       coupleContext,
       `Recent Spark answers this week:\n${recentContext}`,
       user1TierContext,
+      user1ClaimsBlock,
       `Generate a Thursday observation and calibrated question specifically for ${user1Name} — angle it toward what you notice about them individually, not just the couple.`
     ].filter(Boolean).join('\n\n')
 
@@ -325,6 +332,7 @@ RULES:
       coupleContext,
       `Recent Spark answers this week:\n${recentContext}`,
       user2TierContext,
+      user2ClaimsBlock,
       `Generate a Thursday observation and calibrated question specifically for ${user2Name} — angle it toward what you notice about them individually, not just the couple.`
     ].filter(Boolean).join('\n\n')
 
