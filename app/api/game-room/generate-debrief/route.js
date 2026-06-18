@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing } from '@/lib/nora-memory'
+import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing, getSurfaceableClaims } from '@/lib/nora-memory'
 import { noraVerdict } from '@/lib/nora'
 
 export async function POST(request) {
@@ -58,6 +58,10 @@ export async function POST(request) {
 
     const noraMemory = await getNoraMemory(coupleId)
     const noraBriefing = noraMemory ? getMemoryBriefing(noraMemory, user1Name, user2Name) : null
+    const claimsResult = (couple?.user1_id && couple?.user2_id)
+      ? await getSurfaceableClaims(coupleId, couple.user1_id, couple.user2_id, user1Name, user2Name, noraMemory?.user1_individual_signal_count || 0, noraMemory?.user2_individual_signal_count || 0)
+      : { promptBlock: '' }
+    const claimsBlock = claimsResult.promptBlock || null
 
     const find1 = finds?.find(f => f.user_id === couple.user1_id)
     const find2 = finds?.find(f => f.user_id === couple.user2_id)
@@ -98,7 +102,7 @@ Respond ONLY with valid JSON, no markdown fences:
   ],
   "timeline_title": "A short evocative title for this memory (5 words max)"
 }
-${noraBriefing ? `\nWhat Nora knows about this couple:\n${noraBriefing}` : ''}`
+${noraBriefing ? `\nWhat Nora knows about this couple:\n${noraBriefing}` : ''}${claimsBlock ? `\n\n${claimsBlock}` : ''}`
 
     const response = await noraVerdict(prompt, { route: 'game-room/generate-debrief', maxTokens: 500, system: 'Two people went down separate threads of the same rabbit hole and surfaced different things. Your job is to find what their specific choices reveal about them — not about the topic. The convergence_reveal is the only place you speak about them directly. Make it land. Never summarize their finds. Never use "both of you" as a lazy bridge. The debrief questions open territory they haven\'t named yet — never ask something they just answered. Use their names when you see something specific. Two sentences. Find what they didn\'t say. Don\'t explain it.' })
 

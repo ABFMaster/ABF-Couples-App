@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraVerdict } from '@/lib/nora'
-import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing } from '@/lib/nora-memory'
+import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing, getSurfaceableClaims } from '@/lib/nora-memory'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -49,6 +49,10 @@ export async function POST(request) {
 
     const noraMemory = await getNoraMemory(couple?.id)
     const noraBriefing = noraMemory ? getMemoryBriefing(noraMemory, userName, partnerName) : null
+    const claimsResult = (couple?.user1_id && couple?.user2_id)
+      ? await getSurfaceableClaims(couple.id, couple.user1_id, couple.user2_id, userName, partnerName, noraMemory?.user1_individual_signal_count || 0, noraMemory?.user2_individual_signal_count || 0)
+      : { promptBlock: '' }
+    const claimsBlock = claimsResult.promptBlock || null
 
     // Build questions map from session
     const questions = existingSession?.questions || []
@@ -95,7 +99,7 @@ Rules:
 - Never be clinical or therapist-y
 - Be specific to what they actually answered — no generic relationship advice
 - Humor is welcome if it's earned, not forced
-${noraBriefing ? `\nWhat Nora knows about this couple:\n${noraBriefing}` : ''}`
+${noraBriefing ? `\nWhat Nora knows about this couple:\n${noraBriefing}` : ''}${claimsBlock ? `\n\n${claimsBlock}` : ''}`
 
     const response = await noraVerdict(prompt, { route: 'game-room/hot-take/summary-insight', maxTokens: 400, system: 'You watched two people rapid-fire opinions at each other. The disagreements are more interesting than the agreements — find what the pattern reveals about each person individually, not the couple as a label. Use their actual names when you see something specific to them — don\'t hide behind \'one of you\'. Two sentences max. Find what their answers revealed that they didn\'t say out loud. Don\'t explain it. Never restate the answers. The closing line should feel like something they\'d actually say to each other tonight — not therapy homework.' })
     const insight = response

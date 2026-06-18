@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraVerdict } from '@/lib/nora'
-import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing } from '@/lib/nora-memory'
+import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing, getSurfaceableClaims } from '@/lib/nora-memory'
 
 export async function POST(request) {
   try {
@@ -42,6 +42,10 @@ export async function POST(request) {
 
     const noraMemoryFull = await getNoraMemory(coupleId)
     const noraBriefing = noraMemoryFull ? getMemoryBriefing(noraMemoryFull, u1Name, u2Name) : null
+    const claimsResult = (couple?.user1_id && couple?.user2_id)
+      ? await getSurfaceableClaims(coupleId, couple.user1_id, couple.user2_id, u1Name, u2Name, noraMemoryFull?.user1_individual_signal_count || 0, noraMemoryFull?.user2_individual_signal_count || 0)
+      : { promptBlock: '' }
+    const claimsBlock = claimsResult.promptBlock || null
 
     const rankFinal = round.rank_final || []
     const noAgreements = round.no_agreements || []
@@ -56,7 +60,7 @@ The challenge: "${rankData.prompt}"
 
 What they agreed on: ${rankFinal.length > 0 ? rankFinal.map(r => `Position ${r.position}: ${r.item}`).join(', ') : 'nothing'}
 What they couldn't agree on: ${noAgreements.length > 0 ? noAgreements.map(r => `Position ${r.position}: ${u1Name} had "${r.user1Item}", ${u2Name} had "${r.user2Item}"`).join('. ') : 'nothing — perfect match'}
-Couple memory: ${noraMemory?.memory_summary || 'none yet'}
+Couple memory: ${noraMemory?.memory_summary || 'none yet'}${claimsBlock ? `\n\n${claimsBlock}` : ''}
 
 Give a verdict that:
 - References what they refused to budge on — that's the most revealing data

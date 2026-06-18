@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { createClient } from '@supabase/supabase-js'
 import { noraVerdict } from '@/lib/nora'
-import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing } from '@/lib/nora-memory'
+import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing, getSurfaceableClaims } from '@/lib/nora-memory'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -35,6 +35,10 @@ export async function POST(request) {
     const names = profiles ? profiles.map(p => p.display_name).join(' and ') : 'this couple'
     const noraMemoryFull = await getNoraMemory(coupleId)
     const noraBriefing = noraMemoryFull ? getMemoryBriefing(noraMemoryFull, profiles?.[0]?.display_name || 'Partner 1', profiles?.[1]?.display_name || 'Partner 2') : null
+    const claimsResult = (coupleData?.user1_id && coupleData?.user2_id)
+      ? await getSurfaceableClaims(coupleId, coupleData.user1_id, coupleData.user2_id, profiles?.[0]?.display_name || 'Partner 1', profiles?.[1]?.display_name || 'Partner 2', noraMemoryFull?.user1_individual_signal_count || 0, noraMemoryFull?.user2_individual_signal_count || 0)
+      : { promptBlock: '' }
+    const claimsBlock = claimsResult.promptBlock || null
 
     let storyText = coupleResponse || ''
     if (challengeType === 'story') {
@@ -67,7 +71,7 @@ export async function POST(request) {
 
 The challenge: "${rankData.prompt}"
 Their joint ranking (1 = top, last = bottom): ${coupleResponse}
-Couple memory: ${noraMemory?.memory_summary || 'none yet'}
+Couple memory: ${noraMemory?.memory_summary || 'none yet'}${claimsBlock ? `\n\n${claimsBlock}` : ''}
 
 Give a verdict that:
 - Treats this as a single joint decision they made together
@@ -84,7 +88,7 @@ Do not restate the full ranking. Do not compare two separate rankings — there 
 The prompt they were given: "${prompt}"
 Their story:
 ${storyText}
-Couple memory: ${noraMemory?.memory_summary || 'none yet'}
+Couple memory: ${noraMemory?.memory_summary || 'none yet'}${claimsBlock ? `\n\n${claimsBlock}` : ''}
 
 Give a verdict that:
 - Leads with what was funny, surprising, or absurd in the story — react to what actually happened
@@ -107,7 +111,7 @@ The pitch challenge: "${prompt}"
 Their pitch: "${pitchRound?.couple_response || coupleResponse}"
 Your challenge: "${pitchRound?.nora_challenge || 'N/A'}"
 Their defense: "${coupleResponse}"
-Couple memory: ${noraMemory?.memory_summary || 'none yet'}
+Couple memory: ${noraMemory?.memory_summary || 'none yet'}${claimsBlock ? `\n\n${claimsBlock}` : ''}
 
 Give a final verdict:
 - Rule on whether you invest — yes, no, or conditionally. Be decisive.
@@ -121,7 +125,7 @@ Give a final verdict:
 
 The question: "${prompt}"
 Their answer: "${coupleResponse}"
-Couple memory: ${noraMemory?.memory_summary || 'none yet'}
+Couple memory: ${noraMemory?.memory_summary || 'none yet'}${claimsBlock ? `\n\n${claimsBlock}` : ''}
 
 Give a verdict that:
 - Responds to what they remembered (or forgot)
@@ -134,7 +138,7 @@ Give a verdict that:
 
 The planning challenge: "${prompt}"
 Their plan: "${coupleResponse}"
-Couple memory: ${noraMemory?.memory_summary || 'none yet'}
+Couple memory: ${noraMemory?.memory_summary || 'none yet'}${claimsBlock ? `\n\n${claimsBlock}` : ''}
 
 Give a verdict that:
 - Responds to the specific plan they made

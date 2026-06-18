@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { createClient } from '@supabase/supabase-js'
 import { noraVerdict } from '@/lib/nora'
-import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing } from '@/lib/nora-memory'
+import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing, getSurfaceableClaims } from '@/lib/nora-memory'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -75,6 +75,10 @@ export async function POST(request) {
 
     const noraMemory = await getNoraMemory(coupleId)
     const noraBriefing = noraMemory ? getMemoryBriefing(noraMemory, guesserName, answerHolderName) : null
+    const claimsResult = (coupleData?.user1_id && coupleData?.user2_id)
+      ? await getSurfaceableClaims(coupleId, coupleData.user1_id, coupleData.user2_id, guesserName, answerHolderName, noraMemory?.user1_individual_signal_count || 0, noraMemory?.user2_individual_signal_count || 0)
+      : { promptBlock: '' }
+    const claimsBlock = claimsResult.promptBlock || null
 
     const hintsGranted = (round.hints_granted || []).length
     const hintsDenied = round.hint_denials || 0
@@ -114,7 +118,7 @@ Write Nora's verdict for this round. 3-4 sentences max.
 - Land one observation about what this moment says about these two — not a diagnosis, just a noticing. Make it feel earned, not announced.
 - End with one directed question to either ${guesserName} or ${answerHolderName} specifically — a poke that opens territory rather than closes it. Not "discuss this." Something they'll answer out loud without thinking.
 
-${noraBriefing ? `\nWhat Nora knows about this couple:\n${noraBriefing}\n` : ''}
+${noraBriefing ? `\nWhat Nora knows about this couple:\n${noraBriefing}\n` : ''}${claimsBlock ? `\n\n${claimsBlock}` : ''}
 PHILOSOPHY: A miss is not a failure — it's a map gap worth knowing about. A hit is worth celebrating. Either way, ${guesserName} knows something now they may not have known before. That's the point.`
 
     const response = await noraVerdict(userPrompt, {
