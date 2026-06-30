@@ -77,19 +77,19 @@ export async function POST(request) {
 
       if (result.status === 'fulfilled') {
         sent++
-        logPush(supabase, { userId, endpoint, status: 'success', statusCode: result.value?.statusCode, route, title, body })
+        await logPush(supabase, { userId, endpoint, status: 'success', statusCode: result.value?.statusCode, route, title, body })
       } else {
         const reason = result.reason
         const statusCode = reason?.statusCode || null
         errors.push(reason?.message || String(reason))
 
         if (statusCode === 410 || statusCode === 404) {
-          logPush(supabase, { userId, endpoint, status: 'stale', statusCode, route, title, body })
+          await logPush(supabase, { userId, endpoint, status: 'stale', statusCode, route, title, body })
           if (endpoint) {
             await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint)
           }
         } else {
-          logPush(supabase, { userId, endpoint, status: 'failed', statusCode, errorMessage: reason?.message, route, title, body })
+          await logPush(supabase, { userId, endpoint, status: 'failed', statusCode, errorMessage: reason?.message, route, title, body })
         }
       }
     }
