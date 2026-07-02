@@ -193,8 +193,8 @@ async function processDailyContent(couple, user1, user2) {
   }
 
   if (day === 0) {
-    await sendPush(user1.user_id, 'Weekly Reflection', `Your week with ${user2Name} — Nora is ready when you are.`, '/dashboard', 'cron/reflection')
-    await sendPush(user2.user_id, 'Weekly Reflection', `Your week with ${user1Name} — Nora is ready when you are.`, '/dashboard', 'cron/reflection')
+    await sendPush(user1.user_id, 'Weekly Reflection', `Your week with ${user2Name} — Nora is ready when you are.`, '/weekly-reflection', 'cron/reflection')
+    await sendPush(user2.user_id, 'Weekly Reflection', `Your week with ${user1Name} — Nora is ready when you are.`, '/weekly-reflection', 'cron/reflection')
   }
 
   if (day === 0) {

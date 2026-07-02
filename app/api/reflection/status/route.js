@@ -2,7 +2,6 @@ export const dynamic = 'force-dynamic'
 
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { getWeekStart } from '@/lib/dates'
 
 export async function GET(request) {
   try {
@@ -28,13 +27,12 @@ export async function GET(request) {
       return NextResponse.json({ error: 'userId and coupleId required' }, { status: 400 })
     }
 
-    const weekStart = getWeekStart()
-
     const { data: reflection } = await supabase
       .from('weekly_reflections')
       .select('*')
       .eq('couple_id', coupleId)
-      .eq('week_start', weekStart)
+      .order('week_start', { ascending: false })
+      .limit(1)
       .maybeSingle()
 
     if (!reflection) {
