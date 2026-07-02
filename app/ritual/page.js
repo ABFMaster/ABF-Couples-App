@@ -425,8 +425,15 @@ export default function RitualPage() {
                   <div style={{ marginBottom: '16px' }}><RitualAccentCard label={r.frequency} title={r.title} description={r.description} /></div>
                   {!r.suggestion_id && <button onClick={() => setEditingId(r.id)} style={{ background: 'none', border: 'none', color: '#7A8C6E', fontSize: '12px', cursor: 'pointer', padding: '0 0 12px', textDecoration: 'underline' }}>Edit</button>}
                   <NoraBlock text={NORA_WEEK_MESSAGES[weekNum] || NORA_WEEK_MESSAGES[1]} />
-                  <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '13px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center', marginBottom: '16px' }}>
-                    Check in with Nora on Friday
+                  <p
+                    onClick={() => {
+                      const opener = `We're on week ${weekNum} of trying "${r.title}"${r.description ? ` — ${r.description}` : ''}. I want to check in on how it's actually going.`
+                      sessionStorage.setItem('nora_opener', opener)
+                      router.push('/ai-coach?new=true')
+                    }}
+                    style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '13px', color: '#3D6B22', fontStyle: 'italic', textAlign: 'center', marginBottom: '16px', cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    Check in with Nora →
                   </p>
                   {retireRequested ? (
                     iRequestedRetire ? (
