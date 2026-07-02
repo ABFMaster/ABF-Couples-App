@@ -308,7 +308,17 @@ export default function ProfileResultsPage() {
         {/* Actions */}
         <div className="mt-8 flex flex-col gap-3">
           <button
-            onClick={() => router.push('/ai-coach?new=true')}
+            onClick={() => {
+              const headlines = moduleResults
+                .filter(m => m?.insights?.headline)
+                .map(m => `${m.insights.headline}`)
+                .join(' ')
+              const opener = headlines
+                ? `I've just finished reading through your profile — there's quite a bit here worth talking about. ${headlines} Where would you like to start?`
+                : `I've just finished reading through your profile. I'd love to walk you through what I'm seeing. Where would you like to start?`
+              sessionStorage.setItem('nora_opener', opener)
+              router.push('/ai-coach?new=true')
+            }}
             className="w-full min-h-[54px] bg-[#E8614D] text-white rounded-xl font-semibold text-[16px] active:scale-[0.98] transition-transform"
           >
             Tell Nora →

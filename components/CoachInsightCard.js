@@ -109,7 +109,12 @@ export default function CoachInsightCard({
       <span className="text-xl flex-shrink-0">💡</span>
       <p className="flex-1 text-sm text-gray-700 leading-snug">{insight.text}</p>
       <button
-        onClick={() => router.push('/ai-coach')}
+        onClick={() => {
+          if (insight.text) {
+            sessionStorage.setItem('nora_opener', insight.text)
+          }
+          router.push('/ai-coach?new=true')
+        }}
         className="flex-shrink-0 text-sm font-semibold text-coral-600 hover:text-coral-700 transition-colors whitespace-nowrap"
       >
         {insight.cta}

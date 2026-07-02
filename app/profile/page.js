@@ -508,7 +508,7 @@ export default function MePage() {
               : synthesis?.message || 'Nora is watching. Check back Sunday.'}
           </p>
           <button
-            onClick={() => router.push('/ai-coach')}
+            onClick={() => router.push('/ai-coach?new=true')}
             style={{ background: 'none', border: 'none', padding: 0, fontSize: 11, fontFamily: "'DM Sans', sans-serif", color: 'rgba(255,255,255,0.45)', cursor: 'pointer', display: 'block', position: 'relative' }}
           >
             Tell Nora →
