@@ -21,7 +21,7 @@ export default function UsPage() {
   // Now data
   const [ritual, setRitual] = useState(null)
   const [ritualCompletedThisWeek, setRitualCompletedThisWeek] = useState(false)
-  const [lastReflectionDays, setLastReflectionDays] = useState(null)
+  const [lastReflectionWeek, setLastReflectionWeek] = useState(null)
   const [heroData, setHeroData] = useState(null)
 
   // Ahead data
@@ -316,13 +316,12 @@ export default function UsPage() {
       // Last reflection for Now
       const { data: reflections } = await supabase
         .from('weekly_reflections')
-        .select('created_at')
+        .select('week_start')
         .eq('couple_id', cid)
-        .order('created_at', { ascending: false })
+        .order('week_start', { ascending: false })
         .limit(1)
       if (reflections?.[0]) {
-        const days = Math.floor((Date.now() - new Date(reflections[0].created_at).getTime()) / 86400000)
-        setLastReflectionDays(days)
+        setLastReflectionWeek(reflections[0].week_start)
       }
 
       // Next date for Ahead
@@ -731,7 +730,7 @@ export default function UsPage() {
             <div>
               <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '2px' }}>Weekly Reflection</div>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: '#1C1410' }}>
-                {lastReflectionDays === null ? 'Not started yet' : lastReflectionDays === 0 ? 'Just reflected' : lastReflectionDays === 1 ? 'Yesterday' : lastReflectionDays < 7 ? `${lastReflectionDays} days ago` : 'Ready for a new one'}
+                {lastReflectionWeek === null ? 'Not started yet' : `Week of ${new Date(lastReflectionWeek + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`}
               </div>
             </div>
             <div style={{ fontSize: '11px', fontWeight: 500, color: '#1C1208', border: '1px solid #1C1208', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap' }}>Reflect →</div>

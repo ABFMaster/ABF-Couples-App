@@ -23,6 +23,7 @@ export default function NoraCouplesChat({
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
   const sessionRef = useRef(null)
+  const isInitialLoad = useRef(true)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -31,12 +32,20 @@ export default function NoraCouplesChat({
   useEffect(() => {
     if (expanded) {
       fetchMessages()
-      setTimeout(() => inputRef.current?.focus(), 300)
+      if (!defaultExpanded) {
+        setTimeout(() => inputRef.current?.focus(), 300)
+      }
     }
   }, [expanded])
 
   useEffect(() => {
-    if (messages.length > 0) scrollToBottom()
+    if (messages.length > 0) {
+      if (isInitialLoad.current) {
+        isInitialLoad.current = false
+      } else {
+        scrollToBottom()
+      }
+    }
     const userMessages = messages.filter(m => m.role === 'user')
     if (userMessages.length >= 2) setShowContinue(true)
   }, [messages])
