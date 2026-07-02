@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import BottomNav from '@/components/BottomNav'
+import NoraCouplesChat from '@/components/NoraCouplesChat'
 
 export default function WeeklyReflectionPage() {
   const router = useRouter()
@@ -14,6 +15,8 @@ export default function WeeklyReflectionPage() {
   const [reacted, setReacted] = useState({})
   const [userId, setUserId] = useState(null)
   const [coupleId, setCoupleId] = useState(null)
+  const [userName, setUserName] = useState('')
+  const [partnerName, setPartnerName] = useState('')
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -27,12 +30,20 @@ export default function WeeklyReflectionPage() {
 
         const { data: couple } = await supabase
           .from('couples')
-          .select('id')
+          .select('id, user1_id, user2_id')
           .or(`user1_id.eq.${uid},user2_id.eq.${uid}`)
           .maybeSingle()
-
         if (!couple) { setError('No couple found.'); setLoading(false); return }
         setCoupleId(couple.id)
+        const partnerId = couple.user1_id === uid ? couple.user2_id : couple.user1_id
+        const { data: profiles } = await supabase
+          .from('user_profiles')
+          .select('user_id, display_name')
+          .in('user_id', [uid, partnerId])
+        const myProfile = profiles?.find(p => p.user_id === uid)
+        const partnerProfile = profiles?.find(p => p.user_id === partnerId)
+        setUserName(myProfile?.display_name || 'You')
+        setPartnerName(partnerProfile?.display_name || 'Partner')
 
         const token = session.access_token
 
@@ -182,14 +193,19 @@ export default function WeeklyReflectionPage() {
         )}
 
         {/* Talk to Nora */}
-        <button
-          onClick={() => {
-            const openerText = `I just read our weekly reflection. The opening was: "${reflection.opening}" The pattern Nora noticed: "${reflection.pattern}" Carry this forward: "${reflection.week_ahead}". I want to talk through what this means for us.`
-            sessionStorage.setItem('nora_opener', openerText)
-            router.push('/ai-coach?new=true')
-          }}
-          style={{ width: '100%', padding: '14px', background: '#C4714A', color: 'white', border: 'none', borderRadius: '14px', fontSize: '14px', fontWeight: 500, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', marginBottom: '16px' }}
-        >Tell Nora →</button>
+        <div style={{ marginBottom: '16px' }}>
+          <NoraCouplesChat
+            coupleId={coupleId}
+            contextType="sunday_review"
+            contextId={reflection.week_start}
+            contextSummary={`Weekly reflection for the week of ${reflection.week_start}. Opening: ${reflection.opening} Pattern Nora noticed: ${reflection.pattern} Carry this forward: ${reflection.week_ahead}`}
+            userName={userName}
+            partnerName={partnerName}
+            userId={userId}
+            initialNoraMessage={`I've been sitting with this week. ${reflection.pattern ? `The pattern I kept coming back to — ${reflection.pattern}` : reflection.opening} What landed for you?`}
+            mode="full"
+          />
+        </div>
 
         {/* History link */}
         <div style={{ textAlign: 'center' }}>
