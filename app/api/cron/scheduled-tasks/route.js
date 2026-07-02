@@ -269,15 +269,38 @@ async function processThursdayGeneration(couple, user1, user2) {
     const user1Name = user1.display_name || 'Partner 1'
     const user2Name = user2.display_name || 'Partner 2'
 
-    // Fetch recent activity context
-    const [{ data: recentSparks }, noraMemory] = await Promise.all([
+    // Fetch recent activity context — all signals feed Thursday
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    const [{ data: recentSparks }, noraMemory, { data: recentNotices }, { data: recentGames }, { data: recentDates }] = await Promise.all([
       supabase
         .from('sparks')
         .select('prompt, spark_date, spark_responses(user_id, response_text)')
         .eq('couple_id', couple.id)
         .order('spark_date', { ascending: false })
         .limit(4),
-      getNoraMemory(couple.id)
+      getNoraMemory(couple.id),
+      supabase
+        .from('wednesday_notices')
+        .select('user1_notice, user2_notice, user1_id, user2_id, date')
+        .eq('couple_id', couple.id)
+        .gte('date', weekAgo.split('T')[0])
+        .order('date', { ascending: false })
+        .limit(1),
+      supabase
+        .from('game_sessions')
+        .select('mode, hole_topic, created_at')
+        .eq('couple_id', couple.id)
+        .gte('created_at', weekAgo)
+        .order('created_at', { ascending: false })
+        .limit(3),
+      supabase
+        .from('custom_dates')
+        .select('title, completed_at')
+        .eq('couple_id', couple.id)
+        .eq('status', 'completed')
+        .gte('completed_at', weekAgo)
+        .order('completed_at', { ascending: false })
+        .limit(2),
     ])
 
     const coupleContext = noraMemory?.couple_notes?.notes
@@ -295,6 +318,30 @@ async function processThursdayGeneration(couple, user1, user2) {
     ])
     const user1ClaimsBlock = user1ClaimsResult.promptBlock || null
     const user2ClaimsBlock = user2ClaimsResult.promptBlock || null
+
+    // Wednesday notices — what each partner observed about the other this week
+    const notice = recentNotices?.[0]
+    const noticeContext = notice
+      ? (() => {
+          const u1IsUser1 = notice.user1_id === couple.user1_id
+          const u1Notice = u1IsUser1 ? notice.user1_notice : notice.user2_notice
+          const u2Notice = u1IsUser1 ? notice.user2_notice : notice.user1_notice
+          const parts = []
+          if (u1Notice) parts.push(`${user1Name} noticed about ${user2Name}: "${u1Notice}"`)
+          if (u2Notice) parts.push(`${user2Name} noticed about ${user1Name}: "${u2Notice}"`)
+          return parts.length > 0 ? `What they noticed about each other this week:\n${parts.join('\n')}` : null
+        })()
+      : null
+
+    // Recent Game Room activity
+    const gameContext = recentGames?.length > 0
+      ? `Game Room this week:\n${recentGames.map(g => `- ${g.mode}${g.hole_topic ? `: ${g.hole_topic}` : ''}`).join('\n')}`
+      : null
+
+    // Recent completed dates
+    const dateContext = recentDates?.length > 0
+      ? `Dates completed this week:\n${recentDates.map(d => `- ${d.title}`).join('\n')}`
+      : null
 
     const recentContext = recentSparks?.map(s => {
       const responses = s.spark_responses?.map(r => {
@@ -321,6 +368,9 @@ RULES:
       `You are speaking to ${user1Name}.`,
       coupleContext,
       `Recent Spark answers this week:\n${recentContext}`,
+      noticeContext,
+      gameContext,
+      dateContext,
       user1TierContext,
       user1ClaimsBlock,
       `Generate a Thursday observation and calibrated question specifically for ${user1Name} — angle it toward what you notice about them individually, not just the couple.`
@@ -331,6 +381,9 @@ RULES:
       `You are speaking to ${user2Name}.`,
       coupleContext,
       `Recent Spark answers this week:\n${recentContext}`,
+      noticeContext,
+      gameContext,
+      dateContext,
       user2TierContext,
       user2ClaimsBlock,
       `Generate a Thursday observation and calibrated question specifically for ${user2Name} — angle it toward what you notice about them individually, not just the couple.`
