@@ -128,7 +128,7 @@ export async function POST(request) {
     const noraResponse = await noraChat(chatMessages, {
       route: 'nora-inline',
       system: systemPrompt,
-      maxTokens: 200,
+      maxTokens: 350,
     })
 
     // Build updated messages array

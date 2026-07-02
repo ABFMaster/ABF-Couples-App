@@ -176,14 +176,6 @@ export default function WeeklyReflectionPage() {
           </div>
         )}
 
-        {/* Pattern */}
-        {reflection.pattern && (
-          <div style={{ background: 'white', borderRadius: '14px', padding: '16px', marginBottom: '16px', border: '1px solid #EDE5D8' }}>
-            <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '8px' }}>This week's pattern</div>
-            <p style={{ fontFamily: 'Georgia, serif', fontSize: '15px', color: '#2D2418', lineHeight: 1.5, margin: 0 }}>{reflection.pattern}</p>
-          </div>
-        )}
-
         {/* Week ahead */}
         {reflection.week_ahead && (
           <div style={{ background: '#1C1208', borderRadius: '14px', padding: '16px', marginBottom: '28px' }}>
@@ -202,8 +194,9 @@ export default function WeeklyReflectionPage() {
             userName={userName}
             partnerName={partnerName}
             userId={userId}
-            initialNoraMessage={`I've been sitting with this week. ${reflection.pattern ? `The pattern I kept coming back to — ${reflection.pattern}` : reflection.opening} What landed for you?`}
+            initialNoraMessage={reflection.pattern || reflection.opening}
             mode="full"
+            defaultExpanded={true}
           />
         </div>
 

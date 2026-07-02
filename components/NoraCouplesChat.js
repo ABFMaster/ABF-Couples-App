@@ -12,8 +12,9 @@ export default function NoraCouplesChat({
   userId,
   initialNoraMessage,
   mode = 'full',
+  defaultExpanded = false,
 }) {
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(defaultExpanded || false)
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
@@ -264,20 +265,18 @@ export default function NoraCouplesChat({
         {sending && (
           <div style={{ display: 'flex', alignItems: 'flex-start' }}>
             <div style={{
-              padding: '12px 16px',
+              padding: '14px 18px',
               borderRadius: '4px 18px 18px 18px',
               background: '#FAF6EF',
               border: '1px solid #EDE5D8',
+              display: 'flex',
+              gap: '5px',
+              alignItems: 'center',
             }}>
-              <p style={{
-                margin: 0,
-                fontFamily: 'Georgia, serif',
-                fontSize: '15px',
-                color: '#C4AA87',
-                fontStyle: 'italic',
-              }}>
-                ...
-              </p>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#C4AA87', display: 'inline-block', animation: 'noraDot 1.2s ease-in-out infinite', animationDelay: '0s' }} />
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#C4AA87', display: 'inline-block', animation: 'noraDot 1.2s ease-in-out infinite', animationDelay: '0.2s' }} />
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#C4AA87', display: 'inline-block', animation: 'noraDot 1.2s ease-in-out infinite', animationDelay: '0.4s' }} />
+              <style>{`@keyframes noraDot { 0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); } 30% { opacity: 1; transform: scale(1.1); } }`}</style>
             </div>
           </div>
         )}
