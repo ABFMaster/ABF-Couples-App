@@ -176,6 +176,7 @@ You return ONLY valid JSON in this exact format:
   "opening": "A 2-3 sentence personal greeting that acknowledges the week and sets a warm tone. Reference something specific from their week if possible.",
   "moments": [
     {
+      "subject": "user1 or user2 — which partner this moment is primarily about",
       "observation": "A specific observation about something they did or shared this week (1-2 sentences)",
       "prompt": "A reflective question or gentle nudge related to that observation"
     }
@@ -188,7 +189,9 @@ The moments array should have 2-3 items. Do not include more than 3. If there is
 
 Return only the JSON object. No markdown, no explanation, no wrapper text.`
 
-    const message = await noraReact(`Here is the data for this couple's week:\n\n${contextString}\n\nGenerate their weekly reflection.`, {
+    const user1Name = profile1?.display_name || 'Partner 1'
+    const user2Name = profile2?.display_name || 'Partner 2'
+    const message = await noraReact(`Here is the data for this couple's week:\n\n${contextString}\n\nGenerate their weekly reflection.\n\nIMPORTANT: In the moments array, set "subject" to "user1" when the moment is primarily about ${user1Name}, and "user2" when it is primarily about ${user2Name}. If a moment is about both equally, assign it to whichever partner's action or statement it centers on.`, {
       route: 'reflection/generate',
       system: systemPrompt,
       context: 'daily',

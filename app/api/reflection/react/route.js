@@ -19,29 +19,40 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { coupleId, momentIndex, reaction } = await request.json()
+    const { reflectionId, coupleId, momentIndex, reaction } = await request.json()
     if (!coupleId || momentIndex === undefined || momentIndex === null || !reaction) {
       return NextResponse.json({ error: 'coupleId, momentIndex, and reaction required' }, { status: 400 })
     }
-
     if (reaction !== 'lands' && reaction !== 'not_quite') {
       return NextResponse.json({ error: 'reaction must be lands or not_quite' }, { status: 400 })
     }
-
-    // Fetch most recent reflection for this couple
-    const { data: reflection, error: fetchError } = await supabase
-      .from('weekly_reflections')
-      .select('id, moment_reactions')
-      .eq('couple_id', coupleId)
-      .order('week_start', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-
-    if (fetchError) {
-      console.error('[reflection/react] fetch error:', fetchError)
-      return NextResponse.json({ error: 'Failed to fetch reflection' }, { status: 500 })
+    // Use reflectionId directly if provided, otherwise fall back to most recent
+    let reflection
+    if (reflectionId) {
+      const { data, error: fetchError } = await supabase
+        .from('weekly_reflections')
+        .select('id, moment_reactions')
+        .eq('id', reflectionId)
+        .maybeSingle()
+      if (fetchError) {
+        console.error('[reflection/react] fetch error:', fetchError)
+        return NextResponse.json({ error: 'Failed to fetch reflection' }, { status: 500 })
+      }
+      reflection = data
+    } else {
+      const { data, error: fetchError } = await supabase
+        .from('weekly_reflections')
+        .select('id, moment_reactions')
+        .eq('couple_id', coupleId)
+        .order('week_start', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (fetchError) {
+        console.error('[reflection/react] fetch error:', fetchError)
+        return NextResponse.json({ error: 'Failed to fetch reflection' }, { status: 500 })
+      }
+      reflection = data
     }
-
     if (!reflection) {
       return NextResponse.json({ error: 'Reflection not found' }, { status: 404 })
     }

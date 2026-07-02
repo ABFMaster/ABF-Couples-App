@@ -16,6 +16,7 @@ export default function WeeklyReflectionPage() {
   const [userId, setUserId] = useState(null)
   const [coupleId, setCoupleId] = useState(null)
   const [userName, setUserName] = useState('')
+  const [isUser1, setIsUser1] = useState(null)
   const [partnerName, setPartnerName] = useState('')
   const [error, setError] = useState(null)
 
@@ -35,6 +36,7 @@ export default function WeeklyReflectionPage() {
           .maybeSingle()
         if (!couple) { setError('No couple found.'); setLoading(false); return }
         setCoupleId(couple.id)
+        setIsUser1(couple.user1_id === uid)
         const partnerId = couple.user1_id === uid ? couple.user2_id : couple.user1_id
         const { data: profiles } = await supabase
           .from('user_profiles')
@@ -95,13 +97,14 @@ export default function WeeklyReflectionPage() {
   }, [])
 
   const handleReact = async (momentIndex, reaction) => {
+    if (reacted[momentIndex]) return
     const newReacted = { ...reacted, [momentIndex]: reaction }
     setReacted(newReacted)
     const { data: { session } } = await supabase.auth.getSession()
     fetch('/api/reflection/react', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-      body: JSON.stringify({ coupleId, momentIndex, reaction })
+      body: JSON.stringify({ reflectionId: reflection?.id, coupleId, momentIndex, reaction })
     }).catch(() => {})
   }
 
@@ -161,16 +164,24 @@ export default function WeeklyReflectionPage() {
             {moments.map((moment, i) => (
               <div key={i} style={{ background: 'white', borderRadius: '14px', padding: '16px', marginBottom: '10px', border: '1px solid #EDE5D8' }}>
                 <p style={{ fontFamily: 'Georgia, serif', fontSize: '15px', color: '#2D2418', lineHeight: 1.5, margin: '0 0 12px' }}>{typeof moment === 'string' ? moment : moment.observation || moment.text || moment}</p>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    onClick={() => handleReact(i, 'lands')}
-                    style={{ fontSize: '12px', padding: '5px 12px', borderRadius: '20px', border: '1px solid', borderColor: reacted[i] === 'lands' ? '#C4714A' : '#EDE5D8', background: reacted[i] === 'lands' ? '#C4714A' : 'transparent', color: reacted[i] === 'lands' ? 'white' : '#A09080', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, transition: 'all 0.15s' }}
-                  >lands</button>
-                  <button
-                    onClick={() => handleReact(i, 'not_quite')}
-                    style={{ fontSize: '12px', padding: '5px 12px', borderRadius: '20px', border: '1px solid', borderColor: reacted[i] === 'not_quite' ? '#1C1208' : '#EDE5D8', background: reacted[i] === 'not_quite' ? '#1C1208' : 'transparent', color: reacted[i] === 'not_quite' ? 'white' : '#A09080', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, transition: 'all 0.15s' }}
-                  >not quite</button>
-                </div>
+                {(() => {
+                  const moment = moments[i]
+                  const subject = typeof moment === 'object' ? moment.subject : null
+                  const canReact = !subject || (subject === 'user1' && isUser1 === true) || (subject === 'user2' && isUser1 === false)
+                  if (!canReact) return null
+                  return (
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => handleReact(i, 'lands')}
+                        style={{ fontSize: '12px', padding: '5px 12px', borderRadius: '20px', border: '1px solid', borderColor: reacted[i] === 'lands' ? '#C4714A' : '#EDE5D8', background: reacted[i] === 'lands' ? '#C4714A' : 'transparent', color: reacted[i] === 'lands' ? 'white' : '#A09080', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, transition: 'all 0.15s' }}
+                      >lands</button>
+                      <button
+                        onClick={() => handleReact(i, 'not_quite')}
+                        style={{ fontSize: '12px', padding: '5px 12px', borderRadius: '20px', border: '1px solid', borderColor: reacted[i] === 'not_quite' ? '#1C1208' : '#EDE5D8', background: reacted[i] === 'not_quite' ? '#1C1208' : 'transparent', color: reacted[i] === 'not_quite' ? 'white' : '#A09080', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, transition: 'all 0.15s' }}
+                      >not quite</button>
+                    </div>
+                  )
+                })()}
               </div>
             ))}
           </div>
