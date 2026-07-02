@@ -2,6 +2,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
+import NoraCouplesChat from '@/components/NoraCouplesChat'
 
 function RabbitHoleDebriefContent() {
   const router = useRouter()
@@ -10,6 +11,8 @@ function RabbitHoleDebriefContent() {
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState(null)
   const [coupleId, setCoupleId] = useState(null)
+  const [userName, setUserName] = useState('')
+  const [partnerName, setPartnerName] = useState('')
   const [session, setSession] = useState(null)
   const [debrief, setDebrief] = useState(null)
   const [error, setError] = useState(null)
@@ -28,6 +31,15 @@ function RabbitHoleDebriefContent() {
         .maybeSingle()
       if (!couple) { router.push('/connect'); return }
       setCoupleId(couple.id)
+      const partnerId = couple.user1_id === user.id ? couple.user2_id : couple.user1_id
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('user_id, display_name')
+        .in('user_id', [user.id, partnerId])
+      const myProfile = profiles?.find(p => p.user_id === user.id)
+      const partnerProfile = profiles?.find(p => p.user_id === partnerId)
+      setUserName(myProfile?.display_name || 'You')
+      setPartnerName(partnerProfile?.display_name || 'Partner')
 
       if (!sessionIdParam) { router.push('/game-room'); return }
 
@@ -165,6 +177,22 @@ function RabbitHoleDebriefContent() {
             </div>
           )}
 
+          {coupleId && userId && (
+            <div style={{ marginBottom: '16px' }}>
+              <NoraCouplesChat
+                coupleId={coupleId}
+                contextType="game_debrief"
+                contextId={sessionIdParam}
+                contextSummary={`Rabbit Hole game: ${session?.hole_topic}. Nora's convergence: ${debrief?.convergence_reveal} What actually happened: ${debrief?.factual_close}`}
+                userName={userName}
+                partnerName={partnerName}
+                userId={userId}
+                initialNoraMessage={debrief?.convergence_reveal}
+                mode="light"
+                defaultExpanded={false}
+              />
+            </div>
+          )}
           {savedToTimeline ? (
             <div style={{ background: '#ECFDF5', border: '0.5px solid #6EE7B7', borderRadius: '16px', padding: '16px 20px', textAlign: 'center', marginBottom: '10px' }}>
               <p style={{ fontSize: '14px', color: '#065F46', fontWeight: 600, margin: 0 }}>Saved to your timeline ✓</p>
