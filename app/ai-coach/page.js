@@ -365,7 +365,7 @@ function AiCoachContent() {
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-cream-50 to-purple-50">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', background: '#FAF6F0', borderBottom: '1px solid #EDE4D8' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', background: '#FAF6F0', borderBottom: '1px solid #EDE4D8', position: 'sticky', top: 0, zIndex: 10 }}>
         <button onClick={() => router.push('/dashboard')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: '#8B7355', fontSize: '20px' }}>‹</button>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
@@ -429,7 +429,7 @@ function AiCoachContent() {
               ))
             )}
           </div>
-          <div style={{ padding: '16px 20px', borderTop: '1px solid #EDE4D8' }}>
+          <div style={{ padding: '16px 20px 32px', borderTop: '1px solid #EDE4D8' }}>
             <button
               onClick={() => startNewSession()}
               style={{ width: '100%', padding: '14px', background: '#1C1208', color: '#FAF6F0', border: 'none', borderRadius: '14px', fontSize: '14px', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, cursor: 'pointer' }}
