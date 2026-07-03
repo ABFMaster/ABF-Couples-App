@@ -487,15 +487,15 @@ export async function GET(request) {
     if (!conversationId) {
       const { data: conversations, error } = await supabase
         .from('ai_conversations')
-        .select('*')
+        .select('id, title, updated_at, message_count, created_at')
         .eq('user_id', user.id)
+        .eq('type', 'solo')
+        .not('title', 'is', null)
         .order('updated_at', { ascending: false })
-        .limit(20);
-
+        .limit(30);
       if (error) {
         return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500 });
       }
-
       return NextResponse.json({ conversations, messagesRemaining, isPremium: premium });
     }
 

@@ -26,6 +26,8 @@ function AiCoachContent() {
   const [pendingOpener, setPendingOpener] = useState(null);
   const [sessionType, setSessionType] = useState(null);
   const [pendingSeed, setPendingSeed] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [sessionHistory, setSessionHistory] = useState([]);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -139,26 +141,28 @@ function AiCoachContent() {
 
     const { data: { session } } = await supabase.auth.getSession();
     const recentConv = conversations?.[0];
-    const isStale = recentConv
-      ? Date.now() - new Date(recentConv.updated_at).getTime() > 24 * 60 * 60 * 1000
-      : true;
-
     // Check localStorage for pending couples debrief FIRST — takes priority over resume
     const pendingCouplesOpener = typeof window !== 'undefined'
       ? localStorage.getItem('nora_pending_couples_opener')
       : null;
-
     if (pendingCouplesOpener) {
       setPendingOpener(pendingCouplesOpener);
-    } else if (recentConv && !isStale && !isNewSession) {
-      // Resume recent conversation (only when not forced fresh)
+    } else if (recentConv && !isNewSession) {
+      // Always continue most recent conversation unless explicitly starting new
       await loadConversation(recentConv.id, session);
     } else {
+      // New session — close the previous one first if it exists
+      if (recentConv && isNewSession) {
+        fetch('/api/ai-coach/close-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+          body: JSON.stringify({ conversationId: recentConv.id, coupleId: couple?.id }),
+        }).catch(() => {})
+      }
       // Fresh start — check sessionStorage for Nora opener first
       const storedOpener = typeof window !== 'undefined'
         ? sessionStorage.getItem('nora_opener')
         : null;
-
       if (storedOpener) {
         sessionStorage.removeItem('nora_opener');
         setMessages([{
@@ -198,6 +202,29 @@ function AiCoachContent() {
       setLimitReached(data.messagesRemaining <= 0);
     }
   };
+
+  // Load session history for the history panel
+  const loadHistory = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/ai-coach', {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      })
+      const data = await res.json()
+      if (data.conversations) {
+        setSessionHistory(data.conversations.filter(c => c.title))
+      }
+    } catch {}
+  }
+
+  // Start a new session — closes current, navigates with ?new=true
+  const startNewSession = async (opener = null) => {
+    if (opener) {
+      sessionStorage.setItem('nora_opener', opener)
+    }
+    setShowHistory(false)
+    router.push('/ai-coach?new=true')
+  }
 
   // Fetch a warm opener for a fresh conversation start
   const loadOpener = async (coupleIdParam, existingSession = null) => {
@@ -322,11 +349,7 @@ function AiCoachContent() {
   };
 
   const startNewConversation = async () => {
-    setConversationId(null);
-    setMessages([]);
-    if (coupleId) {
-      await loadOpener(coupleId);
-    }
+    await startNewSession()
   };
 
   if (loading) {
@@ -353,8 +376,69 @@ function AiCoachContent() {
             {isPremium ? 'Unlimited messages' : `${messagesRemaining} messages left this week`}
           </span>
         </div>
-        <button onClick={startNewConversation} style={{ background: 'none', border: '1px solid #D9CBBA', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: '#8B7355', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            onClick={() => { loadHistory(); setShowHistory(true); }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8B7355', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title="Past conversations"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </button>
+          <button
+            onClick={startNewConversation}
+            style={{ background: 'none', border: '1px solid #D9CBBA', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: '#8B7355', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title="New conversation"
+          >+</button>
+        </div>
       </div>
+
+      {/* History Panel */}
+      {showHistory && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 50,
+          display: 'flex', flexDirection: 'column',
+          background: '#FAF6F0',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid #EDE4D8' }}>
+            <span style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '20px', fontWeight: 300, color: '#1C1410' }}>Past conversations</span>
+            <button onClick={() => setShowHistory(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '24px', color: '#8B7355', lineHeight: 1 }}>×</button>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+            {sessionHistory.length === 0 ? (
+              <p style={{ fontFamily: 'Georgia, serif', fontSize: '14px', color: '#C4AA87', fontStyle: 'italic', textAlign: 'center', padding: '40px 20px' }}>No past conversations yet.</p>
+            ) : (
+              sessionHistory.map(conv => (
+                <button
+                  key={conv.id}
+                  onClick={() => { setShowHistory(false); loadConversation(conv.id); }}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left',
+                    padding: '14px 20px', background: 'none', border: 'none',
+                    borderBottom: '1px solid #F0E8DC', cursor: 'pointer',
+                  }}
+                >
+                  <div style={{ fontFamily: 'Georgia, serif', fontSize: '15px', color: '#1C1410', marginBottom: '4px' }}>{conv.title}</div>
+                  <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '11px', color: '#C4AA87' }}>
+                    {new Date(conv.updated_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                    {conv.message_count ? ` · ${conv.message_count} messages` : ''}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+          <div style={{ padding: '16px 20px', borderTop: '1px solid #EDE4D8' }}>
+            <button
+              onClick={() => startNewSession()}
+              style={{ width: '100%', padding: '14px', background: '#1C1208', color: '#FAF6F0', border: 'none', borderRadius: '14px', fontSize: '14px', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, cursor: 'pointer' }}
+            >
+              Start something new →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
