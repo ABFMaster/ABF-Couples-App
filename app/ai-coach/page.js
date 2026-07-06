@@ -429,7 +429,7 @@ function AiCoachContent() {
               ))
             )}
           </div>
-          <div style={{ padding: '16px 20px 32px', borderTop: '1px solid #EDE4D8' }}>
+          <div style={{ padding: '16px 20px 96px', borderTop: '1px solid #EDE4D8' }}>
             <button
               onClick={() => startNewSession()}
               style={{ width: '100%', padding: '14px', background: '#1C1208', color: '#FAF6F0', border: 'none', borderRadius: '14px', fontSize: '14px', fontFamily: 'DM Sans, sans-serif', fontWeight: 500, cursor: 'pointer' }}
