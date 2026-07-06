@@ -28,12 +28,13 @@ function AiCoachContent() {
   const [pendingSeed, setPendingSeed] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [sessionHistory, setSessionHistory] = useState([]);
+  const isNewSession = searchParams.get('new') === 'true';
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
   useEffect(() => {
     checkAuth();
-  }, []);
+  }, [isNewSession]);
 
   useEffect(() => {
     const pending = typeof window !== 'undefined'
@@ -83,7 +84,6 @@ function AiCoachContent() {
 
   const checkAuth = async () => {
     // Detect forced fresh start from ?new=true (e.g. hero card "Talk to Nora →")
-    const isNewSession = searchParams.get('new') === 'true';
     if (isNewSession) {
       window.history.replaceState({}, '', '/ai-coach');
     }
@@ -365,7 +365,7 @@ function AiCoachContent() {
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-cream-50 to-purple-50">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', background: '#FAF6F0', borderBottom: '1px solid #EDE4D8', position: 'sticky', top: 0, zIndex: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', background: '#FAF6F0', borderBottom: '1px solid #EDE4D8', position: 'fixed', top: 0, left: 0, right: 0, zIndex: 10 }}>
         <button onClick={() => router.push('/dashboard')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: '#8B7355', fontSize: '20px' }}>‹</button>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
@@ -441,7 +441,7 @@ function AiCoachContent() {
       )}
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className="flex-1 overflow-y-auto px-4" style={{ paddingTop: '64px', paddingBottom: '16px' }}>
         <div className="max-w-2xl mx-auto">
           {/* Couples debrief invitation card */}
           {pendingOpener && messages.length === 0 && (
