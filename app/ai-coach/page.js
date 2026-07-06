@@ -365,7 +365,7 @@ function AiCoachContent() {
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: 'linear-gradient(to bottom right, #FAF6F0, #F0EBF8)' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', background: '#FAF6F0', borderBottom: '1px solid #EDE4D8', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', background: '#FAF6F0', borderBottom: '1px solid #EDE4D8' }}>
         <button onClick={() => router.push('/dashboard')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: '#8B7355', fontSize: '20px' }}>‹</button>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
@@ -376,23 +376,7 @@ function AiCoachContent() {
             {isPremium ? 'Unlimited messages' : `${messagesRemaining} messages left this week`}
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            onClick={() => { loadHistory(); setShowHistory(true); }}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8B7355', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            title="Past conversations"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
-            </svg>
-          </button>
-          <button
-            onClick={startNewConversation}
-            style={{ background: 'none', border: '1px solid #D9CBBA', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', color: '#8B7355', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            title="New conversation"
-          >+</button>
-        </div>
+        <div style={{ width: '32px' }} />
       </div>
 
       {/* History Panel */}
@@ -566,6 +550,29 @@ function AiCoachContent() {
         </div>
       )}
 
+      {/* Session Controls */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 16px', background: '#FAF6F0', borderTop: '1px solid #F0E8DC' }}>
+        <button
+          onClick={() => { loadHistory(); setShowHistory(true); }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', color: '#C4AA87', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', padding: '4px 0' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          History
+        </button>
+        <button
+          onClick={startNewConversation}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', color: '#C4AA87', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', padding: '4px 0' }}
+        >
+          New
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
+      </div>
       {/* Input Area */}
       <div className="flex-shrink-0" style={{ background: '#FAF6F0', borderTop: '1px solid #EDE4D8', padding: '12px 16px' }}>
         <div className="max-w-2xl mx-auto">
