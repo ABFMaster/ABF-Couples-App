@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { buildCoachContext, formatContextForPrompt, getRecentActivity, getConversationHistory } from '@/lib/ai-coach-context';
 import { getNoraMemory, updateNoraMemory, maybeUpdateNoraMemory, shouldUpdateMemory, getMemoryBriefing, getSurfaceableClaims, classifyClaimResponse, SIGNAL_TYPES } from '@/lib/nora-memory'
-import { noraChat, buildCoachSystem } from '@/lib/nora'
+import { noraChat, noraReact, buildCoachSystem } from '@/lib/nora'
 import { getNoraBriefing, getNoraTierContext } from '@/lib/nora-knowledge'
 
 // ── NORA PERSONA ──────────────────────────────────────────────────────────────
