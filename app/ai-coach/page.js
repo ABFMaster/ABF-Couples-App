@@ -151,14 +151,6 @@ function AiCoachContent() {
       // Always continue most recent conversation unless explicitly starting new
       await loadConversation(recentConv.id, session);
     } else {
-      // New session — close the previous one first if it exists
-      if (recentConv && isNewSession) {
-        fetch('/api/ai-coach/close-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-          body: JSON.stringify({ conversationId: recentConv.id, coupleId: couple?.id }),
-        }).catch(() => {})
-      }
       // Fresh start — check sessionStorage for Nora opener first
       const storedOpener = typeof window !== 'undefined'
         ? sessionStorage.getItem('nora_opener')
@@ -223,7 +215,21 @@ function AiCoachContent() {
       sessionStorage.setItem('nora_opener', opener)
     }
     setShowHistory(false)
-    router.push('/ai-coach?new=true')
+    setConversationId(null)
+    setMessages([])
+    const storedOpener = opener || (typeof window !== 'undefined' ? sessionStorage.getItem('nora_opener') : null)
+    if (storedOpener) {
+      sessionStorage.removeItem('nora_opener')
+      setMessages([{
+        id: 'opener-' + Date.now(),
+        role: 'assistant',
+        content: storedOpener,
+        created_at: new Date().toISOString(),
+        isOpener: true,
+      }])
+    } else {
+      if (coupleId) await loadOpener(coupleId)
+    }
   }
 
   // Fetch a warm opener for a fresh conversation start

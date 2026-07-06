@@ -193,17 +193,40 @@ export async function POST(request) {
     let activeConversationId = conversationId;
 
     if (!activeConversationId) {
+      // Find the most recent previous conversation to title it now that a new one is starting
+      const { data: prevConversations } = await supabase
+        .from('ai_conversations')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('type', 'solo')
+        .is('title', null)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+      const prevConvId = prevConversations?.[0]?.id
+
       const { data: newConversation, error: createError } = await supabase
         .from('ai_conversations')
         .insert({ user_id: user.id, couple_id: coupleId, type: 'solo' })
         .select('id')
         .maybeSingle();
-
       if (createError) {
         console.error('Error creating conversation:', createError);
         return NextResponse.json({ error: 'Failed to create conversation' }, { status: 500 });
       }
       activeConversationId = newConversation.id;
+
+      // Fire title generation on the previous session now that it's definitively over
+      if (prevConvId) {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
+        fetch(`${appUrl}/api/ai-coach/close-session`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': request.headers.get('authorization') || '',
+          },
+          body: JSON.stringify({ conversationId: prevConvId, coupleId }),
+        }).catch(() => {})
+      }
     }
 
     // ── CLASSIFY RESPONSE TO PREVIOUSLY SURFACED CLAIMS ─────────────
