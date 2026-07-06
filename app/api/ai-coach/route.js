@@ -498,8 +498,45 @@ export async function GET(request) {
         const context = await buildCoachContext(user.id, openerCoupleId, supabase);
         const activity = getRecentActivity(context);
         const userName = context.user?.name || null;
-        const memoryData = await getNoraMemory(openerCoupleId, supabase);
-        const hasMemory = !!memoryData;
+        const memoryData = await getNoraMemory(openerCoupleId);
+        const hasMemory = !!memoryData?.memory_summary || !!memoryData?.user1_notes || !!memoryData?.user2_notes
+
+        if (hasMemory) {
+          // Generate a memory-aware opener — one specific line that feels like Nora picking up
+          const { data: couple } = await supabase
+            .from('couples')
+            .select('user1_id, user2_id')
+            .eq('id', openerCoupleId)
+            .maybeSingle()
+          const isUser1 = couple?.user1_id === user.id
+          const partnerName = isUser1
+            ? (await supabase.from('user_profiles').select('display_name').eq('user_id', couple?.user2_id).maybeSingle()).data?.display_name || 'your partner'
+            : (await supabase.from('user_profiles').select('display_name').eq('user_id', couple?.user1_id).maybeSingle()).data?.display_name || 'your partner'
+          const myNotes = isUser1 ? memoryData?.user1_notes?.notes : memoryData?.user2_notes?.notes
+          const memorySummary = memoryData?.memory_summary || ''
+          const openerPrompt = `You are opening a new conversation with ${userName || 'this person'}. You have been paying attention to them and their relationship with ${partnerName}.
+
+What you know:
+${myNotes ? `Your notes on ${userName}: ${myNotes.slice(0, 400)}` : ''}
+${memorySummary ? `Summary: ${memorySummary.slice(0, 300)}` : ''}
+
+Write ONE opening sentence — warm, specific, present tense. Something only sayable about this person specifically. Not a question. Not a greeting. Just Nora noticing something and naming it. Under 25 words.`
+
+          const openerText = await noraReact(openerPrompt, {
+            route: 'ai-coach/opener',
+            maxTokens: 60,
+          })
+
+          return NextResponse.json({
+            recentActivity: activity,
+            userName,
+            messagesRemaining,
+            isPremium: premium,
+            hasMemory: true,
+            memoryOpener: openerText?.trim() || null,
+          })
+        }
+
         return NextResponse.json({ recentActivity: activity, userName, messagesRemaining, isPremium: premium, hasMemory });
       } catch (e) {
         console.error('Coach opener error:', e);
