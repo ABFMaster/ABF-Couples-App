@@ -27,6 +27,7 @@ function AiCoachContent() {
   const [sessionType, setSessionType] = useState(null);
   const [pendingSeed, setPendingSeed] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [loadingOpener, setLoadingOpener] = useState(false);
   const [sessionHistory, setSessionHistory] = useState([]);
   const isNewSession = searchParams.get('new') === 'true';
   const messagesEndRef = useRef(null);
@@ -228,7 +229,11 @@ function AiCoachContent() {
         isOpener: true,
       }])
     } else {
-      if (coupleId) await loadOpener(coupleId)
+      if (coupleId) {
+        setLoadingOpener(true)
+        await loadOpener(coupleId)
+        setLoadingOpener(false)
+      }
     }
   }
 
@@ -470,7 +475,7 @@ function AiCoachContent() {
           )}
 
           {/* Empty state / Welcome message */}
-          {messages.length === 0 && (
+          {messages.length === 0 && !loadingOpener && (
             <div style={{ textAlign: 'center', padding: '48px 24px 24px' }}>
               <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'linear-gradient(145deg, #1C1410 0%, #2D3561 100%)', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#C9A84C' }} />
