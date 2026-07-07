@@ -514,18 +514,16 @@ export async function GET(request) {
             : (await supabase.from('user_profiles').select('display_name').eq('user_id', couple?.user1_id).maybeSingle()).data?.display_name || 'your partner'
           const myNotes = isUser1 ? memoryData?.user1_notes?.notes : memoryData?.user2_notes?.notes
           const memorySummary = memoryData?.memory_summary || ''
-          const openerPrompt = `You are opening a new conversation with ${userName || 'this person'}. You have been paying attention to them and their relationship with ${partnerName}.
-
-What you know:
-${myNotes ? `Your notes on ${userName}: ${myNotes.slice(0, 400)}` : ''}
-${memorySummary ? `Summary: ${memorySummary.slice(0, 300)}` : ''}
-
-Write ONE opening sentence — warm, specific, present tense. Something only sayable about this person specifically. Not a question. Not a greeting. Just Nora noticing something and naming it. Under 25 words.`
-
-          const openerText = await noraReact(openerPrompt, {
-            route: 'ai-coach/opener',
-            maxTokens: 60,
-          })
+          const name = userName || 'you'
+          const openers = [
+            `Good to have you here, ${name}.`,
+            `I'm here, ${name}. What's on your mind?`,
+            `${name}. I'm glad you came.`,
+            `I've been thinking about you, ${name}. What's going on?`,
+            `Here when you're ready, ${name}.`,
+            `Good to see you, ${name}.`,
+          ]
+          const memoryOpener = openers[Math.floor(Math.random() * openers.length)]
 
           return NextResponse.json({
             recentActivity: activity,
@@ -533,7 +531,7 @@ Write ONE opening sentence — warm, specific, present tense. Something only say
             messagesRemaining,
             isPremium: premium,
             hasMemory: true,
-            memoryOpener: openerText?.trim() || null,
+            memoryOpener,
           })
         }
 
