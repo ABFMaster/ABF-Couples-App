@@ -254,6 +254,18 @@ function AiCoachContent() {
         setLimitReached(data.messagesRemaining <= 0);
       }
 
+      // Memory-aware opener for returning users
+      if (data.memoryOpener) {
+        setMessages([{
+          id: 'opener-' + Date.now(),
+          role: 'assistant',
+          content: data.memoryOpener,
+          created_at: new Date().toISOString(),
+          isOpener: true,
+        }])
+        setLoadingOpener(false)
+        return
+      }
       // Build a warm opener message from recent activity
       if (data.recentActivity && !data.hasMemory) {
         const { type, description, suggestion } = data.recentActivity;
