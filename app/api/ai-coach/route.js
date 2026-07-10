@@ -375,8 +375,8 @@ export async function POST(request) {
     )
 
     // ── CALL CLAUDE ────────────────────────────────────────────────
-    if (!process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY) {
-      console.error('NEXT_PUBLIC_ANTHROPIC_API_KEY is not configured');
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error('ANTHROPIC_API_KEY is not configured');
       return NextResponse.json({ error: 'AI service not configured' }, { status: 503 });
     }
 
