@@ -30,12 +30,15 @@ function AiCoachContent() {
   const [loadingOpener, setLoadingOpener] = useState(false);
   const [sessionHistory, setSessionHistory] = useState([]);
   const isNewSession = searchParams.get('new') === 'true';
+  const hasCheckedAuth = useRef(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
   useEffect(() => {
+    if (hasCheckedAuth.current) return;
+    hasCheckedAuth.current = true;
     checkAuth();
-  }, [isNewSession]);
+  }, []);
 
   useEffect(() => {
     const pending = typeof window !== 'undefined'
