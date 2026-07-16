@@ -84,7 +84,8 @@ function AiCoachContent() {
   };
 
   const checkAuth = async () => {
-    // Detect forced fresh start from ?new=true (e.g. hero card "Talk to Nora →")
+    // Capture isNewSession before stripping the URL param
+    const startingFresh = isNewSession;
     if (isNewSession) {
       window.history.replaceState({}, '', '/ai-coach');
     }
@@ -148,7 +149,7 @@ function AiCoachContent() {
       : null;
     if (pendingCouplesOpener) {
       setPendingOpener(pendingCouplesOpener);
-    } else if (recentConv && !isNewSession) {
+    } else if (recentConv && !startingFresh) {
       // Always continue most recent conversation unless explicitly starting new
       await loadConversation(recentConv.id, session);
     } else {
