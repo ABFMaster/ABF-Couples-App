@@ -731,16 +731,20 @@ export async function GET(request) {
 
     let processed = 0
     for (const couple of couples) {
-      const user1 = profileMap[couple.user1_id] || {}
-      const user2 = profileMap[couple.user2_id] || {}
-      await processDailyContent(couple, user1, user2)
-      const day = getDayInTimezone(user1.timezone || user2.timezone || 'America/Los_Angeles')
-      if (day === 0) await processWeeklyReflection(couple)
-      if (day === 4) await processThursdayGeneration(couple, user1, user2)
-      if (new Date().getUTCDay() === 5 && new Date().getUTCHours() === 2) await processThursdayReveal(couple, user1, user2)
-      if (day === 3) await processWednesdayNotice(couple, user1, user2)
-      if (new Date().getUTCDay() === 4 && new Date().getUTCHours() === 2) await processWednesdayReveal(couple, user1, user2)
-      processed++
+      try {
+        const user1 = profileMap[couple.user1_id] || {}
+        const user2 = profileMap[couple.user2_id] || {}
+        await processDailyContent(couple, user1, user2)
+        const day = getDayInTimezone(user1.timezone || user2.timezone || 'America/Los_Angeles')
+        if (day === 0) await processWeeklyReflection(couple)
+        if (day === 4) await processThursdayGeneration(couple, user1, user2)
+        if (new Date().getUTCDay() === 5 && new Date().getUTCHours() === 2) await processThursdayReveal(couple, user1, user2)
+        if (day === 3) await processWednesdayNotice(couple, user1, user2)
+        if (new Date().getUTCDay() === 4 && new Date().getUTCHours() === 2) await processWednesdayReveal(couple, user1, user2)
+        processed++
+      } catch (err) {
+        console.error('[cron] couple processing error:', couple.id, err)
+      }
     }
 
     processNoraSynthesis(couples, profileMap)
