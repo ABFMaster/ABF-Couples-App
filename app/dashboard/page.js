@@ -44,6 +44,7 @@ export default function Dashboard() {
   const [relationshipPhotos, setRelationshipPhotos]     = useState([])
   const [uploadingPhotos, setUploadingPhotos]           = useState(false)
   const [photoUploadComplete, setPhotoUploadComplete]   = useState(false)
+  const [showPhotoSection, setShowPhotoSection]         = useState(true)
   const [showCatchupCard, setShowCatchupCard]           = useState(false)
   const [showDatesModal, setShowDatesModal]             = useState(false)
   const [importantDates, setImportantDates]             = useState({ met: '', firstDate: '', firstKiss: '', anniversary: '', customDates: [] })
@@ -150,11 +151,8 @@ export default function Dashboard() {
   useEffect(() => { fetchAll() }, [fetchAll])
 
   useEffect(() => {
-    if (localStorage.getItem('abf_photos_later')) {
-      setPhotoUploadComplete(true)
-    }
     if (localStorage.getItem('abf_photos_done')) {
-      setPhotoUploadComplete(true)
+      setShowPhotoSection(false)
     }
     if (localStorage.getItem('abf_catchup_dismissed')) {
       setShowCatchupCard(false)
@@ -550,7 +548,7 @@ export default function Dashboard() {
         )}
 
         {/* SECTION 3.6 — PHOTO UPLOAD */}
-        <div style={{ margin: '0 20px 20px' }}>
+        {showPhotoSection && <div style={{ margin: '0 20px 20px' }}>
           {!photoUploadComplete ? (
             <div style={{ padding: '20px', background: '#FFFFFF', borderRadius: 16, border: '1px solid #E8DDD0' }}>
               <div style={{ fontSize: 11, fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.12em', color: '#8B7355', textTransform: 'uppercase', marginBottom: 8 }}>YOUR STORY IN PHOTOS</div>
@@ -580,14 +578,14 @@ export default function Dashboard() {
               </button>
               {relationshipPhotos.length > 0 && !uploadingPhotos && (
                 <button
-                  onClick={() => { localStorage.setItem('abf_photos_done', 'true'); setPhotoUploadComplete(true); setTimeout(() => setPhotoUploadComplete(false), 3000) }}
+                  onClick={() => { localStorage.setItem('abf_photos_done', 'true'); setPhotoUploadComplete(true); setTimeout(() => setShowPhotoSection(false), 3000) }}
                   style={{ width: '100%', background: 'transparent', border: 'none', padding: '8px', fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', cursor: 'pointer', marginTop: 4 }}>
                   Done adding photos
                 </button>
               )}
               {relationshipPhotos.length === 0 && !uploadingPhotos && (
                 <button
-                  onClick={() => { localStorage.setItem('abf_photos_later', 'true'); setPhotoUploadComplete(true) }}
+                  onClick={() => { setShowPhotoSection(false) }}
                   style={{ width: '100%', background: 'transparent', border: 'none', padding: '8px', fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', cursor: 'pointer', marginTop: 4 }}>
                   I'll add photos later
                 </button>
@@ -599,7 +597,7 @@ export default function Dashboard() {
               <span style={{ fontSize: 13, fontFamily: 'DM Sans, sans-serif', color: '#8B7355' }}>Photos added. Nora will remember them.</span>
             </div>
           )}
-        </div>
+        </div>}
 
         {/* SECTION 3.65 — CATCH-UP CARD */}
         {showCatchupCard && (
