@@ -126,7 +126,7 @@ export default function Dashboard() {
         .maybeSingle()
 
       if (existingPhotos) {
-        setPhotoUploadComplete(true)
+        setShowPhotoSection(false)
       }
 
       const { data: existingDates } = await supabase
