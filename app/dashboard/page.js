@@ -748,7 +748,7 @@ export default function Dashboard() {
                 From Your Timeline
               </div>
               <div
-                onClick={() => router.push('/us?section=been')}
+                onClick={() => router.push(`/us?section=been&eventId=${memoryCard.id}`)}
                 style={{ borderRadius: '18px', overflow: 'hidden', marginBottom: '12px', boxShadow: '0 2px 12px rgba(28,20,16,0.08)', cursor: 'pointer', position: 'relative', height: '260px' }}
               >
                 {memoryCard.photo_urls?.[0] ? (

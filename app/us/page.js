@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SharedItemCard from '@/components/SharedItemCard'
 import { getWeekStart } from '@/lib/dates'
-export default function UsPage() {
+function UsPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [user, setUser] = useState(null)
   const [couple, setCouple] = useState(null)
   const [userName, setUserName] = useState('')
@@ -75,6 +76,12 @@ export default function UsPage() {
     computeMissingMilestones(events || [])
     computeNoraSurfaced(events || [])
     setTimelineLoading(false)
+    // Deep link — open specific event if eventId param is present
+    const eventId = searchParams?.get('eventId')
+    if (eventId) {
+      const target = (events || []).find(e => e.id === eventId)
+      if (target) setSelectedEvent(target)
+    }
   }
 
   const computeNoraSurfaced = (events) => {
@@ -1306,5 +1313,13 @@ export default function UsPage() {
       )}
 
     </div>
+  )
+}
+
+export default function UsPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#FAF6EF' }} />}>
+      <UsPageContent />
+    </Suspense>
   )
 }
