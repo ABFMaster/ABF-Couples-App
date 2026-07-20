@@ -41,6 +41,46 @@ export default function WednesdayCard({ userId, coupleId, userName, partnerName,
 
   const isRevealed = entry.status === 'revealed'
 
+  // POST-7PM LATE SUBMISSION — not yet submitted, reveal window open, before cutoff
+  if (!submitted && !isRevealed && isPastReveal && !isPastCutoff && isWednesday) {
+    return (
+      <div style={{ margin: '0 16px 16px', background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, overflow: 'hidden' }}>
+        <div style={{ padding: '16px 18px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#C9A96E' }}></div>
+            <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: '#C9A96E', textTransform: 'uppercase' }}>The Notice · Still open</span>
+          </div>
+          {entry.partnerNotice && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#B0A8A0', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>{partnerName} noticed about you</div>
+              <p style={{ fontFamily: 'Georgia, serif', fontSize: 15, color: '#1A1A1A', lineHeight: 1.7, margin: 0, background: '#FFF8F4', padding: '12px 14px', borderRadius: 10, borderLeft: '3px solid #C4694F' }}>"{entry.partnerNotice}"</p>
+            </div>
+          )}
+          <p style={{ fontFamily: 'Georgia, serif', fontSize: 15, color: '#1A1A1A', lineHeight: 1.7, margin: '0 0 12px' }}>
+            You can still send yours until 10pm tonight.
+          </p>
+        </div>
+        <div style={{ padding: '0 18px 18px' }}>
+          <textarea
+            value={notice}
+            onChange={e => setNotice(e.target.value)}
+            placeholder={`Something specific about ${partnerName}...`}
+            rows={3}
+            style={{ width: '100%', padding: '10px 12px', border: '0.5px solid #E8E0D8', borderRadius: 10, fontSize: 14, resize: 'none', background: '#FFF8F4', color: '#1A1A1A', lineHeight: 1.5, boxSizing: 'border-box', fontFamily: 'Georgia, serif' }}
+          />
+          {submitError && <p style={{ fontSize: 12, color: '#C4694F', margin: '6px 0 0' }}>{submitError}</p>}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+            <button
+              onClick={handleSend}
+              disabled={!notice.trim() || submitting}
+              style={{ background: notice.trim() ? '#C4694F' : '#E8E0D8', color: 'white', border: 'none', padding: '8px 20px', borderRadius: 100, fontSize: 14, cursor: notice.trim() ? 'pointer' : 'default', fontWeight: 500 }}
+            >{submitting ? 'Sending...' : `Send to ${partnerName}`}</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // PRE-SEND VIEW
   if (!submitted && !isRevealed) {
     return (

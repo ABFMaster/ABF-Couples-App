@@ -15,6 +15,14 @@
     {
       "path": "/api/cron/scheduled-tasks",
       "schedule": "0 2 * * 4"
+    },
+    {
+      "path": "/api/cron/scheduled-tasks",
+      "schedule": "0 1 * * 4"
+    },
+    {
+      "path": "/api/cron/scheduled-tasks",
+      "schedule": "0 5 * * 4"
     }
   ]
 }

@@ -525,6 +525,74 @@ async function processWednesdayNotice(couple, user1, user2) {
   }
 }
 
+async function processWednesdayEveningReminder(couple, user1, user2) {
+  try {
+    const todayStr = getTodayString('America/Los_Angeles')
+    const { data: entry } = await supabase
+      .from('wednesday_notices')
+      .select('*')
+      .eq('couple_id', couple.id)
+      .eq('date', todayStr)
+      .eq('status', 'pending')
+      .maybeSingle()
+    if (!entry) return
+    const user1Name = user1.display_name || 'Partner 1'
+    const user2Name = user2.display_name || 'Partner 2'
+    // Only push to users who haven't submitted yet
+    if (!entry.user1_notice) {
+      await sendPush(user1.user_id, 'The Notice', `Last chance — send your Notice to ${user2Name} before 10pm tonight.`, '/dashboard', 'wednesday/evening')
+    }
+    if (!entry.user2_notice) {
+      await sendPush(user2.user_id, 'The Notice', `Last chance — send your Notice to ${user1Name} before 10pm tonight.`, '/dashboard', 'wednesday/evening')
+    }
+  } catch (err) {
+    console.error('[wednesday/evening] couple:', couple.id, err)
+  }
+}
+
+async function processWednesdayCutoff(couple, user1, user2) {
+  try {
+    const todayStr = getTodayString('America/Los_Angeles')
+    const { data: entry } = await supabase
+      .from('wednesday_notices')
+      .select('*')
+      .eq('couple_id', couple.id)
+      .eq('date', todayStr)
+      .eq('status', 'pending')
+      .maybeSingle()
+    if (!entry) return
+    const user1Name = user1.display_name || 'Partner 1'
+    const user2Name = user2.display_name || 'Partner 2'
+    const hasUser1 = !!entry.user1_notice
+    const hasUser2 = !!entry.user2_notice
+    let synthesis = ''
+    if (hasUser1 || hasUser2) {
+      const synthesisPrompt = [
+        `You are Nora. Two partners were asked to notice something about each other this week.`,
+        hasUser1 ? `${user1Name} sent to ${user2Name}: "${entry.user1_notice}"` : `${user1Name} did not send a notice today.`,
+        hasUser2 ? `${user2Name} sent to ${user1Name}: "${entry.user2_notice}"` : `${user2Name} did not send a notice today.`,
+        `Write 2 sentences maximum. Find what the notice(s) reveal about how this couple sees each other. If only one person sent a notice, honor what they shared without making the other feel bad for missing it. End with one warm observation, not a question.`
+      ].filter(Boolean).join('\n\n')
+      const systemPrompt = `You are Nora — warm, specific, brief. Honor what was shared. Never generic.`
+      synthesis = await noraChat(
+        [{ role: 'user', content: synthesisPrompt }],
+        { route: 'wednesday/cutoff', system: systemPrompt, maxTokens: 150 }
+      ) || ''
+    }
+    await supabase
+      .from('wednesday_notices')
+      .update({ nora_synthesis: synthesis.trim() || null, status: 'revealed' })
+      .eq('id', entry.id)
+    // Only push if at least one person submitted
+    if (hasUser1 || hasUser2) {
+      await sendPush(user1.user_id, 'The Notice', 'See what was noticed this week.', '/dashboard', 'wednesday/cutoff')
+      await sendPush(user2.user_id, 'The Notice', 'See what was noticed this week.', '/dashboard', 'wednesday/cutoff')
+    }
+  } catch (err) {
+    console.error('[wednesday/cutoff] couple:', couple.id, err)
+  }
+}
+
 async function processWednesdayReveal(couple, user1, user2) {
   try {
     const todayStr = getTodayString('America/Los_Angeles')
@@ -741,6 +809,8 @@ export async function GET(request) {
         if (new Date().getUTCDay() === 5 && new Date().getUTCHours() === 2) await processThursdayReveal(couple, user1, user2)
         if (day === 3) await processWednesdayNotice(couple, user1, user2)
         if (new Date().getUTCDay() === 4 && new Date().getUTCHours() === 2) await processWednesdayReveal(couple, user1, user2)
+        if (new Date().getUTCDay() === 4 && new Date().getUTCHours() === 1) await processWednesdayEveningReminder(couple, user1, user2)
+        if (new Date().getUTCDay() === 4 && new Date().getUTCHours() === 5) await processWednesdayCutoff(couple, user1, user2)
         processed++
       } catch (err) {
         console.error('[cron] couple processing error:', couple.id, err)

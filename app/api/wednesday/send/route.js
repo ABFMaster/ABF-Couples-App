@@ -20,16 +20,33 @@ export async function POST(request) {
     const { coupleId, notice, partnerName } = await request.json()
     if (!coupleId || !notice?.trim()) return NextResponse.json({ error: 'coupleId and notice required' }, { status: 400 })
 
+    // Check 10pm Pacific cutoff
+    const nowPacific = new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })
+    const pacificHour = new Date(nowPacific).getHours()
+    const pacificDay = new Date(nowPacific).getDay()
+    if (pacificDay === 3 && pacificHour >= 22) {
+      return NextResponse.json({ error: 'Submission window closed at 10pm' }, { status: 403 })
+    }
+
     const todayStr = getTodayString('America/Los_Angeles')
+    // Get this week's Wednesday date
+    const now = new Date(nowPacific)
+    const dayOfWeek = now.getDay()
+    const daysToWed = (3 - dayOfWeek + 7) % 7
+    const wednesdayDate = new Date(now)
+    wednesdayDate.setDate(now.getDate() - (dayOfWeek === 3 ? 0 : (7 - daysToWed) % 7))
+    const wednesdayStr = wednesdayDate.toISOString().split('T')[0]
 
     const { data: entry } = await supabase
       .from('wednesday_notices')
       .select('*')
       .eq('couple_id', coupleId)
-      .eq('date', todayStr)
+      .eq('date', wednesdayStr)
       .maybeSingle()
-
-    if (!entry) return NextResponse.json({ error: 'No Wednesday Notice for today' }, { status: 404 })
+    if (!entry) return NextResponse.json({ error: 'No Wednesday Notice found' }, { status: 404 })
+    if (entry.status === 'revealed' && pacificHour >= 22) {
+      return NextResponse.json({ error: 'Submission window closed' }, { status: 403 })
+    }
 
     const isUser1 = entry.user1_id === user.id
     const updateField = isUser1

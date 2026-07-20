@@ -22,12 +22,20 @@ export async function GET(request) {
     if (!coupleId) return NextResponse.json({ error: 'coupleId required' }, { status: 400 })
 
     const todayStr = getTodayString('America/Los_Angeles')
+    // Query this week's Wednesday entry regardless of current day
+    const nowPacific = new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })
+    const now = new Date(nowPacific)
+    const dayOfWeek = now.getDay()
+    const daysBack = dayOfWeek === 3 ? 0 : (dayOfWeek + 4) % 7
+    const wednesdayDate = new Date(now)
+    wednesdayDate.setDate(now.getDate() - daysBack)
+    const wednesdayStr = wednesdayDate.toISOString().split('T')[0]
 
     const { data: entry } = await supabase
       .from('wednesday_notices')
       .select('*')
       .eq('couple_id', coupleId)
-      .eq('date', todayStr)
+      .eq('date', wednesdayStr)
       .maybeSingle()
 
     if (!entry) return NextResponse.json({ entry: null })
