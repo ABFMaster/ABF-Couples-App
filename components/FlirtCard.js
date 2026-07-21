@@ -22,6 +22,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   const [holdProgress, setHoldProgress] = useState(0)
   const [holdComplete, setHoldComplete] = useState(false)
   const [reactionSaved, setReactionSaved] = useState(null)
+  const [cardFlipped, setCardFlipped] = useState(false)
   const [timelineEvents, setTimelineEvents] = useState([])
   const [timelineLoading, setTimelineLoading] = useState(false)
   const [timelineFilter, setTimelineFilter] = useState('all')
@@ -271,7 +272,18 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
       from { opacity: 0; }
       to { opacity: 1; }
     }
+    @keyframes fcStampPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+    }
     .fc-mem-chips::-webkit-scrollbar { display: none; }
+    .fc-card-scene { perspective: 700px; width: 100%; }
+    .fc-card-inner { position: relative; width: 100%; transform-style: preserve-3d; transition: transform 0.5s ease; }
+    .fc-card-inner.flipped { transform: rotateY(180deg); }
+    .fc-card-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; width: 100%; }
+    .fc-card-back { backface-visibility: hidden; -webkit-backface-visibility: hidden; position: absolute; top: 0; left: 0; right: 0; transform: rotateY(180deg); }
+    .fc-stripe-border { position: absolute; inset: 0; z-index: 2; pointer-events: none; border-radius: 6px; background: repeating-linear-gradient(-45deg, #c4694f 0, #c4694f 6px, transparent 6px, transparent 10px, #1a3a52 10px, #1a3a52 16px, transparent 16px, transparent 20px); -webkit-mask: linear-gradient(#000 0, #000 0) content-box, linear-gradient(#000 0, #000 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0, #000 0) content-box, linear-gradient(#000 0, #000 0); mask-composite: exclude; padding: 7px; }
+    .fc-rcv-stripe { position: absolute; inset: 0; z-index: 1; pointer-events: none; background: repeating-linear-gradient(-45deg, #c4694f 0, #c4694f 4px, transparent 4px, transparent 7px, #1a3a52 7px, #1a3a52 11px, transparent 11px, transparent 14px); -webkit-mask: linear-gradient(#000 0, #000 0) content-box, linear-gradient(#000 0, #000 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0, #000 0) content-box, linear-gradient(#000 0, #000 0); mask-composite: exclude; padding: 5px; }
   `
 
   const PostcardShell = ({ children, onClick, sealed }) => (
@@ -365,28 +377,73 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
     const hasUnseen = unseenCount > 0
 
     return (
-      <PostcardShell onClick={() => hasUnseen ? setView('stack') : setView('drop')} sealed={hasUnseen}>
-        {/* Message side */}
-        <div style={{ flex: 1, padding: '4px 12px 12px', position: 'relative', minHeight: 160 }}>
-          {[...Array(6)].map((_, i) => (
-            <div key={i} style={{ borderBottom: `0.5px solid ${hasUnseen ? '#EAE0CC' : '#EEE8DC'}`, height: i === 0 ? 28 : 20 }}>
-              {i === 0 && (
-                <span style={{ fontFamily: 'Georgia, serif', fontSize: 12, color: hasUnseen ? '#C9A96E' : '#C8BFB0', fontStyle: 'italic' }}>
-                  {hasUnseen ? `from ${partnerName} —` : `write something for ${partnerName}...`}
-                </span>
-              )}
-              {i === 1 && hasUnseen && (
-                <span style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: '#C4B89A', fontStyle: 'italic' }}>tap to open</span>
-              )}
+      <div style={{ margin: '0 16px 16px', position: 'relative' }}>
+        <style>{POSTCARD_STYLES}</style>
+        <div className="fc-card-scene">
+          <div className={`fc-card-inner${cardFlipped ? ' flipped' : ''}`}>
+
+            {/* FRONT — postcard image */}
+            <div className="fc-card-face">
+              <div
+                style={{ position: 'relative', borderRadius: 6, overflow: 'hidden', border: '1px solid #D4C4A8', cursor: 'pointer' }}
+                onClick={() => setCardFlipped(true)}
+              >
+                <img src="/flirt-postcard.png" style={{ width: '100%', display: 'block', objectFit: 'cover', minHeight: 140 }} alt="" />
+                {hasUnseen && (
+                  <div style={{ position: 'absolute', top: 10, right: 10, background: '#C4694F', color: 'white', borderRadius: '50%', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{unseenCount}</div>
+                )}
+                <div style={{ position: 'absolute', bottom: 10, right: 12, fontSize: 10, color: 'rgba(255,255,255,0.8)', fontFamily: 'Georgia, serif', fontStyle: 'italic', textShadow: '0 1px 3px rgba(0,0,0,0.4)' }}>tap to flip →</div>
+              </div>
             </div>
-          ))}
-          {!hasUnseen && sent.length > 0 && (
-            <button onClick={e => { e.stopPropagation(); setView('sent') }} style={{ position: 'absolute', bottom: 8, left: 12, background: 'none', border: 'none', fontSize: 10, color: '#B0A8A0', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>view sent →</button>
-          )}
+
+            {/* BACK — postcard back with compose or open */}
+            <div className="fc-card-back">
+              <div style={{ background: hasUnseen ? '#FDF8F0' : '#FAFAF7', border: `1px solid ${hasUnseen ? '#D4C4A8' : '#DDD5C8'}`, borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
+                <div className={hasUnseen ? 'fc-rcv-stripe' : 'fc-stripe-border'} />
+                <div style={{ position: 'absolute', inset: 5, border: `0.5px solid ${hasUnseen ? '#EAE0CC' : '#EEE8DC'}`, borderRadius: 3, pointerEvents: 'none', zIndex: 0 }} />
+                <div style={{ padding: '8px 12px 0', position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 7, fontWeight: 700, letterSpacing: 3, color: '#C8B8A0' }}>POSTCARD</span>
+                  <button onClick={() => setCardFlipped(false)} style={{ background: 'none', border: 'none', fontSize: 10, color: '#B0A8A0', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>← flip back</button>
+                </div>
+
+                <div style={{ display: 'flex', position: 'relative', zIndex: 1 }}>
+                  {/* Message side */}
+                  <div style={{ flex: 1, padding: '4px 12px 12px', position: 'relative', minHeight: 140 }}>
+                    {[...Array(6)].map((_, i) => (
+                      <div key={i} style={{ borderBottom: `0.5px solid ${hasUnseen ? '#EAE0CC' : '#EEE8DC'}`, height: i === 0 ? 28 : 20 }}>
+                        {i === 0 && (
+                          <span style={{ fontFamily: 'Georgia, serif', fontSize: 12, color: hasUnseen ? '#C9A96E' : '#C8BFB0', fontStyle: 'italic' }}>
+                            {hasUnseen ? `from ${partnerName} —` : `write something for ${partnerName}...`}
+                          </span>
+                        )}
+                        {i === 1 && hasUnseen && (
+                          <span style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: '#C4B89A', fontStyle: 'italic' }}>waiting to be opened</span>
+                        )}
+                      </div>
+                    ))}
+                    {!hasUnseen && sent.length > 0 && (
+                      <button onClick={e => { e.stopPropagation(); setView('sent') }} style={{ position: 'absolute', bottom: 8, left: 12, background: 'none', border: 'none', fontSize: 10, color: '#B0A8A0', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>view sent →</button>
+                    )}
+                  </div>
+                  {/* Address side */}
+                  <AddressSide toName={hasUnseen ? userName : partnerName} stampSealed={hasUnseen} stampProgress={0} />
+                </div>
+
+                {/* Action button */}
+                <div style={{ padding: '0 12px 12px', position: 'relative', zIndex: 1 }}>
+                  <button
+                    onClick={() => hasUnseen ? setView('stack') : setView('drop')}
+                    style={{ width: '100%', padding: '9px', background: hasUnseen ? '#C4694F' : '#FFF8F4', border: `0.5px solid ${hasUnseen ? '#C4694F' : '#E8E0D8'}`, borderRadius: 8, fontSize: 13, color: hasUnseen ? 'white' : '#C4694F', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}
+                  >
+                    {hasUnseen ? 'open flirt →' : 'send a flirt →'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
-        {/* Address side */}
-        <AddressSide toName={hasUnseen ? userName : partnerName} stampSealed={hasUnseen} stampProgress={0} />
-      </PostcardShell>
+      </div>
     )
   }
 
@@ -703,48 +760,82 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
     return (
       <div style={{ margin: '0 16px 16px' }}>
         <style>{POSTCARD_STYLES}</style>
-        <div style={{ background: '#FDF8F0', border: '1px solid #D4C4A8', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
-          <div style={{ position: 'absolute', inset: 5, border: '0.5px solid #EAE0CC', borderRadius: 3, pointerEvents: 'none', zIndex: 0 }} />
-          <div style={{ padding: '8px 12px 0', position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 7, fontWeight: 700, letterSpacing: 3, color: '#C8B8A0' }}>POSTCARD</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              {received.length > 1 && (
-                <span style={{ fontSize: 10, color: '#B0A8A0', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>{currentIndex + 1} of {received.length}</span>
-              )}
-              <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', fontSize: 18, color: '#B0A8A0', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', position: 'relative', zIndex: 1 }}>
-            {/* Message side */}
-            <div style={{ flex: 1, padding: '4px 12px 12px' }}>
-              <div style={{ borderBottom: '0.5px solid #EAE0CC', paddingBottom: 4, marginBottom: 2 }}>
-                <span style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: '#C9A96E', fontStyle: 'italic' }}>from {partnerName} —</span>
-                <span style={{ fontFamily: 'Georgia, serif', fontSize: 10, color: '#B0A8A0', fontStyle: 'italic', marginLeft: 8 }}>{formatTimeAgo(current.created_at)}</span>
+        <div style={{ background: '#f5f0e4', border: '0.5px solid #c8b8a0', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
+          <div className="fc-rcv-stripe" />
+          <div style={{ position: 'relative', zIndex: 2, margin: 5, background: '#f5f0e4' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '0.5px solid #ddd0bc' }}>
+              <span style={{ fontFamily: 'Georgia, serif', fontSize: 12, color: '#c9a96e', fontStyle: 'italic' }}>from {partnerName} —</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {received.length > 1 && <span style={{ fontSize: 10, color: '#b0a8a0', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>{currentIndex + 1} of {received.length}</span>}
+                <span style={{ fontSize: 10, color: '#b0a8a0', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>{formatTimeAgo(current.created_at)}</span>
+                <button onClick={() => { setCardFlipped(false); setView('home') }} style={{ background: 'none', border: 'none', fontSize: 18, color: '#b0a8a0', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
               </div>
-
-              {/* Content on ruled lines */}
-              <div style={{ paddingTop: 6, backgroundImage: 'repeating-linear-gradient(transparent, transparent 19px, #EAE0CC 19px, #EAE0CC 20px)', backgroundSize: '100% 20px', minHeight: 80 }}>
+            </div>
+            {/* Body */}
+            <div style={{ display: 'flex' }}>
+              <div style={{ flex: 1, padding: '8px 10px', fontFamily: 'Georgia, serif', fontSize: 14, color: '#2a2015', lineHeight: 1.65, backgroundImage: 'repeating-linear-gradient(transparent, transparent 21px, #d8ccba 21px, #d8ccba 22px)', backgroundSize: '100% 22px', minHeight: 72 }}>
                 {renderFlirtContent(current)}
               </div>
-
-              {received.length > 1 && (
-                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-                  {currentIndex > 0 && <button onClick={() => setCurrentIndex(i => i - 1)} style={{ background: 'none', border: 'none', fontSize: 11, color: '#B0A8A0', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic', padding: 0 }}>← prev</button>}
-                  {currentIndex < received.length - 1 && <button onClick={() => setCurrentIndex(i => i + 1)} style={{ background: 'none', border: 'none', fontSize: 11, color: '#B0A8A0', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic', padding: 0 }}>next →</button>}
-                </div>
+              {/* Address col with ABF stamp */}
+              <div style={{ width: 82, flexShrink: 0, borderLeft: '0.5px solid #c8b8a0', padding: '8px 7px', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ fontSize: 6, fontWeight: 700, letterSpacing: 2, color: '#b0a090', fontFamily: 'system-ui', marginBottom: 2 }}>To</div>
+                <div style={{ fontFamily: 'Georgia, serif', fontSize: 13, color: '#2a2015' }}>{userName}</div>
+                {/* ABF coral stamp */}
+                <svg style={{ position: 'absolute', top: 6, right: 6 }} width="44" height="52" viewBox="0 0 44 52" fill="none">
+                  <circle cx="4" cy="5" r="4" fill="#f5f0e4"/>
+                  <circle cx="11" cy="1" r="4" fill="#f5f0e4"/>
+                  <circle cx="22" cy="1" r="4" fill="#f5f0e4"/>
+                  <circle cx="33" cy="1" r="4" fill="#f5f0e4"/>
+                  <circle cx="40" cy="5" r="4" fill="#f5f0e4"/>
+                  <circle cx="4" cy="47" r="4" fill="#f5f0e4"/>
+                  <circle cx="11" cy="51" r="4" fill="#f5f0e4"/>
+                  <circle cx="22" cy="51" r="4" fill="#f5f0e4"/>
+                  <circle cx="33" cy="51" r="4" fill="#f5f0e4"/>
+                  <circle cx="40" cy="47" r="4" fill="#f5f0e4"/>
+                  <circle cx="1" cy="13" r="4" fill="#f5f0e4"/>
+                  <circle cx="1" cy="22" r="4" fill="#f5f0e4"/>
+                  <circle cx="1" cy="31" r="4" fill="#f5f0e4"/>
+                  <circle cx="1" cy="40" r="4" fill="#f5f0e4"/>
+                  <circle cx="43" cy="13" r="4" fill="#f5f0e4"/>
+                  <circle cx="43" cy="22" r="4" fill="#f5f0e4"/>
+                  <circle cx="43" cy="31" r="4" fill="#f5f0e4"/>
+                  <circle cx="43" cy="40" r="4" fill="#f5f0e4"/>
+                  <rect x="4" y="4" width="36" height="44" rx="1" fill="#c4694f"/>
+                  <rect x="8" y="8" width="28" height="36" rx="0.5" fill="none" stroke="rgba(253,248,244,0.3)" strokeWidth="0.6"/>
+                  <path d="M22 52 m-12 0 a12 12 0 0 1 24 0" fill="none" id="rcvArc"/>
+                  <text fontSize="4" fontWeight="700" letterSpacing="1" fontFamily="system-ui" fill="rgba(253,248,244,0.75)">
+                    <textPath href="#rcvArc" startOffset="50%" textAnchor="middle">ALWAYS BE FLIRTING</textPath>
+                  </text>
+                  <circle cx="22" cy="23" r="6" fill="none" stroke="rgba(253,248,244,0.4)" strokeWidth="0.8"/>
+                  <path d="M22 25.5C22 25.5 19.5 23 19.5 21.2C19.5 20 20.6 19.1 21.6 20.2 21.9 20.5 22 21 22 21 22 21 22.1 20.5 22.4 20.2 23.4 19.1 24.5 20 24.5 21.2 24.5 23 22 25.5 22 25.5Z" fill="white"/>
+                  <text x="22" y="35" textAnchor="middle" fontSize="5" fontFamily="system-ui" fontWeight="700" letterSpacing="1.5" fill="rgba(253,248,244,0.85)">ABF</text>
+                  <text x="22" y="40" textAnchor="middle" fontSize="3.5" fontFamily="system-ui" fill="rgba(253,248,244,0.55)">2026</text>
+                </svg>
+              </div>
+            </div>
+            {/* Tap reactions — replacing hold mechanic */}
+            <div style={{ padding: '7px 10px', borderTop: '0.5px solid #ddd0bc', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0 }}>
+              <span style={{ fontSize: 10, color: '#c8b8a0', fontFamily: 'system-ui', letterSpacing: '0.06em', marginRight: 8 }}>react</span>
+              {reactionSaved ? (
+                <span style={{ fontFamily: 'Georgia, serif', fontSize: 11, fontStyle: 'italic', color: '#c4694f' }}>{reactionSaved === 'this_is_so_you' ? 'this is so you' : reactionSaved === 'made_my_day' ? 'made my day' : 'saving this'}</span>
+              ) : (
+                <>
+                  <button onClick={() => saveReaction('this_is_so_you')} style={{ background: 'none', border: 'none', fontSize: 11, color: '#8b7355', fontFamily: 'Georgia, serif', fontStyle: 'italic', cursor: 'pointer', padding: '3px 6px', borderRadius: 3 }}>this is so you</button>
+                  <span style={{ color: '#ddd0bc', fontSize: 10 }}> · </span>
+                  <button onClick={() => saveReaction('made_my_day')} style={{ background: 'none', border: 'none', fontSize: 11, color: '#8b7355', fontFamily: 'Georgia, serif', fontStyle: 'italic', cursor: 'pointer', padding: '3px 6px', borderRadius: 3 }}>made my day</button>
+                  <span style={{ color: '#ddd0bc', fontSize: 10 }}> · </span>
+                  <button onClick={() => saveReaction('saving_this')} style={{ background: 'none', border: 'none', fontSize: 11, color: '#8b7355', fontFamily: 'Georgia, serif', fontStyle: 'italic', cursor: 'pointer', padding: '3px 6px', borderRadius: 3 }}>saving this</button>
+                </>
               )}
             </div>
-
-            {/* Address side with hold-to-react stamp */}
-            <AddressSide
-              toName={userName}
-              stampSealed={false}
-              stampProgress={holdProgress}
-              onStampDown={startHold}
-              onStampUp={endHold}
-              showReaction={true}
-            />
+            {/* Nav */}
+            {received.length > 1 && (
+              <div style={{ display: 'flex', gap: 12, padding: '4px 10px 8px' }}>
+                {currentIndex > 0 && <button onClick={() => setCurrentIndex(i => i - 1)} style={{ background: 'none', border: 'none', fontSize: 11, color: '#b0a8a0', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic', padding: 0 }}>← prev</button>}
+                {currentIndex < received.length - 1 && <button onClick={() => setCurrentIndex(i => i + 1)} style={{ background: 'none', border: 'none', fontSize: 11, color: '#b0a8a0', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic', padding: 0 }}>next →</button>}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -756,10 +847,10 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
     return (
       <div style={{ margin: '0 16px 16px' }}>
         <style>{POSTCARD_STYLES}</style>
-        <div style={{ background: '#FAFAF7', border: '1px solid #DDD5C8', borderRadius: 6, overflow: 'hidden' }}>
-          <div style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '0.5px solid #EEE8DC' }}>
-            <span style={{ fontSize: 7, fontWeight: 700, letterSpacing: 3, color: '#C8B8A0' }}>SENT</span>
-            <button onClick={() => setView('home')} style={{ background: 'none', border: 'none', fontSize: 18, color: '#B0A8A0', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
+        <div style={{ background: '#f5f0e4', border: '0.5px solid #c8b8a0', borderRadius: 6, overflow: 'hidden' }}>
+          <div style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '0.5px solid #ddd0bc' }}>
+            <span style={{ fontSize: 7, fontWeight: 700, letterSpacing: 3, color: '#c8b8a0', fontFamily: 'system-ui' }}>SENT</span>
+            <button onClick={() => { setCardFlipped(false); setView('home') }} style={{ background: 'none', border: 'none', fontSize: 18, color: '#b0a8a0', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
           </div>
           {sent.map(f => (
             <div key={f.id} style={{ padding: '10px 12px', borderBottom: '0.5px solid #EEE8DC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -770,21 +861,8 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                 </div>
                 <div style={{ fontSize: 10, color: '#B0A8A0', fontFamily: 'Georgia, serif', fontStyle: 'italic', marginTop: 2 }}>{formatTimeAgo(f.created_at)}</div>
               </div>
-              <div style={{ width: 28, height: 34, position: 'relative', flexShrink: 0 }}>
-                <div style={{
-                  position: 'absolute',
-                  inset: 0,
-                  borderRadius: 1,
-                  border: `2px dotted ${f.reaction ? '#B8943A' : '#C8BFB0'}`,
-                  background: f.reaction ? '#C9A96E' : '#F0EBE0',
-                  overflow: 'hidden'
-                }}>
-                  <div style={{ position: 'absolute', inset: 3, border: `0.5px solid ${f.reaction ? 'rgba(255,255,255,0.4)' : 'rgba(180,168,150,0.4)'}`, borderRadius: 1 }} />
-                  <div style={{ position: 'absolute', top: 5, left: 0, right: 0, textAlign: 'center', fontSize: 5, fontWeight: 700, letterSpacing: 1, color: f.reaction ? '#FDF8F0' : '#B0A898', fontFamily: 'system-ui', zIndex: 1 }}>ABF</div>
-                  <div style={{ position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)', width: 11, height: 11, borderRadius: '50%', border: `1px solid ${f.reaction ? 'rgba(255,255,255,0.5)' : '#C8BFB0'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
-                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: f.reaction ? '#FDF8F0' : 'transparent' }} />
-                  </div>
-                </div>
+              <div style={{ fontSize: 10, fontFamily: 'system-ui', padding: '2px 8px', borderRadius: 100, flexShrink: 0, background: f.reaction ? 'rgba(201,169,110,0.15)' : '#f0ebe0', color: f.reaction ? '#a07a30' : '#b0a090', border: f.reaction ? 'none' : '0.5px solid #ddd0bc' }}>
+                {f.reaction ? 'reacted' : 'delivered'}
               </div>
             </div>
           ))}
