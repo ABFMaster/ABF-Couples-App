@@ -412,357 +412,100 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
 
             {/* BACK — postcard back with compose or open */}
             <div className="fc-card-back">
-              <div style={{ background: hasUnseen ? '#FDF8F0' : '#FAFAF7', border: `1px solid ${hasUnseen ? '#D4C4A8' : '#DDD5C8'}`, borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
-                <div className={hasUnseen ? 'fc-rcv-stripe' : 'fc-stripe-border'} />
-                <div style={{ position: 'absolute', inset: 5, border: `0.5px solid ${hasUnseen ? '#EAE0CC' : '#EEE8DC'}`, borderRadius: 3, pointerEvents: 'none', zIndex: 0 }} />
-                <div style={{ padding: '8px 12px 0', position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 7, fontWeight: 700, letterSpacing: 3, color: '#C8B8A0' }}>POSTCARD</span>
-                  <button onClick={() => setCardFlipped(false)} style={{ background: 'none', border: 'none', fontSize: 10, color: '#B0A8A0', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>← flip back</button>
-                </div>
-
-                <div style={{ display: 'flex', position: 'relative', zIndex: 1 }}>
-                  {/* Message side */}
-                  <div style={{ flex: 1, padding: '4px 12px 12px', position: 'relative', minHeight: 140 }}>
-                    {[...Array(6)].map((_, i) => (
-                      <div key={i} style={{ borderBottom: `0.5px solid ${hasUnseen ? '#EAE0CC' : '#EEE8DC'}`, height: i === 0 ? 28 : 20 }}>
-                        {i === 0 && (
-                          <span style={{ fontFamily: 'Georgia, serif', fontSize: 12, color: hasUnseen ? '#C9A96E' : '#C8BFB0', fontStyle: 'italic' }}>
-                            {hasUnseen ? `from ${partnerName} —` : `write something for ${partnerName}...`}
+              <div style={{ position: 'absolute', inset: 0, background: '#f5f0e4', borderRadius: 6, overflow: 'hidden' }}>
+                <div className="fc-stripe-border" />
+                <div style={{ position: 'relative', zIndex: 3, margin: 7, background: '#f5f0e4', height: 'calc(100% - 14px)', display: 'flex', flexDirection: 'column' }}>
+                  {hasUnseen ? (
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ padding: '10px 10px 6px', borderBottom: '0.5px solid #ddd0bc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontFamily: 'Georgia, serif', fontSize: 12, color: '#c9a96e', fontStyle: 'italic' }}>from {partnerName}</span>
+                        <button onClick={() => setCardFlipped(false)} style={{ background: 'none', border: 'none', fontSize: 9, color: '#b0a090', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>← flip back</button>
+                      </div>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+                        <button onClick={() => { setCardFlipped(false); setView('stack') }} style={{ background: '#c4694f', color: 'white', border: 'none', borderRadius: 100, padding: '10px 24px', fontSize: 13, fontFamily: 'Georgia, serif', fontStyle: 'italic', cursor: 'pointer' }}>open flirt →</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      {/* Header */}
+                      <div style={{ padding: '8px 10px 6px', borderBottom: '0.5px solid #ddd0bc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: 6, letterSpacing: 3, color: '#b8a890', textTransform: 'uppercase', fontFamily: 'system-ui' }}>Postcard · Always Be Flirting</span>
+                        <button onClick={() => setCardFlipped(false)} style={{ background: 'none', border: 'none', fontSize: 9, color: '#b0a090', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>← flip back</button>
+                      </div>
+                      {/* Type selector */}
+                      <div style={{ padding: '6px 10px', borderBottom: '0.5px solid #ddd0bc', display: 'flex', gap: 0, flexWrap: 'wrap' }}>
+                        {['song','word','photo','gif','memory'].map((t,i,arr) => (
+                          <span key={t} style={{ display: 'flex', alignItems: 'center' }}>
+                            <button onClick={() => setDropType(t)} style={{ background: 'none', border: 'none', fontSize: 8, fontWeight: 700, letterSpacing: 1, color: dropType === t ? '#c4694f' : '#b8a890', cursor: 'pointer', padding: 0, fontFamily: 'system-ui', textDecoration: dropType === t ? 'underline' : 'none', textUnderlineOffset: 2 }}>{t.toUpperCase()}</button>
+                            {i < arr.length - 1 && <span style={{ color: '#ddd0bc', fontSize: 8, margin: '0 4px' }}>·</span>}
                           </span>
-                        )}
-                        {i === 1 && hasUnseen && (
-                          <span style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: '#C4B89A', fontStyle: 'italic' }}>waiting to be opened</span>
-                        )}
+                        ))}
                       </div>
-                    ))}
-                    {!hasUnseen && sent.length > 0 && (
-                      <button onClick={e => { e.stopPropagation(); setView('sent') }} style={{ position: 'absolute', bottom: 8, left: 12, background: 'none', border: 'none', fontSize: 10, color: '#B0A8A0', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>view sent →</button>
-                    )}
-                  </div>
-                  {/* Address side */}
-                  <AddressSide toName={hasUnseen ? userName : partnerName} stampSealed={hasUnseen} stampProgress={0} />
-                </div>
-
-                {/* Action button */}
-                <div style={{ padding: '0 12px 12px', position: 'relative', zIndex: 1 }}>
-                  <button
-                    onClick={() => hasUnseen ? setView('stack') : setView('drop')}
-                    style={{ width: '100%', padding: '9px', background: hasUnseen ? '#C4694F' : '#FFF8F4', border: `0.5px solid ${hasUnseen ? '#C4694F' : '#E8E0D8'}`, borderRadius: 8, fontSize: 13, color: hasUnseen ? 'white' : '#C4694F', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}
-                  >
-                    {hasUnseen ? 'open flirt →' : 'send a flirt →'}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // DROP STATE — writing on the postcard
-  if (view === 'drop') {
-    const types = ['SONG', 'WORD', 'PHOTO', 'GIF', 'FOUND', 'MEMORY']
-    const canSend = dropType === 'song' ? !!selectedTrack : dropType === 'memory' ? !!selectedMemory : !!content.trim()
-
-    return (
-      <div style={{ margin: '0 16px 16px' }}>
-        <style>{POSTCARD_STYLES}</style>
-        <div style={{ background: '#FAFAF7', border: '1px solid #DDD5C8', borderRadius: 6, overflow: 'hidden', position: 'relative' }}>
-          <div style={{ position: 'absolute', inset: 5, border: '0.5px solid #EEE8DC', borderRadius: 3, pointerEvents: 'none', zIndex: 0 }} />
-          <div style={{ padding: '8px 12px 0', position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 7, fontWeight: 700, letterSpacing: 3, color: '#C8B8A0' }}>POSTCARD</span>
-            <button onClick={() => { setView('home'); setDropType(null); setContent('') }} style={{ background: 'none', border: 'none', fontSize: 18, color: '#B0A8A0', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
-          </div>
-
-          <div style={{ display: 'flex', position: 'relative', zIndex: 1 }}>
-            {/* Message side */}
-            <div style={{ flex: 1, padding: '4px 12px 12px' }}>
-              {/* Type selector */}
-              <div style={{ borderBottom: '0.5px solid #EEE8DC', paddingBottom: 6, marginBottom: 4, display: 'flex', flexWrap: 'wrap', gap: '2px 0' }}>
-                {types.map((t, i) => (
-                  <span key={t}>
-                    <span
-                      onClick={() => { setDropType(t.toLowerCase()); setContent(''); setSelectedTrack(null); setSelectedMemory(null); setMetadata(null); setSpotifyResults([]); setGifResults([]) }}
-                      style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: dropType === t.toLowerCase() ? '#C9A96E' : '#C0B4A4', cursor: 'pointer', textDecoration: dropType === t.toLowerCase() ? 'underline' : 'none', textUnderlineOffset: 2 }}
-                    >{t}</span>
-                    {i < types.length - 1 && <span style={{ fontSize: 9, color: '#DDD5C8', margin: '0 4px' }}>·</span>}
-                  </span>
-                ))}
-              </div>
-
-              {/* Input area — transforms by type */}
-              <div style={{ minHeight: 100 }}>
-                {!dropType && (
-                  <div style={{ paddingTop: 8 }}>
-                    {[...Array(5)].map((_, i) => (
-                      <div key={i} style={{ borderBottom: '0.5px solid #EEE8DC', height: 20 }} />
-                    ))}
-                    <p style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: '#D0C8BC', fontStyle: 'italic', margin: '6px 0 0' }}>choose what to send above...</p>
-                  </div>
-                )}
-
-                {/* WORD / MEMORY */}
-                {dropType === 'word' && (
-                  <div style={{ position: 'relative' }}>
-                    <textarea
-                      value={content}
-                      onChange={e => setContent(e.target.value)}
-                      placeholder={`say something to ${partnerName}...`}
-                      rows={5}
-                      maxLength={200}
-                      autoFocus
-                      style={{
-                        width: '100%',
-                        background: 'transparent',
-                        border: 'none',
-                        outline: 'none',
-                        resize: 'none',
-                        fontFamily: 'Georgia, serif',
-                        fontSize: 15,
-                        color: '#2A2420',
-                        lineHeight: '20px',
-                        padding: '2px 0',
-                        boxSizing: 'border-box',
-                        backgroundImage: 'repeating-linear-gradient(transparent, transparent 19px, #EEE8DC 19px, #EEE8DC 20px)',
-                        backgroundSize: '100% 20px'
-                      }}
-                    />
-                  </div>
-                )}
-
-                {/* SONG */}
-                {dropType === 'song' && !selectedTrack && (
-                  <div>
-                    <input
-                      value={spotifyQuery}
-                      onChange={e => {
-                        setSpotifyQuery(e.target.value)
-                        clearTimeout(spotifyTimeout.current)
-                        if (e.target.value.length > 2) {
-                          setSpotifySearching(true)
-                          spotifyTimeout.current = setTimeout(async () => {
-                            try {
-                              const res = await fetch(`/api/spotify/search?q=${encodeURIComponent(e.target.value)}`, {
-                                headers: { 'Authorization': `Bearer ${session.access_token}` }
-                              })
-                              const data = await res.json()
-                              setSpotifyResults(data.tracks || [])
-                            } catch {}
-                            setSpotifySearching(false)
-                          }, 400)
-                        } else { setSpotifyResults([]); setSpotifySearching(false) }
-                      }}
-                      placeholder="search for a song..."
-                      autoFocus
-                      style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: '0.5px solid #C9A96E', outline: 'none', fontFamily: 'Georgia, serif', fontSize: 13, color: '#2A2420', padding: '4px 0', boxSizing: 'border-box' }}
-                    />
-                    {spotifySearching && <p style={{ fontSize: 11, color: '#B0A8A0', margin: '4px 0', fontStyle: 'italic' }}>searching...</p>}
-                    <div style={{ maxHeight: 100, overflowY: 'auto' }}>
-                      {spotifyResults.slice(0, 4).map(track => (
-                        <div key={track.id} onClick={() => { setSelectedTrack(track); setContent(track.spotifyUrl) }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '0.5px solid #EEE8DC', cursor: 'pointer' }}>
-                          {track.albumArtSmall && <img src={track.albumArtSmall} style={{ width: 28, height: 28, borderRadius: 3, flexShrink: 0 }} alt="" />}
-                          <div>
-                            <p style={{ fontSize: 12, fontWeight: 500, color: '#2A2420', margin: 0 }}>{track.name}</p>
-                            <p style={{ fontSize: 11, color: '#8A8078', margin: 0 }}>{track.artist}</p>
-                          </div>
+                      {/* Content + address */}
+                      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+                        <div style={{ flex: 1, padding: '6px 10px', position: 'relative', overflow: 'hidden' }}>
+                          <div style={{ position: 'absolute', inset: '6px 10px', backgroundImage: 'repeating-linear-gradient(transparent, transparent 21px, #d8ccba 21px, #d8ccba 22px)', backgroundSize: '100% 22px', pointerEvents: 'none' }} />
+                          {!dropType && <div style={{ fontFamily: 'Georgia, serif', fontSize: 12, color: '#c8baa8', fontStyle: 'italic', position: 'relative', zIndex: 1 }}>choose a type above...</div>}
+                          {dropType === 'word' && <textarea value={content} onChange={e => setContent(e.target.value)} placeholder={`say something to ${partnerName}...`} rows={4} style={{ position: 'relative', zIndex: 1, width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontFamily: 'Georgia, serif', fontSize: 13, color: '#2a2015', lineHeight: '22px', padding: 0, boxSizing: 'border-box' }} />}
+                          {dropType === 'song' && (
+                            <div style={{ position: 'relative', zIndex: 1 }}>
+                              <input value={spotifyQuery} onChange={e => { setSpotifyQuery(e.target.value); clearTimeout(spotifyTimeout.current); spotifyTimeout.current = setTimeout(async () => { if (e.target.value.trim().length < 2) return; setSpotifySearching(true); try { const r = await fetch(`/api/spotify/search?q=${encodeURIComponent(e.target.value)}`, { headers: { Authorization: `Bearer ${session?.access_token}` } }); const d = await r.json(); setSpotifyResults(d.tracks || []); } catch {} setSpotifySearching(false); }, 400); }} placeholder="search for a song..." style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'Georgia, serif', fontSize: 13, color: '#2a2015', padding: 0, lineHeight: '22px', boxSizing: 'border-box' }} />
+                              {selectedTrack && <div style={{ marginTop: 4, fontSize: 11, color: '#c9a96e', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>✓ {selectedTrack.name} — {selectedTrack.artist}</div>}
+                              {spotifyResults.length > 0 && !selectedTrack && <div style={{ position: 'absolute', top: 24, left: 0, right: 0, background: '#fdf8f0', border: '0.5px solid #d4c4a8', borderRadius: 6, zIndex: 10, maxHeight: 100, overflowY: 'auto' }}>{spotifyResults.slice(0,4).map(t => <div key={t.id} onClick={() => { setSelectedTrack(t); setSpotifyResults([]); }} style={{ padding: '6px 10px', fontSize: 12, fontFamily: 'Georgia, serif', cursor: 'pointer', borderBottom: '0.5px solid #ede0cc', color: '#2a2015' }}>{t.name} — {t.artist}</div>)}</div>}
+                            </div>
+                          )}
+                          {dropType === 'gif' && (
+                            <div style={{ position: 'relative', zIndex: 1 }}>
+                              <input value={gifQuery} onChange={e => { setGifQuery(e.target.value); clearTimeout(gifTimeout.current); gifTimeout.current = setTimeout(async () => { if (e.target.value.trim().length < 2) return; setGifSearching(true); try { const r = await fetch(`/api/giphy/search?q=${encodeURIComponent(e.target.value)}`, { headers: { Authorization: `Bearer ${session?.access_token}` } }); const d = await r.json(); setGifResults(d.gifs || []); } catch {} setGifSearching(false); }, 400); }} placeholder="search for a GIF..." style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontFamily: 'Georgia, serif', fontSize: 13, color: '#2a2015', padding: 0, lineHeight: '22px', boxSizing: 'border-box' }} />
+                              {content && <img src={content} style={{ maxWidth: '100%', maxHeight: 60, marginTop: 4, borderRadius: 4 }} />}
+                              {gifResults.length > 0 && !content && <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>{gifResults.slice(0,4).map(g => <img key={g.id} src={g.previewUrl} onClick={() => { setContent(g.url); setGifResults([]); }} style={{ width: 56, height: 56, objectFit: 'cover', cursor: 'pointer', borderRadius: 4 }} />)}</div>}
+                            </div>
+                          )}
+                          {dropType === 'photo' && (
+                            <div style={{ position: 'relative', zIndex: 1 }}>
+                              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={async e => { const file = e.target.files[0]; if (!file) return; const { createClient } = await import('@supabase/supabase-js'); const sc = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY); const path = `flirts/${userId}/${Date.now()}`; await sc.storage.from('abf-media').upload(path, file); const { data } = sc.storage.from('abf-media').getPublicUrl(path); setContent(data.publicUrl); }} />
+                              {!content ? <button onClick={() => fileInputRef.current?.click()} style={{ background: 'none', border: '0.5px solid #d4c4a8', borderRadius: 6, padding: '6px 12px', fontSize: 11, color: '#8b7355', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>tap to add photo</button> : <img src={content} style={{ maxWidth: '100%', maxHeight: 70, borderRadius: 4 }} />}
+                            </div>
+                          )}
+                          {dropType === 'memory' && (
+                            <div style={{ position: 'relative', zIndex: 1 }}>
+                              {selectedMemory ? <div style={{ fontFamily: 'Georgia, serif', fontSize: 13, color: '#2a2015', fontStyle: 'italic' }}>{selectedMemory.title}</div> : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>{timelineEvents.slice(0,6).map(e => <button key={e.id} onClick={() => { setSelectedMemory(e); setMetadata({ title: e.title, event_date: e.event_date }); }} style={{ background: 'none', border: '0.5px solid #d4c4a8', borderRadius: 100, padding: '3px 10px', fontSize: 10, color: '#8b7355', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>{e.title}</button>)}</div>}
+                            </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {dropType === 'song' && selectedTrack && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '0.5px solid #EEE8DC' }}>
-                    {selectedTrack.albumArt && <img src={selectedTrack.albumArt} style={{ width: 40, height: 40, borderRadius: 4, flexShrink: 0 }} alt="" />}
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: '#2A2420', margin: 0 }}>{selectedTrack.name}</p>
-                      <p style={{ fontSize: 11, color: '#8A8078', margin: 0 }}>{selectedTrack.artist}</p>
-                    </div>
-                    <button onClick={() => { setSelectedTrack(null); setContent(''); setSpotifyQuery('') }} style={{ background: 'none', border: 'none', fontSize: 11, color: '#B0A8A0', cursor: 'pointer' }}>change</button>
-                  </div>
-                )}
-
-                {/* GIF */}
-                {dropType === 'gif' && !content && (
-                  <div>
-                    <input
-                      value={gifQuery}
-                      onChange={e => {
-                        setGifQuery(e.target.value)
-                        clearTimeout(gifTimeout.current)
-                        if (e.target.value.length > 1) {
-                          setGifSearching(true)
-                          gifTimeout.current = setTimeout(async () => {
-                            try {
-                              const res = await fetch(`https://api.giphy.com/v1/gifs/search?api_key=GlVGYHkr3WSBnllca54iNt0yFbjz7L65&q=${encodeURIComponent(e.target.value)}&limit=6&rating=g`)
-                              const data = await res.json()
-                              setGifResults(data.data || [])
-                            } catch {}
-                            setGifSearching(false)
-                          }, 400)
-                        } else { setGifResults([]); setGifSearching(false) }
-                      }}
-                      placeholder="search for a GIF..."
-                      autoFocus
-                      style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: '0.5px solid #C9A96E', outline: 'none', fontFamily: 'Georgia, serif', fontSize: 13, color: '#2A2420', padding: '4px 0', boxSizing: 'border-box' }}
-                    />
-                    {gifSearching && <p style={{ fontSize: 11, color: '#B0A8A0', margin: '4px 0', fontStyle: 'italic' }}>searching...</p>}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4, marginTop: 4 }}>
-                      {gifResults.slice(0, 6).map(gif => (
-                        <img
-                          key={gif.id}
-                          src={gif.images.fixed_height_small.url}
-                          onClick={() => setContent(gif.images.original.url)}
-                          style={{ width: '100%', height: 56, objectFit: 'cover', borderRadius: 3, cursor: 'pointer' }}
-                          alt=""
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {dropType === 'gif' && content && (
-                  <div style={{ position: 'relative' }}>
-                    <img src={content} style={{ width: '100%', maxHeight: 100, objectFit: 'cover', borderRadius: 4 }} alt="" />
-                    <button onClick={() => setContent('')} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', border: 'none', color: 'white', borderRadius: '50%', width: 20, height: 20, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
-                  </div>
-                )}
-
-                {/* PHOTO */}
-                {dropType === 'photo' && !content && (
-                  <div>
-                    <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={async e => {
-                      const file = e.target.files?.[0]
-                      if (!file) return
-                      try {
-                        const { createClient } = await import('@supabase/supabase-js')
-                        const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, { global: { headers: { Authorization: `Bearer ${session.access_token}` } } })
-                        const path = `flirts/${userId}/${Date.now()}_${file.name.replace(/\s/g, '_')}`
-                        const { data } = await sb.storage.from('photos').upload(path, file, { upsert: true })
-                        if (data) {
-                          const { data: urlData } = sb.storage.from('photos').getPublicUrl(path)
-                          setContent(urlData.publicUrl)
-                        }
-                      } catch {}
-                    }} />
-                    <button onClick={() => fileInputRef.current?.click()} style={{ width: '100%', padding: '20px 0', background: 'transparent', border: '0.5px dashed #D4C4A8', borderRadius: 4, fontSize: 12, color: '#B0A8A0', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic', marginTop: 4 }}>tap to choose a photo</button>
-                  </div>
-                )}
-
-                {dropType === 'photo' && content && (
-                  <div style={{ position: 'relative' }}>
-                    <img src={content} style={{ width: '100%', maxHeight: 100, objectFit: 'cover', borderRadius: 4 }} alt="" />
-                    <button onClick={() => setContent('')} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.5)', border: 'none', color: 'white', borderRadius: '50%', width: 20, height: 20, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
-                  </div>
-                )}
-
-                {/* FOUND */}
-                {dropType === 'found' && (
-                  <div>
-                    <input
-                      value={content}
-                      onChange={e => setContent(e.target.value)}
-                      placeholder="paste a link..."
-                      autoFocus
-                      style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: '0.5px solid #C9A96E', outline: 'none', fontFamily: 'Georgia, serif', fontSize: 13, color: '#2A2420', padding: '4px 0', boxSizing: 'border-box' }}
-                    />
-                  </div>
-                )}
-
-                {/* MEMORY — timeline picker */}
-                {dropType === 'memory' && !selectedMemory && (
-                  <div style={{ paddingTop: 4 }}>
-                    {/* Filter chips */}
-                    <div className="fc-mem-chips" style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 6, scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                      {['all', 'trip', 'date_night', 'milestone', 'anniversary', 'first_date', 'first_kiss', 'achievement', 'custom'].map(f => (
-                        <button key={f} onClick={() => setTimelineFilter(f)} style={{ flexShrink: 0, fontSize: 9, fontWeight: 700, letterSpacing: 0.8, padding: '3px 8px', borderRadius: 20, border: `1px solid ${timelineFilter === f ? '#C9A96E' : '#D4C4A8'}`, background: timelineFilter === f ? '#C9A96E' : 'transparent', color: timelineFilter === f ? '#FDF8F0' : '#B0A8A0', cursor: 'pointer', fontFamily: 'system-ui' }}>
-                          {f === 'all' ? 'ALL' : f.replace('_', ' ').toUpperCase()}
-                        </button>
-                      ))}
-                    </div>
-                    {/* List */}
-                    <div style={{ maxHeight: 140, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0 }}>
-                      {timelineLoading ? (
-                        <p style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: '#B0A8A0', fontStyle: 'italic', margin: '8px 0' }}>loading...</p>
-                      ) : (() => {
-                        const filtered = timelineFilter === 'all' ? timelineEvents : timelineEvents.filter(e => e.event_type === timelineFilter)
-                        if (filtered.length === 0) return <p style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: '#B0A8A0', fontStyle: 'italic', margin: '8px 0' }}>no memories yet</p>
-                        return filtered.map(ev => (
-                          <div key={ev.id} onClick={() => { setSelectedMemory(ev); setMetadata({ event_id: ev.id, event_type: ev.event_type, title: ev.title, description: ev.description, event_date: ev.event_date, image_url: ev.image_url || ev.photo_urls?.[0] || null }) }} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderBottom: '0.5px solid #EEE8DC', cursor: 'pointer' }}>
-                            <div style={{ flexShrink: 0 }}>
-                              {(ev.photo_urls?.[0] || ev.image_url) ? (
-                                <img src={ev.photo_urls?.[0] || ev.image_url} style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 4 }} alt="" />
-                              ) : (
-                                <MemoryEventIcon event_type={ev.event_type} size={28} />
-                              )}
-                            </div>
-                            <div style={{ minWidth: 0 }}>
-                              <div style={{ fontFamily: 'Georgia, serif', fontSize: 12, color: '#2A2420', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.title}</div>
-                              {ev.event_date && <div style={{ fontSize: 9, color: '#B0A8A0', fontFamily: 'system-ui', marginTop: 1 }}>{new Date(ev.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>}
-                            </div>
+                        {/* Address side with stamp */}
+                        <div style={{ width: 90, flexShrink: 0, borderLeft: '0.5px solid #d4c4a8', padding: '8px 6px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                          <div style={{ fontSize: 6, fontWeight: 700, letterSpacing: 2, color: '#b0a090', fontFamily: 'system-ui', marginBottom: 2 }}>To</div>
+                          <div style={{ fontFamily: 'Georgia, serif', fontSize: 14, color: '#2a2015', marginBottom: 4 }}>{partnerName}</div>
+                          <div style={{ height: 11, borderBottom: '0.5px solid #ddd0bc', marginBottom: 3 }} />
+                          <div style={{ height: 11, borderBottom: '0.5px solid #ddd0bc', marginBottom: 3 }} />
+                          {/* Stamp — send button */}
+                          <div onClick={async () => { const canSend = dropType === 'song' ? !!selectedTrack : dropType === 'memory' ? !!selectedMemory : !!content.trim(); if (!canSend || sending || !dropType) return; await handleSend(); setCardFlipped(false); setDropType(null); setContent(''); setSelectedTrack(null); setSelectedMemory(null); }} style={{ position: 'absolute', top: 6, right: 6, cursor: dropType ? 'pointer' : 'default' }}>
+                            <svg width="52" height="62" viewBox="0 0 52 62" fill="none">
+                              <circle cx="4" cy="5" r="4" fill="#f5f0e4"/><circle cx="12" cy="1" r="4" fill="#f5f0e4"/><circle cx="26" cy="1" r="4" fill="#f5f0e4"/><circle cx="40" cy="1" r="4" fill="#f5f0e4"/><circle cx="48" cy="5" r="4" fill="#f5f0e4"/>
+                              <circle cx="4" cy="57" r="4" fill="#f5f0e4"/><circle cx="12" cy="61" r="4" fill="#f5f0e4"/><circle cx="26" cy="61" r="4" fill="#f5f0e4"/><circle cx="40" cy="61" r="4" fill="#f5f0e4"/><circle cx="48" cy="57" r="4" fill="#f5f0e4"/>
+                              <circle cx="1" cy="14" r="4" fill="#f5f0e4"/><circle cx="1" cy="24" r="4" fill="#f5f0e4"/><circle cx="1" cy="34" r="4" fill="#f5f0e4"/><circle cx="1" cy="44" r="4" fill="#f5f0e4"/>
+                              <circle cx="51" cy="14" r="4" fill="#f5f0e4"/><circle cx="51" cy="24" r="4" fill="#f5f0e4"/><circle cx="51" cy="34" r="4" fill="#f5f0e4"/><circle cx="51" cy="44" r="4" fill="#f5f0e4"/>
+                              <rect x="4" y="4" width="44" height="54" rx="1" fill={dropType ? '#c4694f' : '#ede8db'}/>
+                              <rect x="8" y="8" width="36" height="46" rx="0.5" fill="none" stroke={dropType ? 'rgba(255,255,255,0.3)' : '#c8b8a0'} strokeWidth="0.7"/>
+                              <path d="M26 62 m-14 0 a14 14 0 0 1 28 0" fill="none" id="bap"/>
+                              <text fontSize="4" fontWeight="700" letterSpacing="1" fontFamily="system-ui" fill={dropType ? 'rgba(253,248,244,0.8)' : '#b0a090'}><textPath href="#bap" startOffset="50%" textAnchor="middle">ALWAYS BE FLIRTING</textPath></text>
+                              <circle cx="26" cy="30" r="8" fill="none" stroke={dropType ? 'rgba(255,255,255,0.45)' : '#c8b8a0'} strokeWidth="1"/>
+                              <path d="M26 33C26 33 23 30.5 23 28.5C23 27.2 24.2 26.2 25.2 27.4 25.5 27.7 26 28.3 26 28.3 26 28.3 26.5 27.7 26.8 27.4 27.8 26.2 29 27.2 29 28.5 29 30.5 26 33 26 33Z" fill={dropType ? 'white' : '#c8b8a0'}/>
+                              <text x="26" y="44" textAnchor="middle" fontSize="5.5" fontFamily="system-ui" fontWeight="700" letterSpacing="1.5" fill={dropType ? 'rgba(253,248,244,0.9)' : '#b0a090'}>ABF</text>
+                              <text x="26" y="50" textAnchor="middle" fontSize="3.5" fontFamily="system-ui" fill={dropType ? 'rgba(253,248,244,0.6)' : '#b0a090'}>2026</text>
+                            </svg>
+                            <div style={{ fontSize: 8, color: dropType ? '#c4694f' : '#b0a090', fontFamily: 'Georgia, serif', fontStyle: 'italic', textAlign: 'center', marginTop: 2 }}>{sending ? 'sending...' : dropType ? 'tap to mail' : 'stamp'}</div>
                           </div>
-                        ))
-                      })()}
-                    </div>
-                  </div>
-                )}
-                {/* MEMORY — selected state */}
-                {dropType === 'memory' && selectedMemory && (
-                  <div style={{ paddingTop: 4 }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0', borderBottom: '0.5px solid #EEE8DC' }}>
-                      <div style={{ flexShrink: 0 }}>
-                        {(selectedMemory.photo_urls?.[0] || selectedMemory.image_url) ? (
-                          <img src={selectedMemory.photo_urls?.[0] || selectedMemory.image_url} style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 4 }} alt="" />
-                        ) : (
-                          <MemoryEventIcon event_type={selectedMemory.event_type} size={32} />
-                        )}
-                      </div>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ fontFamily: 'Georgia, serif', fontSize: 13, color: '#2A2420' }}>{selectedMemory.title}</div>
-                        {selectedMemory.event_date && <div style={{ fontSize: 9, color: '#B0A8A0', fontFamily: 'system-ui', marginTop: 1 }}>{new Date(selectedMemory.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>}
-                        {selectedMemory.description && <div style={{ fontFamily: 'Georgia, serif', fontSize: 11, color: '#6B5E52', marginTop: 4, fontStyle: 'italic', lineHeight: 1.4 }}>{selectedMemory.description.length > 80 ? selectedMemory.description.slice(0, 80) + '…' : selectedMemory.description}</div>}
+                          {sent.length > 0 && <button onClick={() => { setCardFlipped(false); setView('sent') }} style={{ position: 'absolute', bottom: 6, left: 6, fontSize: 8, color: '#b0a090', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>sent →</button>}
+                        </div>
                       </div>
                     </div>
-                    <button onClick={() => { setSelectedMemory(null); setMetadata(null) }} style={{ marginTop: 6, fontSize: 9, fontWeight: 700, letterSpacing: 0.8, color: '#B0A8A0', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'system-ui' }}>CHANGE</button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Address side with Mail it stamp */}
-            <div style={{ width: 120, flexShrink: 0, padding: '4px 10px 12px', borderLeft: '0.5px solid #D4C4A8', position: 'relative' }}>
-              <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 2, color: '#B0A898', marginBottom: 4 }}>TO</div>
-              <div style={{ borderBottom: '0.5px solid #D4C4A8', paddingBottom: 4, marginBottom: 6 }}>
-                <span style={{ fontFamily: 'Georgia, serif', fontSize: 16, color: '#2A2420' }}>{partnerName}</span>
-              </div>
-              <div style={{ borderBottom: '0.5px solid #E8E0D4', marginBottom: 4, height: 12 }} />
-              <div style={{ borderBottom: '0.5px solid #E8E0D4', marginBottom: 12, height: 12 }} />
-
-              {/* Stamp — becomes Mail it button when content ready */}
-              <div style={{ position: 'absolute', top: 8, right: 10 }}>
-                <div onClick={canSend ? handleSend : undefined} style={{ width: 36, height: 42, position: 'relative', flexShrink: 0, cursor: canSend ? 'pointer' : 'default' }}>
-                  <div style={{
-                    position: 'absolute',
-                    inset: 0,
-                    borderRadius: 1,
-                    border: `2px dotted ${canSend ? '#B8943A' : '#C8BFB0'}`,
-                    background: canSend ? '#C9A96E' : '#F0EBE0',
-                    overflow: 'hidden'
-                  }}>
-                    <div style={{ position: 'absolute', inset: 3, border: `0.5px solid ${canSend ? 'rgba(255,255,255,0.4)' : 'rgba(180,168,150,0.4)'}`, borderRadius: 1 }} />
-                    <div style={{ position: 'absolute', top: 7, left: 0, right: 0, textAlign: 'center', fontSize: 6, fontWeight: 700, letterSpacing: 1, color: canSend ? '#FDF8F0' : '#B0A898', fontFamily: 'system-ui', zIndex: 1 }}>ABF</div>
-                    <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', width: 14, height: 14, borderRadius: '50%', border: `1px solid ${canSend ? 'rgba(255,255,255,0.5)' : '#C8BFB0'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: canSend ? '#FDF8F0' : 'transparent' }} />
-                    </div>
-                  </div>
-                </div>
-                <div style={{ fontSize: 8, color: canSend ? '#C9A96E' : '#C8BFB0', textAlign: 'center', marginTop: 3, fontFamily: 'Georgia, serif', fontStyle: 'italic', transition: 'color 0.2s' }}>
-                  {sending ? 'sending...' : canSend ? 'mail it' : 'stamp'}
+                  )}
                 </div>
               </div>
             </div>
+
           </div>
         </div>
       </div>
