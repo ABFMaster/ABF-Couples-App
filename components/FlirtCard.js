@@ -401,7 +401,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                     <div style={{ background: '#c4694f', borderRadius: 100, padding: '3px 10px', fontSize: 10, fontWeight: 700, color: 'white', fontFamily: 'system-ui', whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 8 }}>
                       {unseenCount} new
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>
