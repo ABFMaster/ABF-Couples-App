@@ -40,6 +40,13 @@ export default function WednesdayCard({ userId, coupleId, userName, partnerName,
   if (loading || !entry) return null
 
   const isRevealed = entry.status === 'revealed'
+  const nowPacific = new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })
+  const pacificDate = new Date(nowPacific)
+  const pacificHour = pacificDate.getHours()
+  const pacificDay = pacificDate.getDay()
+  const isWednesday = pacificDay === 3
+  const isPastReveal = pacificHour >= 19
+  const isPastCutoff = isWednesday && pacificHour >= 22
 
   // POST-7PM LATE SUBMISSION — not yet submitted, reveal window open, before cutoff
   if (!submitted && !isRevealed && isPastReveal && !isPastCutoff && isWednesday) {
