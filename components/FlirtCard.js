@@ -23,6 +23,8 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   const [holdComplete, setHoldComplete] = useState(false)
   const [reactionSaved, setReactionSaved] = useState(null)
   const [cardFlipped, setCardFlipped] = useState(false)
+  const [cardHeight, setCardHeight] = useState(null)
+  const frontImgRef = useRef(null)
   const [timelineEvents, setTimelineEvents] = useState([])
   const [timelineLoading, setTimelineLoading] = useState(false)
   const [timelineFilter, setTimelineFilter] = useState('all')
@@ -278,7 +280,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
     }
     .fc-mem-chips::-webkit-scrollbar { display: none; }
     .fc-card-scene { perspective: 1400px; width: 100%; isolation: isolate; }
-    .fc-card-inner { position: relative; width: 100%; aspect-ratio: 717 / 503; transform-style: preserve-3d; transition: transform 0.65s cubic-bezier(0.4,0,0.2,1); }
+    .fc-card-inner { position: relative; width: 100%; transform-style: preserve-3d; transition: transform 0.65s cubic-bezier(0.4,0,0.2,1); }
     .fc-card-inner.flipped { transform: rotateY(180deg); }
     .fc-card-face { position: absolute; top: 0; left: 0; right: 0; bottom: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 6px; overflow: hidden; }
     .fc-card-back { position: absolute; top: 0; left: 0; right: 0; bottom: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(180deg); border-radius: 6px; overflow: hidden; }
@@ -380,7 +382,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
       <div style={{ margin: '0 16px 16px', position: 'relative' }}>
         <style>{POSTCARD_STYLES}</style>
         <div className="fc-card-scene">
-          <div className={`fc-card-inner${cardFlipped ? ' flipped' : ''}`}>
+          <div className={`fc-card-inner${cardFlipped ? ' flipped' : ''}`} style={cardHeight ? { height: cardHeight } : {}}>
 
             {/* FRONT — postcard image */}
             <div className="fc-card-face">
@@ -389,9 +391,11 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                 onClick={() => setCardFlipped(true)}
               >
                 <img
+                  ref={frontImgRef}
                   src="/flirt-postcard.png"
                   alt="Greetings from Always Be Flirting"
                   style={{ width: '100%', display: 'block', borderRadius: 6 }}
+                  onLoad={e => setCardHeight(e.target.offsetHeight)}
                 />
                 <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 56, background: 'linear-gradient(to top, rgba(10,15,25,0.82) 0%, transparent 100%)', borderRadius: '0 0 6px 6px', display: 'flex', alignItems: 'flex-end', padding: '0 14px 12px', justifyContent: 'space-between' }}>
                   <span style={{ fontFamily: 'Georgia, serif', fontSize: 14, fontStyle: 'italic', color: hasUnseen ? '#f2c96e' : 'rgba(253,248,244,0.95)', letterSpacing: '0.02em' }}>
