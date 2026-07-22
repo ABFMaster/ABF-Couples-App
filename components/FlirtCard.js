@@ -277,11 +277,11 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
       50% { transform: scale(1.06); }
     }
     .fc-mem-chips::-webkit-scrollbar { display: none; }
-    .fc-card-scene { perspective: 700px; width: 100%; }
-    .fc-card-inner { position: relative; width: 100%; transform-style: preserve-3d; transition: transform 0.65s cubic-bezier(0.4,0,0.2,1); }
+    .fc-card-scene { perspective: 1400px; width: 100%; isolation: isolate; }
+    .fc-card-inner { position: relative; width: 100%; transform-style: preserve-3d; transition: transform 0.65s cubic-bezier(0.4,0,0.2,1); padding-bottom: 68%; }
     .fc-card-inner.flipped { transform: rotateY(180deg); }
-    .fc-card-face { position: absolute; width: 100%; top: 0; left: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 6px; overflow: hidden; }
-    .fc-card-back { backface-visibility: hidden; -webkit-backface-visibility: hidden; position: absolute; top: 0; left: 0; right: 0; bottom: 0; transform: rotateY(180deg); min-height: 220px; border-radius: 6px; overflow: hidden; }
+    .fc-card-face { position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 6px; overflow: hidden; }
+    .fc-card-back { backface-visibility: hidden; -webkit-backface-visibility: hidden; position: absolute; top: 0; left: 0; right: 0; bottom: 0; transform: rotateY(180deg); border-radius: 6px; overflow: hidden; }
     .fc-stripe-border { position: absolute; inset: 0; z-index: 2; pointer-events: none; border-radius: 6px; background: repeating-linear-gradient(-45deg, #c4694f 0, #c4694f 6px, transparent 6px, transparent 10px, #1a3a52 10px, #1a3a52 16px, transparent 16px, transparent 20px); -webkit-mask: linear-gradient(#000 0, #000 0) content-box, linear-gradient(#000 0, #000 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0, #000 0) content-box, linear-gradient(#000 0, #000 0); mask-composite: exclude; padding: 7px; }
     .fc-rcv-stripe { position: absolute; inset: 0; z-index: 1; pointer-events: none; background: repeating-linear-gradient(-45deg, #c4694f 0, #c4694f 4px, transparent 4px, transparent 7px, #1a3a52 7px, #1a3a52 11px, transparent 11px, transparent 14px); -webkit-mask: linear-gradient(#000 0, #000 0) content-box, linear-gradient(#000 0, #000 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0, #000 0) content-box, linear-gradient(#000 0, #000 0); mask-composite: exclude; padding: 5px; }
   `
@@ -380,7 +380,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
       <div style={{ margin: '0 16px 16px', position: 'relative' }}>
         <style>{POSTCARD_STYLES}</style>
         <div className="fc-card-scene">
-          <div className={`fc-card-inner${cardFlipped ? ' flipped' : ''}`} style={{ minHeight: cardFlipped ? 280 : 'auto' }}>
+          <div className={`fc-card-inner${cardFlipped ? ' flipped' : ''}`}>
 
             {/* FRONT — postcard image */}
             <div className="fc-card-face">
