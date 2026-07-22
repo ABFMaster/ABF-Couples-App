@@ -280,7 +280,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
     .fc-card-scene { perspective: 700px; width: 100%; }
     .fc-card-inner { position: relative; width: 100%; transform-style: preserve-3d; transition: transform 0.5s ease; }
     .fc-card-inner.flipped { transform: rotateY(180deg); }
-    .fc-card-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; width: 100%; }
+    .fc-card-face { position: absolute; width: 100%; top: 0; left: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; min-height: 220px; border-radius: 6px; overflow: hidden; height: 100%; }
     .fc-card-back { backface-visibility: hidden; -webkit-backface-visibility: hidden; position: absolute; top: 0; left: 0; right: 0; transform: rotateY(180deg); }
     .fc-stripe-border { position: absolute; inset: 0; z-index: 2; pointer-events: none; border-radius: 6px; background: repeating-linear-gradient(-45deg, #c4694f 0, #c4694f 6px, transparent 6px, transparent 10px, #1a3a52 10px, #1a3a52 16px, transparent 16px, transparent 20px); -webkit-mask: linear-gradient(#000 0, #000 0) content-box, linear-gradient(#000 0, #000 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0, #000 0) content-box, linear-gradient(#000 0, #000 0); mask-composite: exclude; padding: 7px; }
     .fc-rcv-stripe { position: absolute; inset: 0; z-index: 1; pointer-events: none; background: repeating-linear-gradient(-45deg, #c4694f 0, #c4694f 4px, transparent 4px, transparent 7px, #1a3a52 7px, #1a3a52 11px, transparent 11px, transparent 14px); -webkit-mask: linear-gradient(#000 0, #000 0) content-box, linear-gradient(#000 0, #000 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0, #000 0) content-box, linear-gradient(#000 0, #000 0); mask-composite: exclude; padding: 5px; }
@@ -401,8 +401,6 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                     <div style={{ background: '#c4694f', borderRadius: 100, padding: '3px 10px', fontSize: 10, fontWeight: 700, color: 'white', fontFamily: 'system-ui', whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 8 }}>
                       {unseenCount} new
                     </div>
-                  ) : (
-                    <span style={{ fontSize: 10, color: 'rgba(253,248,244,0.4)', fontFamily: 'Georgia, serif', fontStyle: 'italic', flexShrink: 0, marginLeft: 8 }}>tap to flip</span>
                   )}
                 </div>
               </div>
