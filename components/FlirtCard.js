@@ -388,11 +388,23 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                 style={{ position: 'relative', borderRadius: 6, overflow: 'hidden', border: '1px solid #D4C4A8', cursor: 'pointer' }}
                 onClick={() => setCardFlipped(true)}
               >
-                <img src="/flirt-postcard.png" style={{ width: '100%', display: 'block', objectFit: 'cover', minHeight: 140 }} alt="" />
-                {hasUnseen && (
-                  <div style={{ position: 'absolute', top: 10, right: 10, background: '#C4694F', color: 'white', borderRadius: '50%', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{unseenCount}</div>
-                )}
-                <div style={{ position: 'absolute', bottom: 10, right: 12, fontSize: 10, color: 'rgba(255,255,255,0.8)', fontFamily: 'Georgia, serif', fontStyle: 'italic', textShadow: '0 1px 3px rgba(0,0,0,0.4)' }}>tap to flip →</div>
+                <img
+                  src="/flirt-postcard.png"
+                  alt="Greetings from Always Be Flirting"
+                  style={{ width: '100%', display: 'block', borderRadius: 6 }}
+                />
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 56, background: 'linear-gradient(to top, rgba(10,15,25,0.82) 0%, transparent 100%)', borderRadius: '0 0 6px 6px', display: 'flex', alignItems: 'flex-end', padding: '0 14px 12px', justifyContent: 'space-between' }}>
+                  <span style={{ fontFamily: 'Georgia, serif', fontSize: 14, fontStyle: 'italic', color: hasUnseen ? '#f2c96e' : 'rgba(253,248,244,0.95)', letterSpacing: '0.02em' }}>
+                    {hasUnseen ? `${partnerName} sent you a flirt — tap to open` : `Send ${partnerName} a flirt →`}
+                  </span>
+                  {hasUnseen ? (
+                    <div style={{ background: '#c4694f', borderRadius: 100, padding: '3px 10px', fontSize: 10, fontWeight: 700, color: 'white', fontFamily: 'system-ui', whiteSpace: 'nowrap', flexShrink: 0, marginLeft: 8 }}>
+                      {unseenCount} new
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: 10, color: 'rgba(253,248,244,0.4)', fontFamily: 'Georgia, serif', fontStyle: 'italic', flexShrink: 0, marginLeft: 8 }}>tap to flip</span>
+                  )}
+                </div>
               </div>
             </div>
 
