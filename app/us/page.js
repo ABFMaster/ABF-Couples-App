@@ -851,8 +851,19 @@ function UsPageContent() {
       {selectedEvent && (
         <div style={{ position: 'fixed', inset: 0, background: '#FAF6F0', zIndex: 150, overflowY: 'auto' }}>
           {/* Header — photo or gradient */}
-          <div style={{ position: 'relative', height: 260, background: selectedEvent.photo_urls?.[0] || selectedEvent.image_url ? '#1C1410' : 'linear-gradient(135deg, #1C1410 0%, #2D3561 100%)', overflow: 'hidden', flexShrink: 0 }}>
-            {(selectedEvent.photo_urls?.[0] || selectedEvent.image_url) && (
+          <div style={{ position: 'relative', background: '#1C1410', overflow: 'hidden', flexShrink: 0 }}>
+            {selectedEvent.photo_urls?.length > 1 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: selectedEvent.photo_urls.length === 2 ? '1fr 1fr' : selectedEvent.photo_urls.length === 3 ? '1fr 1fr 1fr' : '1fr 1fr', gap: 2 }}>
+                {selectedEvent.photo_urls.slice(0, 4).map((url, i) => (
+                  <div key={i} style={{ position: 'relative', height: selectedEvent.photo_urls.length <= 2 ? 260 : 160, overflow: 'hidden' }}>
+                    <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
+                    {i === 3 && selectedEvent.photo_urls.length > 4 && (
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 20, fontFamily: 'Georgia, serif' }}>+{selectedEvent.photo_urls.length - 4}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (selectedEvent.photo_urls?.[0] || selectedEvent.image_url) && (
               <img src={selectedEvent.photo_urls?.[0] || selectedEvent.image_url} alt={selectedEvent.title} style={{ width: '100%', height: 260, objectFit: 'contain', objectPosition: 'center center', display: 'block' }} />
             )}
             {!(selectedEvent.photo_urls?.[0] || selectedEvent.image_url) && (
