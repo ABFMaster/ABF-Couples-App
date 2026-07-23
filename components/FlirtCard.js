@@ -442,8 +442,8 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                         ))}
                       </div>
                       {/* Content + address */}
-                      <div style={{ display: 'flex', alignItems: 'stretch', flex: 1, overflow: 'hidden' }}>
-                        <div style={{ flex: 1, padding: '8px 10px', position: 'relative', overflow: 'hidden' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', overflow: 'hidden' }}>
+                        <div style={{ flex: 1, padding: '8px 10px', position: 'relative', overflow: 'hidden', maxHeight: 240 }}>
                           <div style={{ position: 'absolute', inset: '8px 10px', backgroundImage: 'repeating-linear-gradient(transparent, transparent 26px, #d8ccba 26px, #d8ccba 27px)', backgroundSize: '100% 27px', pointerEvents: 'none' }} />
                           {!dropType && <div style={{ fontFamily: 'Georgia, serif', fontSize: 14, color: '#8b7355', fontStyle: 'italic', position: 'relative', zIndex: 1 }}>choose a type above...</div>}
                           {dropType === 'word' && <textarea value={content} onChange={e => setContent(e.target.value)} placeholder={`say something to ${partnerName}...`} rows={4} style={{ position: 'relative', zIndex: 1, width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontFamily: 'Georgia, serif', fontSize: 13, color: '#2a2015', lineHeight: '22px', padding: 0, boxSizing: 'border-box' }} />}
@@ -478,7 +478,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                           {/* Stamp — top of column */}
                           <div onClick={async () => { const canSend = dropType === 'song' ? !!selectedTrack : dropType === 'memory' ? !!selectedMemory : !!content.trim(); if (!canSend || sending || !dropType) return; await handleSend(); setCardFlipped(false); setDropType(null); setContent(''); setSelectedTrack(null); setSelectedMemory(null); }} style={{ cursor: dropType ? 'pointer' : 'default' }}>
                             <img src="/abf-stamp.png" alt="ABF stamp" style={{ width: 82, height: 82, display: 'block', opacity: dropType ? 1 : 0.4, transition: 'opacity 0.2s' }} />
-                            <div style={{ fontSize: 9, color: dropType ? '#c4694f' : '#8b7355', fontFamily: 'Georgia, serif', fontStyle: 'italic', textAlign: 'center', marginTop: 2 }}>{sending ? 'sending...' : dropType ? 'tap to mail →' : 'stamp'}</div>
+                            {dropType && <div style={{ fontSize: 9, color: '#c4694f', fontFamily: 'Georgia, serif', fontStyle: 'italic', textAlign: 'center', marginTop: 2 }}>{sending ? 'sending...' : 'tap to mail →'}</div>}
                           </div>
                           {/* Address lines + To name */}
                           <div style={{ marginTop: 12 }}>
