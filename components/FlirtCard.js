@@ -442,7 +442,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                         ))}
                       </div>
                       {/* Content + address */}
-                      <div style={{ display: 'flex', minHeight: 120, maxHeight: 180 }}>
+                      <div style={{ display: 'flex', flex: 1 }}>
                         <div style={{ flex: 1, padding: '8px 10px', position: 'relative', overflow: 'hidden' }}>
                           <div style={{ position: 'absolute', inset: '8px 10px', backgroundImage: 'repeating-linear-gradient(transparent, transparent 26px, #d8ccba 26px, #d8ccba 27px)', backgroundSize: '100% 27px', pointerEvents: 'none' }} />
                           {!dropType && <div style={{ fontFamily: 'Georgia, serif', fontSize: 14, color: '#8b7355', fontStyle: 'italic', position: 'relative', zIndex: 1 }}>choose a type above...</div>}
@@ -476,7 +476,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                         {/* Address side with stamp */}
                         <div style={{ width: 110, flexShrink: 0, borderLeft: '0.5px solid #d4c4a8', padding: '0 0 8px 0', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'visible' }}>
                           {/* Stamp — flush top right */}
-                          <div onClick={async () => { const canSend = dropType === 'song' ? !!selectedTrack : dropType === 'memory' ? !!selectedMemory : !!content.trim(); if (!canSend || sending || !dropType) return; await handleSend(); setCardFlipped(false); setDropType(null); setContent(''); setSelectedTrack(null); setSelectedMemory(null); }} style={{ cursor: dropType ? 'pointer' : 'default', position: 'absolute', top: -2, right: -2, filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.15))' }}>
+                          <div onClick={async () => { const canSend = dropType === 'song' ? !!selectedTrack : dropType === 'memory' ? !!selectedMemory : !!content.trim(); if (!canSend || sending || !dropType) return; await handleSend(); setCardFlipped(false); setDropType(null); setContent(''); setSelectedTrack(null); setSelectedMemory(null); }} style={{ cursor: dropType ? 'pointer' : 'default', alignSelf: 'flex-end' }}>
                             <img src="/abf-stamp.png" alt="ABF stamp" style={{ width: 88, height: 88, display: 'block', opacity: dropType ? 1 : 0.4, transition: 'opacity 0.2s' }} />
                             <div style={{ fontSize: 9, color: dropType ? '#c4694f' : '#8b7355', fontFamily: 'Georgia, serif', fontStyle: 'italic', textAlign: 'center', marginTop: 3 }}>{sending ? 'sending...' : dropType ? 'tap to mail →' : 'stamp'}</div>
                           </div>
