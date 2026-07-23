@@ -48,8 +48,8 @@ export default function WednesdayCard({ userId, coupleId, userName, partnerName,
   const isPastReveal = pacificHour >= 19
   const isPastCutoff = isWednesday && pacificHour >= 22
 
-  // POST-7PM LATE SUBMISSION — not yet submitted, reveal window open, before cutoff
-  if (!submitted && !isRevealed && isPastReveal && !isPastCutoff && isWednesday) {
+  // POST-7PM LATE SUBMISSION — not yet submitted, still within 10pm cutoff
+  if (!submitted && !entry.myNotice && isPastReveal && !isPastCutoff && isWednesday) {
     return (
       <div style={{ margin: '0 16px 16px', background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, overflow: 'hidden' }}>
         <div style={{ padding: '16px 18px 0' }}>

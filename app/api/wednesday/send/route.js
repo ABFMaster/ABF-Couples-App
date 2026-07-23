@@ -44,7 +44,7 @@ export async function POST(request) {
       .eq('date', wednesdayStr)
       .maybeSingle()
     if (!entry) return NextResponse.json({ error: 'No Wednesday Notice found' }, { status: 404 })
-    if (entry.status === 'revealed' && pacificHour >= 22) {
+    if (entry.status === 'revealed' && (pacificDay !== 3 || pacificHour >= 22)) {
       return NextResponse.json({ error: 'Submission window closed' }, { status: 403 })
     }
 
