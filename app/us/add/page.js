@@ -14,11 +14,48 @@ export default function AddToStoryPage() {
   const [memoryTitle, setMemoryTitle] = useState('')
   const [memoryDate, setMemoryDate] = useState(new Date().toISOString().split('T')[0])
   const [memoryLocation, setMemoryLocation] = useState('')
+  const [locationResults, setLocationResults] = useState([])
+  const [locationSearching, setLocationSearching] = useState(false)
+  const [mapsLoaded, setMapsLoaded] = useState(false)
   const [memoryPhotos, setMemoryPhotos] = useState([])
   const [uploadingPhotos, setUploadingPhotos] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const photoInputRef = useRef(null)
+  const locationTimeout = useRef(null)
+
+  useEffect(() => {
+    if (mapsLoaded || window.google?.maps) {
+      if (window.google?.maps) setMapsLoaded(true)
+      return
+    }
+    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
+    if (!apiKey) return
+    window.__gmapsAddInit = () => setMapsLoaded(true)
+    const script = document.createElement('script')
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async&callback=__gmapsAddInit`
+    script.async = true
+    document.head.appendChild(script)
+    return () => { window.__gmapsAddInit = undefined }
+  }, [])
+
+  const searchLocation = async (query) => {
+    if (!query || query.length < 2) { setLocationResults([]); return }
+    if (!window.google?.maps) return
+    setLocationSearching(true)
+    try {
+      const { AutocompleteSuggestion } = await window.google.maps.importLibrary('places')
+      const { suggestions } = await AutocompleteSuggestion.fetchAutocompleteSuggestions({
+        input: query,
+        language: 'en',
+      })
+      setLocationResults(suggestions?.map(s => ({
+        placeId: s.placePrediction?.placeId,
+        text: s.placePrediction?.text?.text || '',
+      })) || [])
+    } catch {}
+    setLocationSearching(false)
+  }
 
   useEffect(() => {
     const init = async () => {
@@ -135,9 +172,25 @@ export default function AddToStoryPage() {
             <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#8B7355', textTransform: 'uppercase', marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}>When was it?</div>
             <input type="date" value={memoryDate} onChange={e => setMemoryDate(e.target.value)} style={{ width: '100%', background: 'none', border: 'none', borderBottom: '1px solid #D9CBBA', padding: '10px 0', fontSize: 16, fontFamily: 'DM Sans, sans-serif', color: '#1C1410', outline: 'none', boxSizing: 'border-box' }} />
           </div>
-          <div style={{ marginBottom: 32 }}>
+          <div style={{ marginBottom: 32, position: 'relative' }}>
             <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#8B7355', textTransform: 'uppercase', marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}>Where? <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: 11, color: '#C4AA87' }}>optional</span></div>
-            <input value={memoryLocation} onChange={e => setMemoryLocation(e.target.value)} placeholder="Victoria, BC" style={{ width: '100%', background: 'none', border: 'none', borderBottom: '1px solid #D9CBBA', padding: '10px 0', fontSize: 16, fontFamily: 'DM Sans, sans-serif', color: '#1C1410', outline: 'none', boxSizing: 'border-box' }} />
+            <input
+              value={memoryLocation}
+              onChange={e => {
+                setMemoryLocation(e.target.value)
+                clearTimeout(locationTimeout.current)
+                locationTimeout.current = setTimeout(() => searchLocation(e.target.value), 300)
+              }}
+              placeholder="Victoria, BC"
+              style={{ width: '100%', background: 'none', border: 'none', borderBottom: '1px solid #D9CBBA', padding: '10px 0', fontSize: 16, fontFamily: 'DM Sans, sans-serif', color: '#1C1410', outline: 'none', boxSizing: 'border-box' }}
+            />
+            {locationResults.length > 0 && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #D9CBBA', borderRadius: 10, zIndex: 50, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
+                {locationResults.slice(0, 4).map((r, i) => (
+                  <div key={i} onClick={() => { setMemoryLocation(r.text); setLocationResults([]) }} style={{ padding: '12px 16px', fontSize: 14, color: '#1C1410', fontFamily: 'DM Sans, sans-serif', cursor: 'pointer', borderBottom: i < 3 ? '0.5px solid #F0EBE3' : 'none' }}>{r.text}</div>
+                ))}
+              </div>
+            )}
           </div>
           <div style={{ marginBottom: 36 }}>
             <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#8B7355', textTransform: 'uppercase', marginBottom: 8, fontFamily: 'DM Sans, sans-serif' }}>Your photos <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: 11, color: '#C4AA87' }}>optional · {partnerName} can add theirs too</span></div>
