@@ -9,6 +9,7 @@ function UsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [user, setUser] = useState(null)
+  const [photoViewer, setPhotoViewer] = useState(null) // { photos: [], index: 0 }
   const [couple, setCouple] = useState(null)
   const [userName, setUserName] = useState('')
   const [partnerName, setPartnerName] = useState('')
@@ -853,18 +854,16 @@ function UsPageContent() {
           {/* Header — photo or gradient */}
           <div style={{ position: 'relative', background: '#1C1410', overflow: 'hidden', flexShrink: 0 }}>
             {selectedEvent.photo_urls?.length > 1 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: selectedEvent.photo_urls.length === 2 ? '1fr 1fr' : selectedEvent.photo_urls.length === 3 ? '1fr 1fr 1fr' : '1fr 1fr', gap: 2 }}>
-                {selectedEvent.photo_urls.slice(0, 4).map((url, i) => (
-                  <div key={i} style={{ position: 'relative', height: selectedEvent.photo_urls.length <= 2 ? 260 : 160, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', overflowX: 'auto', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch', gap: 2 }}>
+                {selectedEvent.photo_urls.map((url, i) => (
+                  <div key={i} onClick={() => setPhotoViewer({ photos: selectedEvent.photo_urls, index: i })} style={{ flexShrink: 0, width: '80vw', maxWidth: 320, height: 260, scrollSnapAlign: 'start', cursor: 'pointer', overflow: 'hidden', position: 'relative' }}>
                     <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
-                    {i === 3 && selectedEvent.photo_urls.length > 4 && (
-                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 20, fontFamily: 'Georgia, serif' }}>+{selectedEvent.photo_urls.length - 4}</div>
-                    )}
+                    <div style={{ position: 'absolute', bottom: 8, right: 10, fontSize: 10, color: 'rgba(255,255,255,0.6)', fontFamily: 'DM Sans, sans-serif' }}>{i + 1} / {selectedEvent.photo_urls.length}</div>
                   </div>
                 ))}
               </div>
             ) : (selectedEvent.photo_urls?.[0] || selectedEvent.image_url) && (
-              <img src={selectedEvent.photo_urls?.[0] || selectedEvent.image_url} alt={selectedEvent.title} style={{ width: '100%', height: 260, objectFit: 'contain', objectPosition: 'center center', display: 'block' }} />
+              <img src={selectedEvent.photo_urls?.[0] || selectedEvent.image_url} onClick={() => selectedEvent.photo_urls?.[0] && setPhotoViewer({ photos: selectedEvent.photo_urls, index: 0 })} alt={selectedEvent.title} style={{ width: '100%', height: 260, objectFit: 'contain', objectPosition: 'center center', display: 'block', cursor: 'pointer' }} />
             )}
             {!(selectedEvent.photo_urls?.[0] || selectedEvent.image_url) && (
               <div style={{ width: '100%', height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1210,6 +1209,29 @@ function UsPageContent() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {photoViewer && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 1000, display: 'flex', flexDirection: 'column' }} onClick={() => setPhotoViewer(null)}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '56px 20px 16px' }}>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontFamily: 'DM Sans, sans-serif' }}>{photoViewer.index + 1} of {photoViewer.photos.length}</div>
+            <button onClick={() => setPhotoViewer(null)} style={{ background: 'none', border: 'none', color: 'white', fontSize: 28, cursor: 'pointer', lineHeight: 1, padding: 0 }}>×</button>
+          </div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 20px', position: 'relative' }} onClick={e => e.stopPropagation()}>
+            <img src={photoViewer.photos[photoViewer.index]} alt="" style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: 4 }} />
+            {photoViewer.index > 0 && (
+              <button onClick={() => setPhotoViewer(v => ({ ...v, index: v.index - 1 }))} style={{ position: 'absolute', left: 8, background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 40, height: 40, color: 'white', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+            )}
+            {photoViewer.index < photoViewer.photos.length - 1 && (
+              <button onClick={() => setPhotoViewer(v => ({ ...v, index: v.index + 1 }))} style={{ position: 'absolute', right: 8, background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 40, height: 40, color: 'white', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+            )}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 6, padding: '16px 20px 40px' }}>
+            {photoViewer.photos.map((_, i) => (
+              <div key={i} onClick={e => { e.stopPropagation(); setPhotoViewer(v => ({ ...v, index: i })) }} style={{ width: i === photoViewer.index ? 20 : 6, height: 6, borderRadius: 3, background: i === photoViewer.index ? 'white' : 'rgba(255,255,255,0.3)', cursor: 'pointer', transition: 'all 0.2s' }} />
+            ))}
           </div>
         </div>
       )}
