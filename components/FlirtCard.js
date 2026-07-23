@@ -442,8 +442,8 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                         ))}
                       </div>
                       {/* Content + address */}
-                      <div style={{ display: 'flex', height: 200 }}>
-                        <div style={{ flex: 1, padding: '8px 10px', position: 'relative', overflow: 'hidden' }}>
+                      <div style={{ display: 'flex' }}>
+                        <div style={{ flex: 1, padding: '8px 10px', position: 'relative' }}>
                           <div style={{ position: 'absolute', inset: '8px 10px', backgroundImage: 'repeating-linear-gradient(transparent, transparent 26px, #d8ccba 26px, #d8ccba 27px)', backgroundSize: '100% 27px', pointerEvents: 'none' }} />
                           {!dropType && <div style={{ fontFamily: 'Georgia, serif', fontSize: 14, color: '#8b7355', fontStyle: 'italic', position: 'relative', zIndex: 1 }}>choose a type above...</div>}
                           {dropType === 'word' && <textarea value={content} onChange={e => setContent(e.target.value)} placeholder={`say something to ${partnerName}...`} rows={4} style={{ position: 'relative', zIndex: 1, width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontFamily: 'Georgia, serif', fontSize: 13, color: '#2a2015', lineHeight: '22px', padding: 0, boxSizing: 'border-box' }} />}
