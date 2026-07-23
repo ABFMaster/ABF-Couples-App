@@ -538,7 +538,7 @@ function UsPageContent() {
         <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.18em', color: '#8B7355', textTransform: 'uppercase', marginBottom: '3px' }}>Your Shared Life</div>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
           <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '44px', fontWeight: 300, color: '#1C1410', letterSpacing: '-0.02em', lineHeight: 1 }}>Us</div>
-          <button onClick={() => router.push('/shared/add')} style={{ fontSize: '11px', fontWeight: 500, color: '#8B7355', background: 'none', border: '1px solid #D9CBBA', padding: '6px 14px', borderRadius: '20px', cursor: 'pointer', letterSpacing: '0.06em' }}>+ Add</button>
+          <button onClick={() => router.push('/us/add')} style={{ fontSize: '11px', fontWeight: 500, color: '#8B7355', background: 'none', border: '1px solid #D9CBBA', padding: '6px 14px', borderRadius: '20px', cursor: 'pointer', letterSpacing: '0.06em' }}>+ Add</button>
         </div>
       </div>
 
