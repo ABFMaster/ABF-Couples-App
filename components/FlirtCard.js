@@ -477,51 +477,8 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                         <div style={{ width: 110, flexShrink: 0, borderLeft: '0.5px solid #d4c4a8', padding: '0 0 8px 0', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'visible' }}>
                           {/* Stamp — flush top right */}
                           <div onClick={async () => { const canSend = dropType === 'song' ? !!selectedTrack : dropType === 'memory' ? !!selectedMemory : !!content.trim(); if (!canSend || sending || !dropType) return; await handleSend(); setCardFlipped(false); setDropType(null); setContent(''); setSelectedTrack(null); setSelectedMemory(null); }} style={{ cursor: dropType ? 'pointer' : 'default', position: 'absolute', top: -2, right: -2, filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.15))' }}>
-                            <svg width="88" height="104" viewBox="0 0 88 104" fill="none">
-                              {/* Top perf — white circles punch holes in the face */}
-                              <circle cx="6" cy="6" r="5" fill="white"/>
-                              <circle cx="18" cy="1" r="5" fill="white"/>
-                              <circle cx="32" cy="1" r="5" fill="white"/>
-                              <circle cx="44" cy="1" r="5" fill="white"/>
-                              <circle cx="56" cy="1" r="5" fill="white"/>
-                              <circle cx="70" cy="1" r="5" fill="white"/>
-                              <circle cx="82" cy="6" r="5" fill="white"/>
-                              {/* Bottom perf */}
-                              <circle cx="6" cy="98" r="5" fill="white"/>
-                              <circle cx="18" cy="103" r="5" fill="white"/>
-                              <circle cx="32" cy="103" r="5" fill="white"/>
-                              <circle cx="44" cy="103" r="5" fill="white"/>
-                              <circle cx="56" cy="103" r="5" fill="white"/>
-                              <circle cx="70" cy="103" r="5" fill="white"/>
-                              <circle cx="82" cy="98" r="5" fill="white"/>
-                              {/* Left perf */}
-                              <circle cx="1" cy="18" r="5" fill="white"/>
-                              <circle cx="1" cy="32" r="5" fill="white"/>
-                              <circle cx="1" cy="46" r="5" fill="white"/>
-                              <circle cx="1" cy="60" r="5" fill="white"/>
-                              <circle cx="1" cy="74" r="5" fill="white"/>
-                              <circle cx="1" cy="88" r="5" fill="white"/>
-                              {/* Right perf */}
-                              <circle cx="87" cy="18" r="5" fill="white"/>
-                              <circle cx="87" cy="32" r="5" fill="white"/>
-                              <circle cx="87" cy="46" r="5" fill="white"/>
-                              <circle cx="87" cy="60" r="5" fill="white"/>
-                              <circle cx="87" cy="74" r="5" fill="white"/>
-                              <circle cx="87" cy="88" r="5" fill="white"/>
-                              <rect x="11" y="11" width="66" height="82" rx="0.5" fill="none" stroke={dropType ? 'rgba(255,255,255,0.25)' : '#c8b8a0'} strokeWidth="1"/>
-                              <line x1="44" y1="26" x2="44" y2="21" stroke={dropType ? 'rgba(255,255,255,0.6)' : '#c8b8a0'} strokeWidth="1.5" strokeLinecap="round"/>
-                              <line x1="55" y1="34" x2="60" y2="33" stroke={dropType ? 'rgba(255,255,255,0.6)' : '#c8b8a0'} strokeWidth="1.5" strokeLinecap="round"/>
-                              <line x1="51" y1="48" x2="54" y2="52" stroke={dropType ? 'rgba(255,255,255,0.6)' : '#c8b8a0'} strokeWidth="1.5" strokeLinecap="round"/>
-                              <line x1="37" y1="48" x2="34" y2="52" stroke={dropType ? 'rgba(255,255,255,0.6)' : '#c8b8a0'} strokeWidth="1.5" strokeLinecap="round"/>
-                              <line x1="33" y1="34" x2="28" y2="33" stroke={dropType ? 'rgba(255,255,255,0.6)' : '#c8b8a0'} strokeWidth="1.5" strokeLinecap="round"/>
-                              <circle cx="44" cy="38" r="10" fill="none" stroke={dropType ? 'rgba(255,255,255,0.45)' : '#c8b8a0'} strokeWidth="1"/>
-                              <path d="M44 41.8C44 41.8 40.3 38.6 40.3 36.1C40.3 34.5 41.8 33.3 43 34.8 43.4 35.1 44 35.9 44 35.9 44 35.9 44.6 35.1 45 34.8 46.3 33.3 47.8 34.5 47.8 36.1 47.8 38.6 44 41.8 44 41.8Z" fill={dropType ? 'white' : '#c8b8a0'}/>
-                              <text x="44" y="56" textAnchor="middle" fontSize="9" fontFamily="system-ui" fontWeight="700" letterSpacing="2.5" fill={dropType ? 'rgba(253,248,244,0.9)' : '#b0a090'}>ABF</text>
-                              <text x="44" y="66" textAnchor="middle" fontSize="5.5" fontFamily="system-ui" fill={dropType ? 'rgba(253,248,244,0.6)' : '#b0a090'}>2026</text>
-                              <path d="M44 100 m-18 0 a18 18 0 0 1 36 0" fill="none" id="bap"/>
-                              <text fontSize="4" fontWeight="700" letterSpacing="1" fontFamily="system-ui" fill={dropType ? 'rgba(253,248,244,0.8)' : '#b0a090'}><textPath href="#bap" startOffset="50%" textAnchor="middle">ALWAYS BE FLIRTING</textPath></text>
-                            </svg>
-                            <div style={{ fontSize: 8, color: dropType ? '#c4694f' : '#b0a090', fontFamily: 'Georgia, serif', fontStyle: 'italic', textAlign: 'center', marginTop: 2 }}>{sending ? 'sending...' : dropType ? 'tap to mail' : 'stamp'}</div>
+                            <img src="/abf-stamp.png" alt="ABF stamp" style={{ width: 88, height: 88, display: 'block', opacity: dropType ? 1 : 0.4, transition: 'opacity 0.2s' }} />
+                            <div style={{ fontSize: 9, color: dropType ? '#c4694f' : '#8b7355', fontFamily: 'Georgia, serif', fontStyle: 'italic', textAlign: 'center', marginTop: 3 }}>{sending ? 'sending...' : dropType ? 'tap to mail →' : 'stamp'}</div>
                           </div>
                           <div style={{ marginTop: 120 }}>
                             <div style={{ height: 12, borderBottom: '0.5px solid #ddd0bc', marginBottom: 4, marginLeft: 8 }} />
