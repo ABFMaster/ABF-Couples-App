@@ -474,19 +474,20 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                           )}
                         </div>
                         {/* Address side with stamp */}
-                        <div style={{ width: 110, flexShrink: 0, borderLeft: '0.5px solid #d4c4a8', padding: '0 0 8px 0', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'visible' }}>
-                          {/* Stamp — flush top right */}
-                          <div onClick={async () => { const canSend = dropType === 'song' ? !!selectedTrack : dropType === 'memory' ? !!selectedMemory : !!content.trim(); if (!canSend || sending || !dropType) return; await handleSend(); setCardFlipped(false); setDropType(null); setContent(''); setSelectedTrack(null); setSelectedMemory(null); }} style={{ cursor: dropType ? 'pointer' : 'default', alignSelf: 'flex-end' }}>
-                            <img src="/abf-stamp.png" alt="ABF stamp" style={{ width: 88, height: 88, display: 'block', opacity: dropType ? 1 : 0.4, transition: 'opacity 0.2s' }} />
-                            <div style={{ fontSize: 9, color: dropType ? '#c4694f' : '#8b7355', fontFamily: 'Georgia, serif', fontStyle: 'italic', textAlign: 'center', marginTop: 3 }}>{sending ? 'sending...' : dropType ? 'tap to mail →' : 'stamp'}</div>
+                        <div style={{ width: 100, flexShrink: 0, borderLeft: '0.5px solid #d4c4a8', padding: '6px 6px 8px 8px', display: 'flex', flexDirection: 'column' }}>
+                          {/* Stamp — top of column */}
+                          <div onClick={async () => { const canSend = dropType === 'song' ? !!selectedTrack : dropType === 'memory' ? !!selectedMemory : !!content.trim(); if (!canSend || sending || !dropType) return; await handleSend(); setCardFlipped(false); setDropType(null); setContent(''); setSelectedTrack(null); setSelectedMemory(null); }} style={{ cursor: dropType ? 'pointer' : 'default' }}>
+                            <img src="/abf-stamp.png" alt="ABF stamp" style={{ width: 82, height: 82, display: 'block', opacity: dropType ? 1 : 0.4, transition: 'opacity 0.2s' }} />
+                            <div style={{ fontSize: 9, color: dropType ? '#c4694f' : '#8b7355', fontFamily: 'Georgia, serif', fontStyle: 'italic', textAlign: 'center', marginTop: 2 }}>{sending ? 'sending...' : dropType ? 'tap to mail →' : 'stamp'}</div>
                           </div>
-                          <div style={{ marginTop: 120 }}>
-                            <div style={{ height: 12, borderBottom: '0.5px solid #ddd0bc', marginBottom: 4, marginLeft: 8 }} />
-                            <div style={{ height: 12, borderBottom: '0.5px solid #ddd0bc', marginBottom: 8, marginLeft: 8 }} />
-                            <div style={{ fontSize: 7, fontWeight: 700, letterSpacing: 2, color: '#8b7355', fontFamily: 'system-ui', marginBottom: 2, marginLeft: 8 }}>To</div>
-                            <div style={{ fontFamily: 'Georgia, serif', fontSize: 16, color: '#2a2015', marginLeft: 8 }}>{partnerName}</div>
+                          {/* Address lines + To name */}
+                          <div style={{ marginTop: 12 }}>
+                            <div style={{ height: 12, borderBottom: '0.5px solid #ddd0bc', marginBottom: 4 }} />
+                            <div style={{ height: 12, borderBottom: '0.5px solid #ddd0bc', marginBottom: 8 }} />
+                            <div style={{ fontSize: 7, fontWeight: 700, letterSpacing: 2, color: '#8b7355', fontFamily: 'system-ui', marginBottom: 2 }}>To</div>
+                            <div style={{ fontFamily: 'Georgia, serif', fontSize: 15, color: '#2a2015' }}>{partnerName}</div>
                           </div>
-                          {sent.length > 0 && <button onClick={() => { setCardFlipped(false); setView('sent') }} style={{ position: 'absolute', bottom: 6, right: 8, fontSize: 8, color: '#b0a090', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>sent →</button>}
+                          {sent.length > 0 && <button onClick={() => { setCardFlipped(false); setView('sent') }} style={{ marginTop: 'auto', fontSize: 8, color: '#b0a090', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic', alignSelf: 'flex-end' }}>sent →</button>}
                         </div>
                       </div>
                     </div>
