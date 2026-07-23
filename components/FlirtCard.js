@@ -283,7 +283,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
     .fc-card-inner { position: relative; width: 100%; transform-style: preserve-3d; transition: transform 0.65s cubic-bezier(0.4,0,0.2,1); }
     .fc-card-inner.flipped { transform: rotateY(180deg); }
     .fc-card-face { position: absolute; top: 0; left: 0; right: 0; bottom: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 6px; overflow: hidden; }
-    .fc-card-back { position: absolute; top: 0; left: 0; right: 0; bottom: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(180deg); border-radius: 6px; overflow: hidden; }
+    .fc-card-back { position: absolute; top: 0; left: 0; right: 0; bottom: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; transform: rotateY(180deg); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column; }
     .fc-stripe-border { position: absolute; inset: 0; z-index: 2; pointer-events: none; border-radius: 6px; background: repeating-linear-gradient(-45deg, #c4694f 0, #c4694f 6px, transparent 6px, transparent 10px, #1a3a52 10px, #1a3a52 16px, transparent 16px, transparent 20px); -webkit-mask: linear-gradient(#000 0, #000 0) content-box, linear-gradient(#000 0, #000 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0, #000 0) content-box, linear-gradient(#000 0, #000 0); mask-composite: exclude; padding: 7px; }
     .fc-rcv-stripe { position: absolute; inset: 0; z-index: 1; pointer-events: none; background: repeating-linear-gradient(-45deg, #c4694f 0, #c4694f 4px, transparent 4px, transparent 7px, #1a3a52 7px, #1a3a52 11px, transparent 11px, transparent 14px); -webkit-mask: linear-gradient(#000 0, #000 0) content-box, linear-gradient(#000 0, #000 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0, #000 0) content-box, linear-gradient(#000 0, #000 0); mask-composite: exclude; padding: 5px; }
   `
@@ -412,9 +412,9 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
 
             {/* BACK — postcard back with compose or open */}
             <div className="fc-card-back">
-              <div style={{ position: 'absolute', inset: 0, background: '#f5f0e4', borderRadius: 6, overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', inset: 0, background: '#f5f0e4', borderRadius: 6, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                 <div className="fc-stripe-border" />
-                <div style={{ position: 'relative', zIndex: 3, margin: 7, background: '#f5f0e4', height: 'calc(100% - 14px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <div style={{ position: 'relative', zIndex: 3, margin: 7, background: '#f5f0e4', flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                   {hasUnseen ? (
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                       <div style={{ padding: '10px 10px 6px', borderBottom: '0.5px solid #ddd0bc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -442,7 +442,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                         ))}
                       </div>
                       {/* Content + address */}
-                      <div style={{ display: 'flex', alignItems: 'stretch' }}>
+                      <div style={{ display: 'flex', alignItems: 'stretch', flex: 1, overflow: 'hidden' }}>
                         <div style={{ flex: 1, padding: '8px 10px', position: 'relative', overflow: 'hidden' }}>
                           <div style={{ position: 'absolute', inset: '8px 10px', backgroundImage: 'repeating-linear-gradient(transparent, transparent 26px, #d8ccba 26px, #d8ccba 27px)', backgroundSize: '100% 27px', pointerEvents: 'none' }} />
                           {!dropType && <div style={{ fontFamily: 'Georgia, serif', fontSize: 14, color: '#8b7355', fontStyle: 'italic', position: 'relative', zIndex: 1 }}>choose a type above...</div>}
