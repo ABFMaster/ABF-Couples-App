@@ -654,14 +654,32 @@ function UsPageContent() {
               const hasPhoto = event.photo_urls?.length > 0 || !!event.image_url
               const primaryPhoto = event.photo_urls?.[0] || event.image_url
 
+              const isMemory = event.event_type === 'custom' && event.item_subtype === 'memory'
+              const canAddPhotos = isMemory && event.created_by !== user?.id
+
               if (hasPhoto) {
                 return (
-                  <div key={event.id} onClick={() => setSelectedEvent(event)} style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 12, position: 'relative', cursor: 'pointer', background: '#E8DDD0' }}>
-                    <img src={primaryPhoto} alt={event.title} style={{ width: '100%', height: 200, objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
-                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 16px', background: 'linear-gradient(to top, rgba(28,20,16,0.8) 0%, transparent 100%)' }}>
-                      <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 18, color: '#FAF6F0', fontWeight: 400 }}>{event.title}</div>
-                      <div style={{ fontSize: 11, color: 'rgba(250,246,240,0.7)', marginTop: 2, fontFamily: 'DM Sans, sans-serif' }}>{new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                  <div key={event.id} style={{ marginBottom: 12 }}>
+                    <div onClick={() => setSelectedEvent(event)} style={{ borderRadius: canAddPhotos ? '14px 14px 0 0' : 14, overflow: 'hidden', position: 'relative', cursor: 'pointer' }}>
+                      <img src={primaryPhoto} alt={event.title} style={{ width: '100%', height: 200, objectFit: 'cover', objectPosition: 'center top', display: 'block' }} />
+                      {event.photo_urls?.length > 1 && (
+                        <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.5)', borderRadius: 100, padding: '3px 8px', fontSize: 10, color: 'white', fontFamily: 'DM Sans, sans-serif' }}>{event.photo_urls.length} photos</div>
+                      )}
+                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 16px', background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)' }}>
+                        <div style={{ fontFamily: 'Cormorant Garamond, Georgia, serif', fontSize: 18, color: '#FAF6F0', fontWeight: 400 }}>{event.title}</div>
+                        <div style={{ fontSize: 11, color: 'rgba(250,246,240,0.7)', marginTop: 2, fontFamily: 'DM Sans, sans-serif' }}>{new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+                      </div>
                     </div>
+                    {canAddPhotos && (
+                      <button onClick={() => setSelectedEvent(event)} style={{ width: '100%', padding: '10px', background: '#1C1410', border: 'none', borderRadius: '0 0 14px 14px', fontSize: 12, color: '#FAF6F0', fontFamily: 'Georgia, serif', fontStyle: 'italic', cursor: 'pointer', textAlign: 'center' }}>
+                        Add your photos →
+                      </button>
+                    )}
+                    {isMemory && event.nora_observation && (
+                      <div style={{ padding: '10px 14px', background: '#F5F0E8', borderRadius: '0 0 10px 10px' }}>
+                        <div style={{ fontSize: 12, color: '#6B5A4A', fontStyle: 'italic', fontFamily: 'Georgia, serif', lineHeight: 1.5 }}>{event.nora_observation}</div>
+                      </div>
+                    )}
                   </div>
                 )
               }
