@@ -923,7 +923,7 @@ function UsPageContent() {
                 <button
                   onClick={() => editPhotoRef.current?.click()}
                   style={{ flex: 1, padding: 11, border: '1px solid #E8DDD0', borderRadius: 10, fontSize: 12, color: '#6B5D4F', background: '#FFFFFF', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}>
-                  {selectedEvent?.photo_urls?.length > 0 || selectedEvent?.image_url ? 'Change photo' : '+ Add photo'}
+                  {selectedEvent?.event_type === 'custom' ? '+ Add photos' : selectedEvent?.photo_urls?.length > 0 || selectedEvent?.image_url ? 'Change photo' : '+ Add photo'}
                 </button>
               )}
               {selectedEvent?.created_by === user?.id && (
@@ -940,7 +940,13 @@ function UsPageContent() {
                 </button>
               )}
             </div>
-            <input ref={editPhotoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) addPhotoToEvent(f) }} />
+            <input ref={editPhotoRef} type="file" accept="image/*" multiple={selectedEvent?.event_type === 'custom'} style={{ display: 'none' }} onChange={async e => {
+              if (selectedEvent?.event_type === 'custom') {
+                for (const f of Array.from(e.target.files || [])) { await addPhotoToEvent(f) }
+              } else {
+                const f = e.target.files?.[0]; if (f) addPhotoToEvent(f)
+              }
+            }} />
           </div>
         </div>
       )}
