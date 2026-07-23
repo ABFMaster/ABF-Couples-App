@@ -429,23 +429,23 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                       {/* Header */}
                       <div style={{ padding: '8px 10px 6px', borderBottom: '0.5px solid #ddd0bc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: 6, letterSpacing: 3, color: '#b8a890', textTransform: 'uppercase', fontFamily: 'system-ui' }}>Postcard · Always Be Flirting</span>
-                        <button onClick={() => setCardFlipped(false)} style={{ background: 'none', border: 'none', fontSize: 9, color: '#b0a090', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>← flip back</button>
+                        <span style={{ fontSize: 7, letterSpacing: 2, color: '#6b5a4a', textTransform: 'uppercase', fontFamily: 'system-ui', fontWeight: 600 }}>Postcard · ABF</span>
+                        <button onClick={() => setCardFlipped(false)} style={{ background: 'none', border: 'none', fontSize: 11, color: '#6b5a4a', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>← flip back</button>
                       </div>
                       {/* Type selector */}
-                      <div style={{ padding: '6px 10px', borderBottom: '0.5px solid #ddd0bc', display: 'flex', gap: 0, flexWrap: 'wrap' }}>
+                      <div style={{ padding: '8px 10px', borderBottom: '0.5px solid #ddd0bc', display: 'flex', gap: 0, flexWrap: 'wrap' }}>
                         {['song','word','photo','gif','memory'].map((t,i,arr) => (
                           <span key={t} style={{ display: 'flex', alignItems: 'center' }}>
-                            <button onClick={() => setDropType(t)} style={{ background: 'none', border: 'none', fontSize: 8, fontWeight: 700, letterSpacing: 1, color: dropType === t ? '#c4694f' : '#b8a890', cursor: 'pointer', padding: 0, fontFamily: 'system-ui', textDecoration: dropType === t ? 'underline' : 'none', textUnderlineOffset: 2 }}>{t.toUpperCase()}</button>
-                            {i < arr.length - 1 && <span style={{ color: '#ddd0bc', fontSize: 8, margin: '0 4px' }}>·</span>}
+                            <button onClick={() => setDropType(t)} style={{ background: 'none', border: 'none', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: dropType === t ? '#c4694f' : '#6b5a4a', cursor: 'pointer', padding: 0, fontFamily: 'system-ui', textDecoration: dropType === t ? 'underline' : 'none', textUnderlineOffset: 2 }}>{t.toUpperCase()}</button>
+                            {i < arr.length - 1 && <span style={{ color: '#c8b8a0', fontSize: 10, margin: '0 5px' }}>·</span>}
                           </span>
                         ))}
                       </div>
                       {/* Content + address */}
                       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-                        <div style={{ flex: 1, padding: '6px 10px', position: 'relative', overflow: 'hidden' }}>
-                          <div style={{ position: 'absolute', inset: '6px 10px', backgroundImage: 'repeating-linear-gradient(transparent, transparent 21px, #d8ccba 21px, #d8ccba 22px)', backgroundSize: '100% 22px', pointerEvents: 'none' }} />
-                          {!dropType && <div style={{ fontFamily: 'Georgia, serif', fontSize: 12, color: '#c8baa8', fontStyle: 'italic', position: 'relative', zIndex: 1 }}>choose a type above...</div>}
+                        <div style={{ flex: 1, padding: '8px 10px', position: 'relative', overflow: 'hidden' }}>
+                          <div style={{ position: 'absolute', inset: '8px 10px', backgroundImage: 'repeating-linear-gradient(transparent, transparent 26px, #d8ccba 26px, #d8ccba 27px)', backgroundSize: '100% 27px', pointerEvents: 'none' }} />
+                          {!dropType && <div style={{ fontFamily: 'Georgia, serif', fontSize: 14, color: '#8b7355', fontStyle: 'italic', position: 'relative', zIndex: 1 }}>choose a type above...</div>}
                           {dropType === 'word' && <textarea value={content} onChange={e => setContent(e.target.value)} placeholder={`say something to ${partnerName}...`} rows={4} style={{ position: 'relative', zIndex: 1, width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontFamily: 'Georgia, serif', fontSize: 13, color: '#2a2015', lineHeight: '22px', padding: 0, boxSizing: 'border-box' }} />}
                           {dropType === 'song' && (
                             <div style={{ position: 'relative', zIndex: 1 }}>
@@ -474,13 +474,11 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                           )}
                         </div>
                         {/* Address side with stamp */}
-                        <div style={{ width: 90, flexShrink: 0, borderLeft: '0.5px solid #d4c4a8', padding: '8px 6px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-                          <div style={{ fontSize: 6, fontWeight: 700, letterSpacing: 2, color: '#b0a090', fontFamily: 'system-ui', marginBottom: 2 }}>To</div>
-                          <div style={{ fontFamily: 'Georgia, serif', fontSize: 14, color: '#2a2015', marginBottom: 4 }}>{partnerName}</div>
-                          <div style={{ height: 11, borderBottom: '0.5px solid #ddd0bc', marginBottom: 3 }} />
-                          <div style={{ height: 11, borderBottom: '0.5px solid #ddd0bc', marginBottom: 3 }} />
-                          {/* Stamp — send button */}
-                          <div onClick={async () => { const canSend = dropType === 'song' ? !!selectedTrack : dropType === 'memory' ? !!selectedMemory : !!content.trim(); if (!canSend || sending || !dropType) return; await handleSend(); setCardFlipped(false); setDropType(null); setContent(''); setSelectedTrack(null); setSelectedMemory(null); }} style={{ position: 'absolute', top: 6, right: 6, cursor: dropType ? 'pointer' : 'default' }}>
+                        <div style={{ width: 110, flexShrink: 0, borderLeft: '0.5px solid #d4c4a8', padding: '8px 8px 8px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                          <div style={{ fontSize: 7, fontWeight: 700, letterSpacing: 2, color: '#8b7355', fontFamily: 'system-ui', marginBottom: 2, alignSelf: 'flex-start' }}>To</div>
+                          <div style={{ fontFamily: 'Georgia, serif', fontSize: 16, color: '#2a2015', marginBottom: 8, alignSelf: 'flex-start', fontWeight: 400 }}>{partnerName}</div>
+                          {/* Stamp — send button, below name */}
+                          <div onClick={async () => { const canSend = dropType === 'song' ? !!selectedTrack : dropType === 'memory' ? !!selectedMemory : !!content.trim(); if (!canSend || sending || !dropType) return; await handleSend(); setCardFlipped(false); setDropType(null); setContent(''); setSelectedTrack(null); setSelectedMemory(null); }} style={{ cursor: dropType ? 'pointer' : 'default' }}>
                             <svg width="52" height="62" viewBox="0 0 52 62" fill="none">
                               <circle cx="4" cy="5" r="4" fill="#f5f0e4"/><circle cx="12" cy="1" r="4" fill="#f5f0e4"/><circle cx="26" cy="1" r="4" fill="#f5f0e4"/><circle cx="40" cy="1" r="4" fill="#f5f0e4"/><circle cx="48" cy="5" r="4" fill="#f5f0e4"/>
                               <circle cx="4" cy="57" r="4" fill="#f5f0e4"/><circle cx="12" cy="61" r="4" fill="#f5f0e4"/><circle cx="26" cy="61" r="4" fill="#f5f0e4"/><circle cx="40" cy="61" r="4" fill="#f5f0e4"/><circle cx="48" cy="57" r="4" fill="#f5f0e4"/>
