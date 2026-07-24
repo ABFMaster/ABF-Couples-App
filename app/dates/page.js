@@ -65,51 +65,28 @@ export default function DatesPage() {
     setCoupleId(cid)
 
     const now = new Date().toISOString()
-
-    const [{ data: upcoming }, { data: upcomingCustom }] = await Promise.all([
-      supabase.from('date_plans').select('*').eq('couple_id', cid).eq('status', 'planned').gt('date_time', now).order('date_time', { ascending: true }).limit(1).maybeSingle(),
-      supabase.from('custom_dates').select('*').eq('couple_id', cid).eq('status', 'planned').gt('date_time', now).order('date_time', { ascending: true }).limit(1).maybeSingle(),
-    ])
-
-    let upcomingToShow = null
-    if (upcoming && upcomingCustom) {
-      upcomingToShow = new Date(upcoming.date_time) <= new Date(upcomingCustom.date_time) ? upcoming : upcomingCustom
-    } else if (upcoming) {
-      upcomingToShow = upcoming
-    } else if (upcomingCustom) {
-      upcomingToShow = upcomingCustom
-    }
-    setUpcomingDate(upcomingToShow)
-
-    const { data: pastPlans } = await supabase
-      .from('date_plans')
+    const { data: upcomingCustom } = await supabase
+      .from('custom_dates')
       .select('*')
       .eq('couple_id', cid)
-      .neq('status', 'cancelled')
-      .or(`status.eq.completed,date_time.lt.${now}`)
-      .order('date_time', { ascending: false })
-      .limit(10)
+      .in('status', ['planned', 'approved'])
+      .gt('date_time', now)
+      .order('date_time', { ascending: true })
+      .limit(1)
+    setUpcomingDate(upcomingCustom?.[0] || null)
 
     const { data: customDates } = await supabase
       .from('custom_dates')
       .select('id, title, date_time, created_at, status, user1_rating, user2_rating, stops')
       .eq('couple_id', cid)
       .neq('status', 'pending_delete')
-      .order('created_at', { ascending: false })
-      .limit(6)
-
-    const normalized = [
-      ...(pastPlans ?? []).map(p => ({
-        id: p.id, source: 'plan', title: p.title, date: p.date_time,
-        stops: null, status: p.status, rating: p.rating,
-      })),
-      ...(customDates ?? []).map(c => ({
-        id: c.id, source: 'custom', title: c.title, date: c.date_time || c.created_at,
-        stops: c.stops, status: c.status, rating: c.user1_rating || c.user2_rating || null,
-        photo_url: getHeroPhoto(c.stops, c.id),
-      })),
-    ].sort((a, b) => new Date(b.date ?? 0) - new Date(a.date ?? 0))
-
+      .order('date_time', { ascending: false })
+      .limit(12)
+    const normalized = (customDates ?? []).map(c => ({
+      id: c.id, source: 'custom', title: c.title, date: c.date_time || c.created_at,
+      stops: c.stops, status: c.status, rating: c.user1_rating || c.user2_rating || null,
+      photo_url: getHeroPhoto(c.stops, c.id),
+    })).sort((a, b) => new Date(b.date ?? 0) - new Date(a.date ?? 0))
     setPastDates(normalized)
     setLoading(false)
   }
@@ -153,15 +130,14 @@ export default function DatesPage() {
     <div style={{ minHeight: '100vh', background: '#FAF6F0', paddingBottom: '100px', fontFamily: 'DM Sans, sans-serif' }}>
 
       {/* HEADER */}
-      <div style={{ background: 'linear-gradient(145deg, #1C1410 0%, #2D3561 100%)', padding: '52px 24px 32px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '140px', height: '140px', borderRadius: '50%', background: 'rgba(201,168,76,0.06)' }} />
-        <button onClick={() => router.back()} style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '20px', padding: 0, fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.04em' }}>← Back</button>
+      <div style={{ background: '#FAF6F0', padding: '52px 24px 28px', borderBottom: '1px solid #EDE4D8' }}>
+        <button onClick={() => router.back()} style={{ fontSize: '12px', color: '#8B7355', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '20px', padding: 0, fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.04em' }}>← Back</button>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '16px' }}>
           <div>
-            <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.18em', color: '#C9A84C', textTransform: 'uppercase', marginBottom: '4px' }}>Your Shared Life</div>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '44px', fontWeight: 300, color: 'white', letterSpacing: '-0.02em', lineHeight: 1 }}>Date Night</div>
+            <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.18em', color: '#8B7355', textTransform: 'uppercase', marginBottom: '4px' }}>Your Shared Life</div>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '44px', fontWeight: 300, color: '#1C1410', letterSpacing: '-0.02em', lineHeight: 1 }}>Date Night</div>
           </div>
-          <button onClick={() => router.push('/dates/custom')} style={{ fontSize: '12px', fontWeight: 500, color: '#C9A84C', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)', padding: '10px 18px', borderRadius: '24px', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.04em' }}>
+          <button onClick={() => router.push('/dates/custom')} style={{ fontSize: '12px', fontWeight: 500, color: '#FAF6F0', background: '#1C1410', border: 'none', padding: '10px 18px', borderRadius: '24px', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.04em' }}>
             + Plan a Date
           </button>
         </div>

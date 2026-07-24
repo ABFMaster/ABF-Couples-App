@@ -184,28 +184,16 @@ const ritualCompletedThisWeek = !!completion?.completed
 
     // ── PART 4: Dates + pills + weather ──────────────────────────────────────
     const nowIso = new Date().toISOString()
-    const [{ data: planDates }, { data: customDates }] = await Promise.all([
-      supabase
-        .from('date_plans')
-        .select('id, title, date_time, status')
-        .eq('couple_id', coupleId)
-        .in('status', ['planned', 'approved'])
-        .gte('date_time', nowIso)
-        .order('date_time', { ascending: true })
-        .limit(5),
-      supabase
-        .from('custom_dates')
-        .select('id, title, date_time, status')
-        .eq('couple_id', coupleId)
-        .in('status', ['planned', 'approved'])
-        .neq('status', 'pending_delete')
-        .gte('date_time', nowIso)
-        .order('date_time', { ascending: true })
-        .limit(5),
-    ])
-    const allDates = [...(planDates || []), ...(customDates || [])]
-      .sort((a, b) => new Date(a.date_time) - new Date(b.date_time))
-    const nextDate = allDates[0] || null
+    const { data: customDates } = await supabase
+      .from('custom_dates')
+      .select('id, title, date_time, status')
+      .eq('couple_id', coupleId)
+      .in('status', ['planned', 'approved'])
+      .neq('status', 'pending_delete')
+      .gte('date_time', nowIso)
+      .order('date_time', { ascending: true })
+      .limit(5)
+    const nextDate = (customDates || [])[0] || null
 
     const daysUntilDate = nextDate
       ? Math.round((new Date(nextDate.date_time) - new Date()) / 86400000)
