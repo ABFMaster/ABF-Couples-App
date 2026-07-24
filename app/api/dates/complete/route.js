@@ -47,6 +47,11 @@ export async function POST(request) {
     }
 
     const isUser1 = couple.user1_id === userId
+    // Guard — prevent double completion
+    const alreadyCompleted = isUser1 ? !!date.user1_completed_at : !!date.user2_completed_at
+    if (alreadyCompleted) {
+      return NextResponse.json({ success: true, alreadyCompleted: true })
+    }
     const updateData = isUser1
       ? { user1_rating: rating, user1_review: review?.trim() || null, user1_completed_at: new Date().toISOString() }
       : { user2_rating: rating, user2_review: review?.trim() || null, user2_completed_at: new Date().toISOString() }

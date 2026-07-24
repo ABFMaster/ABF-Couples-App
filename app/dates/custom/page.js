@@ -685,12 +685,13 @@ export default function CustomDateBuilderPage() {
       const { data: newDate, error } = await supabase
         .from('custom_dates')
         .insert({
-          user_id:   user.id,
-          couple_id: coupleId,
-          title:     dateName.trim() || defaultDateName(),
-          stops:     itinerary,
-          date_time: dateTime ? new Date(dateTime).toISOString() : null,
-          status:    'planned',
+          user_id:          user.id,
+          couple_id:        coupleId,
+          title:            dateName.trim() || defaultDateName(),
+          stops:            itinerary,
+          date_time:        dateTime ? new Date(dateTime).toISOString() : null,
+          status:           'planned',
+          user1_approved_at: new Date().toISOString(),
         })
         .select()
         .single()
