@@ -67,7 +67,7 @@ export default function DatesPage() {
     const now = new Date().toISOString()
     const { data: upcomingCustom } = await supabase
       .from('custom_dates')
-      .select('*')
+      .select('id, title, date_time, status, stops')
       .eq('couple_id', cid)
       .in('status', ['planned', 'approved'])
       .gt('date_time', now)
@@ -150,7 +150,11 @@ export default function DatesPage() {
 
         {upcomingDate ? (
           <div onClick={() => router.push(`/dates/${upcomingDate.id}`)} style={{ borderRadius: '18px', overflow: 'hidden', marginBottom: '24px', boxShadow: '0 2px 16px rgba(28,20,16,0.10)', cursor: 'pointer', position: 'relative', height: '200px' }}>
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #2D3561 100%)' }} />
+            {getHeroPhoto(upcomingDate.stops, upcomingDate.id) ? (
+              <img src={getHeroPhoto(upcomingDate.stops, upcomingDate.id)} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+            ) : (
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #2D3561 100%)' }} />
+            )}
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.08) 55%, transparent 100%)' }} />
             <div style={{ position: 'absolute', top: '12px', left: '12px', fontSize: '10px', fontWeight: 500, letterSpacing: '0.06em', padding: '3px 8px', borderRadius: '20px', textTransform: 'uppercase', background: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.9)' }}>Date Night</div>
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '14px 16px' }}>

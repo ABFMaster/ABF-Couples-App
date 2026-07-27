@@ -701,7 +701,7 @@ export default function CustomDateBuilderPage() {
       // Generate conversation starters
       setSaveStage('generating')
       try {
-        await fetch('/api/dates/conversation-starters', {
+        const startersRes = await fetch('/api/dates/conversation-starters', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -710,18 +710,16 @@ export default function CustomDateBuilderPage() {
             dateTitle: dateName.trim() || defaultDateName(),
             stops: itinerary,
           })
-        }).then(async res => {
-          const { starters } = await res.json()
-          if (starters) {
-            await supabase
-              .from('custom_dates')
-              .update({ conversation_starters: starters })
-              .eq('id', newDate.id)
-          }
         })
+        const { starters } = await startersRes.json()
+        if (starters) {
+          await supabase
+            .from('custom_dates')
+            .update({ conversation_starters: starters })
+            .eq('id', newDate.id)
+        }
       } catch (e) {
         console.error('Starters generation failed:', e)
-        // Non-fatal — date is already saved
       }
 
       setSaveStage('done')
