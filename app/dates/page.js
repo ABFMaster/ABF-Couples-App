@@ -65,12 +65,14 @@ export default function DatesPage() {
     setCoupleId(cid)
 
     const now = new Date().toISOString()
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
     const { data: upcomingCustom } = await supabase
       .from('custom_dates')
       .select('id, title, date_time, status, stops')
       .eq('couple_id', cid)
       .in('status', ['planned', 'approved'])
-      .gt('date_time', now)
+      .gte('date_time', startOfToday.toISOString())
       .order('date_time', { ascending: true })
       .limit(1)
     setUpcomingDate(upcomingCustom?.[0] || null)
