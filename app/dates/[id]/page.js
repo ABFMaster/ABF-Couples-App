@@ -60,6 +60,14 @@ export default function DateDetailPage({ params }) {
   const [notFound, setNotFound] = useState(false)
   const [showStarters, setShowStarters] = useState(false)
   const [activeCategory, setActiveCategory] = useState('personalized')
+  const starterKeyMap = { personalized: ['personalized', 'before', 'us'], fun: ['fun', 'during'], growth: ['growth', 'after', 'deeper'] }
+  const getStarters = (starters, cat) => {
+    if (!starters) return []
+    for (const key of (starterKeyMap[cat] || [cat])) {
+      if (starters[key]?.length) return starters[key]
+    }
+    return []
+  }
   const [showCompleteModal, setShowCompleteModal] = useState(false)
   const [myRating, setMyRating] = useState(0)
   const [myReview, setMyReview] = useState('')
@@ -533,7 +541,7 @@ export default function DateDetailPage({ params }) {
                   ))}
                 </div>
                 <div className="space-y-2">
-                  {(date.conversation_starters[activeCategory] || []).map((q, i) => (
+                  {getStarters(date.conversation_starters, activeCategory).map((q, i) => (
                     <div key={i} className="bg-[#FDF6EF] rounded-xl px-4 py-3">
                       <p className="text-gray-700 text-sm leading-relaxed">{q}</p>
                     </div>
