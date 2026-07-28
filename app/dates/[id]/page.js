@@ -88,6 +88,10 @@ export default function DateDetailPage({ params }) {
   const [addingToTimeline, setAddingToTimeline] = useState(false)
   const [addedToTimeline, setAddedToTimeline] = useState(false)
 
+  // Date photos (during/after) state
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [photoUploadError, setPhotoUploadError] = useState(null)
+
   useEffect(() => {
     loadDate()
   }, [id])
@@ -295,6 +299,48 @@ export default function DateDetailPage({ params }) {
     }
   }
 
+  // ── Add photos to the date (during/after) — any couple member can add ──
+  const handleAddDatePhoto = async (e) => {
+    const file = e.target.files[0]
+    e.target.value = ''
+    if (!file || !date) return
+    setUploadingPhoto(true)
+    setPhotoUploadError(null)
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `dates/${date.couple_id}/${date.id}/${Date.now()}.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('timeline-photos')
+        .upload(path, file)
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('timeline-photos')
+        .getPublicUrl(path)
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Not signed in')
+
+      const res = await fetch('/api/dates/photos/add', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ dateId: date.id, photoUrls: [publicUrl] }),
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || 'Failed to save photo')
+
+      setDate(prev => ({ ...prev, photos: result.photos }))
+    } catch (err) {
+      console.error('Add date photo error:', err)
+      setPhotoUploadError('Could not add that photo. Try again.')
+    } finally {
+      setUploadingPhoto(false)
+    }
+  }
+
   const approveDatePlan = async () => {
     if (approvingDate) return
     setApprovingDate(true)
@@ -487,6 +533,31 @@ export default function DateDetailPage({ params }) {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* ── Photos (during/after) ─────────────────────────── */}
+        {isCustom && (
+          <div style={{ background: 'white', borderRadius: '16px', padding: '16px 18px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
+            <div className="flex items-center justify-between mb-3">
+              <p style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87' }}>
+                Photos{date.photos?.length > 0 ? ` · ${date.photos.length}` : ''}
+              </p>
+              <label className="text-xs font-semibold text-coral-500 hover:text-coral-600 cursor-pointer">
+                {uploadingPhoto ? 'Uploading…' : '+ Add photo'}
+                <input type="file" accept="image/*" onChange={handleAddDatePhoto} disabled={uploadingPhoto} className="hidden" />
+              </label>
+            </div>
+            {photoUploadError && <p className="text-xs text-red-400 mb-2">{photoUploadError}</p>}
+            {date.photos?.length > 0 ? (
+              <div className="grid grid-cols-3 gap-2">
+                {date.photos.map((url, i) => (
+                  <img key={i} src={url} alt="" className="w-full aspect-square object-cover rounded-lg" />
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-400 text-xs">No photos yet — add some during or after your date.</p>
+            )}
           </div>
         )}
 
