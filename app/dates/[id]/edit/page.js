@@ -31,8 +31,10 @@ function haversineKm(a, b) {
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x))
 }
 
+// US audience — display in feet/miles, not km
 function formatDist(km) {
-  return km < 1 ? `${Math.round(km * 1000)}m` : `${km.toFixed(1)}km`
+  const miles = km * 0.621371
+  return miles < 0.1 ? `${Math.round(miles * 5280)}ft` : `${miles.toFixed(1)}mi`
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
