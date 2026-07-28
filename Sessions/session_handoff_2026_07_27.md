@@ -1,20 +1,26 @@
 # ABF + Nora Session Handoff — July 27, 2026
 
-## PROTOCOLS (non-negotiable)
-- Read file before editing
-- One change at a time, test before next
-- Commit after every working change with descriptive message
-- Claude Code prompts, Terminal commands, and SQL always in separate code blocks
-- Every Claude Code prompt ends with "do not change anything else"
-- Deploy via git push only — never npx vercel
-- git add -A when new files exist
-- Remove debug logs before closing a feature
-- Delete dead code immediately
-- pwd before every git or file operation (two repos side by side on Desktop)
-- Check existing code before writing new code
-- Await all async operations — no fire-and-forget (Vercel kills unawaited promises)
-- Root cause before fix — state the root cause, check if pattern exists elsewhere, confirm fix scope
-- No bandaid fixes
+## PROTOCOLS — ENFORCE WITHOUT EXCEPTION
+1. Read file before editing
+2. One change at a time — test before next
+3. Commit after every working change with descriptive message
+4. Claude Code prompts / Terminal commands / SQL always in completely separate code blocks
+5. Every Claude Code prompt ends with "do not change anything else"
+6. Deploy via git push only — never npx vercel
+7. git add -A when new files exist — never git add -u (silently excludes new files)
+8. Remove debug logs before closing a feature
+9. Delete dead code immediately
+10. Env vars in .env.local AND Vercel
+11. pwd before every git or file op — abf-app and nora-app sit side by side on Desktop
+12. Check existing code before writing new code
+13. Await ALL async on Vercel — no fire-and-forget, serverless kills unawaited promises
+14. ROOT CAUSE RULE: before any fix — state root cause, check if pattern exists elsewhere, confirm fix scope. No bandaid fixes.
+15. State machine discipline: for any two-user async feature, full state machine agreed before any code
+16. Single source of truth for multiplayer state: all shared state lives in DB, not client refs
+17. force-dynamic on every new API route
+18. Never use git add -u — silently excludes new files causing 404s in prod
+
+See Sessions/PRODUCT_BACKLOG.md for full feature backlog.
 
 ## REPOS
 - ABF: ~/Desktop/abf-app → https://github.com/ABFMaster/ABF-Couples-App → https://abf-couples-app.vercel.app
