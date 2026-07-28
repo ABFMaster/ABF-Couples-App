@@ -4,7 +4,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import BottomNav from '@/components/BottomNav'
-import { getHeroPhoto } from '@/lib/date-night'
+import { getHeroPhoto, REACTION_LABELS } from '@/lib/date-night'
+
+// Maps the new text reactions onto the same 1-5 scale the old star rating
+// used, so "Top Rated" sorting still works across a mix of legacy-starred
+// and new-reaction dates. Not displayed as stars — text labels only.
+const REACTION_RANK = { loved_it: 5, really_good: 4, fine: 2, not_for_us: 1 }
 
 function fmtDate(iso) {
   if (!iso) return null
@@ -33,13 +38,14 @@ export default function DateHistoryPage() {
     const now = new Date().toISOString()
 
     const [{ data: customDates }, { data: datePlans }] = await Promise.all([
-      supabase.from('custom_dates').select('id, title, date_time, created_at, status, user1_rating, user2_rating, stops, hero_photo_url').eq('couple_id', cid).neq('status', 'pending_delete').order('created_at', { ascending: false }).limit(50),
+      supabase.from('custom_dates').select('id, title, date_time, created_at, status, user1_rating, user2_rating, user1_reaction, user2_reaction, stops, hero_photo_url').eq('couple_id', cid).neq('status', 'pending_delete').order('created_at', { ascending: false }).limit(50),
       supabase.from('date_plans').select('id, title, date_time, status, rating').eq('couple_id', cid).order('date_time', { ascending: false }).limit(50),
     ])
 
     const normalizedCustom = (customDates ?? []).map(c => ({
       id: c.id, source: 'custom', title: c.title,
       date_time: c.date_time || c.created_at,
+      reaction: c.user1_reaction || c.user2_reaction || null,
       rating: c.user1_rating || c.user2_rating || null,
       photo_url: c.hero_photo_url || getHeroPhoto(c.stops, c.id),
       stop_count: c.stops?.length ?? 0,
@@ -49,6 +55,7 @@ export default function DateHistoryPage() {
     const normalizedPlans = (datePlans ?? []).map(p => ({
       id: p.id, source: 'plan', title: p.title,
       date_time: p.date_time,
+      reaction: null,
       rating: p.rating || null,
       photo_url: null,
       stop_count: 0,
@@ -65,8 +72,11 @@ export default function DateHistoryPage() {
   useEffect(() => { fetchData() }, [fetchData])
 
   const filtered = dates.filter(d => d.title?.toLowerCase().includes(search.toLowerCase()))
+  // Reaction-based dates and legacy star-rated dates need a shared scale to
+  // sort against each other — map reactions onto the old 1-5 range.
+  const sortScore = (d) => d.reaction ? (REACTION_RANK[d.reaction] || 0) : (d.rating ?? 0)
   const sorted = sortBy === 'top'
-    ? [...filtered].sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
+    ? [...filtered].sort((a, b) => sortScore(b) - sortScore(a))
     : filtered
 
   if (loading) return (
@@ -147,8 +157,12 @@ export default function DateHistoryPage() {
                   <div style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '9px', fontWeight: 500, padding: '2px 8px', borderRadius: '20px', background: '#C8952A', color: '#fff' }}>Done</div>
                 )}
 
-                {/* Rating */}
-                {date.rating > 0 && (
+                {/* Reaction (new) or legacy star rating (old rows saved before the reflection mechanic) */}
+                {date.reaction ? (
+                  <div style={{ position: 'absolute', top: '10px', right: date.status === 'completed' ? '60px' : '10px', fontSize: '9px', fontWeight: 500, padding: '2px 8px', borderRadius: '20px', background: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.9)' }}>
+                    {REACTION_LABELS[date.reaction] || date.reaction}
+                  </div>
+                ) : date.rating > 0 && (
                   <div style={{ position: 'absolute', top: '10px', right: date.status === 'completed' ? '60px' : '10px', fontSize: '11px' }}>
                     {'⭐'.repeat(Math.min(date.rating, 5))}
                   </div>
