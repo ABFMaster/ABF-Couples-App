@@ -208,7 +208,6 @@ export default function CustomDateBuilderPage() {
   const router = useRouter()
 
   // UI mode
-  const [mode, setMode] = useState('list')
   const [mapExpanded, setMapExpanded] = useState(false)
 
   // Maps
@@ -376,20 +375,6 @@ export default function CustomDateBuilderPage() {
     mapInstance.current.panTo(userLocation)
   }, [userLocation])
 
-  // ── Trigger map resize when switching back to map mode ──────────
-  useEffect(() => {
-    if (mode !== 'map' || !mapInstance.current) return
-    requestAnimationFrame(() => {
-      window.google.maps.event.trigger(mapInstance.current, 'resize')
-      if (itinerary.length >= 2) {
-        const bounds = new window.google.maps.LatLngBounds()
-        itinerary.forEach(s => { if (s.lat && s.lng) bounds.extend({ lat: s.lat, lng: s.lng }) })
-        mapInstance.current.fitBounds(bounds, 60)
-      } else {
-        mapInstance.current.setCenter(userLocation)
-      }
-    })
-  }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Sync markers + route when itinerary changes ─────────────────
   useEffect(() => {
@@ -777,11 +762,7 @@ export default function CustomDateBuilderPage() {
       <div style={{ flexShrink: 0, background: '#FAF6EF', borderBottom: '0.5px solid #E8DFD0', padding: '14px 16px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 20 }}>
         <button onClick={() => router.back()} style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F0E8DC', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '14px', color: '#5A4A36' }}>←</button>
         <span style={{ fontFamily: 'Georgia, serif', fontSize: '17px', color: '#1C1208', fontWeight: 400, fontStyle: 'italic' }}>Build your date night</span>
-        <div style={{ display: 'flex', gap: '2px', background: '#EDE5D8', borderRadius: '20px', padding: '3px' }}>
-          {[{id:'list',label:'List'},{id:'map',label:'Map'}].map(m => (
-            <button key={m.id} onClick={() => setMode(m.id)} style={{ fontSize: '11px', fontWeight: 500, padding: '4px 10px', borderRadius: '16px', border: 'none', cursor: 'pointer', color: mode === m.id ? '#1C1208' : '#7A6A54', background: mode === m.id ? '#FAF6EF' : 'transparent', transition: 'all 0.15s' }}>{m.label}</button>
-          ))}
-        </div>
+        <div style={{ width: '32px', height: '32px' }} />
       </div>
 
       {/* Scrollable content */}
