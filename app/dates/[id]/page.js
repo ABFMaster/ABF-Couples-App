@@ -67,6 +67,7 @@ export default function DateDetailPage({ params }) {
 
   // Partner / send state
   const [currentUserId, setCurrentUserId] = useState(null)
+  const [isUser1, setIsUser1] = useState(null)
   const [partnerId, setPartnerId] = useState(null)
   const [partnerName, setPartnerName] = useState('your partner')
   const [sendingToPartner, setSendingToPartner] = useState(false)
@@ -113,6 +114,7 @@ export default function DateDetailPage({ params }) {
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
         .maybeSingle()
       if (coupleData) {
+        setIsUser1(coupleData.user1_id === user.id)
         const pId = coupleData.user1_id === user.id ? coupleData.user2_id : coupleData.user1_id
         setPartnerId(pId)
         if (pId) {
@@ -173,6 +175,10 @@ export default function DateDetailPage({ params }) {
   const isPlan   = date._source === 'plan'
   const isCustom = date._source === 'custom'
   const isCompleted = date.status === 'completed'
+  // Per-user completion — isCompleted only flips once BOTH partners are in.
+  const myCompleted = isUser1 === true ? !!date.user1_completed_at
+    : isUser1 === false ? !!date.user2_completed_at
+    : false
 
   const mapUrl = isCustom
     ? multiStopMapUrl(date.stops)
@@ -750,13 +756,24 @@ export default function DateDetailPage({ params }) {
         )}
 
         {/* ── Mark as Done ──────────────────────────────────── */}
+        {/* Was keyed only off the couple-level isCompleted (needs BOTH
+            partners), so a user who'd already completed their own side
+            could still see and re-click the button indefinitely. Now checks
+            the current user's own completion, matching the approve-date-plan
+            pattern above. */}
         {isCustom && !isCompleted && (isPast || !dateTimeValue) && (
-          <button
-            onClick={() => setShowCompleteModal(true)}
-            className="w-full py-4 bg-white border-2 border-[#C4714A] text-[#C4714A] font-bold rounded-2xl text-sm"
-          >
-            ✓ Mark as Done
-          </button>
+          myCompleted ? (
+            <div className="w-full py-4 bg-[#FAF3EA] border-2 border-[#EDE5D8] text-[#8B7355] font-semibold rounded-2xl text-sm text-center">
+              ✓ You marked this done — waiting on {partnerName}
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowCompleteModal(true)}
+              className="w-full py-4 bg-white border-2 border-[#C4714A] text-[#C4714A] font-bold rounded-2xl text-sm"
+            >
+              ✓ Mark as Done
+            </button>
+          )
         )}
 
         {/* ── Delete flow ───────────────────────────────────── */}
