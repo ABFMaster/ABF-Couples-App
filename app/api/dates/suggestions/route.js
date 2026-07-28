@@ -17,6 +17,23 @@ const CATEGORY_TO_GOOGLE_TYPE = {
   shopping: 'shopping_mall',
 };
 
+// Google Places API (New) priceLevels filter — ordered cheapest to priciest.
+// Our maxPrice/price_level params use a 1-4 "up to this price" scale; convert
+// that into "every tier from free through maxPrice" for the filter.
+const PRICE_LEVELS_ORDERED = [
+  'PRICE_LEVEL_FREE',
+  'PRICE_LEVEL_INEXPENSIVE',
+  'PRICE_LEVEL_MODERATE',
+  'PRICE_LEVEL_EXPENSIVE',
+  'PRICE_LEVEL_VERY_EXPENSIVE',
+];
+
+function priceLevelsUpTo(maxPrice) {
+  if (!maxPrice) return undefined;
+  const clamped = Math.min(Math.max(Math.round(maxPrice), 1), 4);
+  return PRICE_LEVELS_ORDERED.slice(0, clamped + 1);
+}
+
 /**
  * GET /api/dates/suggestions
  *
@@ -69,6 +86,7 @@ export async function GET(request) {
       },
       body: JSON.stringify({
         includedTypes: category && CATEGORY_TO_GOOGLE_TYPE[category] ? [CATEGORY_TO_GOOGLE_TYPE[category]] : undefined,
+        priceLevels: priceLevelsUpTo(priceLevel),
         maxResultCount: limit || 20,
         locationRestriction: {
           circle: {
@@ -167,6 +185,7 @@ export async function POST(request) {
         },
         body: JSON.stringify({
           includedTypes: [placeType],
+          priceLevels: priceLevelsUpTo(maxPrice),
           maxResultCount: 20,
           locationRestriction: {
             circle: {
