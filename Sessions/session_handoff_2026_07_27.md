@@ -19,6 +19,7 @@
 16. Single source of truth for multiplayer state: all shared state lives in DB, not client refs
 17. force-dynamic on every new API route
 18. Never use git add -u — silently excludes new files causing 404s in prod
+19. Code audit is a standard last step of every sprint (added July 28, 2026) — check for missing force-dynamic, leftover debug logs, orphaned/unused exports, cron hour-gates without a matching vercel.json schedule entry, and params accepted-but-never-applied. Log findings in PRODUCT_BACKLOG.md.
 
 See Sessions/PRODUCT_BACKLOG.md for full feature backlog.
 
