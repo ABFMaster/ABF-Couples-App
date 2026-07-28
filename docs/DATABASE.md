@@ -49,7 +49,7 @@ Last audited: February 2026
 
 ### custom_dates
 **Purpose:** User-built date nights with stop-by-stop itinerary
-**Key fields:** `id`, `user_id`, `couple_id`, `title`, `date_time`, `stops` (jsonb), `rating`, `review`
+**Key fields:** `id`, `user_id`, `couple_id`, `title`, `date_time`, `stops` (jsonb), `hero_photo_url`, `rating`, `review`
 **Used by:** `app/dates/custom/page.js`, `lib/ai-coach-context.js`
 **Status:** Active
 

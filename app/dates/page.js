@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { fetchDateSuggestions } from '@/lib/date-suggestions'
+import { getHeroPhoto } from '@/lib/date-night'
 
 function fmtDate(iso) {
   if (!iso) return null
@@ -13,16 +14,6 @@ function fmtDate(iso) {
 function fmtTime(iso) {
   if (!iso) return null
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-}
-
-function getHeroPhoto(stops, id) {
-  if (!stops?.length) return null
-  const locationPhotos = stops.filter(s => s.photo_url && s.place_id && !s.place_id.startsWith('custom-')).map(s => s.photo_url)
-  const otherPhotos = stops.filter(s => s.photo_url && (!s.place_id || s.place_id.startsWith('custom-'))).map(s => s.photo_url)
-  const allPhotos = [...locationPhotos, ...otherPhotos]
-  if (!allPhotos.length) return null
-  const seed = id ? id.charCodeAt(0) + id.charCodeAt(id.length - 1) : 0
-  return allPhotos[seed % allPhotos.length]
 }
 
 const CURATED_IDEAS = [
@@ -69,7 +60,7 @@ export default function DatesPage() {
     startOfToday.setHours(0, 0, 0, 0)
     const { data: upcomingCustom } = await supabase
       .from('custom_dates')
-      .select('id, title, date_time, status, stops')
+      .select('id, title, date_time, status, stops, hero_photo_url')
       .eq('couple_id', cid)
       .in('status', ['planned', 'approved'])
       .gte('date_time', startOfToday.toISOString())
@@ -79,7 +70,7 @@ export default function DatesPage() {
 
     const { data: customDates } = await supabase
       .from('custom_dates')
-      .select('id, title, date_time, created_at, status, user1_rating, user2_rating, stops')
+      .select('id, title, date_time, created_at, status, user1_rating, user2_rating, stops, hero_photo_url')
       .eq('couple_id', cid)
       .neq('status', 'pending_delete')
       .order('date_time', { ascending: false })
@@ -87,7 +78,7 @@ export default function DatesPage() {
     const normalized = (customDates ?? []).map(c => ({
       id: c.id, source: 'custom', title: c.title, date: c.date_time || c.created_at,
       stops: c.stops, status: c.status, rating: c.user1_rating || c.user2_rating || null,
-      photo_url: getHeroPhoto(c.stops, c.id),
+      photo_url: c.hero_photo_url || getHeroPhoto(c.stops, c.id),
     })).sort((a, b) => new Date(b.date ?? 0) - new Date(a.date ?? 0))
     setPastDates(normalized)
     setLoading(false)
@@ -152,8 +143,8 @@ export default function DatesPage() {
 
         {upcomingDate ? (
           <div onClick={() => router.push(`/dates/${upcomingDate.id}`)} style={{ borderRadius: '18px', overflow: 'hidden', marginBottom: '24px', boxShadow: '0 2px 16px rgba(28,20,16,0.10)', cursor: 'pointer', position: 'relative', height: '200px' }}>
-            {getHeroPhoto(upcomingDate.stops, upcomingDate.id) ? (
-              <img src={getHeroPhoto(upcomingDate.stops, upcomingDate.id)} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
+            {(upcomingDate.hero_photo_url || getHeroPhoto(upcomingDate.stops, upcomingDate.id)) ? (
+              <img src={upcomingDate.hero_photo_url || getHeroPhoto(upcomingDate.stops, upcomingDate.id)} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
             ) : (
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #2D3561 100%)' }} />
             )}

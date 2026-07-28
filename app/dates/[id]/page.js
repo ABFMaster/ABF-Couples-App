@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { getHeroPhoto } from '@/lib/date-night'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function staticMapUrl(lat, lng) {
@@ -38,16 +39,6 @@ function fmtDate(iso) {
 function fmtTime(iso) {
   if (!iso) return null
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-}
-
-function getHeroPhoto(stops, id) {
-  if (!stops?.length) return null
-  const locationPhotos = stops.filter(s => s.photo_url && s.place_id && !s.place_id.startsWith('custom-')).map(s => s.photo_url)
-  const otherPhotos = stops.filter(s => s.photo_url && (!s.place_id || s.place_id.startsWith('custom-'))).map(s => s.photo_url)
-  const allPhotos = [...locationPhotos, ...otherPhotos]
-  if (!allPhotos.length) return null
-  const seed = id ? id.charCodeAt(0) + id.charCodeAt(id.length - 1) : 0
-  return allPhotos[seed % allPhotos.length]
 }
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
@@ -182,7 +173,7 @@ export default function DateDetailPage({ params }) {
   const mapUrl = isCustom
     ? multiStopMapUrl(date.stops)
     : staticMapUrl(date.latitude, date.longitude)
-  const heroPhoto = getHeroPhoto(date.stops, date.id)
+  const heroPhoto = date.hero_photo_url || getHeroPhoto(date.stops, date.id)
 
   const dateStr = fmtDate(isPlan ? date.date_time : (date.date_time || date.created_at))
   const timeStr = date.date_time ? fmtTime(date.date_time) : null
@@ -288,7 +279,7 @@ export default function DateDetailPage({ params }) {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ coupleId: date.couple_id, userId: currentUserId, eventType: 'date_night', title: date.title, description: description || null, eventDate: date.date_time || date.created_at, photoUrls: timelinePhoto ? [timelinePhoto] : getHeroPhoto(date.stops, date.id) ? [getHeroPhoto(date.stops, date.id)] : [] }),
+        body: JSON.stringify({ coupleId: date.couple_id, userId: currentUserId, eventType: 'date_night', title: date.title, description: description || null, eventDate: date.date_time || date.created_at, photoUrls: timelinePhoto ? [timelinePhoto] : heroPhoto ? [heroPhoto] : [] }),
       })
 
       setAddedToTimeline(true)

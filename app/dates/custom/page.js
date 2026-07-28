@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { searchMovies, searchShows, getDetails } from '@/lib/omdb'
 import { fetchAndStorePlacePhoto } from '@/lib/place-photo'
+import { getHeroPhoto } from '@/lib/date-night'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const DEFAULT_CENTER = { lat: 47.6062, lng: -122.3321 }
@@ -697,6 +698,17 @@ export default function CustomDateBuilderPage() {
         .single()
 
       if (error) throw error
+
+      // Compute and store the hero photo once, at save time — avoids
+      // re-deriving it from live stops on every render (was picking a
+      // different/wrong stop as the itinerary changed after save).
+      const heroPhotoUrl = getHeroPhoto(itinerary, newDate.id)
+      if (heroPhotoUrl) {
+        await supabase
+          .from('custom_dates')
+          .update({ hero_photo_url: heroPhotoUrl })
+          .eq('id', newDate.id)
+      }
 
       // Generate conversation starters
       setSaveStage('generating')

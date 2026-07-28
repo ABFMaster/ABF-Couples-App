@@ -4,20 +4,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import BottomNav from '@/components/BottomNav'
+import { getHeroPhoto } from '@/lib/date-night'
 
 function fmtDate(iso) {
   if (!iso) return null
   return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-}
-
-function getHeroPhoto(stops, id) {
-  if (!stops?.length) return null
-  const locationPhotos = stops.filter(s => s.photo_url && s.place_id && !s.place_id.startsWith('custom-')).map(s => s.photo_url)
-  const otherPhotos = stops.filter(s => s.photo_url && (!s.place_id || s.place_id.startsWith('custom-'))).map(s => s.photo_url)
-  const allPhotos = [...locationPhotos, ...otherPhotos]
-  if (!allPhotos.length) return null
-  const seed = id ? id.charCodeAt(0) + id.charCodeAt(id.length - 1) : 0
-  return allPhotos[seed % allPhotos.length]
 }
 
 export default function DateHistoryPage() {
@@ -42,7 +33,7 @@ export default function DateHistoryPage() {
     const now = new Date().toISOString()
 
     const [{ data: customDates }, { data: datePlans }] = await Promise.all([
-      supabase.from('custom_dates').select('id, title, date_time, created_at, status, user1_rating, user2_rating, stops').eq('couple_id', cid).neq('status', 'pending_delete').order('created_at', { ascending: false }).limit(50),
+      supabase.from('custom_dates').select('id, title, date_time, created_at, status, user1_rating, user2_rating, stops, hero_photo_url').eq('couple_id', cid).neq('status', 'pending_delete').order('created_at', { ascending: false }).limit(50),
       supabase.from('date_plans').select('id, title, date_time, status, rating').eq('couple_id', cid).order('date_time', { ascending: false }).limit(50),
     ])
 
@@ -50,7 +41,7 @@ export default function DateHistoryPage() {
       id: c.id, source: 'custom', title: c.title,
       date_time: c.date_time || c.created_at,
       rating: c.user1_rating || c.user2_rating || null,
-      photo_url: getHeroPhoto(c.stops, c.id),
+      photo_url: c.hero_photo_url || getHeroPhoto(c.stops, c.id),
       stop_count: c.stops?.length ?? 0,
       status: c.status,
     }))

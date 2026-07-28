@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { searchMovies, searchShows, getDetails } from '@/lib/omdb'
 import { fetchAndStorePlacePhoto } from '@/lib/place-photo'
+import { getHeroPhoto } from '@/lib/date-night'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const SEATTLE_CENTER = { lat: 47.6062, lng: -122.3321 }
@@ -583,6 +584,7 @@ export default function EditDatePage({ params }) {
           title: dateName.trim() || 'Untitled Date',
           stops: itinerary,
           date_time: dateTime ? new Date(dateTime).toISOString() : null,
+          hero_photo_url: getHeroPhoto(itinerary, id),
         })
         .eq('id', id)
 
