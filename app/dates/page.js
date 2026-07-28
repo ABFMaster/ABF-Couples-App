@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { fetchDateSuggestions, selectDateSuggestions, DATE_CATEGORIES } from '@/lib/date-suggestions'
+import { fetchDateSuggestions, selectDateSuggestions, scoreCategory, DATE_CATEGORIES } from '@/lib/date-suggestions'
 import { getHeroPhoto } from '@/lib/date-night'
 
 function fmtDate(iso) {
@@ -25,20 +25,26 @@ const CURATED_IDEAS = [
   { id: 'connection', title: 'Something Just Us', tag: 'Connection', gradient: 'linear-gradient(135deg, #5A2A1C 0%, #C47A6A 100%)' },
 ]
 
-// Each vibe still maps to a theme, but which category we actually search is
-// picked at request time from selectDateSuggestions()'s assessment-ranked
-// list — whichever candidate for this vibe ranks highest wins. Keeps the
-// vibes meaningfully distinct while letting real assessment data influence
-// which specific category shows up within that vibe.
-const VIBE_CATEGORY_CANDIDATES = {
-  'quality-time': ['romantic_dinner', 'relaxation'],
-  'adventure': ['adventure', 'culture'],
-  'connection': ['relaxation', 'romantic_dinner', 'nightlife'],
+// Each vibe has one guaranteed-distinct primary category — Something Slow,
+// Something New, and Something Just Us must never resolve to the same
+// search. Assessment data can only bump a vibe onto its one alternate, and
+// only when that alternate is *strictly* more indicated than the primary
+// (scoreCategory() > 0 and beats the primary) — never a coin-flip tie-break,
+// which is what previously let Slow and Just Us both collapse onto
+// romantic_dinner whenever the couple's assessment didn't clearly favor
+// either one.
+const VIBE_CATEGORIES = {
+  'quality-time': { primary: 'romantic_dinner', alternate: 'culture' },
+  'adventure': { primary: 'adventure', alternate: 'culture' },
+  'connection': { primary: 'relaxation', alternate: 'nightlife' },
 }
 
-function pickCategoryForVibe(ideaId, rankedCategories) {
-  const candidates = VIBE_CATEGORY_CANDIDATES[ideaId] || [rankedCategories[0]]
-  return candidates.slice().sort((a, b) => rankedCategories.indexOf(a) - rankedCategories.indexOf(b))[0]
+function pickCategoryForVibe(ideaId, assessmentScores) {
+  const { primary, alternate } = VIBE_CATEGORIES[ideaId] || { primary: 'romantic_dinner' }
+  if (!alternate) return primary
+  const primaryScore = scoreCategory(primary, assessmentScores)
+  const alternateScore = scoreCategory(alternate, assessmentScores)
+  return alternateScore > primaryScore ? alternate : primary
 }
 
 export default function DatesPage() {
@@ -133,12 +139,12 @@ export default function DatesPage() {
       // Recently-visited stops (across all past dates) so we don't keep
       // resurfacing the same restaurant/venue every time a vibe is tapped.
       const recentDates = pastDates.flatMap(d => (d.stops || []).filter(s => s.place_id))
-      const { categories, avoidPlaceIds, radius, maxPrice } = selectDateSuggestions({
+      const { avoidPlaceIds, radius, maxPrice } = selectDateSuggestions({
         userLocation,
         assessmentScores,
         recentDates,
       })
-      const category = pickCategoryForVibe(idea.id, categories)
+      const category = pickCategoryForVibe(idea.id, assessmentScores)
       const ticketmasterKeyword = DATE_CATEGORIES[category]?.ticketmasterKeyword
       const ticketmasterUrl = `/api/events/ticketmaster?lat=${userLocation.lat}&lng=${userLocation.lng}&radius=50&size=8${ticketmasterKeyword ? `&keyword=${encodeURIComponent(ticketmasterKeyword)}` : ''}`
       const [places, events] = await Promise.all([
