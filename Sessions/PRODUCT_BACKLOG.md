@@ -1,5 +1,5 @@
 # ABF + Nora — Product Backlog
-Last updated: July 27, 2026
+Last updated: July 28, 2026
 
 This file is permanent and cumulative. Add items, update status, never delete history.
 
@@ -17,15 +17,17 @@ This file is permanent and cumulative. Add items, update status, never delete hi
 ## ABF — FEATURES
 
 ### Date Night
-- 🟢 Planning flow redesign — itinerary-first, stops visible as cards while building, not hidden in bottom bar
-- 🟢 Photo upload in date detail — users want to add photos during/after the date
+- ✅ Planning flow redesign — itinerary-first, stops visible as cards while building, not hidden in bottom bar
+- ✅ Photo upload in date detail — multi-select, uploads all chosen files
 - 🟢 Home page upcoming strip — show planned date within 48 hours contextually, disappears otherwise. Agreed design: one line between Nora card and Flirt card, only within 48hr window
-- 🟢 Movie/Show stop map fix — non-location stops cause map to disappear
-- 🟢 List/Map toggle — currently does nothing
-- 🟢 Expanding map hides category pills — z-index issue
-- 🟡 Ideas For You Two personalization — pass Nora's couple knowledge into search prompt so results are specific to Matt + Cass not generic
+- ✅ Movie/Show stop map fix — non-location stops cause map to disappear
+- ✅ List/Map toggle — removed dead toggle in custom/page.js (edit/page.js's toggle was already functional, untouched)
+- ✅ Expanding map hides category pills — resolved via the planning-flow redesign above
+- ✅ Ideas For You Two personalization — built differently than originally scoped: instead of passing Nora's free-text couple knowledge into a search prompt, wired selectDateSuggestions() to weight each vibe's category by the couple's relationship_assessments scores, exclude previously-visited places (avoidPlaceIds), and apply real price-level filtering. Ticketmaster events now vary per vibe via a keyword param (adventure -> "experience", culture -> "theater", nightlife -> "music"). Passing actual Nora couple-knowledge into a live web-search prompt is still the bigger unbuilt idea — see AI web-search agent below.
+- ✅ Post-date reflection mechanic (new item, not originally listed) — replaced the 5-star "How was the date?" modal with 4 text reaction pills (Loved it / Really good / It was fine / Not for us — no emoji, ABF rule), optional note, per-user Mark as Done guard (was repeat-clickable before), immediate push to the partner when one side completes, Nora observation once both have reflected, and a once-daily cron nudge for whoever hasn't reflected on a past date yet.
 - 🟡 During-date interactivity — location-based prompts, Game Room integration at stops, photo capture prompt
 - 📋 Game Room + Date Night integration — promote Game Room within date flow, between stops
+- 🟡 AI web-search suggestion agent — discussed in depth July 27-28. Cost estimate ~$0.05-0.08/request ($25-3000/month at 100-10k users, Sonnet 5 pricing + $0.01/search). Explicit sequencing agreed: wire up the existing engine first (done above), then decide if it's still needed. Verdict as of July 28: Ticketmaster keyword variation is a band-aid, not a real fix — it can't surface non-Ticketmaster experiences (the "Mind of a Serial Killer" example) no matter how it's tuned. Still holding off building until real usage data comes in on the wired-up version.
 
 ### Couples Memory
 - 🟢 Dream trip flow on /us/add — currently stubs to /shared/add, needs proper creation flow
@@ -45,10 +47,17 @@ This file is permanent and cumulative. Add items, update status, never delete hi
 ## ABF — TECHNICAL
 
 ### Security
-- 🟢 57 API routes without explicit auth — real vulnerability. Must fix before public launch. Not blocking current private users.
+- 🟢 57 API routes without explicit auth — re-confirmed accurate July 28 (109 total routes, exactly 57 have no auth-check pattern). Real vulnerability. Must fix before public launch. Not blocking current private users. This is the single highest-priority technical item outstanding.
 
 ### Data
 - 🟢 Bet questions category field — 120 questions in lib/bet-questions.js need { category } added (preferences/likely/reactions/confessions). question_category column exists in bets table and is nullable.
+
+### Audit findings — July 28 code review
+- 🟢 Daily Check-in feature appears fully dead in production — no app/checkin page or route exists anywhere, BottomNav has no entry point for it, and no code path inserts into daily_checkins at all. Yet lib/checkin-patterns.js's analyzeUserPatterns() (used by the AI coach) still reads from that table as if it were a live signal, meaning the coach has been working off zero fresh check-in data with no visible failure. lib/checkin-questions.js (question bank) is fully orphaned — imported nowhere. Needs a decision: rebuild the check-in UI, or deprecate the table + orphaned files and adjust the AI coach's expectations accordingly.
+- 🟢 Morning-after reflection push (see Post-date reflection mechanic above) was gated on a local hour with no corresponding cron schedule entry — fixed July 28, added a dedicated vercel.json cron. Flag: app now has 7 cron entries on one route; Vercel Hobby plan caps at 2, worth confirming plan/dashboard state.
+- 🟢 maxPrice/price_level accepted by app/api/dates/suggestions/route.js but never applied to the Google Places call — fixed July 28.
+- 📋 ~25 exported functions/constants in lib/ have zero imports anywhere else in the app (e.g. lib/checkin-patterns.js's analyzeCouplePatterns/detectConcerns/generateWeeklySummary, lib/nora-knowledge.js's getDiscrepancyNotes, lib/ritual-suggestions.js's getRitualsByTag/getRitualsByTier/getSeasonalRituals, lib/date-suggestions.js's fetchNearbyPlaces). Some are likely intentional (raw data arrays consumed internally by a wrapper function in the same file); a few look like whole built-but-never-wired capabilities worth a closer look, particularly the checkin-patterns trio and getDiscrepancyNotes. Not verified individually — worth a dedicated pass, not urgent.
+- 📋 Known low-priority edge cases documented in code comments, not fixed: a narrow race if both partners tap Mark as Done within the same instant (app/api/dates/complete/route.js), and unavoidable category overlap between two vibes' assessment-driven alternates (app/dates/page.js VIBE_CATEGORIES) when only 5 categories exist for 3 vibes.
 
 ---
 
@@ -95,3 +104,8 @@ This file is permanent and cumulative. Add items, update status, never delete hi
 - ✅ Date Night — color palette, custom_dates consolidation, creator auto-confirm, mark done guard, conversation starters fixed, Next Up hero photo
 - ✅ Security audit — Next.js 16.2.10, ANTHROPIC_API_KEY fix, RLS verified, rate limiting
 - ✅ Nora Standalone — iOS simulator verified, new user experience, push notifications, privacy/terms
+- ✅ July 28 — Date Night bug batch: grid ordering, hero image locking, dead List/Map toggle removed, Movie/Show map fix, planning-flow redesign, multi-photo upload, dashboard hero CTA routing fix
+- ✅ July 28 — Full palette pass across Date Night (2 rounds — CURATED_IDEAS cards, history header, Next Up banner, button gradients), km→miles distance fix
+- ✅ July 28 — Post-date reflection mechanic (reaction pills, no stars/emoji, Mark as Done per-user guard + partner push, Nora observation, morning-after cron nudge)
+- ✅ July 28 — Ideas For You Two personalization (assessment-weighted category picking, avoidPlaceIds, Ticketmaster keyword variation), fixed two follow-on bugs (Slow/Just Us collapsing onto the same category by default; maxPrice/price_level never actually applied)
+- ✅ July 28 — Code audit: missing force-dynamic on 1 route, 4 leftover debug console.logs in profile photo upload, missing cron schedule entry for the morning-after push, Date History star badge silently going blank for new completions
