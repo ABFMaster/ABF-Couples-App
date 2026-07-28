@@ -72,11 +72,21 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
   const activeRating = localMine?.question_rating || selectedRating
   const isSealed = !!(activeReaction && activeRating)
 
-  // Pre-set all reveal states if mounting into a completed game
+  // Pre-set all reveal states only if THIS user has personally already
+  // triggered their reveal before (mine.reveal_seen_at, set the first time
+  // they tap "Reveal the cards"). Using "both partners have answered" alone
+  // here was the bug: whoever answers first has nothing to do but leave and
+  // come back later, so by the time they reopen the Bet it's already fully
+  // resolved server-side — they'd get skipped straight to the static end
+  // state and never actually see their own flip animation, while whoever
+  // answered last (still on the page live) got the full reveal. Gating on
+  // a per-user "have I seen it" flag means both partners always get their
+  // own reveal moment, regardless of who answered first.
   const initiallyInD = !!(
     mine?.prediction && mine?.actual_answer &&
     theirs?.prediction && theirs?.actual_answer &&
-    mine?.nora_reaction && mine?.nora_intro
+    mine?.nora_reaction && mine?.nora_intro &&
+    mine?.reveal_seen_at
   )
   const [revealStarted, setRevealStarted] = useState(initiallyInD)
   const [flipped, setFlipped] = useState([initiallyInD, initiallyInD, initiallyInD, initiallyInD])
@@ -124,6 +134,16 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
       return () => clearInterval(interval)
     }
   }, [state, noraReady, poll])
+
+  const handleRevealStart = () => {
+    setRevealStarted(true)
+    setLocalMine(prev => ({ ...(prev || {}), reveal_seen_at: new Date().toISOString() }))
+    fetch('/api/bet/reveal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ betId: bet.id, userId }),
+    }).catch(() => {})
+  }
 
   const triggerPulse = (key) => {
     setPulsingDown(key)
@@ -334,7 +354,7 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
               </p>
             )}
             <button
-              onClick={() => setRevealStarted(true)}
+              onClick={handleRevealStart}
               style={{
                 width: '100%',
                 padding: '14px',
