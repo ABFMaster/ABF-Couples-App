@@ -1097,19 +1097,19 @@ export default function EditDatePage({ params }) {
               <button
                 onClick={handleSave}
                 disabled={itinerary.length === 0}
-                className="w-full py-4 bg-gradient-to-r from-[#C4714A] to-[#3D3580] text-white font-bold rounded-2xl shadow-md disabled:opacity-40 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
+                className="w-full py-4 bg-gradient-to-r from-[#C4714A] to-[#C9A84C] text-white font-bold rounded-2xl shadow-md disabled:opacity-40 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
               >
                 Save Changes →
               </button>
             )}
             {saveStage === 'saving' && (
-              <div className="w-full py-4 bg-gradient-to-r from-[#C4714A] to-[#3D3580] text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
+              <div className="w-full py-4 bg-gradient-to-r from-[#C4714A] to-[#C9A84C] text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 Saving changes…
               </div>
             )}
             {saveStage === 'generating' && (
-              <div className="w-full py-4 bg-gradient-to-r from-[#C4714A] to-[#3D3580] text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
+              <div className="w-full py-4 bg-gradient-to-r from-[#C4714A] to-[#C9A84C] text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2">
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ✨ Refreshing conversation starters…
               </div>

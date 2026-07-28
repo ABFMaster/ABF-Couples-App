@@ -466,9 +466,11 @@ export default function DateDetailPage({ params }) {
           style={{
             position: 'absolute',
             inset: 0,
+            // Warm ABF palette fallback — was ending in dark navy (#2D3561),
+            // a leftover from the pre-redesign look. Now stays warm throughout.
             background: heroPhoto
-              ? `url("${heroPhoto}") center/cover no-repeat, linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #2D3561 100%)`
-              : 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #2D3561 100%)'
+              ? `url("${heroPhoto}") center/cover no-repeat, linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #D4BA7A 100%)`
+              : 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #D4BA7A 100%)'
           }}
         />
       </div>
@@ -683,7 +685,7 @@ export default function DateDetailPage({ params }) {
                   <button
                     onClick={approveDatePlan}
                     disabled={approvingDate}
-                    className="w-full py-3 bg-gradient-to-r from-[#C4714A] to-[#3D3580] text-white font-bold rounded-2xl text-sm disabled:opacity-40"
+                    className="w-full py-3 bg-gradient-to-r from-[#C4714A] to-[#C9A84C] text-white font-bold rounded-2xl text-sm disabled:opacity-40"
                   >
                     {approvingDate ? 'Confirming…' : "I'm in! 💕"}
                   </button>
@@ -725,7 +727,7 @@ export default function DateDetailPage({ params }) {
                   <button
                     onClick={approveDatePlan}
                     disabled={approvingDate}
-                    className="w-full py-3 bg-gradient-to-r from-[#C4714A] to-[#3D3580] text-white font-bold rounded-2xl text-sm disabled:opacity-40"
+                    className="w-full py-3 bg-gradient-to-r from-[#C4714A] to-[#C9A84C] text-white font-bold rounded-2xl text-sm disabled:opacity-40"
                   >
                     {approvingDate ? 'Confirming…' : "I'm in! 💕"}
                   </button>

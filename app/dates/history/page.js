@@ -79,7 +79,7 @@ export default function DateHistoryPage() {
     <div style={{ minHeight: '100vh', background: '#FAF6F0', paddingBottom: '100px', fontFamily: 'DM Sans, sans-serif' }}>
 
       {/* HEADER */}
-      <div style={{ background: 'linear-gradient(145deg, #1C1410 0%, #2D3561 100%)', padding: '52px 24px 32px', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ background: 'linear-gradient(145deg, #1C1410 0%, #3A2818 100%)', padding: '52px 24px 32px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '140px', height: '140px', borderRadius: '50%', background: 'rgba(201,168,76,0.06)' }} />
         <button onClick={() => router.back()} style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '20px', padding: 0, fontFamily: 'DM Sans, sans-serif' }}>← Back</button>
         <div style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.18em', color: '#C9A84C', textTransform: 'uppercase', marginBottom: '4px' }}>Your Shared Life</div>

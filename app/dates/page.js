@@ -16,10 +16,13 @@ function fmtTime(iso) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
+// Warm/cream ABF palette throughout — these three previously used leftover
+// dark navy/purple/green gradients from the pre-redesign look. Replaced with
+// warm variants so the whole page reads as one consistent palette.
 const CURATED_IDEAS = [
   { id: 'quality-time', title: 'Something Slow', tag: 'Quality Time', gradient: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 100%)' },
-  { id: 'adventure', title: 'Something New', tag: 'Adventure', gradient: 'linear-gradient(135deg, #2D3561 0%, #4A3570 100%)' },
-  { id: 'connection', title: 'Something Just Us', tag: 'Connection', gradient: 'linear-gradient(135deg, #1C3A2A 0%, #4A6B5A 100%)' },
+  { id: 'adventure', title: 'Something New', tag: 'Adventure', gradient: 'linear-gradient(135deg, #6B5020 0%, #C9A84C 100%)' },
+  { id: 'connection', title: 'Something Just Us', tag: 'Connection', gradient: 'linear-gradient(135deg, #5A2A1C 0%, #C47A6A 100%)' },
 ]
 
 export default function DatesPage() {
@@ -146,7 +149,7 @@ export default function DatesPage() {
             {(upcomingDate.hero_photo_url || getHeroPhoto(upcomingDate.stops, upcomingDate.id)) ? (
               <img src={upcomingDate.hero_photo_url || getHeroPhoto(upcomingDate.stops, upcomingDate.id)} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }} />
             ) : (
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #2D3561 100%)' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 50%, #D4BA7A 100%)' }} />
             )}
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.08) 55%, transparent 100%)' }} />
             <div style={{ position: 'absolute', top: '12px', left: '12px', fontSize: '10px', fontWeight: 500, letterSpacing: '0.06em', padding: '3px 8px', borderRadius: '20px', textTransform: 'uppercase', background: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.9)' }}>Date Night</div>
