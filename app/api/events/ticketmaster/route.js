@@ -31,6 +31,7 @@ export async function GET(request) {
     const radius = searchParams.get('radius') || '25'
     const date = searchParams.get('date') || null
     const size = searchParams.get('size') || '10'
+    const keyword = searchParams.get('keyword') || null
 
     const apiKey = process.env.TICKETMASTER_API_KEY
     if (!apiKey) {
@@ -50,6 +51,10 @@ export async function GET(request) {
     if (date) {
       params.set('startDateTime', `${date}T00:00:00Z`)
       params.set('endDateTime', `${date}T23:59:59Z`)
+    }
+
+    if (keyword) {
+      params.set('keyword', keyword)
     }
 
     const url = `https://app.ticketmaster.com/discovery/v2/events.json?${params.toString()}`

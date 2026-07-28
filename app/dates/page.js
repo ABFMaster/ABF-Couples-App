@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { fetchDateSuggestions, selectDateSuggestions } from '@/lib/date-suggestions'
+import { fetchDateSuggestions, selectDateSuggestions, DATE_CATEGORIES } from '@/lib/date-suggestions'
 import { getHeroPhoto } from '@/lib/date-night'
 
 function fmtDate(iso) {
@@ -139,9 +139,11 @@ export default function DatesPage() {
         recentDates,
       })
       const category = pickCategoryForVibe(idea.id, categories)
+      const ticketmasterKeyword = DATE_CATEGORIES[category]?.ticketmasterKeyword
+      const ticketmasterUrl = `/api/events/ticketmaster?lat=${userLocation.lat}&lng=${userLocation.lng}&radius=50&size=8${ticketmasterKeyword ? `&keyword=${encodeURIComponent(ticketmasterKeyword)}` : ''}`
       const [places, events] = await Promise.all([
         fetchDateSuggestions({ location: userLocation, category, avoidPlaceIds, radius, maxPrice }),
-        fetch(`/api/events/ticketmaster?lat=${userLocation.lat}&lng=${userLocation.lng}&radius=50&size=8`, {
+        fetch(ticketmasterUrl, {
           headers: { Authorization: `Bearer ${session?.access_token}` },
         }).then(r => r.json()).then(d => d.events || []).catch(() => []),
       ])
