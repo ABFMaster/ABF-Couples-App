@@ -513,6 +513,16 @@ export default function Dashboard() {
           </p>
           <button
             onClick={() => {
+              // cta_href was being ignored — button always opened Nora chat
+              // regardless of what the API computed (e.g. 'View the plan'
+              // pointing at an upcoming date, or 'Go to Today'). Route there
+              // when it's a real destination; only fall back to Nora chat
+              // for the Nora-branded CTAs.
+              const href = heroData?.cta_href
+              if (href && !href.startsWith('/ai-coach')) {
+                router.push(href)
+                return
+              }
               if (heroData?.message) {
                 sessionStorage.setItem('nora_opener', heroData.message)
               }
