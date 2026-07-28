@@ -227,6 +227,7 @@ export default function DateDetailPage({ params }) {
       const result = await res.json()
       setShowCompleteModal(false)
       setShowTimelinePrompt(result.bothDone)
+      loadDate()
     } catch (err) {
       console.error('Complete error:', err)
       setCompletionError('Failed to save. Try again.')
