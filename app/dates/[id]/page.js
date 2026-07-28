@@ -300,23 +300,30 @@ export default function DateDetailPage({ params }) {
   }
 
   // ── Add photos to the date (during/after) — any couple member can add ──
+  // Supports multi-select: uploads every chosen file, then saves all the
+  // resulting URLs in one batched call so concurrent selections can't race.
   const handleAddDatePhoto = async (e) => {
-    const file = e.target.files[0]
+    const files = Array.from(e.target.files || [])
     e.target.value = ''
-    if (!file || !date) return
+    if (!files.length || !date) return
     setUploadingPhoto(true)
     setPhotoUploadError(null)
     try {
-      const ext = file.name.split('.').pop()
-      const path = `dates/${date.couple_id}/${date.id}/${Date.now()}.${ext}`
-      const { error: uploadError } = await supabase.storage
-        .from('timeline-photos')
-        .upload(path, file)
-      if (uploadError) throw uploadError
+      const uploadedUrls = []
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const ext = file.name.split('.').pop()
+        const path = `dates/${date.couple_id}/${date.id}/${Date.now()}-${i}.${ext}`
+        const { error: uploadError } = await supabase.storage
+          .from('timeline-photos')
+          .upload(path, file)
+        if (uploadError) throw uploadError
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('timeline-photos')
-        .getPublicUrl(path)
+        const { data: { publicUrl } } = supabase.storage
+          .from('timeline-photos')
+          .getPublicUrl(path)
+        uploadedUrls.push(publicUrl)
+      }
 
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Not signed in')
@@ -327,10 +334,10 @@ export default function DateDetailPage({ params }) {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ dateId: date.id, photoUrls: [publicUrl] }),
+        body: JSON.stringify({ dateId: date.id, photoUrls: uploadedUrls }),
       })
       const result = await res.json()
-      if (!res.ok) throw new Error(result.error || 'Failed to save photo')
+      if (!res.ok) throw new Error(result.error || 'Failed to save photos')
 
       setDate(prev => ({ ...prev, photos: result.photos }))
     } catch (err) {
@@ -545,7 +552,7 @@ export default function DateDetailPage({ params }) {
               </p>
               <label className="text-xs font-semibold text-coral-500 hover:text-coral-600 cursor-pointer">
                 {uploadingPhoto ? 'Uploading…' : '+ Add photo'}
-                <input type="file" accept="image/*" onChange={handleAddDatePhoto} disabled={uploadingPhoto} className="hidden" />
+                <input type="file" accept="image/*" multiple onChange={handleAddDatePhoto} disabled={uploadingPhoto} className="hidden" />
               </label>
             </div>
             {photoUploadError && <p className="text-xs text-red-400 mb-2">{photoUploadError}</p>}
