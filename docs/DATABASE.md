@@ -49,8 +49,8 @@ Last audited: February 2026
 
 ### custom_dates
 **Purpose:** User-built date nights with stop-by-stop itinerary
-**Key fields:** `id`, `user_id`, `couple_id`, `title`, `date_time`, `stops` (jsonb), `hero_photo_url`, `photos` (jsonb, any couple member can append via `/api/dates/photos/add`), `rating`, `review`
-**Used by:** `app/dates/custom/page.js`, `lib/ai-coach-context.js`
+**Key fields:** `id`, `user_id`, `couple_id`, `title`, `date_time`, `stops` (jsonb), `hero_photo_url`, `photos` (jsonb, any couple member can append via `/api/dates/photos/add`), `user1_completed_at`/`user2_completed_at`, `user1_reaction`/`user2_reaction` (text — one of `loved_it`/`really_good`/`fine`/`not_for_us`, see `lib/date-night.js` REACTION_OPTIONS; replaces the old 5-star `rating` field, no emoji per ABF rule), `user1_review`/`user2_review` (optional free-text note), `morning_after_prompt_sent_at` (guards the once-only cron nudge in `app/api/cron/scheduled-tasks/route.js`), `nora_observation`/`nora_observation_at` (Nora's synthesis once both partners reflect, written by `app/api/dates/complete/route.js`)
+**Used by:** `app/dates/custom/page.js`, `app/dates/[id]/page.js`, `app/api/dates/complete/route.js`, `lib/ai-coach-context.js`
 **Status:** Active
 
 ---

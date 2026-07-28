@@ -236,6 +236,44 @@ async function sendReengagementPush(couple, user1, user2, noraMemory) {
   }
 }
 
+// Morning-after nudge: for any custom date whose date_time has passed and
+// hasn't been prompted yet, push whichever partner(s) haven't marked it done,
+// deep-linking straight into the reflection modal. One prompt per date —
+// morning_after_prompt_sent_at guards against resending.
+async function processMorningAfterDates(couple, user1, user2) {
+  const timezone = user1.timezone || user2.timezone || 'America/Los_Angeles'
+  const hour = getHourInTimezone(timezone)
+  if (hour !== 10) return
+
+  const now = new Date()
+  const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { data: dates } = await supabase
+    .from('custom_dates')
+    .select('id, title, date_time, user1_completed_at, user2_completed_at')
+    .eq('couple_id', couple.id)
+    .neq('status', 'completed')
+    .is('morning_after_prompt_sent_at', null)
+    .lt('date_time', now.toISOString())
+    .gt('date_time', threeDaysAgo)
+
+  if (!dates?.length) return
+
+  for (const d of dates) {
+    try {
+      if (!d.user1_completed_at) {
+        await sendPush(couple.user1_id, 'Date Night', `How was "${d.title}"? Add a photo or a note.`, `/dates/${d.id}?reflect=1`, 'dates/morning-after')
+      }
+      if (!d.user2_completed_at) {
+        await sendPush(couple.user2_id, 'Date Night', `How was "${d.title}"? Add a photo or a note.`, `/dates/${d.id}?reflect=1`, 'dates/morning-after')
+      }
+      await supabase.from('custom_dates').update({ morning_after_prompt_sent_at: now.toISOString() }).eq('id', d.id)
+    } catch (err) {
+      console.error('[dates/morning-after] date:', d.id, err)
+    }
+  }
+}
+
 async function processWeeklyReflection(couple) {
   try {
     await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/reflection/generate`, {
@@ -803,6 +841,7 @@ export async function GET(request) {
         const user1 = profileMap[couple.user1_id] || {}
         const user2 = profileMap[couple.user2_id] || {}
         await processDailyContent(couple, user1, user2)
+        await processMorningAfterDates(couple, user1, user2)
         const day = getDayInTimezone(user1.timezone || user2.timezone || 'America/Los_Angeles')
         if (day === 0) await processWeeklyReflection(couple)
         if (day === 4) await processThursdayGeneration(couple, user1, user2)

@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect, use } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { getHeroPhoto } from '@/lib/date-night'
+import { getHeroPhoto, REACTION_OPTIONS, REACTION_LABELS } from '@/lib/date-night'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function staticMapUrl(lat, lng) {
@@ -45,6 +45,7 @@ function fmtTime(iso) {
 export default function DateDetailPage({ params }) {
   const { id } = use(params)
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const [date, setDate]       = useState(null)
   const [loading, setLoading] = useState(true)
@@ -60,7 +61,7 @@ export default function DateDetailPage({ params }) {
     return []
   }
   const [showCompleteModal, setShowCompleteModal] = useState(false)
-  const [myRating, setMyRating] = useState(0)
+  const [myReaction, setMyReaction] = useState(null)
   const [myReview, setMyReview] = useState('')
   const [submittingComplete, setSubmittingComplete] = useState(false)
   const [completionError, setCompletionError] = useState(null)
@@ -96,6 +97,16 @@ export default function DateDetailPage({ params }) {
   useEffect(() => {
     loadDate()
   }, [id])
+
+  // Morning-after push deep-links to /dates/{id}?reflect=1 — auto-open the
+  // reflection modal if this user hasn't completed their side yet.
+  useEffect(() => {
+    if (!date || isUser1 === null) return
+    if (searchParams.get('reflect') !== '1') return
+    const alreadyMine = isUser1 ? !!date.user1_completed_at : !!date.user2_completed_at
+    if (date.status === 'completed' || alreadyMine) return
+    setShowCompleteModal(true)
+  }, [date, isUser1, searchParams])
 
   const loadDate = async () => {
     // Fetch current user + partner in parallel with date data
@@ -196,7 +207,7 @@ export default function DateDetailPage({ params }) {
   const statusLabel = isCompleted ? '✓ Done' : isUpcoming ? 'Upcoming' : isPast ? 'Awaiting Review' : 'Planned'
 
   const handleComplete = async () => {
-    if (!myRating || submittingComplete) return
+    if (!myReaction || submittingComplete) return
     setSubmittingComplete(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -209,7 +220,7 @@ export default function DateDetailPage({ params }) {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ dateId: date.id, userId: user.id, rating: myRating, review: myReview }),
+        body: JSON.stringify({ dateId: date.id, userId: user.id, reaction: myReaction, review: myReview }),
       })
       if (!res.ok) throw new Error('Failed to save completion')
 
@@ -647,16 +658,23 @@ export default function DateDetailPage({ params }) {
           <div style={{ background: 'white', borderRadius: '16px', padding: '16px 18px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
             <p style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '6px' }}>How it went</p>
             {[
-              { rating: date.user1_rating, review: date.user1_review, label: date.user_id === currentUserId ? 'You' : partnerName },
-              { rating: date.user2_rating, review: date.user2_review, label: date.user_id === currentUserId ? partnerName : 'You' }
-            ].filter(r => r.rating).map((r, i) => (
+              { reaction: date.user1_reaction, rating: date.user1_rating, review: date.user1_review, label: isUser1 === true ? 'You' : partnerName },
+              { reaction: date.user2_reaction, rating: date.user2_rating, review: date.user2_review, label: isUser1 === false ? 'You' : partnerName }
+            ].filter(r => r.reaction || r.rating).map((r, i) => (
               <div key={i} className={i > 0 ? 'mt-3 pt-3 border-t border-gray-100' : ''}>
-                <p className="text-lg mb-1">{'⭐'.repeat(r.rating)}</p>
+                <p className="text-sm font-semibold text-gray-700 mb-1">
+                  {r.label} — {r.reaction ? REACTION_LABELS[r.reaction] || r.reaction : '⭐'.repeat(r.rating)}
+                </p>
                 {r.review && (
                   <p className="text-gray-600 text-sm italic">"{r.review}"</p>
                 )}
               </div>
             ))}
+            {date.nora_observation && (
+              <p style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #F0EBE2', fontSize: '13px', color: '#6B5A4A', fontStyle: 'italic', fontFamily: 'Georgia, serif', lineHeight: 1.5 }}>
+                {date.nora_observation}
+              </p>
+            )}
           </div>
         )}
 
@@ -895,17 +913,22 @@ export default function DateDetailPage({ params }) {
       {showCompleteModal && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-end justify-center p-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md">
-            <h3 className="text-xl font-bold text-gray-900 mb-1">How was the date? 💕</h3>
-            <p className="text-gray-500 text-sm mb-5">Rate and leave a note for your memory book</p>
+            <h3 className="text-xl font-bold text-gray-900 mb-1">How did it go?</h3>
+            <p className="text-gray-500 text-sm mb-5">Just for you two — no one else sees this</p>
 
-            <div className="flex gap-2 justify-center mb-5">
-              {[1, 2, 3, 4, 5].map(star => (
+            <div className="grid grid-cols-2 gap-2 mb-5">
+              {REACTION_OPTIONS.map(opt => (
                 <button
-                  key={star}
-                  onClick={() => setMyRating(star)}
-                  className={`text-3xl transition-transform ${myRating >= star ? 'scale-110' : 'opacity-30'}`}
+                  key={opt.value}
+                  onClick={() => setMyReaction(opt.value)}
+                  className="py-3 px-3 rounded-xl border-2 font-semibold text-sm transition-colors"
+                  style={
+                    myReaction === opt.value
+                      ? { borderColor: '#C4714A', background: '#FDF1EA', color: '#C4714A' }
+                      : { borderColor: '#E5E2DD', background: 'white', color: '#8B7355' }
+                  }
                 >
-                  ⭐
+                  {opt.label}
                 </button>
               ))}
             </div>
@@ -913,7 +936,7 @@ export default function DateDetailPage({ params }) {
             <textarea
               value={myReview}
               onChange={e => setMyReview(e.target.value)}
-              placeholder="What made it special? (optional)"
+              placeholder="Anything to remember? (optional)"
               className="w-full p-4 border-2 border-[#E5E2DD] rounded-xl focus:border-[#C4714A] focus:outline-none resize-none h-24 text-sm mb-4"
             />
 
@@ -930,10 +953,10 @@ export default function DateDetailPage({ params }) {
               </button>
               <button
                 onClick={handleComplete}
-                disabled={!myRating || submittingComplete}
+                disabled={!myReaction || submittingComplete}
                 className="flex-1 py-3 rounded-xl bg-[#C4714A] text-white font-bold text-sm disabled:opacity-40"
               >
-                {submittingComplete ? 'Saving…' : 'We Did It! 💕'}
+                {submittingComplete ? 'Saving…' : 'Save'}
               </button>
             </div>
           </div>
