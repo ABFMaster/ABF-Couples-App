@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { fetchDateSuggestions } from '@/lib/date-suggestions'
+import { fetchDateSuggestions, selectDateSuggestions } from '@/lib/date-suggestions'
 import { getHeroPhoto } from '@/lib/date-night'
 
 function fmtDate(iso) {
@@ -25,6 +25,22 @@ const CURATED_IDEAS = [
   { id: 'connection', title: 'Something Just Us', tag: 'Connection', gradient: 'linear-gradient(135deg, #5A2A1C 0%, #C47A6A 100%)' },
 ]
 
+// Each vibe still maps to a theme, but which category we actually search is
+// picked at request time from selectDateSuggestions()'s assessment-ranked
+// list — whichever candidate for this vibe ranks highest wins. Keeps the
+// vibes meaningfully distinct while letting real assessment data influence
+// which specific category shows up within that vibe.
+const VIBE_CATEGORY_CANDIDATES = {
+  'quality-time': ['romantic_dinner', 'relaxation'],
+  'adventure': ['adventure', 'culture'],
+  'connection': ['relaxation', 'romantic_dinner', 'nightlife'],
+}
+
+function pickCategoryForVibe(ideaId, rankedCategories) {
+  const candidates = VIBE_CATEGORY_CANDIDATES[ideaId] || [rankedCategories[0]]
+  return candidates.slice().sort((a, b) => rankedCategories.indexOf(a) - rankedCategories.indexOf(b))[0]
+}
+
 export default function DatesPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -33,6 +49,7 @@ export default function DatesPage() {
   const [userLocation, setUserLocation] = useState({ lat: 47.6062, lng: -122.3321 })
   const [coupleId, setCoupleId] = useState(null)
   const [loadingIdea, setLoadingIdea] = useState(null)
+  const [assessmentScores, setAssessmentScores] = useState({})
 
   useEffect(() => { init() }, [])
 
@@ -50,13 +67,35 @@ export default function DatesPage() {
 
     const { data: coupleData } = await supabase
       .from('couples')
-      .select('id')
+      .select('id, user1_id, user2_id')
       .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
       .maybeSingle()
 
     const cid = coupleData?.id ?? null
     if (!cid) { setLoading(false); return }
     setCoupleId(cid)
+
+    // Pull both partners' assessment scores so Ideas For You Two can weight
+    // categories toward what this couple's assessment shows needs attention
+    // (see DATE_CATEGORIES.matchesAssessment in lib/date-suggestions.js).
+    if (coupleData.user1_id && coupleData.user2_id) {
+      const { data: assessments } = await supabase
+        .from('relationship_assessments')
+        .select('user_id, results')
+        .in('user_id', [coupleData.user1_id, coupleData.user2_id])
+      const moduleTotals = {}
+      for (const a of assessments || []) {
+        for (const m of a.results?.modules || []) {
+          if (!m.moduleId || m.percentage == null) continue
+          if (!moduleTotals[m.moduleId]) moduleTotals[m.moduleId] = []
+          moduleTotals[m.moduleId].push(m.percentage)
+        }
+      }
+      const scores = Object.fromEntries(
+        Object.entries(moduleTotals).map(([key, vals]) => [key, vals.reduce((a, b) => a + b, 0) / vals.length])
+      )
+      setAssessmentScores(scores)
+    }
 
     const now = new Date().toISOString()
     const startOfToday = new Date()
@@ -87,19 +126,21 @@ export default function DatesPage() {
     setLoading(false)
   }
 
-  const IDEA_TO_CATEGORY = {
-    'quality-time': 'romantic_dinner',
-    'adventure': 'adventure',
-    'connection': 'relaxation',
-  }
-
   const handleBuildIdea = async (idea) => {
     setLoadingIdea(idea.id)
     const { data: { session } } = await supabase.auth.getSession()
     try {
-      const category = IDEA_TO_CATEGORY[idea.id]
+      // Recently-visited stops (across all past dates) so we don't keep
+      // resurfacing the same restaurant/venue every time a vibe is tapped.
+      const recentDates = pastDates.flatMap(d => (d.stops || []).filter(s => s.place_id))
+      const { categories, avoidPlaceIds, radius, maxPrice } = selectDateSuggestions({
+        userLocation,
+        assessmentScores,
+        recentDates,
+      })
+      const category = pickCategoryForVibe(idea.id, categories)
       const [places, events] = await Promise.all([
-        fetchDateSuggestions({ location: userLocation, category }),
+        fetchDateSuggestions({ location: userLocation, category, avoidPlaceIds, radius, maxPrice }),
         fetch(`/api/events/ticketmaster?lat=${userLocation.lat}&lng=${userLocation.lng}&radius=50&size=8`, {
           headers: { Authorization: `Bearer ${session?.access_token}` },
         }).then(r => r.json()).then(d => d.events || []).catch(() => []),
