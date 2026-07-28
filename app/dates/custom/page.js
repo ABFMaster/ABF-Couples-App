@@ -409,13 +409,17 @@ export default function CustomDateBuilderPage() {
       markersRef.current.push(marker)
     })
 
-    // Fit bounds to markers
-    if (itinerary.length >= 2) {
+    // Fit bounds to markers — key off stops that actually have coordinates,
+    // not total stop count. Movie/Show and custom stops have lat/lng: null,
+    // so itinerary.length alone was calling fitBounds on an empty/degenerate
+    // bounds whenever fewer than 2 stops had real coordinates, blanking the map.
+    const geoStops = itinerary.filter(s => s.lat && s.lng)
+    if (geoStops.length >= 2) {
       const bounds = new window.google.maps.LatLngBounds()
-      itinerary.forEach(s => { if (s.lat && s.lng) bounds.extend({ lat: s.lat, lng: s.lng }) })
+      geoStops.forEach(s => bounds.extend({ lat: s.lat, lng: s.lng }))
       mapInstance.current.fitBounds(bounds, 60)
-    } else if (itinerary[0]?.lat) {
-      mapInstance.current.setCenter({ lat: itinerary[0].lat, lng: itinerary[0].lng })
+    } else if (geoStops.length === 1) {
+      mapInstance.current.setCenter({ lat: geoStops[0].lat, lng: geoStops[0].lng })
       mapInstance.current.setZoom(15)
     }
 

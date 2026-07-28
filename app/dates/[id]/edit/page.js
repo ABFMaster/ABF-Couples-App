@@ -317,10 +317,17 @@ export default function EditDatePage({ params }) {
     if (mode !== 'map' || !mapInstance.current) return
     requestAnimationFrame(() => {
       window.google.maps.event.trigger(mapInstance.current, 'resize')
-      if (itinerary.length >= 2) {
+      // Key off stops with real coordinates, not total stop count — Movie/Show
+      // and custom stops have lat/lng: null, and fitBounds on an empty/
+      // degenerate bounds blanks the map.
+      const geoStops = itinerary.filter(s => s.lat && s.lng)
+      if (geoStops.length >= 2) {
         const bounds = new window.google.maps.LatLngBounds()
-        itinerary.forEach(s => { if (s.lat && s.lng) bounds.extend({ lat: s.lat, lng: s.lng }) })
+        geoStops.forEach(s => bounds.extend({ lat: s.lat, lng: s.lng }))
         mapInstance.current.fitBounds(bounds, 60)
+      } else if (geoStops.length === 1) {
+        mapInstance.current.setCenter({ lat: geoStops[0].lat, lng: geoStops[0].lng })
+        mapInstance.current.setZoom(15)
       } else {
         mapInstance.current.setCenter(userLocation)
       }
@@ -353,9 +360,11 @@ export default function EditDatePage({ params }) {
       })
       markersRef.current.push(marker)
     })
-    if (itinerary.length >= 2) {
+    // Key off stops with real coordinates, not total stop count — see note above.
+    const geoStopsForBounds = itinerary.filter(s => s.lat && s.lng)
+    if (geoStopsForBounds.length >= 2) {
       const bounds = new window.google.maps.LatLngBounds()
-      itinerary.forEach(s => { if (s.lat && s.lng) bounds.extend({ lat: s.lat, lng: s.lng }) })
+      geoStopsForBounds.forEach(s => bounds.extend({ lat: s.lat, lng: s.lng }))
       mapInstance.current.fitBounds(bounds, 60)
     } else if (itinerary[0]?.lat) {
       mapInstance.current.setCenter({ lat: itinerary[0].lat, lng: itinerary[0].lng })
