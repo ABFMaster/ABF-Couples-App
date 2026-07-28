@@ -138,70 +138,11 @@ function NearbyCard({ place, onAdd, alreadyAdded, userLocation, onSelect }) {
   )
 }
 
-function PlanStrip({ itinerary, dateName, onDateNameChange, planExpanded, setPlanExpanded, onSave, saveStage, onRemoveStop, dateTime }) {
-  if (!itinerary.length) return null
-  const stopLabel = `${itinerary.length} stop${itinerary.length === 1 ? '' : 's'}`
-  const formattedDate = dateTime
-    ? new Date(dateTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' + new Date(dateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-    : null
-
-  if (!planExpanded) {
-    return (
-      <div style={{ position: 'fixed', bottom: '64px', left: 0, right: 0, zIndex: 30, padding: '0 16px' }}>
-        <div
-          onClick={() => setPlanExpanded(true)}
-          style={{ background: '#1C1208', borderRadius: '20px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
-        >
-          <span style={{ fontSize: '13px', fontWeight: 500, color: '#C4714A' }}>{stopLabel}</span>
-          <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '14px', color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>{formattedDate || dateName}</span>
-          <span style={{ fontSize: '12px', color: '#C4714A', flexShrink: 0 }}>View plan →</span>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div style={{ position: 'fixed', bottom: '64px', left: 0, right: 0, zIndex: 30, background: '#FAF6EF', borderRadius: '20px 20px 0 0', maxHeight: '60vh', overflowY: 'auto', padding: '16px 16px 24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: formattedDate ? '4px' : '12px' }}>
-        <span style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '16px', color: '#1C1208' }}>Your plan</span>
-        <button onClick={() => setPlanExpanded(false)} style={{ fontSize: '13px', color: '#C4714A', background: 'none', border: 'none', cursor: 'pointer' }}>Done</button>
-      </div>
-      {formattedDate && <p style={{ fontSize: '12px', color: '#A09080', margin: '0 0 12px' }}>{formattedDate}</p>}
-      <input
-        type="text"
-        value={dateName}
-        onChange={e => onDateNameChange(e.target.value)}
-        placeholder="Name your date…"
-        style={{ width: '100%', fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '16px', color: '#1C1208', background: 'transparent', border: 'none', borderBottom: '0.5px solid #EDE5D8', outline: 'none', padding: '8px 0', marginBottom: '8px', boxSizing: 'border-box' }}
-      />
-      {itinerary.map((stop, i) => (
-        <div key={stop.place_id || stop.id || i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: '0.5px solid #EDE5D8' }}>
-          <div style={{ width: '22px', height: '22px', background: '#C4714A', borderRadius: '50%', color: 'white', fontSize: '11px', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</div>
-          {stop.photo_url
-            ? <img src={stop.photo_url} alt={stop.name} style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }} />
-            : <div style={{ width: '44px', height: '44px', background: 'linear-gradient(160deg,#EDE5D8,#C8B89A)', borderRadius: '8px', flexShrink: 0 }} />
-          }
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: '13px', fontWeight: 500, color: '#1C1208', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stop.name}</p>
-            <p style={{ fontSize: '11px', color: '#A09080', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stop.address || stop.venue?.name || ''}</p>
-          </div>
-          <button onClick={() => onRemoveStop(i)} style={{ color: '#C47A6A', background: 'none', border: 'none', fontSize: '13px', cursor: 'pointer', flexShrink: 0 }}>✕</button>
-        </div>
-      ))}
-      <div style={{ height: '12px' }} />
-      <button
-        onClick={onSave}
-        disabled={!!saveStage}
-        style={{ width: '100%', padding: '14px', borderRadius: '12px', background: saveStage ? '#EDE5D8' : '#C4714A', border: 'none', color: saveStage ? '#A09080' : 'white', fontSize: '15px', fontWeight: 500, cursor: saveStage ? 'not-allowed' : 'pointer' }}
-      >
-        {saveStage === 'saving' ? 'Saving…' : saveStage === 'generating' ? 'Getting conversation starters…' : saveStage === 'done' ? '✓ Saved' : 'Save date night'}
-      </button>
-      <div style={{ textAlign: 'center', marginTop: '12px' }}>
-        <button onClick={() => setPlanExpanded(false)} style={{ fontSize: '12px', color: '#A09080', background: 'none', border: 'none', cursor: 'pointer' }}>Add more stops ↑</button>
-      </div>
-    </div>
-  )
-}
+// Itinerary-first: stops render inline as cards in the normal page flow via
+// the "Your plan" section in the main render, not in a fixed bottom sheet.
+// (Previously PlanStrip — a position:fixed slide-up panel — which covered
+// the category-chip suggestions whenever expanding the map pushed them down
+// into its fixed screen zone. Removed rather than patched.)
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function CustomDateBuilderPage() {
@@ -222,7 +163,6 @@ export default function CustomDateBuilderPage() {
   const [previewPlace, setPreviewPlace] = useState(null)
   const [loadingPreview, setLoadingPreview] = useState(false)
   const [selectedCard, setSelectedCard] = useState(null)
-  const [planExpanded, setPlanExpanded] = useState(false)
 
   // Category chips
   const [activeChip, setActiveChip] = useState(null)
@@ -770,7 +710,62 @@ export default function CustomDateBuilderPage() {
       </div>
 
       {/* Scrollable content */}
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: '120px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: '32px' }}>
+
+        {/* Your plan — always visible, itinerary-first */}
+        <div style={{ margin: '12px 16px 0', background: 'white', borderRadius: '16px', border: '0.5px solid #EDE5D8', padding: '14px 16px' }}>
+          <input
+            type="text"
+            value={dateName}
+            onChange={e => setDateName(e.target.value)}
+            placeholder="Name your date…"
+            style={{ width: '100%', fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '17px', color: '#1C1208', background: 'transparent', border: 'none', outline: 'none', padding: 0, marginBottom: '8px', boxSizing: 'border-box' }}
+          />
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: itinerary.length ? '12px' : 0 }}>
+            <span style={{ fontSize: '13px' }}>📅</span>
+            {dateTime
+              ? <span style={{ fontSize: '12px', color: '#C4714A', fontWeight: 500 }}>{new Date(dateTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' + new Date(dateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+              : <span style={{ fontSize: '12px', color: '#A09080' }}>When is your date?</span>
+            }
+            <input
+              type="datetime-local"
+              value={dateTime}
+              onChange={e => setDateTime(e.target.value)}
+              style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
+            />
+          </div>
+
+          {itinerary.length === 0 ? (
+            <p style={{ fontSize: '12px', color: '#A09080', margin: 0 }}>Search below or tap a category to add your first stop</p>
+          ) : (
+            itinerary.map((stop, i) => (
+              <div key={stop.place_id || stop.id || i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', borderBottom: i === itinerary.length - 1 ? 'none' : '0.5px solid #EDE5D8' }}>
+                <div style={{ width: '22px', height: '22px', background: '#C4714A', borderRadius: '50%', color: 'white', fontSize: '11px', fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</div>
+                {stop.photo_url
+                  ? <img src={stop.photo_url} alt={stop.name} style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }} />
+                  : <div style={{ width: '44px', height: '44px', background: 'linear-gradient(160deg,#EDE5D8,#C8B89A)', borderRadius: '8px', flexShrink: 0 }} />
+                }
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: '13px', fontWeight: 500, color: '#1C1208', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stop.name}</p>
+                  <p style={{ fontSize: '11px', color: '#A09080', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{stop.address || stop.venue?.name || ''}</p>
+                </div>
+                <button onClick={() => removeStop(i)} style={{ color: '#C47A6A', background: 'none', border: 'none', fontSize: '13px', cursor: 'pointer', flexShrink: 0 }}>✕</button>
+              </div>
+            ))
+          )}
+        </div>
+
+        {itinerary.length > 0 && (
+          <div style={{ padding: '10px 16px 0' }}>
+            <button
+              onClick={handleSave}
+              disabled={!!saveStage}
+              style={{ width: '100%', padding: '14px', borderRadius: '12px', background: saveStage ? '#EDE5D8' : '#C4714A', border: 'none', color: saveStage ? '#A09080' : 'white', fontSize: '15px', fontWeight: 500, cursor: saveStage ? 'not-allowed' : 'pointer' }}
+            >
+              {saveStage === 'saving' ? 'Saving…' : saveStage === 'generating' ? 'Getting conversation starters…' : saveStage === 'done' ? '✓ Saved' : 'Save date night'}
+            </button>
+          </div>
+        )}
 
         {/* Search bar */}
         <div style={{ padding: '12px 16px 0', position: 'relative', zIndex: 10 }} data-search-box>
@@ -833,21 +828,6 @@ export default function CustomDateBuilderPage() {
             )}
           </div>
         )}
-
-        {/* Date/time selector */}
-        <div style={{ position: 'relative', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '14px' }}>📅</span>
-          {dateTime
-            ? <span style={{ fontSize: '13px', color: '#C4714A', fontWeight: 500 }}>{new Date(dateTime).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + ' · ' + new Date(dateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
-            : <span style={{ fontSize: '13px', color: '#A09080', cursor: 'pointer' }}>When is your date?</span>
-          }
-          <input
-            type="datetime-local"
-            value={dateTime}
-            onChange={e => setDateTime(e.target.value)}
-            style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
-          />
-        </div>
 
         {/* Custom stop + media buttons */}
         <div style={{ display: 'flex', gap: '8px', padding: '10px 16px 0' }}>
@@ -962,27 +942,7 @@ export default function CustomDateBuilderPage() {
           )
         })()}
 
-        {/* Empty state */}
-        {itinerary.length === 0 && !activeChip && (!preloadedSuggestions || preloadedSuggestions.length === 0) && (
-          <div style={{ padding: '40px 16px', textAlign: 'center' }}>
-            <p style={{ fontSize: '28px', margin: '0 0 10px' }}>✨</p>
-            <p style={{ fontSize: '13px', color: '#A09080', lineHeight: 1.6, margin: 0 }}>Search above or tap a category<br />to start building your date</p>
-          </div>
-        )}
-
       </div>
-
-      <PlanStrip
-        itinerary={itinerary}
-        dateName={dateName}
-        onDateNameChange={setDateName}
-        planExpanded={planExpanded}
-        setPlanExpanded={setPlanExpanded}
-        onSave={handleSave}
-        saveStage={saveStage}
-        onRemoveStop={removeStop}
-        dateTime={dateTime}
-      />
 
       <BottomSheet
         card={selectedCard}
