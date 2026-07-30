@@ -112,9 +112,23 @@ create table follow_throughs (
 
   superseded_at timestamptz,        -- set the instant a new trigger replaces this row
   wildcard boolean default false,
-  wildcard_flavor text              -- 'bigger_scope' | 'partner_authored' | null
+  wildcard_flavor text,             -- 'bigger_scope' | 'partner_authored' | null
+  candidate_actions jsonb,          -- { for: 'user1'|'user2', options: [...] } — partner-authored wildcard, cleared once picked
+
+  user1_moved_on_at timestamptz,    -- added post-implementation, see note below
+  user2_moved_on_at timestamptz
 );
 ```
+
+**Built, not just specced — one addition beyond the original design.** Implementation
+surfaced a real gap: `superseded_at` alone can't gate per-user visibility, because under
+Bet-only's weekly cadence a resolved row can sit un-superseded for up to a week. Without a
+per-user "have I already tapped through this" flag, the shared slot would keep showing a
+fully-resolved Follow-Through all week instead of handing back to the day's actual
+activity — same bug shape as Bet's `reveal_seen_at` fix earlier this session. Fixed by
+adding `user{N}_moved_on_at`, set when that user taps "See today's Bet →". A row is
+active for a given user only if their status is still actionable, or they haven't yet
+moved on past a resolved one — never gated on the row's shared `superseded_at` alone.
 
 Tier 2's content reveal (for self-directed items specifically) lives in the same
 `user1_action_text`/`user2_action_text` + `user*_note` columns already on the row —
@@ -154,10 +168,14 @@ and should be treated that way in the notes prompts (`buildPersonNotesPrompt` /
 
 These are already decided in `NOW_DO_THIS_DESIGN.md`; noting here only how they touch
 this table specifically:
-- `expires_at` is computed at generation time using the 6pm-local-cutoff rule.
-- A cron sweep (same pattern as the existing morning-after dates cron) marks rows
-  `expired` on both sides past `expires_at`, non-blocking, same "quietly, no guilt"
-  treatment already used elsewhere.
+- `expires_at` is computed at generation time using the 6pm-local-cutoff rule, via the
+  new `hoursUntilNextLocalMorning()` helper in `lib/dates.js`.
+- Implemented as **lazy expiry on read**, not a cron sweep: `/api/follow-through/today`
+  checks `expires_at` against now on every fetch and flips any still-open side to
+  `expired` inline before responding. Simpler than a scheduled sweep, always correct
+  (nobody can see a stale un-expired row, since the check runs exactly when it's read),
+  and avoids adding a 4th cron entry to an app already flagged for being near the Hobby
+  plan's cap. No vercel.json change needed for this piece.
 - Replacement: when a new Follow-Through generates for a couple and an unresolved row
   still exists, set that row's `superseded_at` and leave its per-user statuses whatever
   they already were (not forced to `expired` — the weekly recap can distinguish "expired
@@ -273,9 +291,20 @@ not a report interface). Mark `user{N}_partner_notified = true` immediately afte
 message is computed once, same as any other Nora card message naturally rotates away and
 never needs a dedicated dismiss action.
 
-## Status: this spec is now complete
+## Status: built, July 29, 2026
 
-Every item flagged open as of the July 29 stress test is resolved above. Remaining before
-a sprint can pick this up: write the actual migration, wire the generation call into
-`bet/respond/route.js`, build the report/reveal endpoints, and build the shared-slot
-front-end (already visualized in the mockups this session, not yet built in code).
+Migration run (including the post-implementation `moved_on_at` addition above),
+generation wired into `bet/respond/route.js`, report/reveal endpoints live at
+`/api/follow-through/today` and `/api/follow-through/report`, and `FollowThroughCard`
+wraps Bet on the dashboard. Not yet live-tested end to end in the app (next Tuesday's
+Bet, or a forced test via `?bet=true`, is the first real chance to see it fire).
+
+Known v1 simplifications, honest and deliberate rather than oversights:
+- If a partner reports very late — after the other has already tapped through to
+  today's activity — that user will not get a special re-surfacing of the Tier 2 mutual
+  moment. It is still recorded and reflected in the weekly recap; it just will not
+  interrupt them again that session. Acceptable for how rarely this can even occur under
+  Bet-only's weekly cadence.
+- `awaiting_partner_pick` (the partner-authored wildcard's pick step) has no polling or
+  push — the picking partner has to happen to open the app before the picked action
+  shows up for the other side. Fine for a ~5%-of-nights wildcard case in v1.

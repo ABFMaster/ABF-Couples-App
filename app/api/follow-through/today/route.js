@@ -50,17 +50,16 @@ export async function GET(request) {
       return NextResponse.json({ active: false })
     }
 
-    const myPrefixEarly = isUser1 ? 'user1' : 'user2'
-    const myStatusEarly = row[`${myPrefixEarly}_status`]
-    const myMovedOnAt = row[`${myPrefixEarly}_moved_on_at`]
-    const myRowResolved = ['done', 'declined', 'expired'].includes(myStatusEarly)
+    const myPrefix = isUser1 ? 'user1' : 'user2'
+    const theirPrefix = isUser1 ? 'user2' : 'user1'
 
     // Per-user active flag — distinct from the row's own superseded_at, same
     // fix shape as Bet's reveal_seen_at bug. The row can stay un-superseded for
     // a long time under a weekly cadence; what actually matters is whether THIS
     // user has already tapped through past it. Once moved_on_at is set, this
     // row is done for this user regardless of the row's broader lifecycle.
-    if (myRowResolved && myMovedOnAt) {
+    const myRowResolved = ['done', 'declined', 'expired'].includes(row[`${myPrefix}_status`])
+    if (myRowResolved && row[`${myPrefix}_moved_on_at`]) {
       return NextResponse.json({ active: false })
     }
 
@@ -75,9 +74,6 @@ export async function GET(request) {
         Object.assign(row, expiryUpdate)
       }
     }
-
-    const myPrefix = isUser1 ? 'user1' : 'user2'
-    const theirPrefix = isUser1 ? 'user2' : 'user1'
 
     const mine = {
       actionText: row[`${myPrefix}_action_text`] || null,

@@ -250,7 +250,6 @@ You are speaking directly to ${partnerName}. React to what the predictions and a
             betRow,
             couple: coupleRow,
             userId,
-            partnerId,
             myName,
             partnerName,
             mine,
@@ -278,7 +277,7 @@ You are speaking directly to ${partnerName}. React to what the predictions and a
 // after both partners' answers and Nora's reaction/intro are in. Non-blocking —
 // any failure here must never affect the Bet reveal itself (caller wraps this
 // in its own try/catch already, but every step below is also defensive).
-async function generateFollowThrough({ supabase, coupleId, betId, betRow, couple, userId, partnerId, myName, partnerName, mine, theirs }) {
+async function generateFollowThrough({ supabase, coupleId, betId, betRow, couple, userId, myName, partnerName, mine, theirs }) {
   const memory = await getNoraMemory(coupleId)
 
   // Distress gate — layer 1: coarse, couple-level, already-computed signal.
