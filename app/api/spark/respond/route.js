@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { updateNoraMemory, SIGNAL_TYPES, getFullNoraContext } from '@/lib/nora-memory'
 import { noraReact } from '@/lib/nora'
+import { generateFollowThrough } from '@/lib/follow-through'
 
 export async function POST(request) {
   try {
@@ -224,6 +225,31 @@ You are speaking directly to ${partnerName}. React to both answers but speak TO 
       await supabase
         .from('nora_memory')
         .upsert({ couple_id: coupleId, memory_summary: updatedSummary }, { onConflict: 'couple_id' })
+
+      // ── FOLLOW-THROUGH GENERATION ──────────────────────────────────────
+      // Same shared logic Bet uses (lib/follow-through.js). See
+      // Sessions/FOLLOW_THROUGH_GENERATION_SPEC.md and
+      // Sessions/FOLLOW_THROUGH_WEEKLY_ROLLOUT.md for the Spark-specific
+      // notes (thinner data shape, no prediction/actual contrast — Nora
+      // reacts to what each person said, not a guess-vs-truth gap).
+      try {
+        await generateFollowThrough({
+          supabase,
+          coupleId,
+          sourceType: 'spark',
+          sourceId: sparkId,
+          sourceLabel: 'Spark',
+          sourceQuestion: sparkRow.question,
+          couple: coupleRow,
+          userId: user.id,
+          myName: currentUserName,
+          partnerName,
+          myAnswer: responseText,
+          theirAnswer: partnerResponse.response_text,
+        })
+      } catch (ftErr) {
+        console.error('[spark/respond] Follow-Through generation error:', ftErr)
+      }
     }
 
     return NextResponse.json({ success: true, bothAnswered, partnerName, noraSoloInsight: soloInsight })
