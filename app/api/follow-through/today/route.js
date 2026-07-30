@@ -29,13 +29,13 @@ async function hasSeenSourceReveal(supabase, sourceType, sourceId, userId) {
       .maybeSingle()
     return !!data?.reveal_seen_at
   }
-  if (sourceType === 'wednesday') {
+  if (sourceType === 'wednesday' || sourceType === 'thursday') {
     // No gate needed here, unlike Bet/Spark. Those reveals are a tap-through
     // or an auto-playing animation the user might not have sat through yet.
-    // Wednesday/Notice's reveal is just a shared status flip on the
-    // wednesday_notices row (cron-driven, not user-triggered) — both
-    // partners see the identical revealed state the instant they open the
-    // dashboard. There's no ceremony to protect, so nothing to gate on.
+    // Wednesday/Notice and Thursday's reveals are both just a shared status
+    // flip (wednesday_notices / thursday_entries), cron-driven rather than
+    // user-triggered — both partners see the identical revealed state the
+    // instant they open the dashboard. There's no ceremony to protect.
     return true
   }
   return true

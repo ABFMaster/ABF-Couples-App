@@ -605,13 +605,15 @@ export default function Dashboard() {
 
         {/* SECTION 3.5 — THURSDAY CARD */}
         {showThursday && (
-          <ThursdayCard
-            userId={user?.id}
-            coupleId={couple?.id}
-            userName={userName}
-            partnerName={partnerName}
-            session={session}
-          />
+          <FollowThroughCard userId={user?.id} coupleId={couple?.id} activityLabel="Thursday">
+            <ThursdayCard
+              userId={user?.id}
+              coupleId={couple?.id}
+              userName={userName}
+              partnerName={partnerName}
+              session={session}
+            />
+          </FollowThroughCard>
         )}
 
         {isSolo && (

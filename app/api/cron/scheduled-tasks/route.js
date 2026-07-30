@@ -512,6 +512,32 @@ async function processThursdayReveal(couple, user1, user2) {
     await sendPush(user1.user_id, 'Nora', 'Something to see together tonight.', '/dashboard', 'thursday/reveal')
     await sendPush(user2.user_id, 'Nora', 'Something to see together tonight.', '/dashboard', 'thursday/reveal')
 
+    // Follow-Through hook — same cron-triggered pattern as Wednesday/Notice,
+    // skipped unless both actually responded. Thursday gives each partner a
+    // DIFFERENT individualized observation+question rather than one shared
+    // question, so this passes myQuestion/theirQuestion instead of
+    // sourceQuestion — see lib/follow-through.js.
+    if (hasUser1 && hasUser2) {
+      try {
+        await generateFollowThrough({
+          supabase,
+          coupleId: couple.id,
+          sourceType: 'thursday',
+          sourceId: entry.id,
+          sourceLabel: 'Thursday',
+          myQuestion: `${entry.user1_observation || ''} ${entry.user1_question || ''}`.trim(),
+          theirQuestion: `${entry.user2_observation || ''} ${entry.user2_question || ''}`.trim(),
+          couple,
+          userId: couple.user1_id,
+          myName: user1Name,
+          partnerName: user2Name,
+          myAnswer: entry.user1_response,
+          theirAnswer: entry.user2_response,
+        })
+      } catch (ftErr) {
+        console.error('[thursday] Follow-Through generation error:', ftErr)
+      }
+    }
   } catch (err) {
     console.error('[thursday/reveal] couple:', couple.id, err)
   }
