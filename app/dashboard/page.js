@@ -505,6 +505,7 @@ export default function Dashboard() {
               coupleId={couple?.id}
               partnerName={partnerName}
               onCheckinComplete={fetchHero}
+              session={session}
             />
           </div>
         )}

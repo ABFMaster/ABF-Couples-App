@@ -137,7 +137,7 @@ function SuggestionCycle({ index, onNext, onSelect, submitting, usedIds = [] }) 
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export default function RitualCard({ userId, coupleId, partnerName, onCheckinComplete }) {
+export default function RitualCard({ userId, coupleId, partnerName, onCheckinComplete, session }) {
   const [loading, setLoading] = useState(true)
   const [rituals, setRituals] = useState([])
   const [completions, setCompletions] = useState([])
@@ -406,9 +406,8 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     try {
       const res = await fetch('/api/ritual/checkin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({
-          userId,
           coupleId,
           ritualId: ritual.id,
           completed,
@@ -439,9 +438,8 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     try {
       const res = await fetch('/api/ritual/checkin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({
-          userId,
           coupleId,
           ritualId: ritual.id,
           completed: false,
