@@ -153,6 +153,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
   const [checkinResult, setCheckinResult] = useState(null) // 'completed' | 'missed' | 'retired'
   const [updatedStreak, setUpdatedStreak] = useState(null)
   const [checkinReaction, setCheckinReaction] = useState(null)
+  const [weekNote, setWeekNote] = useState('')
   const [adoptionReady, setAdoptionReady] = useState(false)
   // Separate suggestion index for retired mode so it doesn't share with State 1
   const [retiredSuggestionIndex, setRetiredSuggestionIndex] = useState(0)
@@ -347,6 +348,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
           ritualId: ritual.id,
           completed,
           weekStart: getWeekStart(),
+          note: weekNote.trim() || null,
         }),
       })
       const data = await res.json()
@@ -359,6 +361,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
       }
       setCheckinReaction(data.completion?.nora_reaction || null)
       setCheckinResult(completed ? 'completed' : 'missed')
+      setWeekNote('')
       if (completed) onCheckinComplete?.()
     } catch {} finally {
       setSubmitting(false)
@@ -715,6 +718,17 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
           if (confirmedThisWeek) return null
           return <>
             <SectionLabel text="HOW DID THIS WEEK GO?" />
+            <textarea
+              value={weekNote}
+              onChange={e => setWeekNote(e.target.value)}
+              placeholder="Anything about how this went? (optional)"
+              rows={2}
+              style={{
+                width: '100%', background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '10px',
+                padding: '10px 12px', fontSize: '13px', color: '#1A2E10', fontFamily: 'inherit',
+                resize: 'none', outline: 'none', boxSizing: 'border-box', marginBottom: '10px',
+              }}
+            />
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 onClick={() => handleCheckin(true, ritual)}

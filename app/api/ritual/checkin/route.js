@@ -7,7 +7,7 @@ import { noraReact } from '@/lib/nora'
 
 export async function POST(request) {
   try {
-    const { userId, coupleId, ritualId, completed, weekStart } = await request.json()
+    const { userId, coupleId, ritualId, completed, weekStart, note } = await request.json()
 
     if (!userId || !coupleId || !ritualId || weekStart === undefined) {
       return NextResponse.json({ error: 'userId, coupleId, ritualId, and weekStart required' }, { status: 400 })
@@ -30,6 +30,7 @@ export async function POST(request) {
           completed_by: userId,
           week_start: weekStart,
           completed: !!completed,
+          reflection_note: note || null,
           updated_at: now,
         },
         { onConflict: 'ritual_id,week_start' }
@@ -96,9 +97,9 @@ export async function POST(request) {
     try {
       const reactionPrompt = `Ritual: "${ritual.title}"${ritual.description ? ` — ${ritual.description}` : ''}
 Streak: ${ritual.streak} week${ritual.streak === 1 ? '' : 's'} in
-This week: ${completed ? 'they did it' : "they didn't get to it"}
+This week: ${completed ? 'they did it' : "they didn't get to it"}${note ? `\nWhat they said about it: "${note}"` : ''}
 
-You are Nora. React to this couple's ritual check-in this week — speak to them together, as "you two". Be specific to what this ritual actually is, not a generic streak comment. If they did it, notice something real about keeping this particular ritual going. If they didn't, be light and non-judgmental — missing a week is normal, not a failure. One sentence, maximum 20 words. Never say the word "streak" out loud.`
+You are Nora. React to this couple's ritual check-in this week — speak to them together, as "you two". Be specific to what this ritual actually is${note ? ', and to what they said about how it went' : ''}, not a generic streak comment. If they did it, notice something real about keeping this particular ritual going. If they didn't, be light and non-judgmental — missing a week is normal, not a failure. One sentence, maximum 20 words. Never say the word "streak" out loud.`
 
       noraReaction = await noraReact(reactionPrompt, {
         route: 'ritual/checkin-reaction',
