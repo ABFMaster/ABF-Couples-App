@@ -270,12 +270,11 @@ mechanic is built and there's something real to react to.
 - **Per-couple opt-out.** Undecided whether this is always-on once shipped, or needs a
   settings toggle for couples who just want the daily question without the follow-through
   layer.
-- **Generation prompt mapping.** The exact inputs/prompt structure for Nora's generation
-  need to be scoped as their own task before implementation starts. As of July 29, this
-  explicitly includes: tagging each generated action as other-directed or self-directed
-  (determines Tier 2 treatment — see above), and deciding what proportion of generated
-  actions should skew toward each category given the research grounding favors other-
-  directed bids as the stronger mechanism.
+- **Generation prompt mapping.** Scoped July 29 — see `Sessions/FOLLOW_THROUGH_GENERATION_SPEC.md`
+  for the exact prompt, JSON contract, DB table, and signal-type additions. Still open
+  within that spec: distress-sensitivity gating before generation fires, the wildcard
+  prompt variant (bigger-scope / partner-authored), and final copy for the asymmetric-
+  completion nudge.
 - **Weekly Reflection review.** Confirmed live and triggers each Sunday, but hasn't been
   reviewed end-to-end recently — worth confirming it's doing what's wanted before adding
   the new visual element to it.
