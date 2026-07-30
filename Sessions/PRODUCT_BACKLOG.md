@@ -54,7 +54,12 @@ This file is permanent and cumulative. Add items, update status, never delete hi
 ## ABF — TECHNICAL
 
 ### Security
-- 🟢 57 API routes without explicit auth — re-confirmed accurate July 28 (109 total routes, exactly 57 have no auth-check pattern). Real vulnerability. Must fix before public launch. Not blocking current private users. This is the single highest-priority technical item outstanding.
+- 🟡 BOLA (Broken Object Level Authorization) fix in progress, started July 30. Full re-audit of all 116 API routes (corrected count, superseding the July 28 estimate of 57/109) found 72 routes with no session-validation pattern at all; 1 excluded as a legitimate OAuth flow (spotify/callback); 71 real. Of those, 4 are orphaned dead code with zero callers anywhere (bet/lock, flirts/unread, game-room/challenge/start, game-room/lobby-status — pending Matt's confirmation to delete), and the remaining 65 are all browser-called (no cron/server-to-server callers among them, confirmed by spot-checking call sites). Fix pattern: shared lib/api-auth.js (requireUser + verifyCoupleMembership + getOwnCoupleId), applied route-by-route with its client caller in the same commit — see Audit findings below for exactly which are done.
+  - Tier 1 (Bet, Ritual, Follow-Through, Dashboard — 16 routes): ✅ done, commits 17be79c, d2cd5d1, 0202b57, 1b0f8fa.
+  - Tier "also sensitive" (Ahead: 2 routes, us/save-flirt, spark/reveal, nora-conversation — 5 routes): 📋 not started.
+  - Game Room (35 routes): 📋 not started.
+  - Lower-stakes (Flirts: 5, Assessment: 3, trips/wander, dates/suggestions — 9 routes): 📋 not started.
+  - weather left unauthenticated intentionally — no user data returned.
 
 ### Data
 - 🟢 Bet questions category field — 120 questions in lib/bet-questions.js need { category } added (preferences/likely/reactions/confessions). question_category column exists in bets table and is nullable.
@@ -88,6 +93,15 @@ This file is permanent and cumulative. Add items, update status, never delete hi
 - 🟢 No new cron entries — Follow-Through generation was added inside the existing processWednesdayReveal/processWednesdayCutoff/processThursdayReveal cron functions, not a new schedule.
 - 🟢 generateFollowThrough's new myQuestion/theirQuestion params verified backward compatible — when omitted, both fall back to sourceQuestion and take the identical prompt branch as before existing Bet/Spark/Wednesday callers pass sourceQuestion only.
 - 📋 Not yet live-tested end to end: both fire on next Wednesday/Thursday's actual cron run, or a forced `?notice=true`/`?thursday=true` dashboard visit combined with manually invoking the cron route with the right UTC hour — genuinely harder to force-test locally than Bet/Spark/Ritual since the reveal functions gate on exact UTC day/hour matches, not URL overrides.
+
+### Audit findings — July 30 code review (Security fix rollout, Tier 1)
+- 🟢 Pattern verified sound before scaling: requireUser() reuses the exact auth.getUser(token) mechanism already proven in 44 pre-existing routes (spark/today, notebook/entry/[id], etc.), just extracted once. verifyCoupleMembership() closes a real gap found in some of those same "good" routes (timeline/event validated a session existed but still trusted a client-supplied coupleId for the write — blocks anonymous callers only, not cross-account impersonation between two authenticated users).
+- 🟢 Deploy-atomicity confirmed as the reason paired route+caller commits are safe here: client and API routes ship in the same Next.js build/deploy, so there's never a window where a route requires a header a live client isn't sending yet.
+- 🟢 lint-clean on every touched file in Tier 1 (bet/react, bet/reveal, bet/respond, ritual/checkin, ritual/adopt, ritual/confirm, ritual/partner-note, ritual/retire, ritual/revisit-check, ritual/revisit-respond, ritual/start, ritual/status, follow-through/report, follow-through/today, dashboard/hero, dashboard/memory, plus BetCard.js, RitualCard.js, FollowThroughCard.js, app/dashboard/page.js, app/ritual/page.js, app/us/page.js) — only the same pre-existing react/no-unescaped-entities errors already logged in prior sprints, not introduced this pass.
+- 🟢 force-dynamic already present on every touched route (all pre-existed this sprint) — verified, no regressions.
+- 🟢 bet/respond's resolvedCoupleId priority flipped from `coupleId || betRow.couple_id` to `betRow.couple_id || coupleId` — DB-derived value now takes priority over client-supplied, consistent with the "never trust the client for identity/ownership" principle this whole fix is built on.
+- 📋 Found but out of scope, not fixed: app/ritual/page.js's handleSaveEdit calls a `/api/ritual/update` route that does not exist anywhere in app/api/ritual/ (pre-existing 404, predates this sprint — the "See all rituals" library page's ritual-edit save silently fails). Worth a dedicated fix, deliberately not bundled into the security sprint.
+- 📋 Not yet live-tested end to end (no session token / live Supabase session available in the sandbox) — verified via lint + full read-through of both the server route and its client caller for each conversion; real confirmation happens when Matt exercises Bet, Ritual, Follow-Through, and the dashboard hero/memory cards live.
 
 ---
 
