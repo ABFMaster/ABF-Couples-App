@@ -488,13 +488,15 @@ export default function Dashboard() {
           </div>
         )}
         {showNotice && (
-          <WednesdayCard
-            userId={user?.id}
-            coupleId={couple?.id}
-            userName={userName}
-            partnerName={partnerName}
-            session={session}
-          />
+          <FollowThroughCard userId={user?.id} coupleId={couple?.id} activityLabel="Notice">
+            <WednesdayCard
+              userId={user?.id}
+              coupleId={couple?.id}
+              userName={userName}
+              partnerName={partnerName}
+              session={session}
+            />
+          </FollowThroughCard>
         )}
         {showRitual && user?.id && couple?.id && (
           <div style={{ margin: '0 16px 14px' }}>

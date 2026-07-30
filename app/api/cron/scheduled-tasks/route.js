@@ -7,6 +7,7 @@ import { getTodayString, getDayOfWeek, getHourInTimezone } from '@/lib/dates'
 import { noraGenerate, noraChat } from '@/lib/nora'
 import { getNoraMemory, getMemoryBriefing, getSurfaceableClaims } from '@/lib/nora-memory'
 import { getNoraTierContext } from '@/lib/nora-knowledge'
+import { generateFollowThrough } from '@/lib/follow-through'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -574,6 +575,35 @@ async function processWednesdayEveningReminder(couple, user1, user2) {
   }
 }
 
+// Follow-Through hook for Wednesday/Notice — called from both the 7pm reveal
+// and the 10pm cutoff fallback, whichever one actually flips this entry to
+// 'revealed'. Unlike Bet/Spark, this fires from a cron function, not a user
+// respond route — nothing here is triggered by either partner's own action.
+// Skipped entirely unless both sides actually sent a notice, matching the
+// same no-partial-content rule Bet/Spark follow, even though Wednesday's own
+// reveal happily reveals with zero or one side answered.
+async function maybeGenerateWednesdayFollowThrough(couple, entry, user1Name, user2Name, hasUser1, hasUser2) {
+  if (!hasUser1 || !hasUser2) return
+  try {
+    await generateFollowThrough({
+      supabase,
+      coupleId: couple.id,
+      sourceType: 'wednesday',
+      sourceId: entry.id,
+      sourceLabel: 'Notice',
+      sourceQuestion: 'What did you notice about each other this week?',
+      couple,
+      userId: couple.user1_id,
+      myName: user1Name,
+      partnerName: user2Name,
+      myAnswer: entry.user1_notice,
+      theirAnswer: entry.user2_notice,
+    })
+  } catch (ftErr) {
+    console.error('[wednesday] Follow-Through generation error:', ftErr)
+  }
+}
+
 async function processWednesdayCutoff(couple, user1, user2) {
   try {
     const todayStr = getTodayString('America/Los_Angeles')
@@ -612,6 +642,7 @@ async function processWednesdayCutoff(couple, user1, user2) {
       await sendPush(user1.user_id, 'The Notice', 'See what was noticed this week.', '/dashboard', 'wednesday/cutoff')
       await sendPush(user2.user_id, 'The Notice', 'See what was noticed this week.', '/dashboard', 'wednesday/cutoff')
     }
+    await maybeGenerateWednesdayFollowThrough(couple, entry, user1Name, user2Name, hasUser1, hasUser2)
   } catch (err) {
     console.error('[wednesday/cutoff] couple:', couple.id, err)
   }
@@ -664,6 +695,7 @@ async function processWednesdayReveal(couple, user1, user2) {
     await sendPush(user1.user_id, 'The Notice', 'Nora noticed something in what you both sent today.', '/dashboard', 'wednesday/reveal')
     await sendPush(user2.user_id, 'The Notice', 'Nora noticed something in what you both sent today.', '/dashboard', 'wednesday/reveal')
 
+    await maybeGenerateWednesdayFollowThrough(couple, entry, user1Name, user2Name, hasUser1, hasUser2)
   } catch (err) {
     console.error('[wednesday/reveal] couple:', couple.id, err)
   }
