@@ -202,20 +202,21 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
-    if (!user?.id || !couple?.id) return
+    if (!user?.id || !couple?.id || !session?.access_token) return
     setMemoryLoading(true)
-    fetch(`/api/dashboard/memory?userId=${user.id}&coupleId=${couple.id}`)
+    fetch(`/api/dashboard/memory?coupleId=${couple.id}`, {
+      headers: { 'Authorization': `Bearer ${session.access_token}` },
+    })
       .then(r => r.json())
       .then(d => setMemoryCard(d))
       .catch(() => setMemoryCard(null))
       .finally(() => setMemoryLoading(false))
-  }, [user, couple])
+  }, [user, couple, session])
 
   const fetchHero = useCallback(() => {
-    if (!user?.id || !couple?.id) return
+    if (!user?.id || !couple?.id || !session?.access_token) return
     setHeroLoading(true)
     const params = new URLSearchParams({
-      userId: user.id,
       coupleId: couple.id,
       userName,
       partnerName,
@@ -229,7 +230,9 @@ export default function Dashboard() {
           .then(d => { if (d.temp != null) setWeather(d) })
           .catch(() => {})
       }
-      fetch(`/api/dashboard/hero?${params}`)
+      fetch(`/api/dashboard/hero?${params}`, {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      })
         .then(r => r.json())
         .then(d => setHeroData(d))
         .catch(() => {})
@@ -244,7 +247,7 @@ export default function Dashboard() {
     } else {
       doFetch(null, null)
     }
-  }, [user, couple, userName, partnerName])
+  }, [user, couple, userName, partnerName, session])
 
   useEffect(() => {
     fetchHero()
@@ -451,7 +454,7 @@ export default function Dashboard() {
         )}
         {showSpark && spark && (
           <div style={{ margin: '0 16px 14px' }}>
-            <FollowThroughCard userId={user?.id} coupleId={couple?.id} activityLabel="Spark">
+            <FollowThroughCard userId={user?.id} coupleId={couple?.id} session={session} activityLabel="Spark">
               <SparkCard
                 spark={spark}
                 mine={mine}
@@ -473,7 +476,7 @@ export default function Dashboard() {
         )}
         {showBet && bet && (
           <div style={{ margin: '0 16px 14px' }}>
-            <FollowThroughCard userId={user?.id} coupleId={couple?.id} activityLabel="Bet">
+            <FollowThroughCard userId={user?.id} coupleId={couple?.id} session={session} activityLabel="Bet">
               <BetCard
                 bet={bet}
                 mine={betMine}
@@ -487,7 +490,7 @@ export default function Dashboard() {
           </div>
         )}
         {showNotice && (
-          <FollowThroughCard userId={user?.id} coupleId={couple?.id} activityLabel="Notice">
+          <FollowThroughCard userId={user?.id} coupleId={couple?.id} session={session} activityLabel="Notice">
             <WednesdayCard
               userId={user?.id}
               coupleId={couple?.id}
@@ -605,7 +608,7 @@ export default function Dashboard() {
 
         {/* SECTION 3.5 — THURSDAY CARD */}
         {showThursday && (
-          <FollowThroughCard userId={user?.id} coupleId={couple?.id} activityLabel="Thursday">
+          <FollowThroughCard userId={user?.id} coupleId={couple?.id} session={session} activityLabel="Thursday">
             <ThursdayCard
               userId={user?.id}
               coupleId={couple?.id}

@@ -2,31 +2,34 @@ export const dynamic = 'force-dynamic'
 
 // DB migration: see Sessions/FOLLOW_THROUGH_GENERATION_SPEC.md — follow_throughs table.
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraReact } from '@/lib/nora'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 // POST /api/follow-through/report
-// Two actions, both unauthenticated like the rest of the Bet-adjacent routes:
-//  - { action: 'pick', followThroughId, userId, coupleId, candidateIndex }
+// Two actions:
+//  - { action: 'pick', followThroughId, coupleId, candidateIndex }
 //    Partner-authored wildcard: the OTHER partner picks which candidate becomes
 //    the target user's action.
-//  - { action: 'report', followThroughId, userId, coupleId, status, note }
+//  - { action: 'report', followThroughId, coupleId, status, note }
 //    Did it / Didn't get to it, with the two-tier reveal.
 export async function POST(request) {
   try {
-    const body = await request.json()
-    const { action, followThroughId, userId, coupleId } = body
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    if (!followThroughId || !userId || !coupleId) {
-      return NextResponse.json({ error: 'followThroughId, userId, and coupleId required' }, { status: 400 })
+    const body = await request.json()
+    const { action, followThroughId, coupleId } = body
+
+    if (!followThroughId || !coupleId) {
+      return NextResponse.json({ error: 'followThroughId and coupleId required' }, { status: 400 })
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    const userId = user.id
 
     const { data: couple } = await supabase
       .from('couples')

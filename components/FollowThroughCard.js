@@ -190,7 +190,7 @@ function ReportFace({ data, onDone, onFlip, activityLabel }) {
   )
 }
 
-export default function FollowThroughCard({ userId, coupleId, children, activityLabel = 'Bet' }) {
+export default function FollowThroughCard({ userId, coupleId, session, children, activityLabel = 'Bet' }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [flipped, setFlipped] = useState(false)
@@ -198,7 +198,9 @@ export default function FollowThroughCard({ userId, coupleId, children, activity
   const load = useCallback(async () => {
     if (!userId || !coupleId) { setLoading(false); return }
     try {
-      const res = await fetch(`/api/follow-through/today?userId=${userId}&coupleId=${coupleId}`)
+      const res = await fetch(`/api/follow-through/today?coupleId=${coupleId}`, {
+        headers: { 'Authorization': `Bearer ${session?.access_token}` },
+      })
       const json = await res.json()
       setData(json)
     } catch {
@@ -206,7 +208,7 @@ export default function FollowThroughCard({ userId, coupleId, children, activity
     } finally {
       setLoading(false)
     }
-  }, [userId, coupleId])
+  }, [userId, coupleId, session])
 
   useEffect(() => { load() }, [load])
 
@@ -218,11 +220,11 @@ export default function FollowThroughCard({ userId, coupleId, children, activity
     const isPick = status === 'pick'
     await fetch('/api/follow-through/report', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
       body: JSON.stringify(
         isPick
-          ? { action: 'pick', followThroughId: data.id, userId, coupleId, candidateIndex }
-          : { action: 'report', followThroughId: data.id, userId, coupleId, status, note }
+          ? { action: 'pick', followThroughId: data.id, coupleId, candidateIndex }
+          : { action: 'report', followThroughId: data.id, coupleId, status, note }
       ),
     })
     await load()
@@ -232,8 +234,8 @@ export default function FollowThroughCard({ userId, coupleId, children, activity
     setFlipped(true)
     fetch('/api/follow-through/report', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'moved_on', followThroughId: data.id, userId, coupleId }),
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ action: 'moved_on', followThroughId: data.id, coupleId }),
     }).catch(() => {})
   }
 

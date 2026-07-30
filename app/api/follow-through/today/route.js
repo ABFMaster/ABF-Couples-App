@@ -2,8 +2,8 @@ export const dynamic = 'force-dynamic'
 
 // DB migration: see Sessions/FOLLOW_THROUGH_GENERATION_SPEC.md — follow_throughs table.
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 // Has this specific user personally been through their own reveal experience
 // for the activity that spawned this Follow-Through row? Each source activity
@@ -41,25 +41,25 @@ async function hasSeenSourceReveal(supabase, sourceType, sourceId, userId) {
   return true
 }
 
-// GET /api/follow-through/today?userId=...&coupleId=...
+// GET /api/follow-through/today?coupleId=...
 // Returns the couple's current (non-superseded) Follow-Through row, shaped per-
-// user with the blind-until-both-report rule applied. Matches the unauthenticated
-// pattern already used by /api/bet/respond, /api/bet/react, /api/bet/reveal —
-// this feature attaches directly to Bet and follows the same convention.
+// user with the blind-until-both-report rule applied.
 export async function GET(request) {
   try {
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
+
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
     const coupleId = searchParams.get('coupleId')
 
-    if (!userId || !coupleId) {
-      return NextResponse.json({ error: 'userId and coupleId required' }, { status: 400 })
+    if (!coupleId) {
+      return NextResponse.json({ error: 'coupleId required' }, { status: 400 })
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    const userId = user.id
 
     const { data: couple } = await supabase
       .from('couples')

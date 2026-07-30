@@ -378,7 +378,9 @@ function UsPageContent() {
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (session) {
-          const res = await fetch(`/api/dashboard/hero?userId=${authUser.id}&coupleId=${cid}&userName=${encodeURIComponent(userName || '')}&partnerName=${encodeURIComponent(partnerName || '')}`)
+          const res = await fetch(`/api/dashboard/hero?coupleId=${cid}&userName=${encodeURIComponent(userName || '')}&partnerName=${encodeURIComponent(partnerName || '')}`, {
+            headers: { 'Authorization': `Bearer ${session.access_token}` },
+          })
           const data = await res.json()
           if (data.message) setHeroData(data)
         }

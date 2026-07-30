@@ -1,30 +1,32 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraSignal, noraChat } from '@/lib/nora'
 import { getNoraTierContext } from '@/lib/nora-knowledge'
 import { getSurfaceableClaims } from '@/lib/nora-memory'
 import { getTodayString, getDayOfWeek, getDateDayLabel, getWeekStart } from '@/lib/dates'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function GET(request) {
   try {
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
+
     const { searchParams } = new URL(request.url)
-    const userId      = searchParams.get('userId')
     const coupleId    = searchParams.get('coupleId')
     const userName    = searchParams.get('userName') || null
     const partnerName = searchParams.get('partnerName') || 'your partner'
     const lat         = searchParams.get('lat')
     const lon         = searchParams.get('lon')
 
-    if (!userId || !coupleId) {
-      return NextResponse.json({ error: 'userId and coupleId required' }, { status: 400 })
+    if (!coupleId) {
+      return NextResponse.json({ error: 'coupleId required' }, { status: 400 })
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    const userId = user.id
 
     const todayStr  = getTodayString('America/Los_Angeles')
     const dayOfWeek = getDayOfWeek('America/Los_Angeles')
