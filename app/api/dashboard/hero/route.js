@@ -40,6 +40,44 @@ export async function GET(request) {
       ? (couple.user1_id === userId ? couple.user2_id : couple.user1_id)
       : null
 
+    // ── PART 0: Follow-Through asymmetric-completion nudge — highest priority ──
+    // If the partner finished a Follow-Through and this user never engaged with
+    // it, surface a quiet, content-free nudge here rather than building any new
+    // UI for it — see Sessions/FOLLOW_THROUGH_GENERATION_SPEC.md. Shown once,
+    // marked via the per-user notified flag, then falls through to normal
+    // messaging on every subsequent call.
+    if (couple) {
+      const isUser1 = couple.user1_id === userId
+      const myPrefix = isUser1 ? 'user1' : 'user2'
+      const theirPrefix = isUser1 ? 'user2' : 'user1'
+
+      const { data: ftRow } = await supabase
+        .from('follow_throughs')
+        .select('id')
+        .eq('couple_id', coupleId)
+        .eq(`${myPrefix}_status`, 'pending')
+        .in(`${theirPrefix}_status`, ['done', 'declined'])
+        .eq(`${myPrefix}_partner_notified`, false)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (ftRow) {
+        await supabase
+          .from('follow_throughs')
+          .update({ [`${myPrefix}_partner_notified`]: true })
+          .eq('id', ftRow.id)
+
+        return NextResponse.json({
+          message: `Something happened after last night's Bet — worth asking ${partnerName} about it.`,
+          cta_label: null,
+          cta_href: null,
+          pills: null,
+          mode: 'follow_through_nudge',
+        })
+      }
+    }
+
     // ── PART 1: Cache — early exit for post mode ──────────────────────────────
     // Check post cache before feature detection to save DB calls
     const { data: earlyCache } = await supabase
