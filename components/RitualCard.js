@@ -168,6 +168,12 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
   const [nextSuggestion, setNextSuggestion] = useState(null)
   const [usedSuggestionIds, setUsedSuggestionIds] = useState([])
 
+  // Occasional Nora revisit of an adopted (artifact-phase) ritual — see
+  // Sessions/RITUAL_ENRICHMENT_DESIGN.md piece 3. Surfaces in the same slot
+  // as "discover another ritual" when eligible, instead of a new card.
+  const [revisitRitual, setRevisitRitual] = useState(null)
+  const [revisitChecked, setRevisitChecked] = useState(false)
+
   useEffect(() => {
     fetch(`/api/ritual/status?userId=${userId}&coupleId=${coupleId}`)
       .then(r => r.json())
@@ -206,6 +212,65 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
   else if (!hasRituals || activeRituals.length === 0) appState = 'NONE'
   else if (discoveringRituals.length > 0) appState = 'DISCOVERING'
   else appState = 'LIBRARY'
+
+  // Check once per Library view: pick up an already-pending revisit from a
+  // prior session first (no cost), otherwise roll for a new one. Guarded by
+  // revisitChecked so this never re-fires on re-render — adoptedRituals is
+  // deliberately left out of the dependency array since it's a fresh array
+  // reference every render; the checked flag is what prevents repeat calls.
+  useEffect(() => {
+    if (appState !== 'LIBRARY' || revisitChecked) return
+    setRevisitChecked(true)
+    const alreadyPending = adoptedRituals.find(r => r.pending_revisit_message)
+    if (alreadyPending) {
+      setRevisitRitual(alreadyPending)
+      return
+    }
+    if (adoptedRituals.length === 0) return
+    fetch('/api/ritual/revisit-check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ coupleId }),
+    })
+      .then(r => r.json())
+      .then(data => { if (data.ritual) setRevisitRitual(data.ritual) })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appState, revisitChecked])
+
+  const handleRevisitStillGoing = async () => {
+    if (!revisitRitual || submitting) return
+    setSubmitting(true)
+    try {
+      await fetch('/api/ritual/revisit-respond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, coupleId, ritualId: revisitRitual.id, action: 'still_going' }),
+      })
+      setRevisitRitual(null)
+    } catch {} finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleRevisitDrifted = async () => {
+    if (!revisitRitual || submitting) return
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/ritual/revisit-respond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, coupleId, ritualId: revisitRitual.id, action: 'drifted' }),
+      })
+      const data = await res.json()
+      if (data.ritual) {
+        setRituals(prev => prev.map(r => r.id === data.ritual.id ? data.ritual : r))
+      }
+      setRevisitRitual(null)
+    } catch {} finally {
+      setSubmitting(false)
+    }
+  }
 
   // ─── Handlers ───────────────────────────────────────────────────────────────
 
@@ -894,7 +959,28 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
       )}
 
       <Divider />
-      {nextSuggestion ? (
+      {revisitRitual ? (
+        <div>
+          <div style={{ background: '#F4FAF0', border: '0.5px solid #C4DDB4', borderRadius: '14px', padding: '20px', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3D6B22', flexShrink: 0 }} />
+              <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#2D5016', textTransform: 'uppercase', margin: 0 }}>Nora</p>
+            </div>
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#2D5016', fontStyle: 'italic', lineHeight: 1.65, marginBottom: '16px', marginTop: 0 }}>
+              {revisitRitual.pending_revisit_message}
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <PrimaryBtn onClick={handleRevisitStillGoing} disabled={submitting}>
+                Still going
+              </PrimaryBtn>
+              <GhostBtn onClick={handleRevisitDrifted}>We drifted from this one</GhostBtn>
+            </div>
+          </div>
+          <a href="/ritual" style={{ display: 'block', textAlign: 'center', fontSize: '13px', color: '#7A8C6E', textDecoration: 'none', padding: '8px 0' }}>
+            See all rituals →
+          </a>
+        </div>
+      ) : nextSuggestion ? (
         <div>
           <div style={{ background: '#F4FAF0', border: '0.5px solid #C4DDB4', borderRadius: '14px', padding: '20px', marginBottom: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
