@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import FlirtCard from '@/components/FlirtCard'
 import SparkCard from '@/components/SparkCard'
 import BetCard from '@/components/BetCard'
+import FollowThroughCard from '@/components/FollowThroughCard'
 import RitualCard from '@/components/RitualCard'
 import ThursdayCard from '@/components/ThursdayCard'
 import WednesdayCard from '@/components/WednesdayCard'
@@ -436,15 +437,17 @@ export default function Dashboard() {
         )}
         {showBet && bet && (
           <div style={{ margin: '0 16px 14px' }}>
-            <BetCard
-              bet={bet}
-              mine={betMine}
-              theirs={betTheirs}
-              partnerId={partnerId}
-              partnerName={partnerName}
-              userId={user?.id}
-              coupleId={couple?.id}
-            />
+            <FollowThroughCard userId={user?.id} coupleId={couple?.id} activityLabel="Bet">
+              <BetCard
+                bet={bet}
+                mine={betMine}
+                theirs={betTheirs}
+                partnerId={partnerId}
+                partnerName={partnerName}
+                userId={user?.id}
+                coupleId={couple?.id}
+              />
+            </FollowThroughCard>
           </div>
         )}
         {showNotice && (
