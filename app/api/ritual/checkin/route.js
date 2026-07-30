@@ -7,7 +7,7 @@ import { noraReact } from '@/lib/nora'
 
 export async function POST(request) {
   try {
-    const { userId, coupleId, ritualId, completed, weekStart, note } = await request.json()
+    const { userId, coupleId, ritualId, completed, weekStart, note, retire } = await request.json()
 
     if (!userId || !coupleId || !ritualId || weekStart === undefined) {
       return NextResponse.json({ error: 'userId, coupleId, ritualId, and weekStart required' }, { status: 400 })
@@ -71,6 +71,32 @@ export async function POST(request) {
         .eq('id', ritualId)
 
       supabase.from('hero_cache').delete().eq('couple_id', coupleId).then(() => {}).catch(() => {})
+    }
+
+    // "Not for us" during the discovering trial — a single person can bail
+    // unilaterally, unlike retiring an already-ADOPTED ritual (which needs
+    // both partners, see lib/ritual-retire.js). Root-caused separately: this
+    // never actually persisted before — the client set status locally only,
+    // so a reload silently un-retired it. Guarded to 'discovering' so this
+    // can never be used to bypass the two-person confirm an adopted ritual
+    // requires.
+    if (retire) {
+      const { data: currentRitual } = await supabase
+        .from('rituals')
+        .select('*')
+        .eq('id', ritualId)
+        .maybeSingle()
+
+      if (currentRitual?.status === 'discovering') {
+        const { data: retiredRitual } = await supabase
+          .from('rituals')
+          .update({ status: 'retired', updated_at: now })
+          .eq('id', ritualId)
+          .select('*')
+          .maybeSingle()
+        return NextResponse.json({ ritual: retiredRitual || currentRitual, completion })
+      }
+      return NextResponse.json({ ritual: currentRitual, completion })
     }
 
     // Fetch updated ritual row

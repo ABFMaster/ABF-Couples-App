@@ -372,7 +372,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     if (submitting) return
     setSubmitting(true)
     try {
-      await fetch('/api/ritual/checkin', {
+      const res = await fetch('/api/ritual/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -381,9 +381,11 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
           ritualId: ritual.id,
           completed: false,
           weekStart: getWeekStart(),
+          retire: true,
         }),
       })
-      setRituals(prev => prev.map(r => r.id === ritual.id ? { ...r, status: 'retired' } : r))
+      const data = await res.json()
+      setRituals(prev => prev.map(r => r.id === ritual.id ? (data.ritual || { ...r, status: 'retired' }) : r))
       setCheckinResult('retired')
     } catch {} finally {
       setSubmitting(false)
