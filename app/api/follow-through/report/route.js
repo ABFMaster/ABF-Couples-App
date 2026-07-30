@@ -52,6 +52,19 @@ export async function POST(request) {
     const myPrefix = isUser1 ? 'user1' : 'user2'
     const theirPrefix = isUser1 ? 'user2' : 'user1'
 
+    // ── MOVED ON ──────────────────────────────────────────────────────────
+    // Fired when the user taps "See today's Bet →" and the card flips. Marks
+    // this row done for THIS user specifically — see the matching comment in
+    // /api/follow-through/today about why this can't just be the row's
+    // superseded_at.
+    if (action === 'moved_on') {
+      await supabase
+        .from('follow_throughs')
+        .update({ [`${myPrefix}_moved_on_at`]: new Date().toISOString() })
+        .eq('id', followThroughId)
+      return NextResponse.json({ success: true })
+    }
+
     // ── PICK ──────────────────────────────────────────────────────────────
     if (action === 'pick') {
       const { candidateIndex } = body
