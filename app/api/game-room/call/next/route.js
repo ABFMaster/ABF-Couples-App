@@ -1,19 +1,17 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const { callSessionId, coupleId } = await request.json()
-    if (!callSessionId || !coupleId) {
-      return NextResponse.json({ error: 'callSessionId and coupleId required' }, { status: 400 })
-    }
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    const { callSessionId } = await request.json()
+    if (!callSessionId) {
+      return NextResponse.json({ error: 'callSessionId required' }, { status: 400 })
+    }
 
     const { data: callSession } = await supabase
       .from('call_sessions')
@@ -22,6 +20,9 @@ export async function POST(request) {
       .maybeSingle()
 
     if (!callSession) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, callSession.couple_id)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const nextRound = callSession.current_round + 1
     const complete = nextRound > callSession.total_rounds

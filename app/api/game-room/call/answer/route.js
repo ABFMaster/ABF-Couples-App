@@ -1,20 +1,28 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraSignal } from '@/lib/nora'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const { callSessionId, roundId, userId, answer, isHotSeat } = await request.json()
-    if (!callSessionId || !roundId || !userId || !answer) {
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
+
+    const { callSessionId, roundId, answer, isHotSeat } = await request.json()
+    if (!callSessionId || !roundId || !answer) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    const { data: callSessionForAuth } = await supabase
+      .from('call_sessions')
+      .select('couple_id')
+      .eq('id', callSessionId)
+      .maybeSingle()
+    if (!callSessionForAuth) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, callSessionForAuth.couple_id)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     // Save answer to correct field
     const updateField = isHotSeat ? { hot_seat_answer: answer } : { predictor_answer: answer }

@@ -78,9 +78,10 @@ function CallPlayContent() {
       setIsHost(sess?.host_user_id === user.id)
 
       if (sess?.host_user_id === user.id) {
+        const { data: { session } } = await supabase.auth.getSession()
         const res = await fetch('/api/game-room/call/generate', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
           body: JSON.stringify({
             sessionId,
             coupleId: couple.id,
@@ -263,13 +264,13 @@ function CallPlayContent() {
     setSubmitting(true)
     setMyAnswer(option)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       await fetch('/api/game-room/call/answer', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({
           callSessionId,
           roundId: round.id,
-          userId,
           answer: option,
           isHotSeat,
         }),
@@ -281,9 +282,10 @@ function CallPlayContent() {
     if (!explanation.trim() || explanationSubmitted) return
     setExplanationSubmitted(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       await fetch('/api/game-room/call/explain', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({ roundId: round.id, explanation }),
       })
     } catch {}
@@ -292,18 +294,20 @@ function CallPlayContent() {
   const handleSkipExplanation = async () => {
     if (explanationSubmitted) return
     setExplanationSubmitted(true)
+    const { data: { session } } = await supabase.auth.getSession()
     await fetch('/api/game-room/call/explain', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
       body: JSON.stringify({ roundId: round.id, explanation: '—' }),
     })
   }
 
   const handleNext = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
     const res = await fetch('/api/game-room/call/next', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ callSessionId, coupleId }),
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ callSessionId }),
     })
     const data = await res.json()
     if (data.complete) {
@@ -329,9 +333,10 @@ function CallPlayContent() {
         .eq('id', sessionId)
         .maybeSingle()
       if (sess?.host_user_id === userId) {
+        const { data: { session } } = await supabase.auth.getSession()
         const genRes = await fetch('/api/game-room/call/generate', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
           body: JSON.stringify({
             sessionId,
             coupleId,
@@ -352,10 +357,11 @@ function CallPlayContent() {
     // Predictor is whoever is NOT the hot seat on the final round
     const finalHotSeatUserId = totalRounds % 2 === 1 ? couple.user1_id : couple.user2_id
     const predictorUserId = finalHotSeatUserId === couple.user1_id ? couple.user2_id : couple.user1_id
+    const { data: { session } } = await supabase.auth.getSession()
     const res = await fetch('/api/game-room/call/verdict', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ callSessionId, coupleId, score, totalRounds, predictorUserId }),
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ callSessionId, score, totalRounds, predictorUserId }),
     })
     const data = await res.json()
     setVerdict(data.verdict)

@@ -1,29 +1,35 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraVerdict } from '@/lib/nora'
 import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing, getSurfaceableClaims } from '@/lib/nora-memory'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const { callSessionId, coupleId, score, totalRounds, predictorUserId } = await request.json()
-    if (!callSessionId || !coupleId || score === undefined || !predictorUserId) {
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
+
+    const { callSessionId, score, totalRounds, predictorUserId } = await request.json()
+    if (!callSessionId || score === undefined || !predictorUserId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
-
-    // Idempotency — return existing verdict if already generated
+    // Idempotency — return existing verdict if already generated. couple_id
+    // comes from the session row itself, never trusted from the client.
     const { data: existingSession } = await supabase
       .from('call_sessions')
-      .select('nora_verdict')
+      .select('nora_verdict, couple_id')
       .eq('id', callSessionId)
       .maybeSingle()
-    if (existingSession?.nora_verdict) {
+    if (!existingSession) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, existingSession.couple_id)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    const coupleId = existingSession.couple_id
+
+    if (existingSession.nora_verdict) {
       return NextResponse.json({ verdict: existingSession.nora_verdict, score, totalRounds })
     }
 
