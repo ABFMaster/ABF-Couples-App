@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
+import { noraReact } from '@/lib/nora'
 
 export async function POST(request) {
   try {
@@ -88,7 +89,37 @@ export async function POST(request) {
       },
     }).catch(() => {})
 
-    return NextResponse.json({ ritual, completion })
+    // Live Nora reaction, replacing the old static NORA_WEEK_MESSAGES lookup
+    // table. Referencing the actual ritual and streak instead of generic
+    // week-number copy. Persisted so a re-render never regenerates it.
+    let noraReaction = null
+    try {
+      const reactionPrompt = `Ritual: "${ritual.title}"${ritual.description ? ` — ${ritual.description}` : ''}
+Streak: ${ritual.streak} week${ritual.streak === 1 ? '' : 's'} in
+This week: ${completed ? 'they did it' : "they didn't get to it"}
+
+You are Nora. React to this couple's ritual check-in this week — speak to them together, as "you two". Be specific to what this ritual actually is, not a generic streak comment. If they did it, notice something real about keeping this particular ritual going. If they didn't, be light and non-judgmental — missing a week is normal, not a failure. One sentence, maximum 20 words. Never say the word "streak" out loud.`
+
+      noraReaction = await noraReact(reactionPrompt, {
+        route: 'ritual/checkin-reaction',
+        context: 'daily',
+        maxTokens: 60,
+      })
+
+      if (noraReaction && completion?.id) {
+        await supabase
+          .from('ritual_completions')
+          .update({ nora_reaction: noraReaction })
+          .eq('id', completion.id)
+      }
+    } catch (reactionErr) {
+      console.error('[ritual/checkin] Nora reaction error:', reactionErr)
+    }
+
+    return NextResponse.json({
+      ritual,
+      completion: noraReaction ? { ...completion, nora_reaction: noraReaction } : completion,
+    })
   } catch (err) {
     console.error('[ritual/checkin] Error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

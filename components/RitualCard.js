@@ -6,12 +6,6 @@ import { getWeekStart } from '@/lib/dates'
 
 const TIER1 = RITUAL_SUGGESTIONS.filter(r => r.tier === 1)
 
-const NORA_WEEK_MESSAGES = {
-  1: "Give this three weeks before you decide. That's the minimum for something to start feeling natural. Check in here each Friday and let Nora know how it's going.",
-  2: "Two weeks in. Research shows it takes about 21 days for something to feel automatic. You're most of the way there. Keep going.",
-  3: "Week three. If this has shown up in your week at all — even imperfectly — that's the ritual working. One more week and you can make it official.",
-}
-
 // ─── Shared style helpers ─────────────────────────────────────────────────────
 
 const WRAPPER = {
@@ -158,6 +152,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
   // State 2 — discovering / check-in flow
   const [checkinResult, setCheckinResult] = useState(null) // 'completed' | 'missed' | 'retired'
   const [updatedStreak, setUpdatedStreak] = useState(null)
+  const [checkinReaction, setCheckinReaction] = useState(null)
   const [adoptionReady, setAdoptionReady] = useState(false)
   // Separate suggestion index for retired mode so it doesn't share with State 1
   const [retiredSuggestionIndex, setRetiredSuggestionIndex] = useState(0)
@@ -362,6 +357,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
           setAdoptionReady(true)
         }
       }
+      setCheckinReaction(data.completion?.nora_reaction || null)
       setCheckinResult(completed ? 'completed' : 'missed')
       if (completed) onCheckinComplete?.()
     } catch {} finally {
@@ -661,9 +657,13 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
           <div style={{ marginBottom: '20px' }}>
             <RitualAccentCard label={ritual.frequency} title={ritual.title} description={ritual.description} />
           </div>
-          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center' }}>
-            Logged. See you next Friday.
-          </p>
+          {checkinReaction ? (
+            <NoraBlock text={checkinReaction} />
+          ) : (
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center' }}>
+              Logged. See you next Friday.
+            </p>
+          )}
         </div>
       )
     }
@@ -676,9 +676,13 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
           <div style={{ marginBottom: '20px' }}>
             <RitualAccentCard label={ritual.frequency} title={ritual.title} description={ritual.description} />
           </div>
-          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center' }}>
-            That's ok. The ritual is still there when you're ready.
-          </p>
+          {checkinReaction ? (
+            <NoraBlock text={checkinReaction} />
+          ) : (
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center' }}>
+              That's ok. The ritual is still there when you're ready.
+            </p>
+          )}
         </div>
       )
     }
@@ -693,7 +697,6 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
         <div style={{ marginBottom: '16px' }}>
           <RitualAccentCard label={ritual.frequency} title={ritual.title} description={ritual.description} />
         </div>
-        <NoraBlock text={NORA_WEEK_MESSAGES[weekNum] || NORA_WEEK_MESSAGES[1]} />
         {(() => {
           const confirmedAt = ritual.partner_confirmed_at ? new Date(ritual.partner_confirmed_at) : null
           const confirmedWeek = confirmedAt ? confirmedAt.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }).slice(0, 10) : null
