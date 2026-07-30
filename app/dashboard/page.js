@@ -417,17 +417,19 @@ export default function Dashboard() {
         )}
         {showSpark && spark && (
           <div style={{ margin: '0 16px 14px' }}>
-            <SparkCard
-              spark={spark}
-              mine={mine}
-              theirs={theirs}
-              partnerName={partnerName}
-              sparkIntroShown={sparkIntroShown}
-              onRespond={handleSparkRespond}
-              onSkip={() => fetchSpark()}
-              onReact={() => fetchSpark()}
-              onInvite={handleSparkInvite}
-            />
+            <FollowThroughCard userId={user?.id} coupleId={couple?.id} activityLabel="Spark">
+              <SparkCard
+                spark={spark}
+                mine={mine}
+                theirs={theirs}
+                partnerName={partnerName}
+                sparkIntroShown={sparkIntroShown}
+                onRespond={handleSparkRespond}
+                onSkip={() => fetchSpark()}
+                onReact={() => fetchSpark()}
+                onInvite={handleSparkInvite}
+              />
+            </FollowThroughCard>
           </div>
         )}
         {showBet && !bet && (
