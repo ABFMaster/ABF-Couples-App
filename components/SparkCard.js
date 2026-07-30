@@ -77,6 +77,23 @@ export default function SparkCard({
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4) }
   }, [state])
 
+  // Spark has no confirming tap like Bet's "Reveal the cards" — mark this
+  // user's reveal as seen automatically once the reveal animation finishes,
+  // so Follow-Through knows it's safe to take over the slot. Skipped if
+  // already set, so replaying the animation on a later remount doesn't keep
+  // rewriting the timestamp.
+  useEffect(() => {
+    if (!pillsShown || mine?.reveal_seen_at) return
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) return
+      fetch('/api/spark/reveal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ sparkId: spark.id, userId: session.user.id }),
+      }).catch(() => {})
+    }).catch(() => {})
+  }, [pillsShown, mine?.reveal_seen_at])
+
   const triggerPulse = (key) => {
     setPulsingDown(key)
     setTimeout(() => { setPulsingDown(null); setPulsingUp(key) }, 75)
