@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
 import { getSparkQuestion } from '@/lib/spark-questions'
 import { getBetQuestion } from '@/lib/bet-questions'
-import { getTodayString, getDayOfWeek } from '@/lib/dates'
+import { getTodayString, getDayOfWeek, getHourInTimezone } from '@/lib/dates'
 import { noraGenerate, noraChat } from '@/lib/nora'
 import { getNoraMemory, getMemoryBriefing, getSurfaceableClaims } from '@/lib/nora-memory'
 import { getNoraTierContext } from '@/lib/nora-knowledge'
@@ -24,20 +24,6 @@ async function sendPush(userId, title, body, url, route) {
       body: JSON.stringify({ userId, title, body, url, route }),
     })
   } catch {
-  }
-}
-
-function getHourInTimezone(timezone) {
-  try {
-    const now = new Date()
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      hour: 'numeric',
-      hour12: false,
-    })
-    return parseInt(formatter.format(now), 10)
-  } catch {
-    return -1
   }
 }
 
