@@ -164,10 +164,118 @@ this table specifically:
   on its own" from "superseded by the next one" if that distinction ever matters, though
   it doesn't change the user-facing treatment).
 
-## Not yet in this spec (still open, per NOW_DO_THIS_DESIGN.md)
+## Distress-sensitivity gate
 
-- Distress-sensitivity gating before generation fires at all
-- Per-couple opt-out
-- Exact copy for the asymmetric-completion soft nudge
-- Wildcard generation prompt variant (bigger-scope and partner-authored need their own
-  prompt shape, not covered above — above is the standard-night case only)
+Not a validated distress detector — we don't have one, and building generation logic
+that pretends otherwise would be overclaiming (flagged honestly earlier in this design
+process). What we do have is two cheap, existing-pattern signals, used conservatively:
+err toward silently skipping generation, never toward forcing an action into a bad night.
+
+**Layer 1 — coarse, couple-level, free (data already exists).** Before generating,
+check `memory.couple_notes.structured_facts.trajectory` (already computed by the existing
+`extractStructuredFacts` in `lib/nora-memory.js`). If `trajectory === 'away'`, skip
+generation entirely for both partners tonight. No new call, no new cost — this data is
+already being written every time Bet/Spark/etc. update couple notes.
+
+**Layer 2 — fine, per-night, cheap.** Trajectory is a slow-moving signal and can lag an
+acute bad night. Add one `noraSignal` call (same fast/cheap Haiku pattern already used by
+`shouldUpdateMemory`) reading tonight's actual Bet answers specifically:
+
+```
+const distressCheck = await noraSignal(
+  `Tonight's Bet question: "${betRow.question}"\n${myName}: "${mine.actual_answer}"\n${partnerName}: "${theirs.actual_answer}"\n\nDoes either answer suggest active distress, conflict, or a rough patch tonight, as opposed to normal playful or reflective engagement? Answer exactly YES or NO.`,
+  { route: 'follow-through/distress-check', maxTokens: 10 }
+)
+```
+
+If either layer trips, skip generation for both partners that night. No row is created,
+nothing is shown, nothing expires and nothing needs explaining — a missing Follow-Through
+isn't a signal either partner is watching for the way a missing partner-response is, so
+silence here costs nothing.
+
+## Per-couple opt-out
+
+Decision: **no settings toggle in v1.** The mechanic already degrades gracefully to
+ignorable — no push, no badge, no penalty, quietly expires if untouched. A couple that
+doesn't want this can already opt out for free by simply never engaging with it, at zero
+cost to them. Building a dedicated toggle means new settings UI, a new preference column,
+and gating logic in every generation path, for a feature that already has a soft off-
+switch built in. Same reasoning already applied to the AI web-search suggestion agent
+decision this session: wire up the real thing, see actual usage, add a toggle later only
+if real users ask for one.
+
+## Wildcard variants
+
+**Eligibility check (runs before either wildcard flavor is considered):** both partners'
+`individual_signal_count` must be above the existing Tier 1 threshold (reusing the
+`getTier()` cutoff already defined in `lib/nora-memory.js` — Tier 2 requires >5), the
+distress gate above must have passed clean, and no wildcard has fired for this couple in
+the last 14 days (`select 1 from follow_throughs where couple_id = ? and wildcard = true
+and created_at > now() - interval '14 days'`). Skip wildcard entirely if any of these
+fail — falls back to a normal night, never blocks generation itself.
+
+If eligible, roll a flat 10% chance. If it hits, pick `bigger_scope` or `partner_authored`
+50/50 and tag `wildcard_flavor` accordingly.
+
+**Bigger scope.** Same generation call as the standard prompt, with this appended:
+
+```
+This is a wildcard night — Nora occasionally gives something with more scope than usual.
+Give ${myName} something bigger: more time, more effort, more intention than a typical
+night's action, appropriate for a couple who's earned it. Explicitly frame the timing —
+say when this runs through (e.g. "sometime this weekend"), so it's never ambiguous
+which loop is still open.
+```
+
+`expires_at` for these rows is set explicitly from the stated timeframe rather than the
+standard 6pm-cutoff window — computed from what Nora's `action_text` actually says, not
+a fixed offset (a "runs through the weekend" action generated on a Tuesday needs a
+different expiry than one generated on a Thursday).
+
+**Partner-authored.** Only one partner's action becomes partner-authored per wildcard
+night (chosen randomly between the two); the other partner's action is generated
+normally. Nora generates candidates instead of a single action:
+
+```
+Return ONLY this JSON:
+{
+  "candidates": [
+    {"action_text": "...", "directed": "other"},
+    {"action_text": "...", "directed": "other"},
+    {"action_text": "...", "directed": "self"}
+  ]
+}
+```
+
+These candidates are shown to the *other* partner (not the one they're for) with framing
+like "Pick one for ${myName} tonight" — single tap, no typing. Whichever is picked gets
+copied into the normal `action_text`/`directed` columns for that user, and from that point
+forward the row behaves exactly like any other Follow-Through — partner-authored only
+changes how the action was chosen, not the schema or the report/reveal flow downstream.
+Needs one transient state before `pending`: `awaiting_partner_pick`, plus a temporary
+`candidate_actions` jsonb column to hold the 2-3 options until one is chosen.
+
+## Asymmetric-completion nudge — placement and copy
+
+Resolved by reusing existing real estate rather than building anything new: the Nora
+secondary card (`app/api/dashboard/hero/route.js`, the same `message`/`cta_label`/
+`cta_href` slot that already drives the dashboard's Nora card) gets one more candidate
+input. That route already does an early-exit priority check (see its `mode === 'post'`
+branch) — add a similar early check: does this user have a Follow-Through where their
+partner's side is `done` or `declined`, their own side is still `pending`, and
+`user{N}_partner_notified` is still false? If so, return that as the hero message instead
+of the normal rotation, content-free:
+
+> "Something happened after last night's Bet — worth asking Cass about it."
+
+No `cta_href` needed (there's no dedicated screen to send them to yet — this is a nudge,
+not a report interface). Mark `user{N}_partner_notified = true` immediately after this
+message is computed once, same as any other Nora card message naturally rotates away and
+never needs a dedicated dismiss action.
+
+## Status: this spec is now complete
+
+Every item flagged open as of the July 29 stress test is resolved above. Remaining before
+a sprint can pick this up: write the actual migration, wire the generation call into
+`bet/respond/route.js`, build the report/reveal endpoints, and build the shared-slot
+front-end (already visualized in the mockups this session, not yet built in code).

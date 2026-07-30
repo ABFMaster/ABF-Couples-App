@@ -1,9 +1,11 @@
 # "The Follow-Through" — Design Direction (working name)
 
-Status: Direction settled July 28, 2026. Mechanics stress-tested and refined July 29,
-2026 (module real estate, timing, reveal semantics — see "Mechanics refinement" below).
-Not yet built. Generation-prompt mapping and a few open dependencies still need
-resolution before this goes into a sprint.
+Status: Design complete as of July 29, 2026. Direction settled July 28; mechanics
+stress-tested and refined July 29 (module real estate, timing, reveal semantics — see
+"Mechanics refinement" below); generation, data model, distress gating, wildcard
+variants, and the asymmetric-completion nudge all scoped July 29 in
+`Sessions/FOLLOW_THROUGH_GENERATION_SPEC.md`. Nothing left open at the design level.
+Not yet built — next step is implementation, not further design.
 
 ## The problem this solves
 
@@ -261,22 +263,25 @@ low effort, a little pride — not obligation.
 feeling above. Leading candidate: "The Follow-Through." Not locked; revisit once the
 mechanic is built and there's something real to react to.
 
-## Open dependencies — not solved yet, flagged honestly
+## Formerly-open dependencies — resolved July 29
 
-- **Distress-sensitivity.** Nora's existing "trajectory"/"unsaid thing" signal in
-  nora_memory is soft and inferred, not a validated distress detector. A playful action
-  prompt landing on a couple mid-conflict is a real risk. This needs its own design pass
-  before broad rollout — do not assume it's handled.
-- **Per-couple opt-out.** Undecided whether this is always-on once shipped, or needs a
-  settings toggle for couples who just want the daily question without the follow-through
-  layer.
-- **Generation prompt mapping.** Scoped July 29 — see `Sessions/FOLLOW_THROUGH_GENERATION_SPEC.md`
-  for the exact prompt, JSON contract, DB table, and signal-type additions. Still open
-  within that spec: distress-sensitivity gating before generation fires, the wildcard
-  prompt variant (bigger-scope / partner-authored), and final copy for the asymmetric-
-  completion nudge.
+- **Distress-sensitivity.** Resolved with a deliberately modest, two-layer gate rather
+  than a claimed real detector: the existing `trajectory` structured fact (skip if
+  `'away'`) plus one cheap per-night `noraSignal` classifier on the actual answers. See
+  `Sessions/FOLLOW_THROUGH_GENERATION_SPEC.md`. Errs toward silently skipping generation,
+  never toward forcing an action into a bad night.
+- **Per-couple opt-out.** Resolved: no settings toggle in v1. The mechanic already
+  degrades to ignorable at zero cost (no push, no badge, no penalty, quiet expiry), so a
+  couple that wants out already has one, for free. Revisit only if real users ask.
+- **Generation prompt mapping.** Fully scoped — exact prompt, JSON contract, DB table,
+  signal-type additions, wildcard variants (bigger-scope and partner-authored), and the
+  asymmetric-completion nudge (reuses the existing Nora hero-card message slot, no new
+  UI) all in `Sessions/FOLLOW_THROUGH_GENERATION_SPEC.md`.
+
+## Still open — genuinely deferred, not design gaps
+
 - **Weekly Reflection review.** Confirmed live and triggers each Sunday, but hasn't been
   reviewed end-to-end recently — worth confirming it's doing what's wanted before adding
-  the new visual element to it.
-- **Asymmetric-completion nudge copy/UI.** Shape of the fix is settled (see above), exact
-  copy and where it renders is not.
+  the new visual element to it. This is a review task, not a design decision.
+- **Longer-term Us/Memory archiving extension.** Explicitly flagged as not-v1 from the
+  start — revisit after the core mechanic ships and there's real usage to learn from.
