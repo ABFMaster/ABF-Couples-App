@@ -5,6 +5,33 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
+// Has this specific user personally been through their own reveal experience
+// for the activity that spawned this Follow-Through row? Each source activity
+// has its own reveal shape, so this isn't one generic check. Unknown/future
+// source types default to true (fail open) rather than hiding Follow-Through
+// forever for a type this function hasn't been taught about yet.
+async function hasSeenSourceReveal(supabase, sourceType, sourceId, userId) {
+  if (sourceType === 'bet') {
+    const { data } = await supabase
+      .from('bet_responses')
+      .select('reveal_seen_at')
+      .eq('bet_id', sourceId)
+      .eq('user_id', userId)
+      .maybeSingle()
+    return !!data?.reveal_seen_at
+  }
+  if (sourceType === 'spark') {
+    const { data } = await supabase
+      .from('spark_responses')
+      .select('reveal_seen_at')
+      .eq('spark_id', sourceId)
+      .eq('user_id', userId)
+      .maybeSingle()
+    return !!data?.reveal_seen_at
+  }
+  return true
+}
+
 // GET /api/follow-through/today?userId=...&coupleId=...
 // Returns the couple's current (non-superseded) Follow-Through row, shaped per-
 // user with the blind-until-both-report rule applied. Matches the unauthenticated
@@ -47,6 +74,20 @@ export async function GET(request) {
       .maybeSingle()
 
     if (!row) {
+      return NextResponse.json({ active: false })
+    }
+
+    // Gate: this user must have personally been through their own reveal
+    // experience for the SOURCE activity before Follow-Through is allowed to
+    // take over the card slot. Without this, generation firing the instant
+    // both partners answer (which happens before either has tapped through
+    // their own reveal) would yank the slot away from Bet/Spark's own reveal
+    // moment — the exact thing this design explicitly called out as required
+    // ("Per-user gating" section, NOW_DO_THIS_DESIGN.md) but was never wired
+    // into this endpoint. Root-caused and fixed here, same bug shape as the
+    // reveal_seen_at issue this whole per-user pattern originated from.
+    const hasSeenOwnReveal = await hasSeenSourceReveal(supabase, row.source_type, row.source_id, userId)
+    if (!hasSeenOwnReveal) {
       return NextResponse.json({ active: false })
     }
 
