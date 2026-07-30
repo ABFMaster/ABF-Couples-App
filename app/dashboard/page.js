@@ -33,6 +33,16 @@ export default function Dashboard() {
   const [heroLoading, setHeroLoading] = useState(true)
   const [weather, setWeather]         = useState(null)
 
+  // Ritual partner-loop nudge (Sessions/RITUAL_ENRICHMENT_DESIGN.md piece 4) —
+  // reached via the hero card's CTA link, not a new screen. Reads the
+  // completion id straight off the URL rather than useSearchParams, since
+  // this is a purely client-side one-time read with no need for a Suspense
+  // boundary.
+  const [ritualNoteCompletionId, setRitualNoteCompletionId] = useState(null)
+  const [ritualNoteText, setRitualNoteText] = useState('')
+  const [ritualNoteSubmitting, setRitualNoteSubmitting] = useState(false)
+  const [ritualNoteDone, setRitualNoteDone] = useState(false)
+
   const [spark, setSpark]             = useState(null)
   const [mine, setMine]               = useState(null)
   const [theirs, setTheirs]           = useState(null)
@@ -166,6 +176,31 @@ export default function Dashboard() {
       setShowDatesModal(false)
     }
   }, [datesSubmitted])
+
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('ritualNote')
+    if (id) setRitualNoteCompletionId(id)
+  }, [])
+
+  const handleSubmitRitualNote = async () => {
+    if (!ritualNoteText.trim() || ritualNoteSubmitting || !user?.id || !couple?.id) return
+    setRitualNoteSubmitting(true)
+    try {
+      await fetch('/api/ritual/partner-note', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          coupleId: couple.id,
+          ritualCompletionId: ritualNoteCompletionId,
+          note: ritualNoteText.trim(),
+        }),
+      })
+    } catch {} finally {
+      setRitualNoteSubmitting(false)
+      setRitualNoteDone(true)
+    }
+  }
 
   useEffect(() => {
     if (!user?.id || !couple?.id) return
@@ -538,6 +573,33 @@ export default function Dashboard() {
             {heroData?.cta_label || 'Tell Nora →'}
           </button>
         </div>
+
+        {ritualNoteCompletionId && !ritualNoteDone && (
+          <div style={{ background: '#F4FAF0', border: '0.5px solid #C4DDB4', borderRadius: '16px', padding: '16px 18px', margin: '0 16px 14px' }}>
+            <textarea
+              value={ritualNoteText}
+              onChange={e => setRitualNoteText(e.target.value)}
+              placeholder="Add a line about it... (optional)"
+              rows={2}
+              style={{ width: '100%', background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '10px', padding: '10px 12px', fontSize: '14px', color: '#1A2E10', fontFamily: 'inherit', resize: 'none', outline: 'none', boxSizing: 'border-box', marginBottom: '10px' }}
+            />
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={handleSubmitRitualNote}
+                disabled={!ritualNoteText.trim() || ritualNoteSubmitting}
+                style={{ flex: 1, padding: '10px', background: '#3D6B22', color: '#FAF6F0', border: 'none', borderRadius: '30px', fontSize: '13px', fontWeight: 600, cursor: (!ritualNoteText.trim() || ritualNoteSubmitting) ? 'default' : 'pointer', opacity: (!ritualNoteText.trim() || ritualNoteSubmitting) ? 0.5 : 1 }}
+              >
+                {ritualNoteSubmitting ? 'Saving…' : 'Add note'}
+              </button>
+              <button
+                onClick={() => setRitualNoteDone(true)}
+                style={{ flex: 1, padding: '10px', background: 'transparent', border: '0.5px solid #D4E8C4', borderRadius: '30px', color: '#7A8C6E', fontSize: '13px', cursor: 'pointer' }}
+              >
+                Skip
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* SECTION 3.5 — THURSDAY CARD */}
         {showThursday && (

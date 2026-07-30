@@ -78,6 +78,46 @@ export async function GET(request) {
       }
     }
 
+    // ── PART 0b: Ritual partner-loop nudge — second priority ──────────────────
+    // Whoever didn't personally tap this week's ritual check-in gets a quiet,
+    // one-time nudge next time they open the app. See
+    // Sessions/RITUAL_ENRICHMENT_DESIGN.md piece 4. Same reused slot as PART 0
+    // above — retargeted at ritual check-ins instead of Follow-Through reports.
+    // Only reached if PART 0 didn't already fire, so at most one nudge shows.
+    if (couple) {
+      const { data: completionRow } = await supabase
+        .from('ritual_completions')
+        .select('id, ritual_id')
+        .eq('couple_id', coupleId)
+        .neq('completed_by', userId)
+        .eq('completed', true)
+        .eq('partner_notified', false)
+        .order('week_start', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (completionRow) {
+        const { data: ritualRow } = await supabase
+          .from('rituals')
+          .select('title')
+          .eq('id', completionRow.ritual_id)
+          .maybeSingle()
+
+        await supabase
+          .from('ritual_completions')
+          .update({ partner_notified: true })
+          .eq('id', completionRow.id)
+
+        return NextResponse.json({
+          message: `${partnerName} logged ${ritualRow?.title ? `"${ritualRow.title}"` : 'your ritual'} this week — want to add a line about it?`,
+          cta_label: 'Add a note',
+          cta_href: `/dashboard?ritualNote=${completionRow.id}`,
+          pills: null,
+          mode: 'ritual_partner_nudge',
+        })
+      }
+    }
+
     // ── PART 1: Cache — early exit for post mode ──────────────────────────────
     // Check post cache before feature detection to save DB calls
     const { data: earlyCache } = await supabase

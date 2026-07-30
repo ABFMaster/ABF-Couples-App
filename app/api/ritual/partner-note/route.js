@@ -1,0 +1,67 @@
+export const dynamic = 'force-dynamic'
+
+// DB migration: see Sessions/RITUAL_ENRICHMENT_DESIGN.md — ritual_completions.partner_notified,
+// ritual_completions.partner_note.
+
+import { createClient } from '@supabase/supabase-js'
+import { NextResponse } from 'next/server'
+import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
+
+// POST /api/ritual/partner-note { userId, coupleId, ritualCompletionId, note }
+// The lightweight capture point for the partner-loop nudge (piece 4 of
+// Sessions/RITUAL_ENRICHMENT_DESIGN.md) — whoever didn't personally check in
+// on this week's ritual can leave an optional one-liner. Never required; the
+// note doesn't get its own Nora reaction, it just becomes one more thing
+// feeding her memory, same as everything else.
+export async function POST(request) {
+  try {
+    const { userId, coupleId, ritualCompletionId, note } = await request.json()
+
+    if (!userId || !coupleId || !ritualCompletionId) {
+      return NextResponse.json({ error: 'userId, coupleId, and ritualCompletionId required' }, { status: 400 })
+    }
+    if (!note || !note.trim()) {
+      return NextResponse.json({ success: true, skipped: true })
+    }
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
+
+    const { data: completion, error } = await supabase
+      .from('ritual_completions')
+      .update({ partner_note: note.trim() })
+      .eq('id', ritualCompletionId)
+      .eq('couple_id', coupleId)
+      .select('ritual_id')
+      .maybeSingle()
+
+    if (error) {
+      console.error('[ritual/partner-note] update error:', error)
+      return NextResponse.json({ error: 'Failed to save note' }, { status: 500 })
+    }
+
+    if (completion?.ritual_id) {
+      const { data: ritual } = await supabase
+        .from('rituals')
+        .select('title')
+        .eq('id', completion.ritual_id)
+        .maybeSingle()
+
+      updateNoraMemory({
+        coupleId,
+        signalType: SIGNAL_TYPES.RITUAL_CHECKIN,
+        inputData: {
+          ritualTitle: ritual?.title,
+          partnerNote: note.trim(),
+        },
+      }).catch(() => {})
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    console.error('[ritual/partner-note] Error:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
