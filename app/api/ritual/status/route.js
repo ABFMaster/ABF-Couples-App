@@ -1,23 +1,23 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { getWeekStart } from '@/lib/dates'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function GET(request) {
   try {
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
+
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
     const coupleId = searchParams.get('coupleId')
 
-    if (!userId || !coupleId) {
-      return NextResponse.json({ error: 'userId and coupleId required' }, { status: 400 })
+    if (!coupleId) {
+      return NextResponse.json({ error: 'coupleId required' }, { status: 400 })
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     // Fetch couple's active rituals
     const { data: rituals } = await supabase

@@ -1,24 +1,25 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const { userId, coupleId, ritualId, action } = await request.json()
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    if (!userId || !coupleId || !ritualId || !action) {
-      return NextResponse.json({ error: 'userId, coupleId, ritualId, and action required' }, { status: 400 })
+    const { coupleId, ritualId, action } = await request.json()
+
+    if (!coupleId || !ritualId || !action) {
+      return NextResponse.json({ error: 'coupleId, ritualId, and action required' }, { status: 400 })
     }
 
     if (action !== 'confirm' && action !== 'discuss') {
       return NextResponse.json({ error: 'action must be confirm or discuss' }, { status: 400 })
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     // Verify the ritual belongs to this couple
     const { data: existing } = await supabase

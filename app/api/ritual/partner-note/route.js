@@ -3,9 +3,9 @@ export const dynamic = 'force-dynamic'
 // DB migration: see Sessions/RITUAL_ENRICHMENT_DESIGN.md — ritual_completions.partner_notified,
 // ritual_completions.partner_note.
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 // POST /api/ritual/partner-note { userId, coupleId, ritualCompletionId, note }
 // The lightweight capture point for the partner-loop nudge (piece 4 of
@@ -15,19 +15,21 @@ import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 // feeding her memory, same as everything else.
 export async function POST(request) {
   try {
-    const { userId, coupleId, ritualCompletionId, note } = await request.json()
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    if (!userId || !coupleId || !ritualCompletionId) {
-      return NextResponse.json({ error: 'userId, coupleId, and ritualCompletionId required' }, { status: 400 })
+    const { coupleId, ritualCompletionId, note } = await request.json()
+
+    if (!coupleId || !ritualCompletionId) {
+      return NextResponse.json({ error: 'coupleId and ritualCompletionId required' }, { status: 400 })
     }
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
     if (!note || !note.trim()) {
       return NextResponse.json({ success: true, skipped: true })
     }
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
 
     const { data: completion, error } = await supabase
       .from('ritual_completions')

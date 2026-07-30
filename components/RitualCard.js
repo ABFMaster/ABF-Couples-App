@@ -175,7 +175,9 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
   const [revisitChecked, setRevisitChecked] = useState(false)
 
   useEffect(() => {
-    fetch(`/api/ritual/status?userId=${userId}&coupleId=${coupleId}`)
+    fetch(`/api/ritual/status?coupleId=${coupleId}`, {
+      headers: { 'Authorization': `Bearer ${session?.access_token}` },
+    })
       .then(r => r.json())
       .then(data => {
         setHasRituals(data.hasRituals || false)
@@ -197,7 +199,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
         setLoading(false)
       })
       .catch(() => setLoading(false))
-  }, [userId, coupleId])
+  }, [userId, coupleId, session])
 
   // ─── Derived state ──────────────────────────────────────────────────────────
 
@@ -229,7 +231,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     if (adoptedRituals.length === 0) return
     fetch('/api/ritual/revisit-check', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
       body: JSON.stringify({ coupleId }),
     })
       .then(r => r.json())
@@ -244,8 +246,8 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     try {
       await fetch('/api/ritual/revisit-respond', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, coupleId, ritualId: revisitRitual.id, action: 'still_going' }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ coupleId, ritualId: revisitRitual.id, action: 'still_going' }),
       })
       setRevisitRitual(null)
     } catch {} finally {
@@ -259,8 +261,8 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     try {
       const res = await fetch('/api/ritual/revisit-respond', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, coupleId, ritualId: revisitRitual.id, action: 'drifted' }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ coupleId, ritualId: revisitRitual.id, action: 'drifted' }),
       })
       const data = await res.json()
       if (data.ritual) {
@@ -275,7 +277,9 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
   // ─── Handlers ───────────────────────────────────────────────────────────────
 
   const refetchAndCheckPending = async () => {
-    const res = await fetch(`/api/ritual/status?userId=${userId}&coupleId=${coupleId}`)
+    const res = await fetch(`/api/ritual/status?coupleId=${coupleId}`, {
+      headers: { 'Authorization': `Bearer ${session?.access_token}` },
+    })
     const data = await res.json()
     setHasRituals(data.hasRituals || false)
     setRituals(data.rituals || [])
@@ -296,8 +300,8 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     try {
       await fetch('/api/ritual/confirm', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, coupleId, ritualId: pendingConfirmation.id, action }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ coupleId, ritualId: pendingConfirmation.id, action }),
       })
       if (action === 'discuss') {
         setDiscussConfirmed(true)
@@ -319,8 +323,8 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     try {
       const res = await fetch('/api/ritual/confirm', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, coupleId, ritualId: ritual.id, action: 'confirm' }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ coupleId, ritualId: ritual.id, action: 'confirm' }),
       })
       const data = await res.json()
       if (data.ritual) {
@@ -345,9 +349,8 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     try {
       const res = await fetch('/api/ritual/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({
-          userId,
           coupleId,
           title: textarea1.trim(),
           description: textarea2.trim() || null,
@@ -372,9 +375,8 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     try {
       const res = await fetch('/api/ritual/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({
-          userId,
           coupleId,
           suggestionId: suggestion.id,
           title: suggestion.title,
@@ -461,8 +463,8 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     try {
       const res = await fetch('/api/ritual/adopt', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, coupleId, ritualId: ritual.id }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ coupleId, ritualId: ritual.id }),
       })
       const data = await res.json()
       if (data.ritual) {
@@ -482,9 +484,8 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     try {
       const res = await fetch('/api/ritual/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({
-          userId,
           coupleId,
           suggestionId: suggestion.id,
           title: suggestion.title,

@@ -180,7 +180,10 @@ export default function RitualPage() {
   }, [router])
 
   const fetchRituals = async (uid, cid) => {
-    const res = await fetch(`/api/ritual/status?userId=${uid}&coupleId=${cid}`)
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch(`/api/ritual/status?coupleId=${cid}`, {
+      headers: { 'Authorization': `Bearer ${session?.access_token}` },
+    })
     const data = await res.json()
     setRituals(data.rituals || [])
     const used = data.usedSuggestionIds || []
@@ -198,10 +201,11 @@ export default function RitualPage() {
     if (submitting) return
     setSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       await fetch('/api/ritual/confirm', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, coupleId, ritualId, action }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ coupleId, ritualId, action }),
       })
       await refetch()
     } catch {} finally { setSubmitting(false) }
@@ -211,10 +215,11 @@ export default function RitualPage() {
     if (submitting) return
     setSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       await fetch('/api/ritual/adopt', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, coupleId, ritualId }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ coupleId, ritualId }),
       })
       setAdoptionDone(prev => ({ ...prev, [ritualId]: true }))
       await refetch()
@@ -225,10 +230,11 @@ export default function RitualPage() {
     if (submitting) return
     setSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       await fetch('/api/ritual/confirm', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, coupleId, ritualId, action: 'confirm' }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ coupleId, ritualId, action: 'confirm' }),
       })
       await refetch()
     } catch {} finally { setSubmitting(false) }
@@ -238,10 +244,11 @@ export default function RitualPage() {
     if (submitting) return
     setSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       await fetch('/api/ritual/retire', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, coupleId, ritualId }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ coupleId, ritualId }),
       })
       await refetch()
     } catch {} finally { setSubmitting(false) }
@@ -272,10 +279,11 @@ export default function RitualPage() {
     if (submitting) return
     setSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       await fetch('/api/ritual/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, coupleId, suggestionId: suggestion.id, title: suggestion.title, description: suggestion.description, frequency: suggestion.frequency, tier: suggestion.tier }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ coupleId, suggestionId: suggestion.id, title: suggestion.title, description: suggestion.description, frequency: suggestion.frequency, tier: suggestion.tier }),
       })
       await refetch()
     } catch {} finally { setSubmitting(false) }
@@ -285,11 +293,11 @@ export default function RitualPage() {
     if (!customTitle.trim() || submitting) return
     setSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       await fetch('/api/ritual/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({
-          userId,
           coupleId,
           title: customTitle.trim(),
           description: customDescription.trim() || null,

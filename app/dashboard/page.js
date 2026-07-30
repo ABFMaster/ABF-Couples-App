@@ -188,9 +188,8 @@ export default function Dashboard() {
     try {
       await fetch('/api/ritual/partner-note', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({
-          userId: user.id,
           coupleId: couple.id,
           ritualCompletionId: ritualNoteCompletionId,
           note: ritualNoteText.trim(),

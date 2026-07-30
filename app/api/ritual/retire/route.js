@@ -1,23 +1,24 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { requestOrConfirmRetire } from '@/lib/ritual-retire'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const { userId, coupleId, ritualId } = await request.json()
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    if (!userId || !coupleId || !ritualId) {
-      return NextResponse.json({ error: 'userId, coupleId, and ritualId required' }, { status: 400 })
+    const { coupleId, ritualId } = await request.json()
+
+    if (!coupleId || !ritualId) {
+      return NextResponse.json({ error: 'coupleId and ritualId required' }, { status: 400 })
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    const result = await requestOrConfirmRetire({ supabase, userId, coupleId, ritualId })
+    const result = await requestOrConfirmRetire({ supabase, userId: user.id, coupleId, ritualId })
 
     if (result.error === 'not_found') return NextResponse.json({ error: 'Ritual not found' }, { status: 404 })
     if (result.error === 'forbidden') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

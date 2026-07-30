@@ -3,9 +3,9 @@ export const dynamic = 'force-dynamic'
 // DB migration: see Sessions/RITUAL_ENRICHMENT_DESIGN.md — rituals.last_revisited_at,
 // rituals.pending_revisit_message.
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraGenerate } from '@/lib/nora'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 const DORMANCY_MS = 6 * 7 * 24 * 3600 * 1000 // ~6 weeks, tunable
 const REVISIT_ROLL = 0.25
@@ -18,15 +18,16 @@ const REVISIT_ROLL = 0.25
 // caller falls back to its normal "discover another ritual" suggestion.
 export async function POST(request) {
   try {
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
+
     const { coupleId } = await request.json()
     if (!coupleId) {
       return NextResponse.json({ error: 'coupleId required' }, { status: 400 })
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { data: adopted } = await supabase
       .from('rituals')
