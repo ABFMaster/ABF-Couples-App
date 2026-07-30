@@ -427,10 +427,11 @@ function UsPageContent() {
           photoUrl = urlData?.publicUrl || null
         }
       }
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/ahead/complete', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemId: item.id, completionNote: note || null, userId: user.id, photoUrl }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ itemId: item.id, completionNote: note || null, photoUrl }),
       })
       if (res.ok) {
         setSharedItems(prev => prev.filter(i => i.id !== item.id))
@@ -442,8 +443,8 @@ function UsPageContent() {
         fetchTimelineEvents(couple.id)
         fetch('/api/ahead/nora-line', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ itemId: item.id, itemTitle: item.title, itemType: item.type, coupleId: couple.id }),
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+          body: JSON.stringify({ itemId: item.id, itemTitle: item.title, itemType: item.type }),
         }).catch(() => {})
       }
     } catch {}

@@ -89,7 +89,7 @@ export default function SparkCard({
       fetch('/api/spark/reveal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ sparkId: spark.id, userId: session.user.id }),
+        body: JSON.stringify({ sparkId: spark.id }),
       }).catch(() => {})
     }).catch(() => {})
   }, [pillsShown, mine?.reveal_seen_at])

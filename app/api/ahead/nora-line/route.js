@@ -1,25 +1,34 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { getNoraMemory } from '@/lib/nora-memory'
 import { noraSignal } from '@/lib/nora.js'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return Response.json(authError.body, { status: authError.status })
 
-    const { itemId, itemTitle, itemType, coupleId, completionNote } = await request.json()
-    if (!itemId || !itemTitle || !coupleId) return Response.json({ error: 'Missing required fields' }, { status: 400 })
+    const { itemId, itemTitle, itemType, completionNote } = await request.json()
+    if (!itemId || !itemTitle) return Response.json({ error: 'Missing required fields' }, { status: 400 })
 
-    // Check if line already generated — idempotency guard
+    // Check if line already generated — idempotency guard. couple_id comes
+    // from the item itself, never trusted from the client.
     const { data: item } = await supabase
       .from('shared_items')
-      .select('completion_nora_line')
+      .select('completion_nora_line, couple_id')
       .eq('id', itemId)
       .single()
-    if (item?.completion_nora_line) {
+    if (!item) return Response.json({ error: 'Item not found' }, { status: 404 })
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, item.couple_id)
+    if (!isMember) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+    if (item.completion_nora_line) {
       return Response.json({ line: item.completion_nora_line })
     }
+
+    const coupleId = item.couple_id
 
     // Get couple context
     const memory = await getNoraMemory(coupleId)

@@ -1,14 +1,17 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return Response.json(authError.body, { status: authError.status })
 
-    const { itemId, completionNote, photoUrl, userId } = await request.json()
+    const { itemId, completionNote, photoUrl } = await request.json()
     if (!itemId) return Response.json({ error: 'itemId required' }, { status: 400 })
+
+    const userId = user.id
 
     // Fetch the shared item
     const { data: item, error: fetchError } = await supabase
@@ -23,13 +26,12 @@ export async function POST(request) {
       return Response.json({ success: true, alreadyPromoted: true })
     }
 
-    // Get couple
-    const { data: couple } = await supabase
-      .from('couples')
-      .select('id, user1_id, user2_id')
-      .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
-      .single()
-    if (!couple) return Response.json({ error: 'Couple not found' }, { status: 404 })
+    // Couple derived from the item's own couple_id — the source of truth —
+    // rather than re-deriving it from the client-supplied userId.
+    const isMember = await verifyCoupleMembership(supabase, userId, item.couple_id)
+    if (!isMember) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+    const couple = { id: item.couple_id }
 
     const now = new Date().toISOString()
     const today = now.split('T')[0]

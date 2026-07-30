@@ -1,20 +1,20 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const { flirtId, userId, mode, title, posterPath } = await request.json()
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    if (!flirtId || !userId || !mode || !title) {
-      return NextResponse.json({ error: 'flirtId, userId, mode, and title are required' }, { status: 400 })
+    const { flirtId, mode, title, posterPath } = await request.json()
+
+    if (!flirtId || !mode || !title) {
+      return NextResponse.json({ error: 'flirtId, mode, and title are required' }, { status: 400 })
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    const userId = user.id
 
     const typeMap = {
       song: 'song',
@@ -31,6 +31,9 @@ export async function POST(request) {
     if (!flirtRow?.couple_id) {
       return NextResponse.json({ error: 'Flirt not found' }, { status: 404 })
     }
+
+    const isMember = await verifyCoupleMembership(supabase, userId, flirtRow.couple_id)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { error } = await supabase
       .from('shared_items')
