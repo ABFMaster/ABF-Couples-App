@@ -2,24 +2,24 @@ export const dynamic = 'force-dynamic'
 
 // DB migration: ALTER TABLE bet_responses ADD COLUMN IF NOT EXISTS nora_intro text;
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { noraReact } from '@/lib/nora'
 import { generateFollowThrough } from '@/lib/follow-through'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const { betId, userId, coupleId, prediction, actualAnswer } = await request.json()
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    if (!betId || !userId) {
-      return NextResponse.json({ error: 'betId and userId required' }, { status: 400 })
+    const { betId, coupleId, prediction, actualAnswer } = await request.json()
+
+    if (!betId) {
+      return NextResponse.json({ error: 'betId required' }, { status: 400 })
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    const userId = user.id
 
     // Fetch the bet row for question and couple context
     const { data: betRow } = await supabase
@@ -32,7 +32,12 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Bet not found' }, { status: 404 })
     }
 
-    const resolvedCoupleId = coupleId || betRow.couple_id
+    // DB-derived couple_id takes priority over any client-supplied value —
+    // only fall back to the client's value if the bet row is somehow missing it.
+    const resolvedCoupleId = betRow.couple_id || coupleId
+
+    const isMember = await verifyCoupleMembership(supabase, userId, resolvedCoupleId)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     // Derive partnerId from couples table
     const { data: coupleRow } = await supabase

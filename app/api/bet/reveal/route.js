@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 // Marks that this specific user has personally triggered their reveal for
 // this Bet. Needed because "both partners have answered" is a couple-level
@@ -12,16 +12,27 @@ import { NextResponse } from 'next/server'
 // straight to the static end state and never gets their own reveal moment.
 export async function POST(request) {
   try {
-    const { betId, userId } = await request.json()
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    if (!betId || !userId) {
-      return NextResponse.json({ error: 'betId and userId required' }, { status: 400 })
+    const { betId } = await request.json()
+
+    if (!betId) {
+      return NextResponse.json({ error: 'betId required' }, { status: 400 })
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    const userId = user.id
+
+    const { data: betRow } = await supabase
+      .from('bets')
+      .select('couple_id')
+      .eq('id', betId)
+      .maybeSingle()
+
+    if (!betRow) return NextResponse.json({ error: 'Bet not found' }, { status: 404 })
+
+    const isMember = await verifyCoupleMembership(supabase, userId, betRow.couple_id)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     await supabase
       .from('bet_responses')

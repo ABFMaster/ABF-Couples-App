@@ -138,11 +138,15 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
   const handleRevealStart = () => {
     setRevealStarted(true)
     setLocalMine(prev => ({ ...(prev || {}), reveal_seen_at: new Date().toISOString() }))
-    fetch('/api/bet/reveal', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ betId: bet.id, userId }),
-    }).catch(() => {})
+    ;(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+      fetch('/api/bet/reveal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ betId: bet.id }),
+      }).catch(() => {})
+    })()
   }
 
   const triggerPulse = (key) => {
@@ -155,12 +159,12 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
     if (!actualText.trim() || !predictionText.trim() || submitting) return
     setSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/bet/respond', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({
           betId: bet.id,
-          userId,
           coupleId,
           prediction: predictionText.trim(),
           actualAnswer: actualText.trim(),
@@ -185,21 +189,29 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
   const handleReaction = (icon) => {
     triggerPulse(icon)
     setSelectedReaction(icon)
-    fetch('/api/bet/react', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ betId: bet.id, userId, reactionIcon: icon, questionRating: activeRating }),
-    }).catch(() => {})
+    ;(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+      fetch('/api/bet/react', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ betId: bet.id, reactionIcon: icon, questionRating: activeRating }),
+      }).catch(() => {})
+    })()
   }
 
   const handleRating = (rating) => {
     triggerPulse(rating)
     setSelectedRating(rating)
-    fetch('/api/bet/react', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ betId: bet.id, userId, reactionIcon: activeReaction, questionRating: rating }),
-    }).catch(() => {})
+    ;(async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+      fetch('/api/bet/react', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ betId: bet.id, reactionIcon: activeReaction, questionRating: rating }),
+      }).catch(() => {})
+    })()
   }
 
   const fadeStyle = (shown, duration = 800) => ({
