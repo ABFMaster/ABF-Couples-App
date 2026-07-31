@@ -114,10 +114,11 @@ function HuntPlayContent() {
   }, [sessionId, userId, phase])
 
   async function handleEndGame() {
+    const { data: { session } } = await supabase.auth.getSession()
     await fetch('/api/game-room/enter-lobby', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, coupleId, action: 'abandon', sessionId }),
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ coupleId, action: 'abandon', sessionId }),
     })
     router.push('/game-room')
   }

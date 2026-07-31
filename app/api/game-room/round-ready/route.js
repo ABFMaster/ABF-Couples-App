@@ -1,19 +1,22 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const { sessionId, coupleId, userId, roundNumber } = await request.json()
-    if (!sessionId || !coupleId || !userId || !roundNumber) {
-      return NextResponse.json({ error: 'sessionId, coupleId, userId, roundNumber required' }, { status: 400 })
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
+
+    const { sessionId, coupleId, roundNumber } = await request.json()
+    if (!sessionId || !coupleId || !roundNumber) {
+      return NextResponse.json({ error: 'sessionId, coupleId, roundNumber required' }, { status: 400 })
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    const userId = user.id
 
     // Get couple to know user1/user2
     const { data: couple } = await supabase

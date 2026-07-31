@@ -155,10 +155,11 @@ function GameRoomLobbyContent() {
     if (entering || !userId || !coupleId) return
     setEntering(true)
     try {
+      const { data: { session: enterSession } } = await supabase.auth.getSession()
       const res = await fetch('/api/game-room/enter-lobby', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, coupleId, mode, forceNew }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${enterSession?.access_token}` },
+        body: JSON.stringify({ coupleId, mode, forceNew }),
       })
       const data = await res.json()
       if (data.session) {
@@ -174,9 +175,10 @@ function GameRoomLobbyContent() {
     if (mode !== 'challenge' && together === null) return
     setStarting(true)
     try {
+      const { data: { session: startSession } } = await supabase.auth.getSession()
       await fetch('/api/game-room/start-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${startSession?.access_token}` },
         body: JSON.stringify({
           sessionId,
           coupleId,

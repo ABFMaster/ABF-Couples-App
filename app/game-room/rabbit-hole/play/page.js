@@ -116,9 +116,10 @@ function RabbitHolePlayContent() {
         const isHostUser = sess.host_user_id === user.id
         if (isHostUser) {
           // Host generates round 1
+          const { data: { session: initSession } } = await supabase.auth.getSession()
           const holeRes = await fetch('/api/game-room/generate-hole', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${initSession?.access_token}` },
             body: JSON.stringify({ sessionId: sess.id, coupleId: couple.id, roundNumber: 1 }),
           })
           const holeData = await holeRes.json()
@@ -234,9 +235,9 @@ function RabbitHolePlayContent() {
           clearInterval(timerRef.current)
           setTimerExpired(true)
           setLoadingNudge(true)
-          fetch('/api/game-room/nora-nudge', {
+          supabase.auth.getSession().then(({ data: { session: authSession } }) => fetch('/api/game-room/nora-nudge', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authSession?.access_token}` },
             body: JSON.stringify({
               sessionId: session?.id,
               coupleId,
@@ -244,7 +245,7 @@ function RabbitHolePlayContent() {
               currentThread: myThread,
               finds: myFinds,
             }),
-          })
+          }))
             .then(r => r.json())
             .then(d => { if (d.nudge) setNoraNudge(d.nudge) })
             .catch(() => {})
@@ -385,9 +386,10 @@ function RabbitHolePlayContent() {
 
       if (isHostUser) {
         // Host generates the next round
+        const { data: { session: nextSession } } = await supabase.auth.getSession()
         const holeRes = await fetch('/api/game-room/generate-hole', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${nextSession?.access_token}` },
           body: JSON.stringify({ sessionId: session.id, coupleId, roundNumber: nextRoundNum }),
         })
         const holeData = await holeRes.json()
@@ -450,10 +452,11 @@ function RabbitHolePlayContent() {
     if (signalingReady || iAmReady) return
     setSignalingReady(true)
     try {
+      const { data: { session: readySession } } = await supabase.auth.getSession()
       const res = await fetch('/api/game-room/round-ready', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: session.id, coupleId, userId, roundNumber }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${readySession?.access_token}` },
+        body: JSON.stringify({ sessionId: session.id, coupleId, roundNumber }),
       })
       const data = await res.json()
       setIAmReady(true)

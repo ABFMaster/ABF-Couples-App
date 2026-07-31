@@ -56,9 +56,10 @@ function RabbitHoleDebriefContent() {
 
       if (isHostUser) {
         // Host generates the debrief — single generation, clean data
+        const { data: { session: authSession } } = await supabase.auth.getSession()
         const debriefRes = await fetch('/api/game-room/generate-debrief', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authSession?.access_token}` },
           body: JSON.stringify({ sessionId: sess.id, coupleId: couple.id }),
         })
         const debriefData = await debriefRes.json()
