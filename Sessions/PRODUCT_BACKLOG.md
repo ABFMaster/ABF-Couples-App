@@ -1,5 +1,5 @@
 # ABF + Nora — Product Backlog
-Last updated: July 30, 2026
+Last updated: July 31, 2026
 
 This file is permanent and cumulative. Add items, update status, never delete history.
 
@@ -57,7 +57,7 @@ This file is permanent and cumulative. Add items, update status, never delete hi
 - 🟡 BOLA (Broken Object Level Authorization) fix in progress, started July 30. Full re-audit of all 116 API routes (corrected count, superseding the July 28 estimate of 57/109) found 72 routes with no session-validation pattern at all; 1 excluded as a legitimate OAuth flow (spotify/callback); 71 real. Of those, 4 are orphaned dead code with zero callers anywhere (bet/lock, flirts/unread, game-room/challenge/start, game-room/lobby-status — pending Matt's confirmation to delete), and the remaining 65 are all browser-called (no cron/server-to-server callers among them, confirmed by spot-checking call sites). Fix pattern: shared lib/api-auth.js (requireUser + verifyCoupleMembership + getOwnCoupleId), applied route-by-route with its client caller in the same commit — see Audit findings below for exactly which are done.
   - Tier 1 (Bet, Ritual, Follow-Through, Dashboard — 16 routes): ✅ done, commits 17be79c, d2cd5d1, 0202b57, 1b0f8fa.
   - Tier "also sensitive" (Ahead: 2 routes, us/save-flirt, spark/reveal, nora-conversation — 5 routes): ✅ done, commit bb8a30a. ahead/complete and ahead/nora-line now derive couple_id from the shared_items row itself rather than a client-supplied value; us/save-flirt and spark/reveal derive it from their respective flirt/spark row; nora-conversation has no couple-scoped resource so only requireUser was added (closes unauthenticated LLM-cost abuse, not classic BOLA).
-  - Game Room (35 routes): 📋 not started.
+  - Game Room (35 routes across 5 sub-games): ✅ done. The Call (6 routes) commit ec4aead; The Challenge (14 routes) commit ff327f5; The Hunt (5 routes) commit 375e930; Hot Take (3 routes) commit a45b63b; shared lobby/session layer (enter-lobby, round-ready, save-interests, start-session, generate-debrief, generate-hole, nora-nudge — 7 routes) commit c7edc34. Several routes derive couple_id from the resource's own DB row (call_rounds, challenge_rounds, hunt_sessions, hot_take_sessions) rather than trusting a client-supplied coupleId, closing confused-deputy gaps. During The Challenge, briefly mixed up memory/ready and memory/submit route contents mid-edit — caught via lint + git show before committing, both fixed correctly; disclosed to Matt.
   - Lower-stakes (Flirts: 5, Assessment: 3, trips/wander, dates/suggestions — 9 routes): 📋 not started.
   - weather left unauthenticated intentionally — no user data returned.
 
