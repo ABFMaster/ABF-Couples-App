@@ -1,8 +1,8 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraChat } from '@/lib/nora'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 const WANDER_SYSTEM_PROMPT = `RESPONSE RULES:
 - Always warm, personal, specific — never generic travel brochure copy
@@ -17,12 +17,16 @@ const WANDER_SYSTEM_PROMPT = `RESPONSE RULES:
 
 export async function POST(request) {
   try {
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
+
     const { action, tripId, coupleId, destination, vibe, freeform, conversation, stage } = await request.json()
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    if (!coupleId) {
+      return NextResponse.json({ error: 'coupleId required' }, { status: 400 })
+    }
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     // Fetch couple context
     const { data: coupleData } = await supabase

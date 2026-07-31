@@ -220,7 +220,7 @@ export default function DateDetailPage({ params }) {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ dateId: date.id, userId: user.id, reaction: myReaction, review: myReview }),
+        body: JSON.stringify({ dateId: date.id, reaction: myReaction, review: myReview }),
       })
       if (!res.ok) throw new Error('Failed to save completion')
 

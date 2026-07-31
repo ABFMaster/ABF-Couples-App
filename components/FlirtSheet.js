@@ -73,10 +73,11 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
     setView('loading')
     setError(false)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/flirts/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ partnerId, userId, mode, previousSuggestion: previousSuggestion || null }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ mode, previousSuggestion: previousSuggestion || null }),
       })
       const data = await res.json()
       if (data.flirt) {
@@ -94,15 +95,19 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
 
   useEffect(() => {
     if (isOpen && !receivedFlirt && userId) {
-      fetch(`/api/flirts/check-profile?userId=${userId}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.flirt_profile_completed === false) {
-            handleClose()
-            router.push('/flirts/onboarding')
-          }
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        fetch('/api/flirts/check-profile', {
+          headers: { 'Authorization': `Bearer ${session?.access_token}` },
         })
-        .catch(() => {})
+          .then(res => res.json())
+          .then(data => {
+            if (data.flirt_profile_completed === false) {
+              handleClose()
+              router.push('/flirts/onboarding')
+            }
+          })
+          .catch(() => {})
+      })
     }
   }, [isOpen])
 
@@ -111,10 +116,12 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
       setView('result')
       setFlirt(receivedFlirt)
       setSelectedMode(receivedFlirt.mode)
-      fetch('/api/flirts/mark-viewed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ flirtId: receivedFlirt.id, userId: receivedFlirt.receiver_id }),
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        fetch('/api/flirts/mark-viewed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+          body: JSON.stringify({ flirtId: receivedFlirt.id }),
+        })
       })
     }
   }, [isOpen, receivedFlirt])
@@ -131,6 +138,7 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
   const sendFlirt = async () => {
     setSending(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       await fetch('/api/push/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -138,8 +146,8 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
       })
       await fetch('/api/flirts/mark-sent', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ flirtId: flirt.id, userId }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ flirtId: flirt.id }),
       })
     } finally {
       setSending(false)

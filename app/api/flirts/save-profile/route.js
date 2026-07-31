@@ -1,9 +1,9 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraGenerate } from '@/lib/nora'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
+import { requireUser } from '@/lib/api-auth'
 
 const EXTRACTION_PROMPT = `Read this conversation and extract the following as a JSON object with no other text:
 {
@@ -15,16 +15,11 @@ const EXTRACTION_PROMPT = `Read this conversation and extract the following as a
 
 export async function POST(request) {
   try {
-    const { messages, userId } = await request.json()
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    const { messages } = await request.json()
+    const userId = user.id
 
     // Format conversation for extraction
     const conversationText = messages

@@ -1,20 +1,19 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { requireUser } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const { flirtId, userId } = await request.json()
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    if (!flirtId || !userId) {
-      return NextResponse.json({ error: 'flirtId and userId are required' }, { status: 400 })
+    const { flirtId } = await request.json()
+    const userId = user.id
+
+    if (!flirtId) {
+      return NextResponse.json({ error: 'flirtId is required' }, { status: 400 })
     }
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
 
     const { error } = await supabase
       .from('flirts')

@@ -644,12 +644,12 @@ export default function CustomDateBuilderPage() {
       // Generate conversation starters
       setSaveStage('generating')
       try {
+        const { data: { session } } = await supabase.auth.getSession()
         const startersRes = await fetch('/api/dates/conversation-starters', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
           body: JSON.stringify({
             coupleId,
-            userId: user.id,
             dateTitle: dateName.trim() || defaultDateName(),
             stops: itinerary,
           })

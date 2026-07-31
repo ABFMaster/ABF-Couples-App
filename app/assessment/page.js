@@ -219,6 +219,7 @@ function AssessmentContent() {
       }
 
       const completedAt = new Date().toISOString()
+      const { data: { session } } = await supabase.auth.getSession()
 
       // Single database operation - either update or insert with ALL data
       if (existingAssessment) {
@@ -235,8 +236,8 @@ function AssessmentContent() {
         if (error) throw error
         fetch('/api/assessment/seed-memory', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id, coupleId: couple?.id || null, answers: finalAnswers, results })
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+          body: JSON.stringify({ coupleId: couple?.id || null, answers: finalAnswers, results })
         }).catch(err => console.error('[Assessment] Memory seed failed:', err))
 
       } else if (user && couple) {
@@ -253,8 +254,8 @@ function AssessmentContent() {
         if (error) throw error
         fetch('/api/assessment/seed-memory', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id, coupleId: couple?.id || null, answers: finalAnswers, results })
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+          body: JSON.stringify({ coupleId: couple?.id || null, answers: finalAnswers, results })
         }).catch(err => console.error('[Assessment] Memory seed failed:', err))
 
       } else if (user && isOnboarding) {
@@ -272,8 +273,8 @@ function AssessmentContent() {
         if (error) throw error
         fetch('/api/assessment/seed-memory', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id, coupleId: couple?.id || null, answers: finalAnswers, results })
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+          body: JSON.stringify({ coupleId: couple?.id || null, answers: finalAnswers, results })
         }).catch(err => console.error('[Assessment] Memory seed failed:', err))
 
       } else {

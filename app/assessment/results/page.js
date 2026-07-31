@@ -30,6 +30,7 @@ export default function AssessmentResults() {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) { router.push('/login'); return }
       setCurrentUser(user)
+      const { data: { session } } = await supabase.auth.getSession()
 
       const { data: profile } = await supabase
         .from('user_profiles')
@@ -112,7 +113,7 @@ export default function AssessmentResults() {
       try {
         const res = await fetch('/api/assessment/personal-summary', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
           body: JSON.stringify({
             userName: profile?.display_name || 'You',
             attachment: { style: attachmentRes.primary, tagline: attachmentRes.profile.tagline },
@@ -135,7 +136,7 @@ export default function AssessmentResults() {
           const partnerLove = generateModuleInsights('love_expression', filterAnswers(partnerData.answers || {}, ['le_1','le_2','le_3']))
           const insightRes = await fetch('/api/assessment/insight', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
             body: JSON.stringify({
               user1Name: profile.name || 'You',
               user2Name: partnerProfile?.name || 'Your partner',

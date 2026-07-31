@@ -1,10 +1,10 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { noraChat } from '@/lib/nora'
 import { REACTION_LABELS } from '@/lib/date-night'
+import { requireUser } from '@/lib/api-auth'
 
 async function sendPush(userId, title, body, url, route) {
   try {
@@ -18,23 +18,12 @@ async function sendPush(userId, title, body, url, route) {
 
 export async function POST(request) {
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { dateId, userId, reaction, review } = await request.json()
-    if (!dateId || !userId || !reaction || !REACTION_LABELS[reaction]) {
+    const { dateId, reaction, review } = await request.json()
+    const userId = user.id
+    if (!dateId || !reaction || !REACTION_LABELS[reaction]) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -58,6 +47,9 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Couple not found' }, { status: 404 })
     }
 
+    if (couple.user1_id !== userId && couple.user2_id !== userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
     const isUser1 = couple.user1_id === userId
     const partnerId = isUser1 ? couple.user2_id : couple.user1_id
     // Guard — prevent double completion

@@ -1,31 +1,27 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraGenerate } from '@/lib/nora'
 import { searchGifs } from '@/lib/giphy'
 import { searchMovies, searchShows } from '@/lib/omdb'
 import { searchSpotifyTracks } from '@/lib/spotify'
+import { requireUser } from '@/lib/api-auth'
 
 const FLIRT_MODES = ['song', 'gif', 'place', 'memory', 'prompt', 'movie', 'show']
 
 export async function POST(request) {
   try {
-    const { partnerId, userId, mode: requestedMode, previousSuggestion } = await request.json()
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { mode: requestedMode, previousSuggestion } = await request.json()
+    const userId = user.id
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
-
-    // Fetch sender profile, partner profile, and couple in parallel
+    // Fetch sender profile and couple first — the partner is derived from
+    // the couple record, never trusted from the client, so a flirt can
+    // never be generated/sent toward someone who isn't actually the caller's partner.
     const [
       { data: myProfile },
-      { data: partnerProfile },
       { data: couple },
     ] = await Promise.all([
       supabase
@@ -34,16 +30,20 @@ export async function POST(request) {
         .eq('user_id', userId)
         .maybeSingle(),
       supabase
-        .from('user_profiles')
-        .select('display_name, love_language_primary')
-        .eq('user_id', partnerId)
-        .maybeSingle(),
-      supabase
         .from('couples')
-        .select('id')
+        .select('id, user1_id, user2_id')
         .or(`user1_id.eq.${userId},user2_id.eq.${userId}`)
         .maybeSingle(),
     ])
+
+    const partnerId = couple ? (couple.user1_id === userId ? couple.user2_id : couple.user1_id) : null
+    const { data: partnerProfile } = partnerId
+      ? await supabase
+          .from('user_profiles')
+          .select('display_name, love_language_primary')
+          .eq('user_id', partnerId)
+          .maybeSingle()
+      : { data: null }
 
     // Fetch nora memory if we have a couple
     let noraMemory = null

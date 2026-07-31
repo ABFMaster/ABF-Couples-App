@@ -59,9 +59,10 @@ export default function DreamTripModal({ isOpen, onClose, coupleId, partnerName,
   const callWander = async (action, extra = {}) => {
     setLoadingWander(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/trips/wander', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({
           action,
           coupleId,

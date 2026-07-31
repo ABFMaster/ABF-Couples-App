@@ -1,26 +1,20 @@
 export const dynamic = 'force-dynamic'
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const authHeader = request.headers.get('authorization')
-    const token = authHeader?.replace('Bearer ', '')
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
-
-    const { data: { user }, error } = await supabase.auth.getUser(token)
-    if (error || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
     const { coupleId, receiverId, type, content, metadata } = await request.json()
 
     if (!coupleId || !receiverId || !type || !content?.trim()) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const validTypes = ['song', 'photo', 'word', 'found', 'memory', 'gif']
     if (!validTypes.includes(type)) {

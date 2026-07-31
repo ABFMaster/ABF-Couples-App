@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server'
 import { noraGenerate } from '@/lib/nora'
+import { requireUser } from '@/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request) {
   try {
+    const { error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
+
     const { userName, attachment, conflict, love } = await request.json()
 
     if (!attachment || !conflict || !love) {

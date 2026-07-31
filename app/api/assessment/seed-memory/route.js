@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { scoreAttachmentStyle, scoreConflictStyle, generateModuleInsights } from '@/lib/relationship-questions'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,9 +10,13 @@ const filterAnswers = (answers, keys) =>
 
 export async function POST(request) {
   try {
-    const { userId, coupleId, answers, results } = await request.json()
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    if (!userId || !answers) {
+    const { coupleId, answers, results } = await request.json()
+    const userId = user.id
+
+    if (!answers) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -31,9 +35,14 @@ export async function POST(request) {
       answers
     }
 
+    // Only trust the client-supplied coupleId if this user actually belongs
+    // to it — otherwise a caller could pollute another couple's memory.
+    const isMember = coupleId ? await verifyCoupleMembership(supabase, userId, coupleId) : false
+    const resolvedCoupleId = isMember ? coupleId : null
+
     await updateNoraMemory({
       userId,
-      coupleId,
+      coupleId: resolvedCoupleId,
       signalType: SIGNAL_TYPES.ASSESSMENT_COMPLETE,
       inputData
     })
@@ -42,11 +51,6 @@ export async function POST(request) {
     const attachmentResult = scoreAttachmentStyle(answers)
     const conflictResult = scoreConflictStyle(answers)
     const loveResult = generateModuleInsights('love_expression', filterAnswers(answers, ['le_1', 'le_2', 'le_3']))
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
 
     await supabase.from('user_profiles').upsert({
       user_id: userId,

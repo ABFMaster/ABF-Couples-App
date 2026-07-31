@@ -2,9 +2,13 @@ export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { noraReact } from '@/lib/nora'
+import { requireUser } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
+    const { error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
+
     const { user1Name, user2Name, modules } = await request.json()
 
     const prompt = `Here are the results for ${user1Name} and ${user2Name} across 3 dimensions:\n\n${modules.map(m => `${m.title}: ${user1Name} scored ${m.userPct}%, ${user2Name} scored ${m.partnerPct}%`).join('\n')}\n\nWrite your couple-level observation.`
