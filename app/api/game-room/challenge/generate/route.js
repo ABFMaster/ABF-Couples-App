@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { CHALLENGE_PROMPTS } from '@/lib/challenge-prompts'
 import { noraGenerate } from '@/lib/nora'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
+import { REACTION_LABELS } from '@/lib/date-night'
 
 export async function POST(request) {
   try {
@@ -164,6 +165,27 @@ Respond in this exact JSON format with no other text:
         .order('event_date', { ascending: true })
         .limit(30)
 
+      // Completed dates — real reactions/reviews from actual dates, same
+      // specific-and-quotable quality as Spark/Bet answers.
+      const { data: completedDates } = await supabase
+        .from('custom_dates')
+        .select('title, date_time, user1_reaction, user1_review, user2_reaction, user2_review')
+        .eq('couple_id', coupleId)
+        .eq('status', 'completed')
+        .order('date_time', { ascending: false })
+        .limit(15)
+
+      // Sent Flirts — mode/type and column names differ between
+      // Nora-generated flirts (mode + suggestion) and freeform ones sent
+      // via FlirtCard (type + content); normalise both below.
+      const { data: sentFlirts } = await supabase
+        .from('flirts')
+        .select('sender_id, receiver_id, mode, type, suggestion, content, reaction, created_at')
+        .eq('couple_id', coupleId)
+        .not('sent_at', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(15)
+
       // Determine guesser vs answer-holder for this round
       // Odd rounds (1, 3): host guesses, partner holds answer
       // Even rounds (2): partner guesses, host holds answer
@@ -213,6 +235,32 @@ Respond in this exact JSON format with no other text:
         ? timelineEvents.map(e => `${e.title} (${e.event_date})${e.description ? ': ' + e.description : ''}`).join('\n')
         : 'No timeline events yet'
 
+      const dateContext = completedDates && completedDates.length > 0
+        ? completedDates
+            .map(d => {
+              const u1 = d.user1_reaction ? `${nameFor(coupleData.user1_id)}: ${REACTION_LABELS[d.user1_reaction] || d.user1_reaction}${d.user1_review ? ` — "${d.user1_review}"` : ''}` : null
+              const u2 = d.user2_reaction ? `${nameFor(coupleData.user2_id)}: ${REACTION_LABELS[d.user2_reaction] || d.user2_reaction}${d.user2_review ? ` — "${d.user2_review}"` : ''}` : null
+              const reactions = [u1, u2].filter(Boolean).join(' | ')
+              return reactions ? `Date "${d.title}": ${reactions}` : null
+            })
+            .filter(Boolean)
+            .join('\n')
+        : 'No completed dates yet'
+
+      const flirtContext = sentFlirts && sentFlirts.length > 0
+        ? sentFlirts
+            .map(f => {
+              const text = f.content || f.suggestion
+              if (!text) return null
+              const senderName = nameFor(f.sender_id)
+              const receiverName = nameFor(f.receiver_id)
+              const reactionNote = f.reaction ? ` (reaction: ${f.reaction})` : ''
+              return `${senderName} sent ${receiverName}: "${text}"${reactionNote}`
+            })
+            .filter(Boolean)
+            .join('\n')
+        : 'No Flirts sent yet'
+
       userPrompt = `You are Nora running a Love Map memory game for ${guesserName} and ${answerHolderName}.
 
 THE GAME: ${guesserName} is the GUESSER. ${answerHolderName} is the ANSWER HOLDER — the question is about ${answerHolderName}, and ${answerHolderName} knows the correct answer about themselves.
@@ -231,6 +279,12 @@ ${betContext}
 
 Timeline events:
 ${timelineContext}
+
+Completed dates:
+${dateContext}
+
+Recent Flirts sent:
+${flirtContext}
 
 YOUR JOB:
 1. Write one specific question about ${answerHolderName} — and ONLY about ${answerHolderName}, never about ${guesserName}. ${guesserName} is the one guessing; the question must be about ${answerHolderName}'s life, memories, preferences, or inner world. The question must have a real, specific answer that ${answerHolderName} will recognise as true about themselves.${usedQuestions.length > 0 ? ` Do NOT ask any of these questions which have already been used this session: ${usedQuestions.map(q => `"${q}"`).join(', ')}.` : ''}
