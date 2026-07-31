@@ -116,13 +116,6 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
       setView('result')
       setFlirt(receivedFlirt)
       setSelectedMode(receivedFlirt.mode)
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        fetch('/api/flirts/mark-viewed', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-          body: JSON.stringify({ flirtId: receivedFlirt.id }),
-        })
-      })
     }
   }, [isOpen, receivedFlirt])
 
