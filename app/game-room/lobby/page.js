@@ -238,6 +238,11 @@ function GameRoomLobbyContent() {
           }),
         })
         const confirmData = await confirmRes.json()
+        if (!confirmRes.ok || !confirmData.challengeSession) {
+          setStarting(false)
+          router.push('/game-room')
+          return
+        }
         router.push(`/game-room/challenge/play?sessionId=${sessionId}&challengeSessionId=${confirmData.challengeSession.id}&type=${challengeType}&rounds=${challengeType === 'memory' ? 3 : 1}&scribe=true`)
         setStarting(false)
         return

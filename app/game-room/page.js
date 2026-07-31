@@ -2,6 +2,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { checkMemoryUnlocked } from '@/lib/memory-unlock'
+import { MEMORY_LOCKED_COPY } from '@/lib/challenge-prompts'
 
 const MODES = [
   {
@@ -69,7 +71,7 @@ const MODES = [
     tagline: 'How well do you actually know each other?',
     accent: '#8B7355',
     accentLight: '#F5F0EA',
-    available: false,
+    available: false, // overridden per-couple at render time once eligibility loads — see memoryUnlocked state
   },
   {
     id: 'remake',
@@ -95,6 +97,8 @@ export default function GameRoomPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [userName, setUserName] = useState('')
+  const [memoryUnlocked, setMemoryUnlocked] = useState(false)
+  const [showMemoryLocked, setShowMemoryLocked] = useState(false)
 
   useEffect(() => {
     const init = async () => {
@@ -114,6 +118,17 @@ export default function GameRoomPage() {
 
       if (profile?.display_name) setUserName(profile.display_name)
       setLoading(false)
+
+      // Memory Test eligibility — non-blocking, doesn't hold up the rest of the page
+      const { data: couple } = await supabase
+        .from('couples')
+        .select('id')
+        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+        .maybeSingle()
+      if (couple?.id) {
+        const { unlocked } = await checkMemoryUnlocked(supabase, couple.id)
+        setMemoryUnlocked(unlocked)
+      }
     }
     init()
   }, [router])
@@ -164,54 +179,80 @@ export default function GameRoomPage() {
 
         {/* Mode cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {MODES.map(mode => (
-            <button
-              key={mode.id}
-              onClick={() => mode.available && router.push(`/game-room/lobby?mode=${mode.id}`)}
-              style={{
-                background: '#FFFFFF',
-                border: `0.5px solid #E8DDD0`,
-                borderRadius: '20px',
-                padding: '20px',
-                textAlign: 'left',
-                cursor: mode.available ? 'pointer' : 'default',
-                opacity: mode.available ? 1 : 0.5,
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '16px',
-                width: '100%',
-              }}
-            >
-              {/* Icon */}
-              <div style={{ width: 48, height: 48, borderRadius: 14, background: mode.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 18, height: 18, borderRadius: 4, background: mode.accent, opacity: 0.85 }} />
-              </div>
-
-              {/* Content */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '18px', fontWeight: 400, color: '#1A1A1A', margin: 0 }}>
-                    {mode.name}
-                  </p>
-                  {!mode.available && (
-                    <span style={{ fontSize: '10px', letterSpacing: '0.08em', color: '#B8A898', textTransform: 'uppercase', background: '#F5F0EA', borderRadius: '6px', padding: '2px 7px' }}>
-                      Soon
-                    </span>
-                  )}
+          {MODES.map(mode => {
+            const isMemory = mode.id === 'memory'
+            const isAvailable = isMemory ? memoryUnlocked : mode.available
+            const isLockedNotSoon = isMemory && !memoryUnlocked // eligibility-gated, not "coming soon"
+            return (
+            <div key={mode.id}>
+              <button
+                onClick={() => {
+                  if (isAvailable) { router.push(`/game-room/lobby?mode=${mode.id}`); return }
+                  if (isLockedNotSoon) setShowMemoryLocked(s => !s)
+                }}
+                style={{
+                  background: '#FFFFFF',
+                  border: `0.5px solid #E8DDD0`,
+                  borderRadius: '20px',
+                  padding: '20px',
+                  textAlign: 'left',
+                  cursor: (isAvailable || isLockedNotSoon) ? 'pointer' : 'default',
+                  opacity: isAvailable ? 1 : 0.5,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '16px',
+                  width: '100%',
+                }}
+              >
+                {/* Icon */}
+                <div style={{ width: 48, height: 48, borderRadius: 14, background: mode.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 18, height: 18, borderRadius: 4, background: mode.accent, opacity: 0.85 }} />
                 </div>
-                <p style={{ fontSize: '13px', color: mode.accent, fontWeight: 500, margin: '0 0 6px' }}>
-                  {mode.tagline}
-                </p>
-                <p style={{ fontSize: '13px', color: '#9CA3AF', lineHeight: 1.5, margin: 0 }}>
-                  {mode.description}
-                </p>
-              </div>
 
-              {mode.available && (
-                <span style={{ color: mode.accent, fontSize: '20px', flexShrink: 0, alignSelf: 'center' }}>›</span>
+                {/* Content */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '18px', fontWeight: 400, color: '#1A1A1A', margin: 0 }}>
+                      {mode.name}
+                    </p>
+                    {!isAvailable && (
+                      <span style={{ fontSize: '10px', letterSpacing: '0.08em', color: '#B8A898', textTransform: 'uppercase', background: '#F5F0EA', borderRadius: '6px', padding: '2px 7px' }}>
+                        {isLockedNotSoon ? 'Locked' : 'Soon'}
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: '13px', color: mode.accent, fontWeight: 500, margin: '0 0 6px' }}>
+                    {mode.tagline}
+                  </p>
+                  <p style={{ fontSize: '13px', color: '#9CA3AF', lineHeight: 1.5, margin: 0 }}>
+                    {mode.description}
+                  </p>
+                </div>
+
+                {(isAvailable || isLockedNotSoon) && (
+                  <span style={{ color: mode.accent, fontSize: '20px', flexShrink: 0, alignSelf: 'center' }}>›</span>
+                )}
+              </button>
+
+              {isLockedNotSoon && showMemoryLocked && (
+                <div style={{ background: '#F5F0EA', border: '0.5px solid #E8DDD0', borderRadius: '16px', padding: '18px 20px', marginTop: '8px' }}>
+                  <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#1A1A1A', margin: '0 0 6px' }}>
+                    {MEMORY_LOCKED_COPY.headline}
+                  </p>
+                  <p style={{ fontSize: '13px', color: '#7A6F63', lineHeight: 1.5, margin: '0 0 12px' }}>
+                    {MEMORY_LOCKED_COPY.body}
+                  </p>
+                  <button
+                    onClick={() => router.push('/us/add')}
+                    style={{ background: 'none', border: 'none', color: '#8B7355', fontSize: '13px', fontWeight: 600, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+                  >
+                    {MEMORY_LOCKED_COPY.cta} →
+                  </button>
+                </div>
               )}
-            </button>
-          ))}
+            </div>
+            )
+          })}
         </div>
 
       </div>
