@@ -186,11 +186,11 @@ function GameRoomLobbyContent() {
       })
 
       if (mode === 'the-hunt') {
+        const { data: { session: huntSession } } = await supabase.auth.getSession()
         const res = await fetch('/api/game-room/hunt/start', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${huntSession?.access_token}` },
           body: JSON.stringify({
-            userId,
             coupleId,
             sessionId,
             together,

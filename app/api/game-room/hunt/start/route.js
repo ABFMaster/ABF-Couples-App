@@ -1,21 +1,22 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { getAvailableMissions, ALL_HUNT_MISSIONS } from '@/lib/hunt-missions'
 import { noraGenerate } from '@/lib/nora'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const { userId, coupleId, sessionId, together, timeTag, dateId } = await request.json()
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return Response.json(authError.body, { status: authError.status })
 
-    if (!userId || !coupleId || !sessionId) {
+    const { coupleId, sessionId, together, timeTag, dateId } = await request.json()
+
+    if (!coupleId || !sessionId) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
     // Idempotency — return existing hunt session if already started
     const { data: existing } = await supabase

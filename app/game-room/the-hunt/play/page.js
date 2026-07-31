@@ -125,9 +125,10 @@ function HuntPlayContent() {
   async function handleConfirm() {
     if (submitting) return
     setSubmitting(true)
+    const { data: { session } } = await supabase.auth.getSession()
     await fetch('/api/game-room/hunt/confirm', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
       body: JSON.stringify({ sessionId }),
     })
     setPhase('active')
@@ -137,10 +138,11 @@ function HuntPlayContent() {
   async function handleDrop() {
     if (!dropText.trim() || submitting) return
     setSubmitting(true)
+    const { data: { session } } = await supabase.auth.getSession()
     await fetch('/api/game-room/hunt/drop', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId, userId, coupleId, dropText }),
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ sessionId, coupleId, dropText }),
     })
     setDropText('')
     setSubmitting(false)
@@ -149,9 +151,10 @@ function HuntPlayContent() {
   async function handleReturn() {
     if (submitting) return
     setSubmitting(true)
+    const { data: { session } } = await supabase.auth.getSession()
     await fetch('/api/game-room/hunt/return', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
       body: JSON.stringify({ sessionId }),
     })
     setPhase('debrief')
@@ -162,10 +165,11 @@ function HuntPlayContent() {
     if (!debriefText.trim() || submitting) return
     setSubmitting(true)
     setDebriefSubmitted(true)
+    const { data: { session } } = await supabase.auth.getSession()
     const res = await fetch('/api/game-room/hunt/debrief', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sessionId, userId, coupleId, debriefText }),
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ sessionId, coupleId, debriefText }),
     })
     const data = await res.json()
     if (data.verdict) {

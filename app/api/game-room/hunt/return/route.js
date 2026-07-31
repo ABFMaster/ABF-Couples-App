@@ -1,19 +1,27 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return Response.json(authError.body, { status: authError.status })
+
     const { sessionId } = await request.json()
 
     if (!sessionId) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    const { data: huntForAuth } = await supabase
+      .from('hunt_sessions')
+      .select('couple_id')
+      .eq('session_id', sessionId)
+      .maybeSingle()
+    if (!huntForAuth) return Response.json({ error: 'Hunt session not found' }, { status: 404 })
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, huntForAuth.couple_id)
+    if (!isMember) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
     const { error } = await supabase
       .from('hunt_sessions')

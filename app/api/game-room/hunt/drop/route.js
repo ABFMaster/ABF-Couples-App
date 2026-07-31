@@ -1,17 +1,15 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const { sessionId, userId, coupleId, dropText, photoUrl } = await request.json()
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return Response.json(authError.body, { status: authError.status })
 
-    if (!sessionId || !userId || !coupleId) {
+    const { sessionId, coupleId, dropText, photoUrl } = await request.json()
+
+    if (!sessionId || !coupleId) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -26,6 +24,10 @@ export async function POST(request) {
       return Response.json({ error: 'Couple not found' }, { status: 404 })
     }
 
+    const isMember = coupleData.user1_id === user.id || coupleData.user2_id === user.id
+    if (!isMember) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+    const userId = user.id
     const isUser1 = coupleData.user1_id === userId
     const dropField = isUser1 ? 'user1_drop' : 'user2_drop'
     const photoField = isUser1 ? 'user1_photo_url' : 'user2_photo_url'
