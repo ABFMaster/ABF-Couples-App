@@ -135,22 +135,27 @@ Respond in this exact JSON format with no other text:
   "prompt": "base prompt returned exactly as written or with one specific personal addition"
 }`
     } else if (challengeType === 'memory') {
-      // Fetch rich couple data for memory question generation
+      // Fetch rich couple data for memory question generation.
+      // NOTE: this used to read from today_responses and bets.user1_answer/
+      // user2_answer — both dead, nothing in the live app writes to them
+      // (the app moved to the spark_responses/bet_responses per-user-row
+      // model). Fixed July 31 2026 to read from the tables Bet/Spark
+      // actually write to. See Sessions/PRODUCT_BACKLOG.md.
       const { data: sparkAnswers } = await supabase
-        .from('today_responses')
-        .select('spark_question, spark_answer, user_id')
+        .from('spark_responses')
+        .select('response_text, user_id, responded_at, sparks(question)')
         .eq('couple_id', coupleId)
-        .not('spark_answer', 'is', null)
-        .order('created_at', { ascending: false })
+        .not('response_text', 'is', null)
+        .order('responded_at', { ascending: false })
         .limit(20)
 
       const { data: betAnswers } = await supabase
-        .from('bets')
-        .select('question, user1_answer, user2_answer, user1_locked, user2_locked')
+        .from('bet_responses')
+        .select('actual_answer, user_id, responded_at, bets(question)')
         .eq('couple_id', coupleId)
-        .not('user1_answer', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(10)
+        .not('actual_answer', 'is', null)
+        .order('responded_at', { ascending: false })
+        .limit(20)
 
       const { data: timelineEvents } = await supabase
         .from('timeline_events')
@@ -180,13 +185,28 @@ Respond in this exact JSON format with no other text:
         .not('memory_question', 'is', null)
       const usedQuestions = (usedRounds || []).map(r => r.memory_question).filter(Boolean)
 
-      // Build context strings
+      // Build context strings — resolve each response's user_id to a name
+      // via the profiles already fetched above, and unwrap the embedded
+      // question (Supabase returns a singular object for a many-to-one
+      // embed, but code defensively in case it's an array).
+      const nameFor = (uid) => profiles?.find(p => p.user_id === uid)?.display_name || 'Someone'
+      const questionOf = (row, table) => {
+        const embedded = row[table]
+        return (Array.isArray(embedded) ? embedded[0]?.question : embedded?.question) || null
+      }
+
       const sparkContext = sparkAnswers && sparkAnswers.length > 0
-        ? sparkAnswers.map(s => `Q: ${s.spark_question} — A: ${s.spark_answer}`).join('\n')
+        ? sparkAnswers
+            .map(s => { const q = questionOf(s, 'sparks'); return q ? `Q: ${q} — ${nameFor(s.user_id)}: ${s.response_text}` : null })
+            .filter(Boolean)
+            .join('\n')
         : 'No Spark answers yet'
 
       const betContext = betAnswers && betAnswers.length > 0
-        ? betAnswers.map(b => `Q: ${b.question} | ${guesserName}: ${b.user1_answer || '?'} | ${answerHolderName}: ${b.user2_answer || '?'}`).join('\n')
+        ? betAnswers
+            .map(b => { const q = questionOf(b, 'bets'); return q ? `Q: ${q} — ${nameFor(b.user_id)}: ${b.actual_answer}` : null })
+            .filter(Boolean)
+            .join('\n')
         : 'No Bet answers yet'
 
       const timelineContext = timelineEvents && timelineEvents.length > 0
