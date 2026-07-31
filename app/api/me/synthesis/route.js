@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraChat } from '@/lib/nora'
 import { getTodayString } from '@/lib/dates'
+import { getPrivateNotes } from '@/lib/nora-memory'
 
 export async function GET(request) {
   try {
@@ -93,6 +94,12 @@ export async function POST(request) {
         userNotes = notes?.notes || null
       }
     }
+
+    // Self-facing only (writes to hero_cache scoped by this user_id, never
+    // shown to their partner) — safe and correct to merge in this user's
+    // private AI-coach notes for continuity.
+    const privateNotes = await getPrivateNotes(userId)
+    userNotes = [userNotes, privateNotes].filter(Boolean).join('\n\n') || null
 
     const entriesSummary = entries?.map(e =>
       `[${e.entry_type}] ${e.content}`

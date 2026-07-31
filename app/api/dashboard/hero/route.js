@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { noraSignal, noraChat } from '@/lib/nora'
 import { getNoraTierContext } from '@/lib/nora-knowledge'
-import { getSurfaceableClaims } from '@/lib/nora-memory'
+import { getSurfaceableClaims, getPrivateNotes } from '@/lib/nora-memory'
 import { getTodayString, getDayOfWeek, getDateDayLabel, getWeekStart } from '@/lib/dates'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
@@ -238,7 +238,12 @@ const ritualCompletedThisWeek = !!completion?.completed
     const myNotes       = isUser1 ? memory?.user1_notes : memory?.user2_notes
     const coupleNotes   = memory?.couple_notes?.notes || null
     const structuredFacts = memory?.couple_notes?.structured_facts || null
-    const myPersonNotes = myNotes?.notes || null
+    // myPersonNotes is self-facing only (used to personalize this user's own
+    // hero card, never shown to their partner), so it's safe — and per the
+    // continuity design — correct to merge in this user's private AI-coach
+    // notes (nora_private_notes) alongside their couple-context notes.
+    const privateNotes = await getPrivateNotes(userId)
+    const myPersonNotes = [myNotes?.notes, privateNotes].filter(Boolean).join('\n\n') || null
     const claimsResult = (couple?.user1_id && couple?.user2_id)
       ? await getSurfaceableClaims(coupleId, couple.user1_id, couple.user2_id, isUser1 ? userName : partnerName, isUser1 ? partnerName : userName, user1Signals, user2Signals)
       : { promptBlock: '' }
