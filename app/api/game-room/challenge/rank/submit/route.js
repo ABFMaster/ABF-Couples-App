@@ -1,20 +1,31 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraSignal } from '@/lib/nora'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const { roundId, userId, coupleId, ranking, rankRound } = await request.json()
-    if (!roundId || !userId || !ranking || !rankRound) {
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
+
+    const { roundId, ranking, rankRound } = await request.json()
+    if (!roundId || !ranking || !rankRound) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    const { data: initialRound } = await supabase
+      .from('challenge_rounds')
+      .select('couple_id')
+      .eq('id', roundId)
+      .maybeSingle()
+    if (!initialRound) return NextResponse.json({ error: 'Round not found' }, { status: 404 })
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, initialRound.couple_id)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    const userId = user.id
+    const coupleId = initialRound.couple_id
 
     const { data: couple } = await supabase
       .from('couples')

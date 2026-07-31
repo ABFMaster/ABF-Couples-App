@@ -1,14 +1,12 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return Response.json(authError.body, { status: authError.status })
+
     const {
       sessionId,
       roundNumber,
@@ -16,13 +14,17 @@ export async function POST(request) {
       currentAnswer,
       originalAnswer,
       dimensionKey,
-      userId,
       coupleId,
     } = await request.json()
 
-    if (!sessionId || !roundNumber || !answerType || !currentAnswer || !userId || !coupleId) {
+    if (!sessionId || !roundNumber || !answerType || !currentAnswer || !coupleId) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+    const userId = user.id
 
     // Determine source and delta
     let source

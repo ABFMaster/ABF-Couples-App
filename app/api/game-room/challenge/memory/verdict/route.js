@@ -1,26 +1,24 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { noraVerdict } from '@/lib/nora'
 import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing, getSurfaceableClaims } from '@/lib/nora-memory'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const { sessionId, roundNumber, coupleId } = await request.json()
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return Response.json(authError.body, { status: authError.status })
 
-    if (!sessionId || !roundNumber || !coupleId) {
+    const { sessionId, roundNumber } = await request.json()
+
+    if (!sessionId || !roundNumber) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Fetch round data
+    // Fetch round data — couple_id comes from here, never trusted from the client
     const { data: round, error: roundError } = await supabase
       .from('challenge_rounds')
-      .select('memory_question, memory_answer, guesser_answer, hints_granted, hint_requests, hint_denials, guesser_user_id, round_number')
+      .select('memory_question, memory_answer, guesser_answer, hints_granted, hint_requests, hint_denials, guesser_user_id, round_number, couple_id')
       .eq('session_id', sessionId)
       .eq('round_number', roundNumber)
       .single()
@@ -28,6 +26,11 @@ export async function POST(request) {
     if (roundError || !round) {
       return Response.json({ error: 'Round not found' }, { status: 404 })
     }
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, round.couple_id)
+    if (!isMember) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+    const coupleId = round.couple_id
 
     // Idempotency — return existing verdict if already generated
     const { data: existingRound } = await supabase

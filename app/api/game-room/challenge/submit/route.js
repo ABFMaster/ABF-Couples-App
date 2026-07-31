@@ -1,24 +1,36 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { noraVerdict } from '@/lib/nora'
 import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing, getSurfaceableClaims } from '@/lib/nora-memory'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const { userId, coupleId, challengeSessionId, roundId, challengeType, prompt, coupleResponse } = await request.json()
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return Response.json(authError.body, { status: authError.status })
 
-    if (!userId || !coupleId || !challengeSessionId || !roundId || !challengeType || !prompt) {
+    const { challengeSessionId, roundId, challengeType, prompt, coupleResponse } = await request.json()
+
+    if (!challengeSessionId || !roundId || !challengeType || !prompt) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
     if (challengeType !== 'story' && !coupleResponse) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    // couple_id derived from the round itself, never trusted from the client
+    const { data: roundForAuth } = await supabase
+      .from('challenge_rounds')
+      .select('couple_id')
+      .eq('id', roundId)
+      .maybeSingle()
+    if (!roundForAuth) return Response.json({ error: 'Round not found' }, { status: 404 })
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, roundForAuth.couple_id)
+    if (!isMember) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+    const coupleId = roundForAuth.couple_id
+    const userId = user.id
 
     // Fetch couple names for Nora
     const { data: coupleData } = await supabase

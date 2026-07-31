@@ -1,31 +1,37 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraSignal } from '@/lib/nora'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const { roundId, coupleId, pitch, prompt } = await request.json()
-    if (!roundId || !coupleId || !pitch) {
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
+
+    const { roundId, pitch, prompt } = await request.json()
+    if (!roundId || !pitch) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
-
-    // Idempotency — return existing challenge if already generated
+    // Idempotency — return existing challenge if already generated. couple_id
+    // comes from the round itself, never trusted from the client.
     const { data: existing } = await supabase
       .from('challenge_rounds')
-      .select('nora_challenge, couple_response')
+      .select('nora_challenge, couple_response, couple_id')
       .eq('id', roundId)
       .maybeSingle()
 
-    if (existing?.nora_challenge) {
+    if (!existing) return NextResponse.json({ error: 'Round not found' }, { status: 404 })
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, existing.couple_id)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    if (existing.nora_challenge) {
       return NextResponse.json({ noraChallenge: existing.nora_challenge })
     }
+
+    const coupleId = existing.couple_id
 
     const { data: couple } = await supabase
       .from('couples')

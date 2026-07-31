@@ -224,9 +224,10 @@ function GameRoomLobbyContent() {
       if (['story', 'pitch', 'rank', 'plan', 'memory'].includes(mode)) {
         const typeMap = { story: 'story', pitch: 'pitch', rank: 'rank', plan: 'plan', memory: 'memory' }
         const challengeType = typeMap[mode]
+        const { data: { session: confirmSession } } = await supabase.auth.getSession()
         const confirmRes = await fetch('/api/game-room/challenge/confirm-type', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${confirmSession?.access_token}` },
           body: JSON.stringify({
             sessionId,
             coupleId,

@@ -1,30 +1,30 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const { userId, coupleId, challengeSessionId } = await request.json()
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return Response.json(authError.body, { status: authError.status })
 
-    if (!userId || !coupleId || !challengeSessionId) {
-      return Response.json({ error: 'Missing required fields' }, { status: 400 })
+    const { challengeSessionId } = await request.json()
+
+    if (!challengeSessionId) {
+      return Response.json({ error: 'challengeSessionId required' }, { status: 400 })
     }
 
     const { data: session, error: fetchError } = await supabase
       .from('challenge_sessions')
       .select('*')
       .eq('id', challengeSessionId)
-      .eq('couple_id', coupleId)
       .single()
 
     if (fetchError || !session) {
       return Response.json({ error: 'Session not found' }, { status: 404 })
     }
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, session.couple_id)
+    if (!isMember) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
     if (session.status === 'complete') {
       return Response.json({ session, complete: true })

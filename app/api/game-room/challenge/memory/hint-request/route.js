@@ -1,14 +1,12 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return Response.json(authError.body, { status: authError.status })
+
     const { sessionId, roundNumber } = await request.json()
 
     if (!sessionId || !roundNumber) {
@@ -18,7 +16,7 @@ export async function POST(request) {
     // Fetch current round state
     const { data: round, error: fetchError } = await supabase
       .from('challenge_rounds')
-      .select('hint_requests, hints_granted, hint_pending')
+      .select('hint_requests, hints_granted, hint_pending, couple_id')
       .eq('session_id', sessionId)
       .eq('round_number', roundNumber)
       .single()
@@ -26,6 +24,9 @@ export async function POST(request) {
     if (fetchError || !round) {
       return Response.json({ error: 'Round not found' }, { status: 404 })
     }
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, round.couple_id)
+    if (!isMember) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
     // Enforce cap on granted hints — denials do not count against the limit
     const hintsGranted = round.hints_granted || []

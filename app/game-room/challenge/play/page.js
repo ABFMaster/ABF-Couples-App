@@ -390,11 +390,11 @@ function ChallengePlayContent() {
         // Host-only: trigger verdict generation when answer is revealed and verdict not yet written
         if (memRound.answer_revealed && !memRound.nora_verdict && isScribeRef.current && !memoryVerdictCalledRef.current) {
           memoryVerdictCalledRef.current = true
-          fetch('/api/game-room/challenge/memory/verdict', {
+          supabase.auth.getSession().then(({ data: { session } }) => fetch('/api/game-room/challenge/memory/verdict', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: memRound.round_number, coupleId: coupleIdRef.current }),
-          }).catch(() => {
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+            body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: memRound.round_number }),
+          })).catch(() => {
             memoryVerdictCalledRef.current = false
           })
         }
@@ -491,15 +491,15 @@ function ChallengePlayContent() {
             setPhase('verdict')
           } else if (storyRound.story_complete && !storyRound.nora_verdict && phaseRef.current !== 'verdict' && isScribeRef.current && !storyVerdictCalledRef.current) {
             storyVerdictCalledRef.current = true
-            fetch('/api/game-room/challenge/submit', {
+            supabase.auth.getSession().then(({ data: { session } }) => fetch('/api/game-room/challenge/submit', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
               body: JSON.stringify({
-                userId: userIdRef.current, coupleId: coupleIdRef.current, challengeSessionId,
+                challengeSessionId,
                 roundId: storyRound.id, challengeType,
                 prompt: storyRound.prompt, coupleResponse: '',
               }),
-            }).catch(() => {
+            })).catch(() => {
               storyVerdictCalledRef.current = false
             })
           }
@@ -600,10 +600,11 @@ function ChallengePlayContent() {
     setMemoryHintResponding(false)
 
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/game-room/challenge/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, coupleId, challengeSessionId, challengeType, roundNumber }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ coupleId, challengeSessionId, challengeType, roundNumber }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -641,11 +642,12 @@ function ChallengePlayContent() {
     setSubmitted(true)
 
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/game-room/challenge/submit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({
-          userId, coupleId, challengeSessionId,
+          challengeSessionId,
           roundId: round.id, challengeType,
           prompt: round.prompt, coupleResponse: response,
         }),
@@ -677,10 +679,11 @@ function ChallengePlayContent() {
   async function handleNext() {
     clearInterval(pollRef.current)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/game-room/challenge/next', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, coupleId, challengeSessionId }),
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ challengeSessionId }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -701,15 +704,13 @@ function ChallengePlayContent() {
     if (!storyInput.trim() || storySubmitting) return
     setStorySubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/game-room/challenge/story/submit-sentence', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({
           roundId: round.id,
-          userId,
-          coupleId,
           sentence: storyInput.trim(),
-          challengeSessionId,
         }),
       })
       const data = await res.json()
@@ -728,13 +729,12 @@ function ChallengePlayContent() {
     if (rankSubmitting) return
     setRankSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/game-room/challenge/rank/submit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({
           roundId: round.id,
-          userId,
-          coupleId,
           ranking: rankingArray,
           rankRound,
         }),
@@ -772,13 +772,12 @@ function ChallengePlayContent() {
     if (rankFinalizing) return
     setRankFinalizing(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/game-room/challenge/rank/finalize', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({
           roundId: round.id,
-          coupleId,
-          challengeSessionId,
           prompt: round.prompt,
         }),
       })
@@ -796,12 +795,12 @@ function ChallengePlayContent() {
     if (!response.trim() || pitchSubmitting) return
     setPitchSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       await fetch('/api/game-room/challenge/pitch/challenge', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({
           roundId: round.id,
-          coupleId,
           pitch: response,
           prompt: round.prompt,
         }),
@@ -815,11 +814,12 @@ function ChallengePlayContent() {
     if (!pitchDefense.trim() || pitchSubmitting) return
     setPitchSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/game-room/challenge/submit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({
-          userId, coupleId, challengeSessionId,
+          challengeSessionId,
           roundId: round.id, challengeType,
           prompt: round.prompt, coupleResponse: pitchDefense,
         }),
@@ -1268,9 +1268,10 @@ function ChallengePlayContent() {
                     const answerType = prePopulatedAnswer
                       ? (memoryIsUpdated ? 'type_a_updated' : 'type_a_confirmed')
                       : 'type_b'
+                    const { data: { session: readySession } } = await supabase.auth.getSession()
                     const readyRes = await fetch('/api/game-room/challenge/memory/ready', {
                       method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
+                      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${readySession?.access_token}` },
                       body: JSON.stringify({
                         sessionId: challengeSessionId,
                         roundNumber: currentRound,
@@ -1278,7 +1279,6 @@ function ChallengePlayContent() {
                         currentAnswer: memoryLocalAnswer,
                         originalAnswer: prePopulatedAnswer || null,
                         dimensionKey: round?.prompt_key || 'unknown',
-                        userId,
                         coupleId,
                       }),
                     })
@@ -1369,9 +1369,10 @@ function ChallengePlayContent() {
                               onClick={async () => {
                                 if (memoryHintResponding) return
                                 setMemoryHintResponding(true)
+                                const { data: { session: grantSession } } = await supabase.auth.getSession()
                                 await fetch('/api/game-room/challenge/memory/hint-respond', {
                                   method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
+                                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${grantSession?.access_token}` },
                                   body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound, action: 'grant' }),
                                 })
                               }}
@@ -1383,9 +1384,10 @@ function ChallengePlayContent() {
                               onClick={async () => {
                                 if (memoryHintResponding) return
                                 setMemoryHintResponding(true)
+                                const { data: { session: denySession } } = await supabase.auth.getSession()
                                 await fetch('/api/game-room/challenge/memory/hint-respond', {
                                   method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
+                                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${denySession?.access_token}` },
                                   body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound, action: 'deny' }),
                                 })
                               }}
@@ -1422,9 +1424,10 @@ function ChallengePlayContent() {
                       </div>
                       <button
                         onClick={async () => {
+                          const { data: { session } } = await supabase.auth.getSession()
                           await fetch('/api/game-room/challenge/memory/reveal', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
                             body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound }),
                           })
                         }}
@@ -1504,9 +1507,10 @@ function ChallengePlayContent() {
                           onClick={async () => {
                             if (memorySubmitting) return
                             setMemorySubmitting(true)
+                            const { data: { session } } = await supabase.auth.getSession()
                             await fetch('/api/game-room/challenge/memory/hint-request', {
                               method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
+                              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
                               body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound }),
                             })
                             setMemorySubmitting(false)
@@ -1520,9 +1524,10 @@ function ChallengePlayContent() {
                         onClick={async () => {
                           if (!memoryGuess.trim() || memorySubmitting) return
                           setMemorySubmitting(true)
+                          const { data: { session } } = await supabase.auth.getSession()
                           await fetch('/api/game-room/challenge/memory/submit', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
                             body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: currentRound, answer: memoryGuess }),
                           })
                           setMemorySubmitting(false)
