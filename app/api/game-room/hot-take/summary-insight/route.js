@@ -1,32 +1,38 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraVerdict } from '@/lib/nora'
 import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing, getSurfaceableClaims } from '@/lib/nora-memory'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const { userName, partnerName, sessionId, userId } = await request.json()
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    if (!userName || !partnerName || !sessionId || !userId) {
+    const { userName, partnerName, sessionId } = await request.json()
+
+    if (!userName || !partnerName || !sessionId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Idempotency — return existing insight if already generated
+    // Idempotency — return existing insight if already generated. couple_id
+    // comes from the session row itself, never trusted from the client.
     const { data: existingSession } = await supabase
       .from('hot_take_sessions')
-      .select('nora_insight, questions')
+      .select('nora_insight, questions, couple_id')
       .eq('session_id', sessionId)
       .maybeSingle()
+    if (!existingSession) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, existingSession.couple_id)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
     if (existingSession?.nora_insight) {
       return NextResponse.json({ insight: existingSession.nora_insight })
     }
+
+    const userId = user.id
 
     // Fetch all answers from DB
     const { data: dbAnswers } = await supabase

@@ -120,9 +120,10 @@ function HotTakeContent() {
       .from('hot_take_sessions')
       .delete()
       .eq('session_id', session.id)
+    const { data: { session: authSession } } = await supabase.auth.getSession()
     const res = await fetch('/api/game-room/hot-take/start', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authSession?.access_token}` },
       body: JSON.stringify({ sessionId: session.id, coupleId, tiers, count: 15 }),
     })
     const data = await res.json()
@@ -136,13 +137,13 @@ function HotTakeContent() {
 
     const currentQ = questions[currentIndex]
     try {
+      const { data: { session: authSession } } = await supabase.auth.getSession()
       const res = await fetch('/api/game-room/hot-take/answer', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authSession?.access_token}` },
         body: JSON.stringify({
           sessionId: session.id,
           coupleId,
-          userId,
           questionId: currentQ.id,
           answer,
         }),
@@ -334,16 +335,16 @@ function HotTakeContent() {
     if (!showSummary || !session?.id || !userId) return
     if (isHost) {
       setLoadingInsight(true)
-      fetch('/api/game-room/hot-take/summary-insight', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: session.id,
-          userId,
-          userName,
-          partnerName,
-        }),
-      })
+      supabase.auth.getSession()
+        .then(({ data: { session: authSession } }) => fetch('/api/game-room/hot-take/summary-insight', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authSession?.access_token}` },
+          body: JSON.stringify({
+            sessionId: session.id,
+            userName,
+            partnerName,
+          }),
+        }))
         .then(r => r.json())
         .then(d => { if (d.insight) setNoraInsight(d.insight) })
         .catch(() => {})

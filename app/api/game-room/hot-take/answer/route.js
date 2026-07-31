@@ -1,20 +1,18 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraSignal } from '@/lib/nora'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const { sessionId, coupleId, userId, questionId, answer } = await request.json()
-    if (!sessionId || !coupleId || !userId || !questionId || answer === undefined) {
-      return NextResponse.json({ error: 'sessionId, coupleId, userId, questionId, answer required' }, { status: 400 })
-    }
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    const { sessionId, coupleId, questionId, answer } = await request.json()
+    if (!sessionId || !coupleId || !questionId || answer === undefined) {
+      return NextResponse.json({ error: 'sessionId, coupleId, questionId, answer required' }, { status: 400 })
+    }
 
     // Get couple
     const { data: couple } = await supabase
@@ -24,6 +22,10 @@ export async function POST(request) {
       .maybeSingle()
     if (!couple) return NextResponse.json({ error: 'Couple not found' }, { status: 404 })
 
+    const isMember = couple.user1_id === user.id || couple.user2_id === user.id
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    const userId = user.id
     const isUser1 = couple.user1_id === userId
     const answerField = isUser1 ? 'user1_answer' : 'user2_answer'
     const partnerId = isUser1 ? couple.user2_id : couple.user1_id
