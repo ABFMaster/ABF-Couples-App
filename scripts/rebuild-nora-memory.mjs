@@ -74,17 +74,24 @@ const args = process.argv.slice(2)
 const mode = args.find(a => a === '--counts') ? 'counts'
   : args.find(a => a === '--preview') ? 'preview'
   : args.find(a => a.startsWith('--apply=')) ? 'apply'
+  : args.find(a => a === '--list-couples') ? 'list-couples'
   : null
 const applyFromPath = args.find(a => a.startsWith('--apply='))?.split('=')[1]
 const batchSizeArg = args.find(a => a.startsWith('--batch-size='))?.split('=')[1]
 const BATCH_SIZE = batchSizeArg ? parseInt(batchSizeArg, 10) : 20
+const targetCoupleId = args.find(a => a.startsWith('--couple-id='))?.split('=')[1] || null
 
 if (!mode) {
   console.log(`
 Usage:
-  node --env-file=.env.local scripts/rebuild-nora-memory.mjs --counts
-  node --env-file=.env.local scripts/rebuild-nora-memory.mjs --preview [--batch-size=20]
+  node --env-file=.env.local scripts/rebuild-nora-memory.mjs --list-couples
+  node --env-file=.env.local scripts/rebuild-nora-memory.mjs --counts [--couple-id=<id>]
+  node --env-file=.env.local scripts/rebuild-nora-memory.mjs --preview [--couple-id=<id>] [--batch-size=20]
   node --env-file=.env.local scripts/rebuild-nora-memory.mjs --apply=scripts/output/<preview-file>.json
+
+--couple-id is only needed if more than one couple exists in the database
+(the script will tell you to use it if so). Run --list-couples first to
+see the options.
 
 See the file header comment for what each mode does.
 `)
@@ -131,13 +138,53 @@ async function getTheCouple() {
     .select('id, user1_id, user2_id, created_at')
   if (error) throw new Error(`Failed to fetch couples: ${error.message}`)
   if (!couples || couples.length === 0) throw new Error('No couples found.')
+
+  if (targetCoupleId) {
+    const match = couples.find(c => c.id === targetCoupleId)
+    if (!match) throw new Error(`No couple found with id ${targetCoupleId}. Run --list-couples to see valid ids.`)
+    return match
+  }
+
   if (couples.length > 1) {
     throw new Error(
-      `Expected exactly one couple (this script assumes the "only users are Cass and I" setup) but found ${couples.length}. ` +
-      `Refusing to guess — pass a specific couple explicitly by editing this script before running against a multi-couple database.`
+      `Found ${couples.length} couples, not 1 — refusing to guess which one to rebuild. ` +
+      `Run --list-couples to see them, then re-run with --couple-id=<id>.`
     )
   }
   return couples[0]
+}
+
+async function runListCouples() {
+  const { data: couples, error } = await supabase
+    .from('couples')
+    .select('id, user1_id, user2_id, created_at')
+    .order('created_at', { ascending: true })
+  if (error) throw new Error(`Failed to fetch couples: ${error.message}`)
+  if (!couples || couples.length === 0) {
+    console.log('No couples found.')
+    return
+  }
+
+  for (const couple of couples) {
+    const { user1Name, user2Name } = await getNames(couple)
+    const { count: signalCount } = await supabase
+      .from('nora_signals')
+      .select('*', { count: 'exact', head: true })
+      .eq('couple_id', couple.id)
+    const { data: memory } = await supabase
+      .from('nora_memory')
+      .select('memory_summary, last_updated')
+      .eq('couple_id', couple.id)
+      .maybeSingle()
+
+    console.log(`\ncouple_id: ${couple.id}`)
+    console.log(`  created_at: ${couple.created_at}`)
+    console.log(`  user1: ${user1Name} (${couple.user1_id})`)
+    console.log(`  user2: ${user2Name} (${couple.user2_id})`)
+    console.log(`  nora_signals rows: ${signalCount ?? 'unknown'}`)
+    console.log(`  has memory_summary: ${memory?.memory_summary ? 'yes' : 'no'}${memory?.last_updated ? ` (last updated ${memory.last_updated})` : ''}`)
+  }
+  console.log(`\nRe-run any mode with --couple-id=<the right id above> to target one specifically.`)
 }
 
 async function getNames(couple) {
@@ -378,6 +425,7 @@ async function runApply() {
 }
 
 try {
+  if (mode === 'list-couples') await runListCouples()
   if (mode === 'counts') await runCounts()
   if (mode === 'preview') await runPreview()
   if (mode === 'apply') await runApply()
