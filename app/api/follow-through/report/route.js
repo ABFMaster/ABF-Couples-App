@@ -41,10 +41,18 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Couple not found' }, { status: 404 })
     }
 
+    // Scoped by couple_id too, not just id — verifyCoupleMembership above
+    // only confirms the caller belongs to the coupleId they supplied, not
+    // that followThroughId (also client-supplied) actually belongs to that
+    // couple. Without this, a genuine member of their own couple could pass
+    // a followThroughId belonging to a different couple and update it using
+    // their own couple's user1/user2 mapping — a confused-deputy gap on the
+    // resource-ID axis rather than the coupleId axis.
     const { data: row } = await supabase
       .from('follow_throughs')
       .select('*')
       .eq('id', followThroughId)
+      .eq('couple_id', coupleId)
       .maybeSingle()
 
     if (!row) {
