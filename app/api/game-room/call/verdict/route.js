@@ -47,6 +47,18 @@ export async function POST(request) {
       .eq('id', coupleId)
       .maybeSingle()
 
+    // predictorUserId is client-supplied — verifyCoupleMembership above only
+    // confirms the CALLER belongs to this couple, not that predictorUserId
+    // does. Without this check, an attacker-supplied id would both
+    // mislabel the verdict (line ~50's partnerId derivation always falls
+    // through to user2_id for anything that isn't a real user1_id match)
+    // and, since neither real partner's id would match, silently drop the
+    // individual-notes write in updateNoraMemory below. Constrained to the
+    // two actual members of the caller's own verified couple.
+    if (predictorUserId !== couple?.user1_id && predictorUserId !== couple?.user2_id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const partnerId = couple.user1_id === predictorUserId ? couple.user2_id : couple.user1_id
 
     const [{ data: predictorProfile }, { data: hotSeatProfile }] = await Promise.all([

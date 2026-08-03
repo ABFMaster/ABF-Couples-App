@@ -30,11 +30,17 @@ export async function POST(request) {
       .eq('id', flirtId)
       .eq('receiver_id', user.id)
 
-    // Fetch flirt to get coupleId and senderId for signal
+    // Fetch flirt to get coupleId and senderId for signal — scoped to
+    // receiver_id = user.id, matching the UPDATE above. Previously
+    // unscoped: any authenticated caller could supply another couple's
+    // flirtId and fire a fabricated FLIRT_RECEIVED signal (writing a real
+    // reaction into that couple's shared couple_notes) even though the
+    // UPDATE itself correctly no-opped for a flirt that wasn't theirs.
     const { data: flirt } = await supabase
       .from('flirts')
       .select('couple_id, sender_id, type, content')
       .eq('id', flirtId)
+      .eq('receiver_id', user.id)
       .maybeSingle()
 
     if (flirt) {

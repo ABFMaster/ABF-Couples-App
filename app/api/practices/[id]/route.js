@@ -48,8 +48,15 @@ export async function PATCH(request, { params }) {
 
     if (error) return NextResponse.json({ error: 'Failed to update practice' }, { status: 500 })
 
+    // DB-derived couple_id takes priority over the client-supplied value —
+    // was previously inverted (client-first), the exact opposite of the
+    // already-fixed bet/respond pattern. The practice row itself is fully
+    // scoped to user_id = user.id above so this couldn't corrupt another
+    // couple's notes text (PRACTICE_UPDATED is individual-only), but a
+    // client-supplied coupleId could still mistag which couple's signal
+    // count/nora_signals log entry this counted against.
     updateNoraMemory({
-      coupleId: coupleId || existing.couple_id || null,
+      coupleId: existing.couple_id || coupleId || null,
       userId: user.id,
       signalType: SIGNAL_TYPES.PRACTICE_UPDATED,
       inputData: { title: existing.title, oldStatus: existing.status, newStatus: status, timestamp: now },

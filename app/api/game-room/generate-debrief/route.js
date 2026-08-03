@@ -130,8 +130,17 @@ ${noraBriefing ? `\nWhat Nora knows about this couple:\n${noraBriefing}` : ''}${
       })
       .eq('id', sessionId)
 
+    // userId was previously omitted entirely — since GAME_ROOM_DEBRIEF is
+    // individual-only in INDIVIDUAL_NOTE_SIGNALS (not a shared-note
+    // signal), a missing userId meant updateUser1/updateUser2 both
+    // resolved false and neither partner's individual notes ever got
+    // written, even though the couple-level signal count still credited
+    // both. Attributed to the calling user, same convention already used
+    // correctly in hunt/debrief, hot-take/summary-insight,
+    // challenge/memory/verdict, and challenge/submit.
     updateNoraMemory({
       coupleId,
+      userId: user.id,
       signalType: SIGNAL_TYPES.GAME_ROOM_DEBRIEF,
       inputData: {
         topic: session.hole_topic,

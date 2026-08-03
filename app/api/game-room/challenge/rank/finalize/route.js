@@ -87,7 +87,10 @@ ${noraBriefing ? `\nWhat Nora knows about this couple:\n${noraBriefing}` : ''}`
       .update({ nora_verdict: verdictText, completed_at: new Date().toISOString() })
       .eq('id', roundId)
 
-    updateNoraMemory({ coupleId, signalType: SIGNAL_TYPES.GAME_ROOM_DEBRIEF, inputData: { gameType: 'rank_challenge', prompt, rankFinal, noAgreements, verdictText } }).catch(() => {})
+    // userId previously omitted — see generate-debrief/route.js for the
+    // full explanation (GAME_ROOM_DEBRIEF is individual-only, so a missing
+    // userId silently drops the individual-notes write entirely).
+    updateNoraMemory({ coupleId, userId: user.id, signalType: SIGNAL_TYPES.GAME_ROOM_DEBRIEF, inputData: { gameType: 'rank_challenge', prompt, rankFinal, noAgreements, verdictText } }).catch(() => {})
     return NextResponse.json({ noraVerdict: verdictText, rankFinal, noAgreements })
   } catch (err) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
