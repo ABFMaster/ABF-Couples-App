@@ -1,11 +1,11 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { buildCoachContext, formatContextForPrompt, getRecentActivity, getConversationHistory } from '@/lib/ai-coach-context';
 import { getNoraMemory, updateNoraMemory, maybeUpdateNoraMemory, shouldUpdateMemory, getMemoryBriefing, getSurfaceableClaims, classifyClaimResponse, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { noraChat, noraReact, buildCoachSystem } from '@/lib/nora'
 import { getNoraBriefing, getNoraTierContext } from '@/lib/nora-knowledge'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 // ── NORA PERSONA ──────────────────────────────────────────────────────────────
 
@@ -146,23 +146,8 @@ async function isPremiumUser(supabase, userId) {
 export async function POST(request) {
   try {
     // ── AUTH ───────────────────────────────────────────────────────
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized - No token' }, { status: 401 });
-    }
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      { global: { headers: { Authorization: `Bearer ${token}` } } }
-    );
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
     // ── PARSE REQUEST ──────────────────────────────────────────────
     const { message, conversationId, coupleId, sessionType } = await request.json();
@@ -172,6 +157,31 @@ export async function POST(request) {
     }
     if (!coupleId) {
       return NextResponse.json({ error: 'Couple ID is required' }, { status: 400 });
+    }
+
+    // Never trust a client-supplied coupleId without this — previously
+    // missing entirely, which let any authenticated user pass an arbitrary
+    // coupleId and get back an AI response synthesized from that couple's
+    // real assessment scores, Spark/Bet answers, and private notes (plus
+    // polluting their signal counts and nora_signals log). Found in the
+    // Aug 2026 Nora memory audit.
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    // If the client supplied a conversationId, it must actually belong to
+    // this user — previously trusted as-is, which (combined with the
+    // classifyClaimResponse call below) let an attacker read a stranger's
+    // last Nora message and write fabricated claim-confidence changes into
+    // a real couple's nora_claims using an arbitrary coupleId.
+    if (conversationId) {
+      const { data: convOwnership } = await supabase
+        .from('ai_conversations')
+        .select('user_id')
+        .eq('id', conversationId)
+        .maybeSingle()
+      if (!convOwnership || convOwnership.user_id !== user.id) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
     }
 
     // ── WEEKLY USAGE CHECK ─────────────────────────────────────────
@@ -465,23 +475,8 @@ export async function POST(request) {
 // GET endpoint to fetch conversation history
 export async function GET(request) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized - No token' }, { status: 401 });
-    }
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      { global: { headers: { Authorization: `Bearer ${token}` } } }
-    );
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
     const { searchParams } = new URL(request.url);
     const conversationId = searchParams.get('conversationId');
@@ -494,6 +489,8 @@ export async function GET(request) {
 
     // ── OPENER MODE: return recent activity for warm welcome ───────
     if (getOpener && openerCoupleId) {
+      const isMember = await verifyCoupleMembership(supabase, user.id, openerCoupleId)
+      if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
       try {
         const context = await buildCoachContext(user.id, openerCoupleId, supabase);
         const activity = getRecentActivity(context);
@@ -555,6 +552,17 @@ export async function GET(request) {
         return NextResponse.json({ error: 'Failed to fetch conversations' }, { status: 500 });
       }
       return NextResponse.json({ conversations, messagesRemaining, isPremium: premium });
+    }
+
+    // Ownership check — previously any authenticated user could read any
+    // conversation's messages by guessing/incrementing conversationId.
+    const { data: convOwnership } = await supabase
+      .from('ai_conversations')
+      .select('user_id')
+      .eq('id', conversationId)
+      .maybeSingle()
+    if (!convOwnership || convOwnership.user_id !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { data: messages, error } = await supabase
