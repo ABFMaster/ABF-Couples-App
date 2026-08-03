@@ -1,24 +1,37 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { getSparkQuestion } from '@/lib/spark-questions'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const token = request.headers.get('Authorization')?.replace('Bearer ', '')
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    const { sparkId } = await request.json()
 
-    const { data: { user } } = await supabase.auth.getUser(token)
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!sparkId) {
+      return NextResponse.json({ error: 'sparkId required' }, { status: 400 })
     }
 
-    const { sparkId, coupleId } = await request.json()
+    // DB-derived couple_id, never trust a client-supplied coupleId for
+    // authorization — the sparks row is the source of truth for which
+    // couple this question belongs to.
+    const { data: sparkOwner } = await supabase
+      .from('sparks')
+      .select('couple_id, question_id')
+      .eq('id', sparkId)
+      .maybeSingle()
+
+    if (!sparkOwner) {
+      return NextResponse.json({ error: 'Spark not found' }, { status: 404 })
+    }
+
+    const coupleId = sparkOwner.couple_id
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     // Step 2: Fetch or create spark_responses row, increment skip_count
     const { data: existing } = await supabase
@@ -44,13 +57,7 @@ export async function POST(request) {
         .eq('id', existing.id)
     }
 
-    // Step 4: Fetch sparks row and couple created_at for coupleAgeDays
-    const { data: sparkRow } = await supabase
-      .from('sparks')
-      .select('couple_id, question_id')
-      .eq('id', sparkId)
-      .maybeSingle()
-
+    // Step 4: couple created_at for coupleAgeDays (sparks row already fetched above)
     const { data: coupleRow } = await supabase
       .from('couples')
       .select('created_at')
@@ -69,7 +76,7 @@ export async function POST(request) {
 
     const usedIds = [...new Set([
       ...(usedRows || []).map(r => r.question_id).filter(Boolean),
-      sparkRow?.question_id,
+      sparkOwner?.question_id,
     ].filter(Boolean))]
 
     // Step 6: Pick new question

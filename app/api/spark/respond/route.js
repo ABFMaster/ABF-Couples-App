@@ -1,26 +1,21 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { updateNoraMemory, SIGNAL_TYPES, getFullNoraContext } from '@/lib/nora-memory'
 import { noraReact } from '@/lib/nora'
 import { generateFollowThrough } from '@/lib/follow-through'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const token = request.headers.get('Authorization')?.replace('Bearer ', '')
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
-
-    const { data: { user } } = await supabase.auth.getUser(token)
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
     const { sparkId, responseText } = await request.json()
+
+    if (!sparkId) {
+      return NextResponse.json({ error: 'sparkId required' }, { status: 400 })
+    }
 
     // Step 3: Fetch sparks row
     const { data: sparkRow } = await supabase
@@ -29,7 +24,14 @@ export async function POST(request) {
       .eq('id', sparkId)
       .maybeSingle()
 
-    const coupleId = sparkRow?.couple_id
+    if (!sparkRow) {
+      return NextResponse.json({ error: 'Spark not found' }, { status: 404 })
+    }
+
+    const coupleId = sparkRow.couple_id
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     // Step 4: Upsert current user's response
     await supabase

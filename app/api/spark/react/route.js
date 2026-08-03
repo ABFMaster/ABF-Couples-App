@@ -1,22 +1,16 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { requireUser } from '@/lib/api-auth'
 
+// No verifyCoupleMembership needed here — every write below is filtered by
+// user_id = user.id (the verified caller's own row), so this can never
+// touch a partner's or another couple's data regardless of sparkId. Uses
+// the shared requireUser helper for consistency with the rest of the app.
 export async function POST(request) {
   try {
-    const authHeader = request.headers.get('authorization')
-    const token = authHeader?.replace('Bearer ', '')
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
-      { auth: { persistSession: false, autoRefreshToken: false } }
-    )
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
     const { sparkId, reactionIcon, questionRating } = await request.json()
     if (!sparkId || (!reactionIcon && questionRating === undefined)) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
