@@ -1,8 +1,8 @@
 export const dynamic = 'force-dynamic'
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraChat, buildCoachSystem } from '@/lib/nora'
 import { getFullNoraContext } from '@/lib/nora-memory'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 const CLINICAL_KNOWLEDGE = `
 WHAT YOU KNOW — DEEPLY, INSTINCTIVELY:
 
@@ -26,16 +26,8 @@ You are a guide character in this couple's story — not a tool they use, but a 
 // GET — fetch existing inline session messages
 export async function GET(request) {
   try {
-    const authHeader = request.headers.get('authorization')
-    const token = authHeader?.replace('Bearer ', '')
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
     const { searchParams } = new URL(request.url)
     const coupleId = searchParams.get('coupleId')
@@ -45,6 +37,11 @@ export async function GET(request) {
     if (!coupleId || !contextType || !contextId) {
       return NextResponse.json({ error: 'coupleId, contextType, contextId required' }, { status: 400 })
     }
+
+    // Previously missing entirely — let any authenticated user read another
+    // couple's inline Nora conversation history by supplying their coupleId.
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { data: session } = await supabase
       .from('nora_inline_sessions')
@@ -64,22 +61,22 @@ export async function GET(request) {
 // POST — send a message and get Nora's response
 export async function POST(request) {
   try {
-    const authHeader = request.headers.get('authorization')
-    const token = authHeader?.replace('Bearer ', '')
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
     const { coupleId, contextType, contextId, message, userName, partnerName, contextSummary } = await request.json()
 
     if (!coupleId || !contextType || !contextId || !message) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    // Previously missing entirely — an attacker could read another couple's
+    // real notes/claims folded into the reply (via getFullNoraContext
+    // below) AND inject their own message + Nora's reply directly into
+    // that couple's real nora_inline_sessions row, visible to the real
+    // partners next time they open the feature.
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     // Fetch or create inline session
     let { data: session } = await supabase
