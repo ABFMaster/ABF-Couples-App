@@ -1,24 +1,34 @@
 export const dynamic = 'force-dynamic'
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { noraReact, noraSignal } from '@/lib/nora'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
-    const authHeader = request.headers.get('authorization')
-    const token = authHeader?.replace('Bearer ', '')
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
     const { conversationId, coupleId } = await request.json()
     if (!conversationId) return NextResponse.json({ error: 'conversationId required' }, { status: 400 })
+
+    // Ownership check — previously any authenticated user could pass a
+    // stranger's conversationId, read their private message content,
+    // overwrite their conversation title, and trigger NORA_CONVERSATION
+    // synthesis using that content under whatever coupleId they supplied.
+    const { data: convOwnership } = await supabase
+      .from('ai_conversations')
+      .select('user_id')
+      .eq('id', conversationId)
+      .maybeSingle()
+    if (!convOwnership || convOwnership.user_id !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    if (coupleId) {
+      const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+      if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     // Fetch all messages from the closing session
     const { data: messages } = await supabase
