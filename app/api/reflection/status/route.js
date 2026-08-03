@@ -1,31 +1,22 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function GET(request) {
   try {
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    const token = authHeader.replace('Bearer ', '')
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
     const coupleId = searchParams.get('coupleId')
 
-    if (!userId || !coupleId) {
-      return NextResponse.json({ error: 'userId and coupleId required' }, { status: 400 })
+    if (!coupleId) {
+      return NextResponse.json({ error: 'coupleId required' }, { status: 400 })
     }
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { data: reflection } = await supabase
       .from('weekly_reflections')

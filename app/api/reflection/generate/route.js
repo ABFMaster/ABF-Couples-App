@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 import { getWeekStart } from '@/lib/dates'
 import { noraReact } from '@/lib/nora'
 import { updateNoraMemory, SIGNAL_TYPES, getFullNoraContext } from '@/lib/nora-memory'
+import { verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
   try {
@@ -14,14 +15,17 @@ export async function POST(request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     )
 
+    let callingUserId = null
     if (authHeader === `Bearer ${process.env.CRON_SECRET}`) {
-      // cron caller — allowed
+      // cron caller — trusted, no couple-membership check applies (there's
+      // no "acting user" for a scheduled job iterating every couple).
     } else if (authHeader.startsWith('Bearer ')) {
       const token = authHeader.replace('Bearer ', '')
       const { data: { user }, error: authError } = await supabase.auth.getUser(token)
       if (authError || !user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
+      callingUserId = user.id
     } else {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -30,6 +34,14 @@ export async function POST(request) {
 
     if (!userId || !coupleId) {
       return NextResponse.json({ error: 'userId and coupleId required' }, { status: 400 })
+    }
+
+    // Only enforced for real user-token calls — this is what previously let
+    // any authenticated caller generate/read another couple's reflection by
+    // supplying a guessed coupleId.
+    if (callingUserId) {
+      const isMember = await verifyCoupleMembership(supabase, callingUserId, coupleId)
+      if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // STEP 1 — Compute Monday of current week in Pacific time
