@@ -5,6 +5,12 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { getStarterRituals } from '@/lib/ritual-suggestions'
 
+// Fallback only — shown before this ritual has a live Nora reaction for the
+// current week (i.e. no check-in yet). Once a check-in happens,
+// ritual_completions.nora_reaction (generated live in app/api/ritual/checkin)
+// takes over — see getReactionFor() below. Previously this static copy was
+// shown unconditionally even when a real reaction existed; fixed as part of
+// the Daily Rhythm audit, Aug 2026.
 const NORA_WEEK_MESSAGES = {
   1: "Give this three weeks before you decide. That's the minimum for something to start feeling natural.",
   2: "Two weeks in. Research shows it takes about 21 days for something to feel automatic. You're most of the way there.",
@@ -143,6 +149,7 @@ export default function RitualPage() {
   const [coupleId, setCoupleId] = useState(null)
   const [partnerName, setPartnerName] = useState('your partner')
   const [rituals, setRituals] = useState([])
+  const [completions, setCompletions] = useState([])
   const [usedSuggestionIds, setUsedSuggestionIds] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [nextSuggestion, setNextSuggestion] = useState(null)
@@ -186,6 +193,7 @@ export default function RitualPage() {
     })
     const data = await res.json()
     setRituals(data.rituals || [])
+    setCompletions(data.completions || [])
     const used = data.usedSuggestionIds || []
     setUsedSuggestionIds(used)
     const tier1 = getStarterRituals()
@@ -195,6 +203,15 @@ export default function RitualPage() {
 
   const refetch = async () => {
     if (userId && coupleId) await fetchRituals(userId, coupleId)
+  }
+
+  // This week's live Nora reaction for a ritual, generated at check-in
+  // (app/api/ritual/checkin). Null until the couple has actually checked in
+  // this week — callers should fall back to the static NORA_WEEK_MESSAGES
+  // copy in that case.
+  const getReactionFor = (ritualId) => {
+    const completion = completions.find(c => c.ritual_id === ritualId)
+    return completion?.nora_reaction || null
   }
 
   const handleConfirm = async (ritualId, action) => {
@@ -432,7 +449,7 @@ export default function RitualPage() {
                   <div style={{ textAlign: 'center', marginBottom: '16px' }}><StreakPill label={`Week ${weekNum} of 3`} /></div>
                   <div style={{ marginBottom: '16px' }}><RitualAccentCard label={r.frequency} title={r.title} description={r.description} /></div>
                   {!r.suggestion_id && <button onClick={() => setEditingId(r.id)} style={{ background: 'none', border: 'none', color: '#7A8C6E', fontSize: '12px', cursor: 'pointer', padding: '0 0 12px', textDecoration: 'underline' }}>Edit</button>}
-                  <NoraBlock text={NORA_WEEK_MESSAGES[weekNum] || NORA_WEEK_MESSAGES[1]} />
+                  <NoraBlock text={getReactionFor(r.id) || NORA_WEEK_MESSAGES[weekNum] || NORA_WEEK_MESSAGES[1]} />
                   <p
                     onClick={() => {
                       const opener = `We're on week ${weekNum} of trying "${r.title}"${r.description ? ` — ${r.description}` : ''}. I want to check in on how it's actually going.`
