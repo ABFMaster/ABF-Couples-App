@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
+import { getOwnCoupleId } from '@/lib/api-auth'
 
 export async function GET(request) {
   try {
@@ -47,11 +48,22 @@ export async function POST(request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { title, coupleId } = await request.json()
+    const { title } = await request.json()
 
     if (!title?.trim()) {
       return NextResponse.json({ error: 'title is required' }, { status: 400 })
     }
+
+    // coupleId is derived from the caller's own profile, never trusted from
+    // the client. The client here never actually sent a coupleId (checked
+    // app/profile/page.js — POST body is `{ title }` only), so this had been
+    // silently defaulting to null and this signal never reached Nora's
+    // memory at all. A crafted request supplying an arbitrary coupleId could
+    // otherwise have polluted another couple's nora_signals log and forced
+    // an unnecessary memory_summary regeneration against their nora_memory
+    // row (actual notes content is protected — updateNoraMemory only writes
+    // into a slot if the acting userId matches that couple's user1/user2).
+    const coupleId = await getOwnCoupleId(supabase, user.id)
 
     const now = new Date().toISOString()
 
