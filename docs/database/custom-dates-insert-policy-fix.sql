@@ -21,6 +21,10 @@
 -- couple_id IS supplied and doesn't actually belong to the caller.
 --
 -- Run this once in the Supabase SQL Editor.
+--
+-- STATUS: Applied by Matt Aug 4 2026 — verified live via pg_policies, the
+-- INSERT row's with_check now shows the EXISTS clause below. Kept in the
+-- repo as a record of the change.
 
 ALTER POLICY "Users can insert their own custom dates" ON public.custom_dates
 WITH CHECK (
