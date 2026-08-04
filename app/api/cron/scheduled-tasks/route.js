@@ -883,23 +883,34 @@ export async function GET(request) {
 
     const profileMap = Object.fromEntries((profiles || []).map(p => [p.user_id, p]))
 
+    // TEMPORARY DIAGNOSTIC — added Aug 2026 to answer "is this cron actually
+    // firing" without a paid Vercel plan's log retention. Matt asked for a
+    // real catalog of cron health after the Weekly Reflection miss
+    // investigation. Remove this block (and the cron_runs table/migration)
+    // once cron health is confirmed over a few weeks — see
+    // Sessions/PRODUCT_BACKLOG.md for the removal note.
+    const blocksFired = new Set()
+    let errored = 0
+
     let processed = 0
     for (const couple of couples) {
       try {
         const user1 = profileMap[couple.user1_id] || {}
         const user2 = profileMap[couple.user2_id] || {}
         await processDailyContent(couple, user1, user2)
+        blocksFired.add('dailyContent')
         await processMorningAfterDates(couple, user1, user2)
         const day = getDayInTimezone(user1.timezone || user2.timezone || 'America/Los_Angeles')
-        if (day === 0) await processWeeklyReflection(couple)
-        if (day === 4) await processThursdayGeneration(couple, user1, user2)
-        if (new Date().getUTCDay() === 5 && new Date().getUTCHours() === 2) await processThursdayReveal(couple, user1, user2)
-        if (day === 3) await processWednesdayNotice(couple, user1, user2)
-        if (new Date().getUTCDay() === 4 && new Date().getUTCHours() === 2) await processWednesdayReveal(couple, user1, user2)
-        if (new Date().getUTCDay() === 4 && new Date().getUTCHours() === 1) await processWednesdayEveningReminder(couple, user1, user2)
-        if (new Date().getUTCDay() === 4 && new Date().getUTCHours() === 5) await processWednesdayCutoff(couple, user1, user2)
+        if (day === 0) { await processWeeklyReflection(couple); blocksFired.add('weeklyReflection') }
+        if (day === 4) { await processThursdayGeneration(couple, user1, user2); blocksFired.add('thursdayGeneration') }
+        if (new Date().getUTCDay() === 5 && new Date().getUTCHours() === 2) { await processThursdayReveal(couple, user1, user2); blocksFired.add('thursdayReveal') }
+        if (day === 3) { await processWednesdayNotice(couple, user1, user2); blocksFired.add('wednesdayNotice') }
+        if (new Date().getUTCDay() === 4 && new Date().getUTCHours() === 2) { await processWednesdayReveal(couple, user1, user2); blocksFired.add('wednesdayReveal') }
+        if (new Date().getUTCDay() === 4 && new Date().getUTCHours() === 1) { await processWednesdayEveningReminder(couple, user1, user2); blocksFired.add('wednesdayEveningReminder') }
+        if (new Date().getUTCDay() === 4 && new Date().getUTCHours() === 5) { await processWednesdayCutoff(couple, user1, user2); blocksFired.add('wednesdayCutoff') }
         processed++
       } catch (err) {
+        errored++
         console.error('[cron] couple processing error:', couple.id, err)
       }
     }
@@ -907,8 +918,24 @@ export async function GET(request) {
     processNoraSynthesis(couples, profileMap)
     await processRabbitHoleConvergence()
 
+    // Non-blocking — a logging failure must never affect the actual cron
+    // work above, which has already completed by this point.
+    try {
+      const now = new Date()
+      await supabase.from('cron_runs').insert({
+        utc_day: now.getUTCDay(),
+        utc_hour: now.getUTCHours(),
+        blocks_fired: [...blocksFired],
+        couples_processed: processed,
+        couples_errored: errored,
+      })
+    } catch (logErr) {
+      console.error('[cron] cron_runs logging error:', logErr)
+    }
+
     return Response.json({ ok: true, processed })
   } catch (err) {
+    console.error('[cron] Top-level error:', err)
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
