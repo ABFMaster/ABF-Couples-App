@@ -9,10 +9,26 @@ export async function POST(request) {
     const { user, supabase, error: authError } = await requireUser(request)
     if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    const { sessionId, coupleId, questionId, answer } = await request.json()
-    if (!sessionId || !coupleId || !questionId || answer === undefined) {
-      return NextResponse.json({ error: 'sessionId, coupleId, questionId, answer required' }, { status: 400 })
+    const { sessionId, questionId, answer } = await request.json()
+    if (!sessionId || !questionId || answer === undefined) {
+      return NextResponse.json({ error: 'sessionId, questionId, answer required' }, { status: 400 })
     }
+
+    // Derive couple_id from the hot_take_sessions row itself rather than
+    // trusting a client-supplied coupleId — the old check only confirmed
+    // the caller belonged to WHATEVER coupleId they sent, never that
+    // sessionId actually belonged to that couple. A member of couple A
+    // could supply couple B's sessionId (with their own real coupleId,
+    // which still passed membership) and the upsert below would overwrite
+    // couple B's hot_take_answers row's couple_id/answer fields, plus leak
+    // couple B's question text and `together` status.
+    const { data: htSessionForAuth } = await supabase
+      .from('hot_take_sessions')
+      .select('couple_id')
+      .eq('session_id', sessionId)
+      .maybeSingle()
+    if (!htSessionForAuth) return NextResponse.json({ error: 'Hot take session not found' }, { status: 404 })
+    const coupleId = htSessionForAuth.couple_id
 
     // Get couple
     const { data: couple } = await supabase
