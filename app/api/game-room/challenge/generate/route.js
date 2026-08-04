@@ -38,13 +38,15 @@ export async function POST(request) {
 
     const userId = user.id
 
-    // Idempotency — return existing round if already generated
+    // Idempotency — return existing round if already generated. .maybeSingle()
+    // here, not .single() — zero matching rows is the normal first-launch
+    // case, not an error condition.
     const { data: existingRound } = await supabase
       .from('challenge_rounds')
       .select('*')
       .eq('session_id', challengeSessionId)
       .eq('round_number', roundNumber)
-      .single()
+      .maybeSingle()
 
     if (existingRound) {
       return Response.json({ round: existingRound })
@@ -387,21 +389,38 @@ Respond in this exact JSON format with no other text:
       }),
     }
 
-    // Save round — upsert prevents race condition when both users call generate simultaneously
-    const { data: upserted, error } = await supabase
+    // Save round — upsert prevents race condition when both users call generate
+    // simultaneously. Was using .single() here, which is the wrong tool for
+    // this job: with ignoreDuplicates:true, the losing request's upsert
+    // matches zero rows (ON CONFLICT DO NOTHING), and .single() on a
+    // zero-row result returns a PostgREST error object instead of null —
+    // an error this code never checked. .maybeSingle() returns null
+    // cleanly on zero rows instead, which is what the `upserted || fallback`
+    // line below actually needs to work as intended.
+    const { data: upserted, error: upsertError } = await supabase
       .from('challenge_rounds')
       .upsert(upsertPayload, { onConflict: 'session_id,round_number', ignoreDuplicates: true })
       .select()
-      .single()
+      .maybeSingle()
+
+    if (upsertError) {
+      console.error('[game-room/challenge/generate] Upsert error:', upsertError)
+    }
 
     // If upsert no-oped (second user hit simultaneously), fetch existing row
-    const round = upserted || await supabase
-      .from('challenge_rounds')
-      .select('*')
-      .eq('session_id', challengeSessionId)
-      .eq('round_number', roundNumber)
-      .single()
-      .then(r => r.data)
+    let round = upserted
+    if (!round) {
+      const { data: fallbackRound, error: fallbackError } = await supabase
+        .from('challenge_rounds')
+        .select('*')
+        .eq('session_id', challengeSessionId)
+        .eq('round_number', roundNumber)
+        .maybeSingle()
+      if (fallbackError) {
+        console.error('[game-room/challenge/generate] Fallback fetch error:', fallbackError)
+      }
+      round = fallbackRound
+    }
 
     if (!round) {
       return Response.json({ error: 'Failed to save round' }, { status: 500 })
@@ -409,6 +428,7 @@ Respond in this exact JSON format with no other text:
 
     return Response.json({ round })
   } catch (err) {
+    console.error('[game-room/challenge/generate] Error:', err)
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
