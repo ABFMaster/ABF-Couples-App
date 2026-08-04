@@ -1,21 +1,32 @@
 export const dynamic = 'force-dynamic'
 
-import { createClient } from '@supabase/supabase-js'
 import { CHALLENGE_PROMPTS, MEMORY_UNLOCK } from '@/lib/challenge-prompts'
 import { noraGenerate } from '@/lib/nora'
+import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
-
+// Had ZERO authentication before this fix — found during the Aug 3 Game
+// Room audit. Took userId/coupleId straight from an unauthenticated
+// request body and used them to read nora_memory.memory_summary (private
+// couple notes) and user_profiles (love_language, attachment_style),
+// feeding both into an AI prompt. No live caller currently exists in
+// app/game-room (this route appears unused by the current UI), but it's
+// reachable directly regardless — fixed the same as every other unused-
+// but-vulnerable route found this engagement.
 export async function POST(request) {
   try {
-    const { userId, coupleId, sessionId, totalRounds } = await request.json()
+    const { user, supabase, error: authError } = await requireUser(request)
+    if (authError) return Response.json(authError.body, { status: authError.status })
 
-    if (!userId || !coupleId || !sessionId || !totalRounds) {
+    const { coupleId, sessionId, totalRounds } = await request.json()
+
+    if (!coupleId || !sessionId || !totalRounds) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
+    if (!isMember) return Response.json({ error: 'Forbidden' }, { status: 403 })
+
+    const userId = user.id
 
     if (![1, 3, 5].includes(totalRounds)) {
       return Response.json({ error: 'totalRounds must be 1, 3, or 5' }, { status: 400 })
@@ -37,10 +48,18 @@ export async function POST(request) {
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
 
+    // Found alongside the auth fix: this queried user_profiles.id (an
+    // unrelated auto-generated PK, see docs/database/user_profiles.sql),
+    // not user_profiles.user_id — always missed, so userProfile was
+    // always null, accountAgeWeeks always 0, and the account-age leg of
+    // this route's own memoryUnlocked check could never pass. Also note:
+    // this duplicates lib/memory-unlock.js's checkMemoryUnlocked() instead
+    // of reusing it — separate finding, not fixed here since this route
+    // has no live caller to verify a behavior change against.
     const { data: userProfile } = await supabase
       .from('user_profiles')
       .select('created_at')
-      .eq('id', userId)
+      .eq('user_id', userId)
       .single()
 
     const accountAgeWeeks = userProfile
