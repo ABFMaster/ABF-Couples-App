@@ -405,6 +405,13 @@ export default function DateDetailPage({ params }) {
         body: JSON.stringify({ dateId: date.id }),
       })
       if (!res.ok) throw new Error()
+      const data = await res.json()
+      // A date that was never shared with a partner is deleted immediately
+      // (no second party to confirm) — see app/api/dates/delete/request.
+      if (data.deleted) {
+        router.push('/dates')
+        return
+      }
       setDateStatus('pending_delete')
       setDeleteRequestedBy(currentUserId)
       setDeleteStage('done')

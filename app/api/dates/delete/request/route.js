@@ -42,6 +42,26 @@ export async function POST(request) {
     return Response.json({ error: 'Cannot request deletion for a date with status: ' + date.status }, { status: 400 })
   }
 
+  // A date that was never shared (shared_with is null — the creator never
+  // tapped "Ready to share?") has no second party to confirm a deletion.
+  // Found during the Aug 3 audit: the two-party pending_delete flow below
+  // is a genuine dead end for this case — /delete/confirm requires someone
+  // OTHER than delete_requested_by, but no one else ever passes this
+  // route's own ownership check for an unshared date, so the creator could
+  // request deletion and then never actually complete it (only cancel back
+  // to 'planned'). Skip the pending/confirm dance entirely for a solo date
+  // — it's the creator's own, deleting it doesn't need a partner's sign-off.
+  if (!date.shared_with) {
+    const { error: deleteError } = await supabase
+      .from('custom_dates')
+      .delete()
+      .eq('id', dateId)
+    if (deleteError) {
+      return Response.json({ error: deleteError.message }, { status: 500 })
+    }
+    return Response.json({ success: true, deleted: true })
+  }
+
   const { error: updateError } = await supabase
     .from('custom_dates')
     .update({ status: 'pending_delete', delete_requested_by: user.id })
