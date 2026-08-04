@@ -35,11 +35,15 @@ export default function DateHistoryPage() {
 
     if (!coupleData) { setLoading(false); return }
     const cid = coupleData.id
-    const now = new Date().toISOString()
 
+    // Both queries order by date_time (not a mix of date_time/created_at) —
+    // matches the field the final client-side sort at line ~66 actually
+    // uses, and date_plans now excludes 'cancelled' the same way
+    // custom_dates excludes 'pending_delete', so a cancelled plan doesn't
+    // show up in history.
     const [{ data: customDates }, { data: datePlans }] = await Promise.all([
-      supabase.from('custom_dates').select('id, title, date_time, created_at, status, user1_rating, user2_rating, user1_reaction, user2_reaction, stops, hero_photo_url').eq('couple_id', cid).neq('status', 'pending_delete').order('created_at', { ascending: false }).limit(50),
-      supabase.from('date_plans').select('id, title, date_time, status, rating').eq('couple_id', cid).order('date_time', { ascending: false }).limit(50),
+      supabase.from('custom_dates').select('id, title, date_time, created_at, status, user1_rating, user2_rating, user1_reaction, user2_reaction, stops, hero_photo_url').eq('couple_id', cid).neq('status', 'pending_delete').order('date_time', { ascending: false }).limit(50),
+      supabase.from('date_plans').select('id, title, date_time, status, rating').eq('couple_id', cid).neq('status', 'cancelled').order('date_time', { ascending: false }).limit(50),
     ])
 
     const normalizedCustom = (customDates ?? []).map(c => ({

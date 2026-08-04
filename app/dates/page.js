@@ -103,7 +103,6 @@ export default function DatesPage() {
       setAssessmentScores(scores)
     }
 
-    const now = new Date().toISOString()
     const startOfToday = new Date()
     startOfToday.setHours(0, 0, 0, 0)
     const { data: upcomingCustom } = await supabase
@@ -116,18 +115,32 @@ export default function DatesPage() {
       .limit(1)
     setUpcomingDate(upcomingCustom?.[0] || null)
 
+    // "Date History" below is meant to show past dates only — fetch a wider
+    // batch (20, not the final display cap of 12) since we filter out
+    // upcoming/future ones and the date already shown in "Next Up" after
+    // the query. Previously had no such filter at all: the same date shown
+    // in "Next Up" could also render again in "Date History", and a
+    // section literally titled "history" could show dates that hadn't
+    // happened yet.
     const { data: customDates } = await supabase
       .from('custom_dates')
       .select('id, title, date_time, created_at, status, user1_rating, user2_rating, stops, hero_photo_url')
       .eq('couple_id', cid)
       .neq('status', 'pending_delete')
       .order('date_time', { ascending: false })
-      .limit(12)
-    const normalized = (customDates ?? []).map(c => ({
-      id: c.id, source: 'custom', title: c.title, date: c.date_time || c.created_at,
-      stops: c.stops, status: c.status, rating: c.user1_rating || c.user2_rating || null,
-      photo_url: c.hero_photo_url || getHeroPhoto(c.stops, c.id),
-    })).sort((a, b) => new Date(b.date ?? 0) - new Date(a.date ?? 0))
+      .limit(20)
+    const upcomingId = upcomingCustom?.[0]?.id ?? null
+    const nowDate = new Date()
+    const normalized = (customDates ?? [])
+      .filter(c => c.id !== upcomingId)
+      .filter(c => c.status === 'completed' || !c.date_time || new Date(c.date_time) <= nowDate)
+      .map(c => ({
+        id: c.id, source: 'custom', title: c.title, date: c.date_time || c.created_at,
+        stops: c.stops, status: c.status, rating: c.user1_rating || c.user2_rating || null,
+        photo_url: c.hero_photo_url || getHeroPhoto(c.stops, c.id),
+      }))
+      .sort((a, b) => new Date(b.date ?? 0) - new Date(a.date ?? 0))
+      .slice(0, 12)
     setPastDates(normalized)
     setLoading(false)
   }
