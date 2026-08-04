@@ -10,11 +10,28 @@ export async function POST(request) {
     const { user, supabase, error: authError } = await requireUser(request)
     if (authError) return Response.json(authError.body, { status: authError.status })
 
-    const { coupleId, challengeSessionId, challengeType, roundNumber } = await request.json()
+    const { challengeSessionId, challengeType, roundNumber } = await request.json()
 
-    if (!coupleId || !challengeSessionId || !challengeType || !roundNumber) {
+    if (!challengeSessionId || !challengeType || !roundNumber) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    // Derive couple_id from the challenge_sessions row itself rather than
+    // trusting a client-supplied coupleId — same resource-derived pattern
+    // already used correctly in challenge/next. The old check only
+    // confirmed the caller belonged to WHATEVER coupleId they sent, never
+    // that challengeSessionId actually belonged to that couple. Without
+    // this, a member of couple A could supply couple B's challengeSessionId
+    // and both read couple B's private Spark/Bet/Timeline/date/Flirt data
+    // (fed into the Nora memory-question prompt below) AND write a
+    // challenge_rounds row into couple B's session.
+    const { data: challengeSessionForAuth } = await supabase
+      .from('challenge_sessions')
+      .select('couple_id')
+      .eq('id', challengeSessionId)
+      .maybeSingle()
+    if (!challengeSessionForAuth) return Response.json({ error: 'Session not found' }, { status: 404 })
+    const coupleId = challengeSessionForAuth.couple_id
 
     const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
     if (!isMember) return Response.json({ error: 'Forbidden' }, { status: 403 })

@@ -14,12 +14,27 @@ export async function POST(request) {
       currentAnswer,
       originalAnswer,
       dimensionKey,
-      coupleId,
     } = await request.json()
 
-    if (!sessionId || !roundNumber || !answerType || !currentAnswer || !coupleId) {
+    if (!sessionId || !roundNumber || !answerType || !currentAnswer) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    // Derive couple_id from the challenge_sessions row itself rather than
+    // trusting a client-supplied coupleId. The old check only confirmed
+    // the caller belonged to their OWN real couple, never that sessionId
+    // (used below to scope the challenge_rounds update) actually belonged
+    // to that couple — a member of couple A could send their own real
+    // coupleId (passes membership) alongside couple B's sessionId and
+    // mark couple B's round ready / overwrite its memory_answer. Matches
+    // the pattern already used in challenge/generate and challenge/next.
+    const { data: challengeSessionForAuth } = await supabase
+      .from('challenge_sessions')
+      .select('couple_id')
+      .eq('id', sessionId)
+      .maybeSingle()
+    if (!challengeSessionForAuth) return Response.json({ error: 'Session not found' }, { status: 404 })
+    const coupleId = challengeSessionForAuth.couple_id
 
     const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
     if (!isMember) return Response.json({ error: 'Forbidden' }, { status: 403 })
