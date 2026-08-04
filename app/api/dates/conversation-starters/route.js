@@ -131,6 +131,13 @@ Examples:
     }
 
     if (dateId) {
+      // Scoped to couple_id, not just id — coupleId membership is verified
+      // above, but that only proves the caller belongs to THAT couple, not
+      // that the client-supplied dateId also belongs to it. Without this,
+      // a member of one couple could supply another couple's dateId and
+      // overwrite that couple's conversation_starters/hype_line. Same
+      // confused-deputy shape already fixed in follow-through/report and
+      // ritual/update.
       await supabase
         .from('custom_dates')
         .update({
@@ -138,6 +145,7 @@ Examples:
           hype_line: starters.hype_line || null
         })
         .eq('id', dateId)
+        .eq('couple_id', coupleId)
     }
 
     return NextResponse.json({ starters })

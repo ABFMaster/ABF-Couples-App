@@ -1,8 +1,8 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { categorizeSuggestion, formatPlaceForDisplay } from '@/lib/date-suggestions';
+import { requireUser } from '@/lib/api-auth';
 
 // Maps our category keys to the Google Places 'type' filter
 // (Nearby Search accepts a single type; we pick the most representative one)
@@ -47,6 +47,14 @@ function priceLevelsUpTo(maxPrice) {
  */
 export async function GET(request) {
   try {
+    // No user data is returned here (just a Google Places proxy), but this
+    // was the one Date Night route with zero auth at all — unlike the
+    // sibling ticketmaster route, which requires a session for the same
+    // class of external-API proxy. Left open, it's a free cost-abuse path
+    // against the Google Places API key for anyone, logged in or not.
+    const { error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
+
     const { searchParams } = new URL(request.url);
 
     const lat = parseFloat(searchParams.get('lat'));
@@ -130,11 +138,13 @@ export async function GET(request) {
  *   avoidPlaceIds - string[]       (optional) — place_ids to exclude
  */
 export async function POST(request) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
   try {
+    // Same auth gap as GET above — see comment there. Also drops an unused
+    // service-role Supabase client that was created here but never
+    // referenced anywhere in this function.
+    const { error: authError } = await requireUser(request)
+    if (authError) return NextResponse.json(authError.body, { status: authError.status })
+
     const body = await request.json();
     const {
       location,
