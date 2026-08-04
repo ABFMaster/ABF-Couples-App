@@ -119,10 +119,13 @@ function AiCoachContent() {
       if (patterns?.concernFlags?.length > 0) {
         const highConcern = patterns.concernFlags.find(c => c.severity === 'high');
         if (highConcern) {
+          // Concern types match lib/checkin-patterns.js's detectConcerns() —
+          // rewritten Aug 2026 to work off check-in presence instead of the
+          // retired mood/connection_score fields, so the type names changed
+          // from consecutive_stress/low_connection/connection_drop.
           const promptMap = {
-            consecutive_stress: "I've been feeling stressed lately. Can you help me work through this?",
-            low_connection: "I want to feel more connected with my partner. Any suggestions?",
-            connection_drop: "My connection with my partner has dropped recently. What can I do?",
+            silence_streak: "I haven't checked in for a few days. Can you help me get back into it?",
+            activity_decline: "I've been showing up less lately. What's going on with me?",
             low_engagement: "I haven't been checking in regularly. Can you help me stay consistent?"
           };
           setProactivePrompt({
