@@ -9,11 +9,26 @@ export async function POST(request) {
     const { user, supabase, error: authError } = await requireUser(request)
     if (authError) return Response.json(authError.body, { status: authError.status })
 
-    const { sessionId, coupleId, debriefText } = await request.json()
+    const { sessionId, debriefText } = await request.json()
 
-    if (!sessionId || !coupleId) {
+    if (!sessionId) {
       return Response.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    // Derive couple_id from the hunt session itself rather than trusting a
+    // client-supplied coupleId — the old check only confirmed the caller
+    // belonged to WHATEVER coupleId they sent, never that sessionId
+    // actually belonged to that couple. A member of couple A could supply
+    // couple B's sessionId and both write into couple B's debrief AND leak
+    // couple B's nora_memory/claims into the AI prompt below. Same pattern
+    // already used correctly in hunt/confirm and hunt/drop.
+    const { data: huntForAuth } = await supabase
+      .from('hunt_sessions')
+      .select('couple_id')
+      .eq('session_id', sessionId)
+      .maybeSingle()
+    if (!huntForAuth) return Response.json({ error: 'Hunt session not found' }, { status: 404 })
+    const coupleId = huntForAuth.couple_id
 
     // Determine user1 or user2
     const { data: coupleData } = await supabase
