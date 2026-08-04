@@ -16,11 +16,20 @@ export async function POST(request) {
     const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
     if (!isMember) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
+    // verifyCoupleMembership above only proves the CALLER belongs to
+    // coupleId — it says nothing about whether the client-supplied
+    // sessionId actually belongs to that couple. Without this check, a
+    // member of couple A could supply couple B's sessionId and have
+    // couple B's private hole_topic/hole_entry read back to them inside
+    // the generated nudge text.
     const { data: session } = await supabase
       .from('game_sessions')
-      .select('hole_topic, hole_entry')
+      .select('hole_topic, hole_entry, couple_id')
       .eq('id', sessionId)
       .single()
+    if (!session || session.couple_id !== coupleId) {
+      return Response.json({ error: 'Session not found' }, { status: 404 })
+    }
 
     const { data: profiles } = await supabase
       .from('user_profiles')

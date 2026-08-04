@@ -18,6 +18,22 @@ export async function POST(request) {
     const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
     if (!isMember) return Response.json({ error: 'Forbidden' }, { status: 403 })
 
+    // verifyCoupleMembership above only proves the CALLER belongs to
+    // coupleId — it says nothing about whether the client-supplied
+    // sessionId actually belongs to that couple. Without this check, a
+    // member of couple A could supply couple B's sessionId and either
+    // read back couple B's already-picked mission, or (if none exists
+    // yet) insert a second hunt_sessions row for that session_id tagged
+    // with couple A's id, corrupting couple B's session.
+    const { data: gameSession } = await supabase
+      .from('game_sessions')
+      .select('couple_id')
+      .eq('id', sessionId)
+      .maybeSingle()
+    if (!gameSession || gameSession.couple_id !== coupleId) {
+      return Response.json({ error: 'Session not found' }, { status: 404 })
+    }
+
     // Idempotency — return existing hunt session if already started
     const { data: existing } = await supabase
       .from('hunt_sessions')
