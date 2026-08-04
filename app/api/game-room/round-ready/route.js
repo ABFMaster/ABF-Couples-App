@@ -26,6 +26,22 @@ export async function POST(request) {
       .maybeSingle()
     if (!couple) return NextResponse.json({ error: 'Couple not found' }, { status: 404 })
 
+    // verifyCoupleMembership above only proves the CALLER belongs to
+    // coupleId — it says nothing about whether sessionId (client-supplied,
+    // used below) actually belongs to that couple. game_rounds has no
+    // couple_id column of its own (it's scoped only via session_id), so
+    // confirm the session's real couple_id matches before touching it.
+    // Without this, a member of couple A could supply couple B's sessionId
+    // and flip/read couple B's round.
+    const { data: gameSession } = await supabase
+      .from('game_sessions')
+      .select('together, couple_id')
+      .eq('id', sessionId)
+      .maybeSingle()
+    if (!gameSession || gameSession.couple_id !== coupleId) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+    }
+
     const isUser1 = couple.user1_id === userId
     const readyField = isUser1 ? 'user1_ready' : 'user2_ready'
     const partnerId = isUser1 ? couple.user2_id : couple.user1_id
@@ -43,10 +59,10 @@ export async function POST(request) {
 
     const bothReady = round.user1_ready && round.user2_ready
 
-    // Notify partner that this user is ready
+    // Notify partner that this user is ready — reuses the gameSession
+    // fetched above for the couple_id check (already has `together`).
     const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
-    const { data: gameSession } = await supabase.from('game_sessions').select('together').eq('id', sessionId).maybeSingle()
-    const isRemote = !gameSession?.together
+    const isRemote = !gameSession.together
 
     // Get user's name for notification
     const { data: myProfile } = await supabase
