@@ -9,10 +9,23 @@ export async function POST(request) {
     const { user, supabase, error: authError } = await requireUser(request)
     if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    const { sessionId, coupleId, callSessionId, roundNumber, hotSeatUserId } = await request.json()
-    if (!sessionId || !coupleId || !callSessionId || !roundNumber || !hotSeatUserId) {
+    const { sessionId, callSessionId, roundNumber, hotSeatUserId } = await request.json()
+    if (!sessionId || !callSessionId || !roundNumber || !hotSeatUserId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
+
+    // Derive couple_id from the call_sessions row itself rather than
+    // trusting a client-supplied coupleId — same pattern already used
+    // correctly in call/answer. The old check only confirmed the caller
+    // belonged to WHATEVER coupleId they sent, never that callSessionId
+    // actually belonged to that couple.
+    const { data: callSessionForAuth } = await supabase
+      .from('call_sessions')
+      .select('couple_id')
+      .eq('id', callSessionId)
+      .maybeSingle()
+    if (!callSessionForAuth) return NextResponse.json({ error: 'Call session not found' }, { status: 404 })
+    const coupleId = callSessionForAuth.couple_id
 
     const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
     if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -33,6 +46,14 @@ export async function POST(request) {
       .select('user1_id, user2_id')
       .eq('id', coupleId)
       .maybeSingle()
+
+    // hotSeatUserId is client-supplied — must be one of THIS couple's two
+    // members, or a caller could name an arbitrary third-party user_id and
+    // leak that stranger's display_name/game_interests into the Nora
+    // prompt below.
+    if (hotSeatUserId !== couple.user1_id && hotSeatUserId !== couple.user2_id) {
+      return NextResponse.json({ error: 'Invalid hot seat user' }, { status: 400 })
+    }
 
     const partnerId = couple.user1_id === hotSeatUserId ? couple.user2_id : couple.user1_id
 

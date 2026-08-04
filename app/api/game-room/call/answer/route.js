@@ -9,7 +9,7 @@ export async function POST(request) {
     const { user, supabase, error: authError } = await requireUser(request)
     if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    const { callSessionId, roundId, answer, isHotSeat } = await request.json()
+    const { callSessionId, roundId, answer } = await request.json()
     if (!callSessionId || !roundId || !answer) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
@@ -24,14 +24,35 @@ export async function POST(request) {
     const isMember = await verifyCoupleMembership(supabase, user.id, callSessionForAuth.couple_id)
     if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    // Save answer to correct field
+    // Fetch the round scoped by session_id as well as id — callSessionId was
+    // verified above to belong to the caller's couple, but roundId itself
+    // was never checked against it: without this extra .eq, a member of
+    // couple A could supply couple B's roundId (with their own real
+    // callSessionId, which still passed the check above) and overwrite
+    // couple B's call_rounds row.
+    const { data: existingRound } = await supabase
+      .from('call_rounds')
+      .select('hot_seat_user_id')
+      .eq('id', roundId)
+      .eq('session_id', callSessionId)
+      .maybeSingle()
+    if (!existingRound) return NextResponse.json({ error: 'Round not found' }, { status: 404 })
+
+    // Derive which field to write from the round's real hot_seat_user_id
+    // rather than trusting a client-supplied isHotSeat flag — otherwise
+    // the predictor could claim isHotSeat:true and overwrite the hot
+    // seat's answer instead of their own, corrupting the round.
+    const isHotSeat = existingRound.hot_seat_user_id === user.id
     const updateField = isHotSeat ? { hot_seat_answer: answer } : { predictor_answer: answer }
     const { data: round } = await supabase
       .from('call_rounds')
       .update(updateField)
       .eq('id', roundId)
+      .eq('session_id', callSessionId)
       .select('*')
       .maybeSingle()
+
+    if (!round) return NextResponse.json({ error: 'Round not found' }, { status: 404 })
 
     // Check if both answered
     const bothAnswered = !!(round?.hot_seat_answer && round?.predictor_answer)
