@@ -124,11 +124,15 @@ async function processDailyContent(couple, user1, user2) {
 
     const { data: usedBets } = await supabase
       .from('bets')
-      .select('question_id')
+      .select('question_id, question_category')
       .eq('couple_id', couple.id)
+      .order('bet_date', { ascending: true })
 
     const usedIds = (usedBets || []).map(b => b.question_id).filter(Boolean)
-    const q = getBetQuestion({ coupleAgeDays, usedIds })
+    // Oldest-first, so slicing the last few inside getBetQuestion gets the
+    // couple's most recent categories, not an arbitrary sample.
+    const recentCategories = (usedBets || []).map(b => b.question_category).filter(Boolean)
+    const q = getBetQuestion({ coupleAgeDays, usedIds, recentCategories })
     if (!q) return
 
     await supabase.from('bets').insert({
