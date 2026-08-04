@@ -23,7 +23,15 @@ export async function POST(request) {
       .select('*')
       .eq('id', sessionId)
       .maybeSingle()
-    if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+    // verifyCoupleMembership above only proves the CALLER belongs to
+    // coupleId — it says nothing about whether the client-supplied
+    // sessionId actually belongs to that couple. Without this check, a
+    // member of couple A could supply couple B's sessionId and both read
+    // AND overwrite couple B's hole_topic/hole_entry/convergence (below),
+    // plus insert a game_rounds row for couple B tagged with coupleId A.
+    if (!session || session.couple_id !== coupleId) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+    }
 
     // Check if this round already exists — idempotent
     const { data: existingRound } = await supabase
