@@ -65,40 +65,24 @@ function ConnectContent() {
     }
   }
 
-  const generateConnectCode = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-    let code = ''
-    for (let i = 0; i < 6; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length))
-    }
-    return code
-  }
-
+  // Code generation, uniqueness checks, and the actual join mutation all
+  // moved server-side (Aug 4 2026) — see app/api/couples/create-code and
+  // app/api/couples/join for why. The browser no longer touches the
+  // couples table directly for either flow.
   const handleCreateCode = async () => {
     setSubmitting(true)
     setError('')
 
     try {
-      const code = generateConnectCode()
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/couples/create-code', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to create connect code')
 
-      const { data: existing } = await supabase
-        .from('couples')
-        .select('connect_code')
-        .eq('connect_code', code)
-        .maybeSingle()
-
-      if (existing) {
-        handleCreateCode()
-        return
-      }
-
-      const { error } = await supabase
-        .from('couples')
-        .insert({ user1_id: user.id, connect_code: code })
-
-      if (error) throw error
-
-      setConnectCode(code)
+      setConnectCode(data.connectCode)
     } catch (err) {
       setError(err.message || 'Failed to create connect code')
     } finally {
@@ -113,25 +97,16 @@ function ConnectContent() {
 
     try {
       const code = inputCode.toUpperCase().trim()
-
       if (code.length !== 6) throw new Error('Code must be 6 characters')
 
-      const { data: couple, error: findError } = await supabase
-        .from('couples')
-        .select('*')
-        .eq('connect_code', code)
-        .maybeSingle()
-
-      if (findError || !couple) throw new Error('Invalid connect code')
-      if (couple.user2_id) throw new Error('This code has already been used')
-      if (couple.user1_id === user.id) throw new Error('You cannot connect to your own code')
-
-      const { error: updateError } = await supabase
-        .from('couples')
-        .update({ user2_id: user.id, connected_at: new Date().toISOString() })
-        .eq('id', couple.id)
-
-      if (updateError) throw updateError
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/couples/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ connectCode: code }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to connect')
 
       router.push('/dashboard')
     } catch (err) {

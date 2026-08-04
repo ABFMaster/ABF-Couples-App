@@ -106,17 +106,6 @@ function Chip({ label, selected, onClick, disabled }) {
   )
 }
 
-// ── Connect Code generator (same charset as connect/page.js) ──────────────────
-
-function generateConnectCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  let code = ''
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return code
-}
-
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
 const inputStyle = {
@@ -245,6 +234,11 @@ function OnboardingFlow() {
 
   // ── Step 4: prepare connect code ───────────────────────────────────────────
 
+  // Code generation, the collision check, and the couples insert all moved
+  // server-side (Aug 4 2026) — see app/api/couples/create-code/route.js.
+  // This page had its own duplicate of the same client-side logic
+  // connect/page.js used to have; both now call the same route so there's
+  // one implementation instead of two that could drift.
   const prepareStep4 = async (authUser) => {
     setStep4Loading(true)
     try {
@@ -265,29 +259,13 @@ function OnboardingFlow() {
       if (existing?.connect_code) {
         setConnectCode(existing.connect_code)
       } else {
-        const code = generateConnectCode()
-        const { data: collision } = await supabase
-          .from('couples')
-          .select('id')
-          .eq('connect_code', code)
-          .maybeSingle()
-
-        const finalCode = collision ? generateConnectCode() : code
-
-        const { data: newCouple } = await supabase.from('couples').insert({
-          user1_id: uid,
-          connect_code: finalCode,
-        }).select('id').single()
-
-        if (newCouple?.id) {
-          supabase.from('user_profiles').upsert({
-            user_id: uid,
-            couple_id: newCouple.id,
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'user_id' }).catch(() => {})
-        }
-
-        setConnectCode(finalCode)
+        const { data: { session } } = await supabase.auth.getSession()
+        const res = await fetch('/api/couples/create-code', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${session?.access_token}` },
+        })
+        const data = await res.json()
+        if (res.ok) setConnectCode(data.connectCode)
       }
     } catch (err) {
       console.error('Error preparing step 4:', err)
