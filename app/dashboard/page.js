@@ -454,7 +454,7 @@ export default function Dashboard() {
         )}
         {showSpark && spark && (
           <div style={{ margin: '0 16px 14px' }}>
-            <FollowThroughCard userId={user?.id} coupleId={couple?.id} session={session} activityLabel="Spark">
+            <FollowThroughCard userId={user?.id} coupleId={couple?.id} session={session} activityLabel="Spark" currentSourceId={spark?.id}>
               <SparkCard
                 spark={spark}
                 mine={mine}

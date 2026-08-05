@@ -26,6 +26,7 @@ export default function SparkCard({
   onSkip,
   onReact,
   onInvite,
+  onSealed,
 }) {
   const [answerText, setAnswerText] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -46,6 +47,14 @@ export default function SparkCard({
   useEffect(() => {
     if (mine?.reaction_icon && mine?.question_rating) setReactionComplete(true)
   }, [mine?.reaction_icon, mine?.question_rating])
+
+  // Same "I'm done looking" signal as Bet's isSealed -- reactionComplete is
+  // the moment both reaction/rating pills are locked in. Mirrors BetCard's
+  // onSealed so FollowThroughCard can trigger the blended fade-in off a
+  // real action here too, instead of a fixed clock.
+  useEffect(() => {
+    if (reactionComplete) onSealed?.()
+  }, [reactionComplete, onSealed])
 
   // State C reveal animation states
   const [partnerCardShown, setPartnerCardShown] = useState(false)
