@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/api-auth'
+import { seedAssessmentMemory, computeAssessmentResults } from '@/lib/assessment-memory'
 
 // Built Aug 4 2026 to close a critical account-takeover vulnerability
 // found during the Game Room/Memory/auth audit. The previous flow did the
@@ -83,6 +84,50 @@ export async function POST(request) {
           { user_id: couple.user1_id, couple_id: updated.id, updated_at: new Date().toISOString() },
         ], { onConflict: 'user_id' })
     } catch {}
+
+    // Backfill Nora memory for any assessment completed during solo
+    // onboarding, before either partner had a couple to attach it to.
+    // app/assessment/page.js's onboarding path explicitly saves with
+    // couple_id: null by design ("assessment row exists before partner is
+    // invited"). But updateNoraMemory requires a resolvable couple_id to do
+    // anything at all — nora_memory is one row per couple, so with no
+    // couple yet there was nothing to write into. That means the original
+    // seed-memory call at completion time silently no-op'd for the Nora
+    // half (logged nothing to nora_signals, incremented no counts,
+    // synthesized no notes), with nothing to catch it later — found this
+    // Aug 5 2026 while backfilling Matt & Cass's own assessments: their
+    // nora_signals had zero assessment_complete rows despite both having
+    // real completed assessments in relationship_assessments.
+    // This is the catch: the moment a real couple_id first exists for both
+    // partners is right here, at pairing. Runs for both partners, since
+    // either one (not just the joiner) may have completed their assessment
+    // solo before this moment. Non-blocking — pairing must succeed
+    // regardless of what happens here.
+    try {
+      for (const uid of [couple.user1_id, user.id]) {
+        const { data: pending } = await supabase
+          .from('relationship_assessments')
+          .select('id, answers')
+          .eq('user_id', uid)
+          .is('couple_id', null)
+          .not('completed_at', 'is', null)
+          .order('completed_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (!pending?.answers) continue
+
+        await supabase
+          .from('relationship_assessments')
+          .update({ couple_id: updated.id })
+          .eq('id', pending.id)
+
+        const results = computeAssessmentResults(pending.answers)
+        await seedAssessmentMemory({ supabase, userId: uid, coupleId: updated.id, answers: pending.answers, results })
+      }
+    } catch (err) {
+      console.error('[couples/join] assessment memory backfill failed:', err)
+    }
 
     return NextResponse.json({ success: true, coupleId: updated.id })
   } catch (err) {

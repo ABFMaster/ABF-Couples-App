@@ -1,44 +1,53 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// ONE-SHOT BACKFILL — assessment_complete signals into user1_notes/user2_notes
+// ONE-SHOT BACKFILL — assessment data into Nora memory, for couples who
+// paired BEFORE the Aug 5 2026 fixes landed.
 //
-// WHY THIS EXISTS (see commit "Fix: ASSESSMENT_COMPLETE never reached
-// user1_notes/user2_notes", Aug 5 2026): ASSESSMENT_COMPLETE always had full
-// signal weights and a full buildPersonNotesPrompt lens, and seed-memory/
-// route.js always logged it to nora_signals correctly — but it was missing
-// from INDIVIDUAL_NOTE_SIGNALS, the routing array that decides whether
-// updateNoraMemory actually synthesizes notes. That's fixed now, so any
-// NEW assessment completion updates notes correctly. This script is
-// specifically for the couples who completed their assessment BEFORE that
-// fix — their assessment_complete signal is sitting in nora_signals but
-// was never synthesized into their notes. This backfills exactly that gap,
-// nothing else.
+// FULL STORY (see commits "Fix: ASSESSMENT_COMPLETE never reached
+// user1_notes/user2_notes" and the assessment-memory pre-pairing fix, both
+// Aug 5 2026):
+//   Bug 1 — ASSESSMENT_COMPLETE was missing from INDIVIDUAL_NOTE_SIGNALS,
+//   so even when a signal WAS logged, it never synthesized into notes.
+//   Fixed in lib/nora-memory.js.
 //
-// SCOPE — deliberately narrow, not a full memory rebuild:
-// This does NOT touch dates, sparks, bets, follow-throughs, or any other
-// signal history (see scripts/rebuild-nora-memory.mjs for that, a separate,
-// much bigger tool for a different problem — the AI-coach privacy leak).
-// This script only:
-//   1. Finds each user's assessment_complete signal(s) in nora_signals
-//   2. Synthesizes new notes for that user starting from their CURRENT
-//      existing notes (not a rebuild-from-scratch — an incremental update,
-//      same as if the fix had been live the day they submitted)
-//   3. Regenerates memory_summary (it reads from all three notes layers,
-//      so it needs to reflect the newly-synthesized assessment content)
-//   4. Leaves couple_notes, structured_facts, all signal counts, and
-//      conversation_count completely untouched — assessment_complete was
-//      never routed to couple_notes by design (see ABF-SIGNAL-REGISTRY.md:
-//      "Acting user only"), and counts were already incremented correctly
-//      at original submission time (that logic was never broken — only
-//      the notes-synthesis routing was).
+//   Bug 2 — bigger: updateNoraMemory requires a resolvable couple_id
+//   (nora_memory is one row per couple). Anyone who completed their
+//   assessment during solo onboarding (app/assessment/page.js's
+//   onboarding path saves with couple_id: null BY DESIGN — the assessment
+//   row needs to exist before a partner is even invited) had their entire
+//   assessment_complete signal silently dropped at submission time: never
+//   logged to nora_signals, no counts incremented, nothing. Fixed going
+//   forward in app/api/couples/join/route.js, which now backfills this
+//   automatically the moment a couple actually pairs.
 //
-// SAFETY — same three-step pattern as rebuild-nora-memory.mjs:
-//   1. --counts   Free. No LLM calls, no DB writes. Shows which users have
-//                 unsynthesized assessment signals.
-//   2. --preview  Runs synthesis, writes result to a local file under
-//                 scripts/output/. Zero writes to nora_memory.
-//   3. --apply=<path-to-preview-json>   Only after review. Backs up the
-//                 current nora_memory row first, then writes exactly what
-//                 you reviewed.
+// That join-time fix only fires for couples pairing AFTER Aug 5 2026. Any
+// couple who already paired before that (Matt & Cass, currently the only
+// two real users) needs a one-time manual catch-up — that's this script.
+//
+// WHAT IT DOES:
+//   For each of the couple's two users, finds their most recent completed
+//   relationship_assessments row (regardless of what couple_id is stored
+//   on it — could be null from the original bug, or already correct), and
+//   runs it through the exact same seedAssessmentMemory() pipeline
+//   production now uses at live completion / join time. This means it
+//   also correctly logs the signal to nora_signals and increments signal
+//   counts for the first time — those were never incremented either,
+//   since updateNoraMemory returned before reaching that step.
+//
+// SAFETY:
+//   1. --counts   Free. No LLM calls, no DB writes. Shows what assessment
+//                 data exists per user and whether it looks already seeded.
+//   2. --preview  Predicts the notes update (same prompt builder production
+//                 uses) and writes it to a local file. Zero writes to
+//                 nora_memory. Review this before doing anything else.
+//   3. --apply=<path-to-preview-json>   Backs up the current nora_memory
+//                 row, then calls the REAL seedAssessmentMemory() pipeline
+//                 for each user found in the preview. This regenerates
+//                 notes fresh at apply time (not a literal replay of the
+//                 previewed text) — same as production always does. In the
+//                 short window between preview and apply nothing else
+//                 should have changed the existing notes, so the applied
+//                 text should closely match what you reviewed, but this is
+//                 a live pipeline call, not a byte-for-byte replay.
 //
 // USAGE (run locally — needs real network access to Supabase + Anthropic,
 // which this sandbox does not have):
@@ -51,6 +60,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'fs'
 import { SIGNAL_TYPES, buildPersonNotesPrompt, buildMemorySummaryPrompt } from '../lib/nora-memory.js'
+import { computeAssessmentResults, seedAssessmentMemory } from '../lib/assessment-memory.js'
 import { noraReact } from '../lib/nora.js'
 
 const args = process.argv.slice(2)
@@ -88,17 +98,6 @@ const supabase = createClient(
 const OUTPUT_DIR = new URL('./output/', import.meta.url)
 mkdirSync(OUTPUT_DIR, { recursive: true })
 
-// Same sanitization buildPersonNotesPrompt already applies to live
-// inputData — applied here too since we're re-feeding historical rows.
-function sanitize(data) {
-  if (!data || typeof data !== 'object') return data
-  const stripped = { ...data }
-  for (const k of ['image_url', 'photo_url', 'photo_urls', 'album_art', 'poster_url', 'artwork_url']) {
-    delete stripped[k]
-  }
-  return stripped
-}
-
 async function getTheCouple() {
   const { data: couples, error } = await supabase
     .from('couples')
@@ -131,41 +130,28 @@ async function getNames(couple) {
   return { user1Name, user2Name }
 }
 
-async function runListCouples() {
-  const { data: couples, error } = await supabase
-    .from('couples')
-    .select('id, user1_id, user2_id, created_at')
-    .order('created_at', { ascending: true })
-  if (error) throw new Error(`Failed to fetch couples: ${error.message}`)
-  if (!couples || couples.length === 0) {
-    console.log('No couples found.')
-    return
-  }
-  for (const couple of couples) {
-    const { user1Name, user2Name } = await getNames(couple)
-    const { count: assessmentCount } = await supabase
-      .from('nora_signals')
-      .select('*', { count: 'exact', head: true })
-      .eq('couple_id', couple.id)
-      .eq('signal_type', SIGNAL_TYPES.ASSESSMENT_COMPLETE)
-    console.log(`\ncouple_id: ${couple.id}`)
-    console.log(`  created_at: ${couple.created_at}`)
-    console.log(`  user1: ${user1Name} (${couple.user1_id})`)
-    console.log(`  user2: ${user2Name} (${couple.user2_id})`)
-    console.log(`  assessment_complete signals: ${assessmentCount ?? 'unknown'}`)
-  }
-  console.log(`\nRe-run any mode with --couple-id=<the right id above> to target one specifically.`)
+async function getLatestCompletedAssessment(userId) {
+  const { data, error } = await supabase
+    .from('relationship_assessments')
+    .select('id, user_id, couple_id, answers, completed_at')
+    .eq('user_id', userId)
+    .not('completed_at', 'is', null)
+    .order('completed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw new Error(`Failed to fetch relationship_assessments for ${userId}: ${error.message}`)
+  return data
 }
 
-async function getAssessmentSignals(coupleId) {
-  const { data, error } = await supabase
+async function getExistingSignalCount(coupleId, userId) {
+  const { count, error } = await supabase
     .from('nora_signals')
-    .select('id, user_id, signal_type, input_data, created_at')
+    .select('*', { count: 'exact', head: true })
     .eq('couple_id', coupleId)
+    .eq('user_id', userId)
     .eq('signal_type', SIGNAL_TYPES.ASSESSMENT_COMPLETE)
-    .order('created_at', { ascending: true })
-  if (error) throw new Error(`Failed to fetch nora_signals: ${error.message}`)
-  return data || []
+  if (error) return null
+  return count
 }
 
 async function getCurrentMemory(coupleId) {
@@ -178,70 +164,88 @@ async function getCurrentMemory(coupleId) {
   return data
 }
 
-async function synthesizePerson(personName, existingNotes, signalsForPerson) {
-  let notes = existingNotes
-  for (let i = 0; i < signalsForPerson.length; i++) {
-    const s = signalsForPerson[i]
-    process.stdout.write(`  ${personName}: assessment signal ${i + 1}/${signalsForPerson.length} (${s.created_at})...`)
-    notes = await noraReact(
-      buildPersonNotesPrompt(personName, SIGNAL_TYPES.ASSESSMENT_COMPLETE, sanitize(s.input_data), notes),
-      { route: 'backfill-assessment/person-notes', context: 'conversation', maxTokens: 400 }
-    )
-    console.log(' done')
+async function runListCouples() {
+  const { data: couples, error } = await supabase
+    .from('couples')
+    .select('id, user1_id, user2_id, created_at')
+    .order('created_at', { ascending: true })
+  if (error) throw new Error(`Failed to fetch couples: ${error.message}`)
+  if (!couples || couples.length === 0) {
+    console.log('No couples found.')
+    return
   }
-  return notes
+  for (const couple of couples) {
+    const { user1Name, user2Name } = await getNames(couple)
+    const a1 = couple.user1_id ? await getLatestCompletedAssessment(couple.user1_id) : null
+    const a2 = couple.user2_id ? await getLatestCompletedAssessment(couple.user2_id) : null
+    console.log(`\ncouple_id: ${couple.id}`)
+    console.log(`  created_at: ${couple.created_at}`)
+    console.log(`  user1: ${user1Name} (${couple.user1_id}) — completed assessment: ${a1 ? a1.completed_at : 'none'}`)
+    console.log(`  user2: ${user2Name} (${couple.user2_id || 'unpaired'}) — completed assessment: ${a2 ? a2.completed_at : 'none'}`)
+  }
+  console.log(`\nRe-run any mode with --couple-id=<the right id above> to target one specifically.`)
 }
 
 async function runCounts() {
   const couple = await getTheCouple()
   const { user1Name, user2Name } = await getNames(couple)
-  const signals = await getAssessmentSignals(couple.id)
-  const user1Signals = signals.filter(s => s.user_id === couple.user1_id)
-  const user2Signals = signals.filter(s => s.user_id === couple.user2_id)
-  const otherSignals = signals.filter(s => s.user_id !== couple.user1_id && s.user_id !== couple.user2_id)
 
   console.log(`\nCouple: ${couple.id}`)
-  console.log(`Total assessment_complete signals found: ${signals.length}`)
-  console.log(`  ${user1Name}: ${user1Signals.length}`)
-  console.log(`  ${user2Name}: ${user2Signals.length}`)
-  if (otherSignals.length) console.log(`  unattributed (no matching user_id): ${otherSignals.length} — will be skipped`)
-
-  if (signals.length === 0) {
-    console.log(`\nNothing to backfill — no assessment_complete signals found for this couple.`)
-  } else {
-    console.log(`\nThis will run ${user1Signals.length + user2Signals.length} LLM calls to synthesize notes, plus 1 to regenerate memory_summary.`)
+  for (const [name, uid] of [[user1Name, couple.user1_id], [user2Name, couple.user2_id]]) {
+    if (!uid) { console.log(`  ${name}: no user_id on this couple`); continue }
+    const assessment = await getLatestCompletedAssessment(uid)
+    if (!assessment) {
+      console.log(`  ${name}: no completed assessment found`)
+      continue
+    }
+    const alreadySeeded = await getExistingSignalCount(couple.id, uid)
+    console.log(`  ${name}: completed assessment on ${assessment.completed_at} (assessment row couple_id: ${assessment.couple_id || 'null'})`)
+    console.log(`    existing assessment_complete nora_signals for this couple: ${alreadySeeded ?? 'unknown'}`)
+    if (alreadySeeded > 0) {
+      console.log(`    -> already seeded at least once. Re-running --preview/--apply will add another signal + re-synthesize notes, not a no-op.`)
+    } else {
+      console.log(`    -> NOT yet seeded. This is the gap --preview/--apply will fix.`)
+    }
   }
 }
 
 async function runPreview() {
   const couple = await getTheCouple()
   const { user1Name, user2Name } = await getNames(couple)
-  const signals = await getAssessmentSignals(couple.id)
+  const current = await getCurrentMemory(couple.id)
+  const existingCoupleNotes = current?.couple_notes?.notes || null
 
-  if (signals.length === 0) {
-    console.log('No assessment_complete signals found for this couple. Nothing to do.')
+  const perUser = {}
+  for (const [key, name, uid] of [['user1', user1Name, couple.user1_id], ['user2', user2Name, couple.user2_id]]) {
+    if (!uid) { perUser[key] = null; continue }
+    const assessment = await getLatestCompletedAssessment(uid)
+    if (!assessment?.answers) { console.log(`${name}: no completed assessment found, skipping.`); perUser[key] = null; continue }
+
+    const results = computeAssessmentResults(assessment.answers)
+    const summaryParts = results.modules.map(m => {
+      if (m.moduleId === 'attachment_profile') return `Attachment: ${m.headline} — ${m.description}`
+      if (m.moduleId === 'conflict_profile') return `Conflict style: ${m.headline} — ${m.description}`
+      if (m.moduleId === 'love_expression') return `Love expression: ${m.headline} — ${m.description}`
+      return `${m.title}: ${m.headline}`
+    }).filter(Boolean)
+    const inputData = { type: 'assessment_complete', summary: summaryParts.join('\n'), answers: assessment.answers }
+
+    const existingNotes = key === 'user1' ? (current?.user1_notes?.notes || null) : (current?.user2_notes?.notes || null)
+    console.log(`\nSynthesizing ${name}'s notes from their assessment (completed ${assessment.completed_at})...`)
+    const newNotes = await noraReact(
+      buildPersonNotesPrompt(name, SIGNAL_TYPES.ASSESSMENT_COMPLETE, inputData, existingNotes),
+      { route: 'backfill-assessment/person-notes', context: 'conversation', maxTokens: 400 }
+    )
+    perUser[key] = { userId: uid, answers: assessment.answers, results, newNotes }
+  }
+
+  if (!perUser.user1 && !perUser.user2) {
+    console.log('\nNo completed assessments found for either partner. Nothing to preview.')
     return
   }
 
-  const current = await getCurrentMemory(couple.id)
-  const existingUser1Notes = current?.user1_notes?.notes || null
-  const existingUser2Notes = current?.user2_notes?.notes || null
-  const existingCoupleNotes = current?.couple_notes?.notes || null // unchanged, passed through to summary regen only
-
-  const user1Signals = signals.filter(s => s.user_id === couple.user1_id)
-  const user2Signals = signals.filter(s => s.user_id === couple.user2_id)
-
-  console.log(`Found ${user1Signals.length} assessment signal(s) for ${user1Name}, ${user2Signals.length} for ${user2Name}.`)
-
-  console.log(`\nSynthesizing ${user1Name}'s notes...`)
-  const newUser1Notes = user1Signals.length
-    ? await synthesizePerson(user1Name, existingUser1Notes, user1Signals)
-    : existingUser1Notes
-
-  console.log(`\nSynthesizing ${user2Name}'s notes...`)
-  const newUser2Notes = user2Signals.length
-    ? await synthesizePerson(user2Name, existingUser2Notes, user2Signals)
-    : existingUser2Notes
+  const newUser1Notes = perUser.user1?.newNotes ?? (current?.user1_notes?.notes || null)
+  const newUser2Notes = perUser.user2?.newNotes ?? (current?.user2_notes?.notes || null)
 
   console.log(`\nRegenerating memory_summary (couple_notes unchanged, but summary blends all three layers)...`)
   const newSummary = await noraReact(
@@ -254,11 +258,12 @@ async function runPreview() {
     generatedAt: new Date().toISOString(),
     user1Name,
     user2Name,
-    signalsUsed: { user1: user1Signals.length, user2: user2Signals.length },
-    memory_summary: newSummary,
-    user1_notes: newUser1Notes,
-    user2_notes: newUser2Notes,
-    // couple_notes intentionally not included — this script never writes it.
+    // Carried through so --apply can call the REAL seedAssessmentMemory()
+    // pipeline for each user, not just write notes text directly.
+    perUser,
+    memory_summary_preview: newSummary,
+    user1_notes_preview: newUser1Notes,
+    user2_notes_preview: newUser2Notes,
   }
 
   const ts = new Date().toISOString().replace(/[:.]/g, '-')
@@ -266,24 +271,26 @@ async function runPreview() {
   const mdPath = new URL(`assessment-backfill-preview-${ts}.md`, OUTPUT_DIR)
 
   writeFileSync(jsonPath, JSON.stringify(result, null, 2))
-  writeFileSync(mdPath, `# Assessment notes backfill preview — ${ts}
+  writeFileSync(mdPath, `# Assessment memory backfill preview — ${ts}
 
 Couple: ${couple.id}
 Generated: ${result.generatedAt}
-Assessment signals used: ${user1Name}: ${user1Signals.length}, ${user2Name}: ${user2Signals.length}
+${perUser.user1 ? `${user1Name}: assessment completed ${perUser.user1.answers ? '(found)' : ''}` : `${user1Name}: no completed assessment found`}
+${perUser.user2 ? `${user2Name}: assessment completed ${perUser.user2.answers ? '(found)' : ''}` : `${user2Name}: no completed assessment found`}
 
-**This is a PREVIEW ONLY. Nothing has been written to nora_memory.**
+**This is a PREVIEW ONLY. Nothing has been written to nora_memory or nora_signals yet.**
 **couple_notes is untouched by this script — not shown here because it doesn't change.**
+**--apply calls the real production pipeline and will regenerate this text fresh, not paste it verbatim — see file header.**
 
-## ${user1Name}'s notes (after assessment backfill)
+## ${user1Name}'s notes (predicted, after assessment backfill)
 
 ${newUser1Notes}
 
-## ${user2Name}'s notes (after assessment backfill)
+## ${user2Name}'s notes (predicted, after assessment backfill)
 
 ${newUser2Notes}
 
-## Memory summary (regenerated to reflect the above)
+## Memory summary (predicted)
 
 ${newSummary}
 `)
@@ -305,31 +312,35 @@ async function runApply() {
   }
 
   const current = await getCurrentMemory(couple.id)
-
   const ts = new Date().toISOString().replace(/[:.]/g, '-')
   const backupPath = new URL(`assessment-backfill-backup-before-apply-${ts}.json`, OUTPUT_DIR)
   writeFileSync(backupPath, JSON.stringify(current || { note: 'no existing row' }, null, 2))
   console.log(`Backed up current nora_memory row to:\n  ${backupPath.pathname}`)
 
-  const { error: upsertErr } = await supabase
-    .from('nora_memory')
-    .upsert({
-      couple_id: couple.id,
-      memory_summary: preview.memory_summary,
-      user1_notes: { notes: preview.user1_notes, updated_at: new Date().toISOString() },
-      user2_notes: { notes: preview.user2_notes, updated_at: new Date().toISOString() },
-      // couple_notes deliberately omitted from this upsert object entirely —
-      // Supabase upsert only touches the columns you pass, so the existing
-      // couple_notes value is left exactly as it was.
-      last_updated: new Date().toISOString(),
-      // Signal counts and conversation_count also deliberately untouched —
-      // those were already correctly incremented at original submission
-      // time (that logic was never broken, only notes-synthesis routing).
-    }, { onConflict: 'couple_id' })
+  for (const key of ['user1', 'user2']) {
+    const entry = preview.perUser?.[key]
+    if (!entry) { console.log(`${key}: nothing to apply (no assessment found in preview).`); continue }
+    console.log(`\nApplying real seedAssessmentMemory() pipeline for ${key} (${entry.userId})...`)
+    await seedAssessmentMemory({
+      supabase,
+      userId: entry.userId,
+      coupleId: couple.id,
+      answers: entry.answers,
+      results: entry.results,
+    })
+    console.log(`  done — nora_signals logged, signal counts incremented, notes synthesized, user_profiles scores written.`)
 
-  if (upsertErr) throw new Error(`Upsert failed: ${upsertErr.message}. Your previous data is safe in the backup file above.`)
+    // Bookkeeping: if the assessment row still has couple_id null (the
+    // original bug's fingerprint), attach it to the real couple now.
+    await supabase
+      .from('relationship_assessments')
+      .update({ couple_id: couple.id })
+      .eq('user_id', entry.userId)
+      .is('couple_id', null)
+      .not('completed_at', 'is', null)
+  }
 
-  console.log(`\nApplied. user1_notes/user2_notes/memory_summary for couple ${couple.id} now reflect the assessment backfill.`)
+  console.log(`\nApplied. nora_memory for couple ${couple.id} now reflects the assessment backfill.`)
   console.log(`If anything looks wrong, the pre-apply state is saved at:\n  ${backupPath.pathname}`)
 }
 
