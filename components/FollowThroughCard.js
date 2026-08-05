@@ -45,9 +45,13 @@ function ReportFace({ data, onDone, onFlip, activityLabel, variant = 'standalone
 
   const wrapperStyle = {
     background: '#1C1510',
-    borderRadius: '20px',
+    // Blended: square top corners so this fuses directly to the bottom of
+    // the card above with zero gap, instead of reading as a second card.
+    // A hairline top divider marks the transition without breaking the shape.
+    borderRadius: isBlended ? '0 0 20px 20px' : '20px',
+    borderTop: isBlended ? '1px solid rgba(212,168,83,0.12)' : undefined,
     padding: isBlended ? '16px' : '24px',
-    border: data.wildcard ? '1.5px solid #D4A853' : (isBlended ? 'none' : '0.5px solid #3D2E1E'),
+    border: data.wildcard ? '1.5px solid #D4A853' : (isBlended ? undefined : '0.5px solid #3D2E1E'),
     boxShadow: isBlended ? 'none' : '0 4px 24px rgba(28, 21, 16, 0.15)',
     position: 'relative',
   }
@@ -117,21 +121,21 @@ function ReportFace({ data, onDone, onFlip, activityLabel, variant = 'standalone
             Already checked in on their side
           </p>
         )}
-        <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '18px', color: '#F5ECD7', textAlign: 'center', lineHeight: 1.4, marginBottom: '22px' }}>
+        <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: isBlended ? '15px' : '18px', color: '#F5ECD7', textAlign: 'center', lineHeight: 1.4, marginBottom: isBlended ? '16px' : '22px' }}>
           {data.mine.actionText}
         </p>
         <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
           <button
             onClick={() => submit('done')}
             disabled={submitting}
-            style={{ flex: 1, padding: '12px', background: '#D4A853', color: '#1C1410', fontSize: '13px', fontWeight: 700, border: 'none', borderRadius: '30px', cursor: submitting ? 'default' : 'pointer', opacity: submitting ? 0.6 : 1 }}
+            style={{ flex: 1, padding: isBlended ? '10px' : '12px', background: '#D4A853', color: '#1C1410', fontSize: '13px', fontWeight: 700, border: 'none', borderRadius: '30px', cursor: submitting ? 'default' : 'pointer', opacity: submitting ? 0.6 : 1 }}
           >
             Did it
           </button>
           <button
             onClick={() => submit('declined')}
             disabled={submitting}
-            style={{ flex: 1, padding: '12px', background: '#2A1E14', color: '#C4B49A', fontSize: '13px', border: '0.5px solid #3D2E1E', borderRadius: '30px', cursor: submitting ? 'default' : 'pointer', opacity: submitting ? 0.6 : 1 }}
+            style={{ flex: 1, padding: isBlended ? '10px' : '12px', background: '#2A1E14', color: '#C4B49A', fontSize: '13px', border: '0.5px solid #3D2E1E', borderRadius: '30px', cursor: submitting ? 'default' : 'pointer', opacity: submitting ? 0.6 : 1 }}
           >
             Didn&apos;t get to it
           </button>
@@ -245,11 +249,12 @@ export default function FollowThroughCard({ userId, coupleId, session, children,
 
   const isBlend = !!(data?.active && currentSourceId && data.sourceId === currentSourceId)
 
-  // Gentle fade/rise on first appearance rather than an abrupt pop-in —
-  // reads as "and one more thing," not an interruption.
+  // Deliberate pause, then a slow drift into place — not a pop-in. Gives the
+  // user a beat to actually sit with the Bet reveal above before attention
+  // gets pulled toward the next thing.
   useEffect(() => {
     if (!isBlend) { setBlendVisible(false); return }
-    const t = setTimeout(() => setBlendVisible(true), 30)
+    const t = setTimeout(() => setBlendVisible(true), 1200)
     return () => clearTimeout(t)
   }, [isBlend])
 
@@ -281,20 +286,39 @@ export default function FollowThroughCard({ userId, coupleId, session, children,
   }
 
   if (isBlend) {
+    // Wildcard days keep their own full card, gap included — that's a
+    // deliberate "this is a bigger, separate moment" signal, not something
+    // to fuse away. Everything else fuses into one continuous shape: shared
+    // background + radius + overflow:hidden on the outer wrapper means Bet's
+    // own rounded bottom corners get absorbed into the same shape instead of
+    // leaving a visible seam, with zero gap between the two sections.
+    const followThroughBlock = (
+      <div
+        style={{
+          marginTop: data.wildcard ? '8px' : 0,
+          opacity: blendVisible ? 1 : 0,
+          transform: blendVisible ? 'translateY(0)' : 'translateY(10px)',
+          transition: 'opacity 900ms ease, transform 900ms ease',
+        }}
+      >
+        <ReportFace data={data} onDone={handleReport} onFlip={handleFlip} activityLabel={activityLabel} variant="blended" />
+      </div>
+    )
+
+    if (data.wildcard) {
+      return (
+        <>
+          {children}
+          {followThroughBlock}
+        </>
+      )
+    }
+
     return (
-      <>
+      <div style={{ background: '#1C1510', borderRadius: '20px', overflow: 'hidden' }}>
         {children}
-        <div
-          style={{
-            marginTop: '8px',
-            opacity: blendVisible ? 1 : 0,
-            transform: blendVisible ? 'translateY(0)' : 'translateY(6px)',
-            transition: 'opacity 400ms ease, transform 400ms ease',
-          }}
-        >
-          <ReportFace data={data} onDone={handleReport} onFlip={handleFlip} activityLabel={activityLabel} variant="blended" />
-        </div>
-      </>
+        {followThroughBlock}
+      </div>
     )
   }
 
