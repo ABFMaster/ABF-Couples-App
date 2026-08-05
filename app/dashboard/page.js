@@ -476,7 +476,7 @@ export default function Dashboard() {
         )}
         {showBet && bet && (
           <div style={{ margin: '0 16px 14px' }}>
-            <FollowThroughCard userId={user?.id} coupleId={couple?.id} session={session} activityLabel="Bet">
+            <FollowThroughCard userId={user?.id} coupleId={couple?.id} session={session} activityLabel="Bet" currentSourceId={bet?.id}>
               <BetCard
                 bet={bet}
                 mine={betMine}

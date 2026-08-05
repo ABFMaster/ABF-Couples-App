@@ -160,6 +160,7 @@ export async function GET(request) {
     return NextResponse.json({
       active: true,
       id: row.id,
+      sourceId: row.source_id,
       sourceType: row.source_type,
       wildcard: row.wildcard,
       wildcardFlavor: row.wildcard_flavor,

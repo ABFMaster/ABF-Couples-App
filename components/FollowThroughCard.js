@@ -12,10 +12,16 @@
 
 import { useState, useEffect, useCallback } from 'react'
 
-function ReportFace({ data, onDone, onFlip, activityLabel }) {
+function ReportFace({ data, onDone, onFlip, activityLabel, variant = 'standalone' }) {
   const [note, setNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [pickSubmitting, setPickSubmitting] = useState(null)
+
+  // Blended (same-source, same-session) gets quieter chrome — it's appended
+  // below the activity card the user is already looking at, not a takeover.
+  // Wildcards always keep the full bold treatment regardless of variant;
+  // that's a deliberate "this is a real event" signal per the design spec.
+  const isBlended = variant === 'blended' && !data.wildcard
 
   const submit = async (status) => {
     if (submitting) return
@@ -40,9 +46,9 @@ function ReportFace({ data, onDone, onFlip, activityLabel }) {
   const wrapperStyle = {
     background: '#1C1510',
     borderRadius: '20px',
-    padding: '24px',
-    border: data.wildcard ? '1.5px solid #D4A853' : '0.5px solid #3D2E1E',
-    boxShadow: '0 4px 24px rgba(28, 21, 16, 0.15)',
+    padding: isBlended ? '16px' : '24px',
+    border: data.wildcard ? '1.5px solid #D4A853' : (isBlended ? 'none' : '0.5px solid #3D2E1E'),
+    boxShadow: isBlended ? 'none' : '0 4px 24px rgba(28, 21, 16, 0.15)',
     position: 'relative',
   }
 
@@ -103,7 +109,7 @@ function ReportFace({ data, onDone, onFlip, activityLabel }) {
             WILDCARD
           </div>
         )}
-        <p style={{ fontSize: '11px', letterSpacing: '0.2em', color: '#D4A853', textTransform: 'uppercase', textAlign: 'center', marginTop: data.wildcard ? '14px' : 0, marginBottom: '8px' }}>
+        <p style={{ fontSize: isBlended ? '9px' : '11px', letterSpacing: '0.2em', color: isBlended ? '#B99B6B' : '#D4A853', textTransform: 'uppercase', textAlign: 'center', marginTop: data.wildcard ? '14px' : 0, marginBottom: isBlended ? '6px' : '8px' }}>
           Follow-Through
         </p>
         {data.theirs?.status && data.theirs.status !== 'pending' && (
@@ -144,7 +150,7 @@ function ReportFace({ data, onDone, onFlip, activityLabel }) {
   // Reported — Tier 1 always, Tier 2 if both are in, then the tap-through
   return (
     <div style={wrapperStyle}>
-      <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#D4A853', textTransform: 'uppercase', textAlign: 'center', marginBottom: '16px' }}>
+      <p style={{ fontSize: isBlended ? '9px' : '10px', letterSpacing: '0.14em', color: isBlended ? '#B99B6B' : '#D4A853', textTransform: 'uppercase', textAlign: 'center', marginBottom: isBlended ? '12px' : '16px' }}>
         {data.bothReported ? 'Follow-Through — both in' : 'Follow-Through'}
       </p>
 
@@ -180,20 +186,27 @@ function ReportFace({ data, onDone, onFlip, activityLabel }) {
         </div>
       )}
 
-      <button
-        onClick={onFlip}
-        style={{ width: '100%', padding: '12px', background: '#1C1410', color: '#FAF6F0', fontSize: '13px', fontWeight: 500, border: '1px solid #3D2E1E', borderRadius: '30px', cursor: 'pointer', marginTop: '4px' }}
-      >
-        See today&apos;s {activityLabel} →
-      </button>
+      {/* Blended mode has no "See today's X" continue button — the activity
+          it would flip to is already visible right above this, not hidden
+          behind it. That button only makes sense for the standalone
+          carryover case, where the activity really is hidden until tapped. */}
+      {variant !== 'blended' && (
+        <button
+          onClick={onFlip}
+          style={{ width: '100%', padding: '12px', background: '#1C1410', color: '#FAF6F0', fontSize: '13px', fontWeight: 500, border: '1px solid #3D2E1E', borderRadius: '30px', cursor: 'pointer', marginTop: '4px' }}
+        >
+          See today&apos;s {activityLabel} →
+        </button>
+      )}
     </div>
   )
 }
 
-export default function FollowThroughCard({ userId, coupleId, session, children, activityLabel = 'Bet' }) {
+export default function FollowThroughCard({ userId, coupleId, session, children, activityLabel = 'Bet', currentSourceId = null }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [flipped, setFlipped] = useState(false)
+  const [blendVisible, setBlendVisible] = useState(false)
 
   const load = useCallback(async () => {
     if (!userId || !coupleId) { setLoading(false); return }
@@ -211,6 +224,34 @@ export default function FollowThroughCard({ userId, coupleId, session, children,
   }, [userId, coupleId, session])
 
   useEffect(() => { load() }, [load])
+
+  // Same-source Follow-Throughs (generated from the activity currently in
+  // `children` — e.g. tonight's Bet) don't swap the slot away; they blend
+  // into it instead, appended below, so results stay visible. Only a
+  // carried-over Follow-Through whose source no longer matches (a new day's
+  // Bet has already been generated) takes over the slot standalone. Without
+  // a refetch trigger, a same-session blend would otherwise only appear
+  // after a full nav-away/back forced a fresh mount — poll while inactive so
+  // it surfaces live instead. Scoped to callers that pass currentSourceId
+  // (Bet, for now) so Spark/Wednesday/Thursday's existing mount-only-fetch
+  // behavior stays untouched until this is validated and generalized.
+  useEffect(() => {
+    if (!currentSourceId) return
+    if (!userId || !coupleId) return
+    if (data?.active) return
+    const interval = setInterval(load, 8000)
+    return () => clearInterval(interval)
+  }, [currentSourceId, userId, coupleId, data?.active, load])
+
+  const isBlend = !!(data?.active && currentSourceId && data.sourceId === currentSourceId)
+
+  // Gentle fade/rise on first appearance rather than an abrupt pop-in —
+  // reads as "and one more thing," not an interruption.
+  useEffect(() => {
+    if (!isBlend) { setBlendVisible(false); return }
+    const t = setTimeout(() => setBlendVisible(true), 30)
+    return () => clearTimeout(t)
+  }, [isBlend])
 
   if (loading || !data?.active) {
     return children
@@ -239,6 +280,24 @@ export default function FollowThroughCard({ userId, coupleId, session, children,
     }).catch(() => {})
   }
 
+  if (isBlend) {
+    return (
+      <>
+        {children}
+        <div
+          style={{
+            marginTop: '8px',
+            opacity: blendVisible ? 1 : 0,
+            transform: blendVisible ? 'translateY(0)' : 'translateY(6px)',
+            transition: 'opacity 400ms ease, transform 400ms ease',
+          }}
+        >
+          <ReportFace data={data} onDone={handleReport} onFlip={handleFlip} activityLabel={activityLabel} variant="blended" />
+        </div>
+      </>
+    )
+  }
+
   return (
     <div style={{ perspective: '1200px' }}>
       <div
@@ -250,7 +309,7 @@ export default function FollowThroughCard({ userId, coupleId, session, children,
         }}
       >
         <div style={{ backfaceVisibility: 'hidden' }}>
-          <ReportFace data={data} onDone={handleReport} onFlip={handleFlip} activityLabel={activityLabel} />
+          <ReportFace data={data} onDone={handleReport} onFlip={handleFlip} activityLabel={activityLabel} variant="standalone" />
         </div>
         <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
           {children}
