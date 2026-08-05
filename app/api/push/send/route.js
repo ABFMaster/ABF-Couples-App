@@ -56,6 +56,11 @@ export async function POST(request) {
       .eq('user_id', userId)
 
     if (!subscriptions?.length) {
+      // Previously a silent no-op -- if a user's subscription lapsed or was
+      // never registered, this returned {sent: 0} with zero trace anywhere.
+      // Log it so a missed push is diagnosable from push_log instead of
+      // just... not happening, invisibly.
+      await logPush(supabase, { userId, status: 'no_subscription', route, title, body })
       return Response.json({ sent: 0 })
     }
 

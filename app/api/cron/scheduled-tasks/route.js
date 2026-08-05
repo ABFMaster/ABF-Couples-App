@@ -19,12 +19,19 @@ const BET_DAYS = [2] // Tue
 
 async function sendPush(userId, title, body, url, route) {
   try {
-    await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/push/send`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/push/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
       body: JSON.stringify({ userId, title, body, url, route }),
     })
-  } catch {
+    if (!res.ok) {
+      console.error('[sendPush] non-ok response:', route, userId, res.status)
+    }
+  } catch (err) {
+    // Previously a bare catch{} -- a failed push here (network error, bad
+    // response) vanished with zero trace anywhere. /api/push/send logs its
+    // own attempts to push_log, but only if this fetch actually reaches it.
+    console.error('[sendPush] failed:', route, userId, err)
   }
 }
 

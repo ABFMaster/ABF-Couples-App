@@ -167,7 +167,13 @@ function ReportFace({ data, onDone, onFlip, activityLabel, variant = 'standalone
         </div>
       )}
 
-      {!data.bothReported && (
+      {/* Other-directed: I did this FOR/TO my partner, so I already lived it
+          with them in the real world — there's nothing left for me to wait
+          on. Waiting on their report is only meaningful when it's actually
+          new information I don't already have (self-directed actions, where
+          I have no other way of knowing what they did). Closing this loop
+          is their job, not something my own card should hold me in. */}
+      {!data.bothReported && data.mine.directed !== 'other' && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
           <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#5A4A38', flexShrink: 0 }} />
           <p style={{ fontSize: '12px', color: '#5A4A38', margin: 0 }}>Waiting on them to check in</p>
