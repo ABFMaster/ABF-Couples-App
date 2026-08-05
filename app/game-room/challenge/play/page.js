@@ -238,7 +238,19 @@ function ChallengePlayContent() {
 
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
+      let { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        // Landing here comes right after several supabase.auth.getSession()
+        // calls in the lobby's handleStart (start-session, then a
+        // mode-specific confirm/start call), each of which can trigger a
+        // refresh-token rotation if the access token was near expiry. This
+        // page's own client instance can momentarily read a session that
+        // hasn't finished settling, making getUser()'s server-side revalidation
+        // fail even though the user is genuinely still logged in. Retry once
+        // before concluding they're actually logged out.
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        ;({ data: { user } } = await supabase.auth.getUser())
+      }
       if (!user) { router.push('/login'); return }
       setUserId(user.id)
 

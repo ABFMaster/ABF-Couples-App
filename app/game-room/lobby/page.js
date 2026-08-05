@@ -34,7 +34,14 @@ function GameRoomLobbyContent() {
 
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+      let { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        // See matching comment in challenge/play/page.js — a transient
+        // refresh-token rotation race can make this fail even when the
+        // user is genuinely still logged in. Retry once before redirecting.
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        ;({ data: { user } } = await supabase.auth.getUser())
+      }
       if (!user) { router.push('/login'); return }
       setUserId(user.id)
 
