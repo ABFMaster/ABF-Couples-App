@@ -52,6 +52,14 @@ export default function Dashboard() {
   const [betMine, setBetMine]         = useState(null)
   const [betTheirs, setBetTheirs]     = useState(null)
 
+  // Notice/Thursday fetch their own entry internally (unlike spark/bet,
+  // which live in this page's own state) -- these just catch the entry id
+  // once each card loads it, so FollowThroughCard can tell whether an
+  // active Follow-Through belongs to today's entry (blend) or a carried-
+  // over one (standalone).
+  const [noticeSourceId, setNoticeSourceId]     = useState(null)
+  const [thursdaySourceId, setThursdaySourceId] = useState(null)
+
   const [relationshipPhotos, setRelationshipPhotos]     = useState([])
   const [uploadingPhotos, setUploadingPhotos]           = useState(false)
   const [photoUploadComplete, setPhotoUploadComplete]   = useState(false)
@@ -490,13 +498,14 @@ export default function Dashboard() {
           </div>
         )}
         {showNotice && (
-          <FollowThroughCard userId={user?.id} coupleId={couple?.id} session={session} activityLabel="Notice">
+          <FollowThroughCard userId={user?.id} coupleId={couple?.id} session={session} activityLabel="Notice" currentSourceId={noticeSourceId}>
             <WednesdayCard
               userId={user?.id}
               coupleId={couple?.id}
               userName={userName}
               partnerName={partnerName}
               session={session}
+              onSourceLoaded={setNoticeSourceId}
             />
           </FollowThroughCard>
         )}
@@ -608,13 +617,14 @@ export default function Dashboard() {
 
         {/* SECTION 3.5 — THURSDAY CARD */}
         {showThursday && (
-          <FollowThroughCard userId={user?.id} coupleId={couple?.id} session={session} activityLabel="Thursday">
+          <FollowThroughCard userId={user?.id} coupleId={couple?.id} session={session} activityLabel="Thursday" currentSourceId={thursdaySourceId}>
             <ThursdayCard
               userId={user?.id}
               coupleId={couple?.id}
               userName={userName}
               partnerName={partnerName}
               session={session}
+              onSourceLoaded={setThursdaySourceId}
             />
           </FollowThroughCard>
         )}

@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 
-export default function ThursdayCard({ userId, coupleId, userName, partnerName, session }) {
+export default function ThursdayCard({ userId, coupleId, userName, partnerName, session, onSourceLoaded, onSealed }) {
   const [entry, setEntry] = useState(null)
   const [loading, setLoading] = useState(true)
   const [response, setResponse] = useState('')
@@ -21,6 +21,16 @@ export default function ThursdayCard({ userId, coupleId, userName, partnerName, 
       })
       .catch(() => setLoading(false))
   }, [userId, coupleId, session])
+
+  // Separate from the fetch above on purpose -- see matching comment in
+  // WednesdayCard.js. Same as Notice: no live reveal animation to protect,
+  // cron-driven and identical for both partners the instant this loads.
+  // Nothing to wait on; signal ready as soon as entry exists.
+  useEffect(() => {
+    if (!entry) return
+    onSourceLoaded?.(entry.id ?? null)
+    onSealed?.()
+  }, [entry, onSourceLoaded, onSealed])
 
   const handleSubmit = async () => {
     if (!response.trim() || submitting) return

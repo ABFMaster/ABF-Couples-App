@@ -1,12 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
 
-export default function WednesdayCard({ userId, coupleId, userName, partnerName, session }) {
+export default function WednesdayCard({ userId, coupleId, userName, partnerName, session, onSourceLoaded, onSealed }) {
   const [entry, setEntry] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notice, setNotice] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
 
   useEffect(() => {
     if (!userId || !coupleId || !session) return
@@ -22,18 +23,36 @@ export default function WednesdayCard({ userId, coupleId, userName, partnerName,
       .catch(() => setLoading(false))
   }, [userId, coupleId, session])
 
+  // Separate from the fetch above on purpose -- these callbacks shouldn't
+  // trigger a refetch if their reference changes (e.g. FollowThroughCard
+  // only starts passing a real onSealed once it knows Follow-Through is
+  // active for this source, which happens after this card has already
+  // loaded). Notice has no live reveal animation to protect the way Bet/
+  // Spark do -- it's either still pending or already fully resolved the
+  // instant this loads, cron-driven, identical for both partners. No
+  // "still reading" concern, so signal ready as soon as entry exists.
+  useEffect(() => {
+    if (!entry) return
+    onSourceLoaded?.(entry.id ?? null)
+    onSealed?.()
+  }, [entry, onSourceLoaded, onSealed])
+
   const handleSend = async () => {
     if (!notice.trim() || submitting) return
     setSubmitting(true)
+    setSubmitError(null)
     try {
-      await fetch('/api/wednesday/send', {
+      const res = await fetch('/api/wednesday/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
         body: JSON.stringify({ coupleId, notice, partnerName })
       })
+      if (!res.ok) throw new Error('Failed to send')
       setSubmitted(true)
       setEntry(prev => ({ ...prev, myNotice: notice, mySentAt: new Date().toISOString() }))
-    } catch {}
+    } catch {
+      setSubmitError("Couldn't send — try again.")
+    }
     setSubmitting(false)
   }
 
@@ -109,6 +128,7 @@ export default function WednesdayCard({ userId, coupleId, userName, partnerName,
             rows={3}
             style={{ width: '100%', padding: '10px 12px', border: '0.5px solid #E8E0D8', borderRadius: 10, fontSize: 14, resize: 'none', background: '#FFF8F4', color: '#1A1A1A', lineHeight: 1.5, boxSizing: 'border-box', fontFamily: 'Georgia, serif' }}
           />
+          {submitError && <p style={{ fontSize: 12, color: '#C4694F', margin: '6px 0 0' }}>{submitError}</p>}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
             <span style={{ fontSize: 12, color: '#B0A8A0' }}>Sends directly to {partnerName}</span>
             <button
