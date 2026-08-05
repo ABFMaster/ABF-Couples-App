@@ -209,8 +209,19 @@ function ReportFace({ data, onDone, onFlip, activityLabel, variant = 'standalone
 export default function FollowThroughCard({ userId, coupleId, session, children, activityLabel = 'Bet', currentSourceId = null }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [flipped, setFlipped] = useState(false)
   const [blendVisible, setBlendVisible] = useState(false)
+
+  // Standalone flip phases: 'resting' (report card alone, self-sized --
+  // today's activity isn't in the DOM at all) -> 'entering' (both faces
+  // mount at rotateY(0), one paint) -> 'flipping' (transitions to 180deg)
+  // -> 'settled' (drop the flip wrapper, render children alone). Today's
+  // activity card only ever exists in the DOM for the brief entering/
+  // flipping window around the actual transition, never just sitting there
+  // hidden the whole time -- that hidden sibling was the source of the
+  // sizing bugs, in both directions (it was inflating the resting card's
+  // height; left as the old design, it would do the same in reverse once
+  // resolved, with the now-hidden report face sitting behind the activity).
+  const [phase, setPhase] = useState('resting')
 
   const load = useCallback(async () => {
     if (!userId || !coupleId) { setLoading(false); return }
@@ -228,6 +239,23 @@ export default function FollowThroughCard({ userId, coupleId, session, children,
   }, [userId, coupleId, session])
 
   useEffect(() => { load() }, [load])
+
+  // Fresh row (a new id) always starts at rest, regardless of whatever
+  // phase a previous row had settled into.
+  useEffect(() => { setPhase('resting') }, [data?.id])
+
+  // entering -> flipping is a two-frame handoff: the flip wrapper needs one
+  // real paint at rotateY(0) before the transform change to 180deg so the
+  // CSS transition actually has something to animate from, rather than
+  // mounting already at its end state.
+  useEffect(() => {
+    if (phase !== 'entering') return
+    let raf2
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setPhase('flipping'))
+    })
+    return () => { cancelAnimationFrame(raf1); if (raf2) cancelAnimationFrame(raf2) }
+  }, [phase])
 
   // Same-source Follow-Throughs (generated from the activity currently in
   // `children` — e.g. tonight's Bet) don't swap the slot away; they blend
@@ -312,7 +340,7 @@ export default function FollowThroughCard({ userId, coupleId, session, children,
   }
 
   const handleFlip = async () => {
-    setFlipped(true)
+    setPhase('entering')
     fetch('/api/follow-through/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
@@ -357,6 +385,23 @@ export default function FollowThroughCard({ userId, coupleId, session, children,
     )
   }
 
+  // Resting: report card alone, in normal document flow — sized purely by
+  // its own content. Today's activity card (children) isn't mounted at all,
+  // so it can't influence this card's height regardless of how tall it is.
+  if (phase === 'resting') {
+    return <ReportFace data={data} onDone={handleReport} onFlip={handleFlip} activityLabel={activityLabel} variant="standalone" />
+  }
+
+  // Settled: the flip finished and this Follow-Through is done — drop the
+  // flip wrapper entirely and render children alone, also in normal flow.
+  // No lingering hidden report face to affect this card's sizing either.
+  if (phase === 'settled') {
+    return children
+  }
+
+  // entering / flipping: the brief transition window where both faces
+  // genuinely need to coexist for the animation to work. This is the only
+  // time today's activity card is mounted before it's actually showing.
   return (
     <div style={{ perspective: '1200px' }}>
       <div
@@ -364,20 +409,11 @@ export default function FollowThroughCard({ userId, coupleId, session, children,
           position: 'relative',
           transformStyle: 'preserve-3d',
           transition: 'transform 900ms cubic-bezier(0.22, 1, 0.36, 1)',
-          transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+          transform: phase === 'flipping' ? 'rotateY(180deg)' : 'rotateY(0deg)',
         }}
+        onTransitionEnd={(e) => { if (e.target === e.currentTarget && phase === 'flipping') setPhase('settled') }}
       >
-        {/* Invisible sizer, in normal document flow: this is what actually
-            establishes the container's height, from the report face alone.
-            Both real faces below are absolutely positioned (inset: 0) so
-            neither one contributes to layout sizing on its own — without
-            this, today's actual Bet card (the back face, considerably
-            taller once it has real content) was inflating the visible
-            card's height even while rotated away and hidden. */}
-        <div aria-hidden="true" style={{ visibility: 'hidden', pointerEvents: 'none' }}>
-          <ReportFace data={data} onDone={() => {}} onFlip={() => {}} activityLabel={activityLabel} variant="standalone" />
-        </div>
-        <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden' }}>
+        <div style={{ backfaceVisibility: 'hidden' }}>
           <ReportFace data={data} onDone={handleReport} onFlip={handleFlip} activityLabel={activityLabel} variant="standalone" />
         </div>
         <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
