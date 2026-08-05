@@ -251,22 +251,43 @@ export default function FollowThroughCard({ userId, coupleId, session, children,
 
   // Primary trigger: the user sealed their reaction/rating on the activity
   // above (BetCard's onSealed, wired below) — a real "I'm done looking"
-  // signal, better than any fixed clock. Fallback: reaction/rating pills are
-  // optional, so someone who never taps them still needs to see this
-  // eventually — a longer courtesy timer covers that case, less precisely
-  // timed but never permanently hidden.
+  // signal, better than any fixed clock.
   const [sealed, setSealed] = useState(false)
   const handleSealed = useCallback(() => setSealed(true), [])
 
+  // Secondary trigger: reaction/rating are optional, so plenty of people
+  // won't tap them at all. A fixed short timer for that case risks
+  // interrupting someone who's simply still reading — the same problem this
+  // whole redesign was meant to fix, just on a shorter clock. Backgrounding
+  // the tab and coming back (switching apps, locking the phone) is a much
+  // better "I stepped away and I'm done with this" signal than any guess at
+  // elapsed time, so use that instead.
+  const [returned, setReturned] = useState(false)
   useEffect(() => {
-    if (!isBlend) { setBlendVisible(false); setSealed(false); return }
-    if (sealed) {
+    if (!isBlend) return
+    let wasHidden = false
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        wasHidden = true
+      } else if (document.visibilityState === 'visible' && wasHidden) {
+        setReturned(true)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [isBlend])
+
+  useEffect(() => {
+    if (!isBlend) { setBlendVisible(false); setSealed(false); setReturned(false); return }
+    if (sealed || returned) {
       const t = setTimeout(() => setBlendVisible(true), 400)
       return () => clearTimeout(t)
     }
-    const fallback = setTimeout(() => setBlendVisible(true), 6000)
+    // True last resort — nobody is realistically still mid-read after this
+    // long with the tab continuously in the foreground the whole time.
+    const fallback = setTimeout(() => setBlendVisible(true), 45000)
     return () => clearTimeout(fallback)
-  }, [isBlend, sealed])
+  }, [isBlend, sealed, returned])
 
   const blendChildren = isBlend && isValidElement(children)
     ? cloneElement(children, { onSealed: handleSealed })
