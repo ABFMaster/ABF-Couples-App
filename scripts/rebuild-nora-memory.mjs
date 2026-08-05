@@ -46,14 +46,19 @@
 //   node --env-file=.env.local scripts/rebuild-nora-memory.mjs --preview
 //   node --env-file=.env.local scripts/rebuild-nora-memory.mjs --apply=scripts/output/<file>.json
 //
-// SCOPE NOTE: assessment_complete signals are intentionally excluded here,
-// matching a real gap found while building this script — ASSESSMENT_COMPLETE
-// is written to nora_signals and has a full prompt lens in
-// buildPersonNotesPrompt, but it's absent from INDIVIDUAL_NOTE_SIGNALS, so
-// it does NOT currently update user1_notes/user2_notes in production either.
-// This script reconstructs what production actually does today (minus the
-// AI-coach leak), not a redesign — that gap is logged separately in
-// PRODUCT_BACKLOG.md for a future, deliberate decision.
+// SCOPE NOTE: assessment_complete signals are intentionally excluded here.
+// Historically this matched a real production gap -- ASSESSMENT_COMPLETE was
+// written to nora_signals and had a full prompt lens in buildPersonNotesPrompt,
+// but was absent from INDIVIDUAL_NOTE_SIGNALS, so it never updated
+// user1_notes/user2_notes in production. That routing gap was fixed Aug 5
+// 2026 (ASSESSMENT_COMPLETE added to INDIVIDUAL_NOTE_SIGNALS in
+// lib/nora-memory.js) -- new assessment completions now synthesize into
+// notes going forward. This script's exclusion is now a deliberate scope
+// choice, not a mirror of a bug: any couple who completed the assessment
+// BEFORE the Aug 5 fix has that assessment sitting in nora_signals but never
+// synthesized into their notes. Whether to fold historical assessment
+// signals into a rebuild is a separate, deliberate call for whoever runs
+// this next -- not something this script should silently start doing.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { createClient } from '@supabase/supabase-js'
