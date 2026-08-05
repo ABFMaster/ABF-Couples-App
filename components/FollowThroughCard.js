@@ -367,7 +367,17 @@ export default function FollowThroughCard({ userId, coupleId, session, children,
           transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
         }}
       >
-        <div style={{ backfaceVisibility: 'hidden' }}>
+        {/* Invisible sizer, in normal document flow: this is what actually
+            establishes the container's height, from the report face alone.
+            Both real faces below are absolutely positioned (inset: 0) so
+            neither one contributes to layout sizing on its own — without
+            this, today's actual Bet card (the back face, considerably
+            taller once it has real content) was inflating the visible
+            card's height even while rotated away and hidden. */}
+        <div aria-hidden="true" style={{ visibility: 'hidden', pointerEvents: 'none' }}>
+          <ReportFace data={data} onDone={() => {}} onFlip={() => {}} activityLabel={activityLabel} variant="standalone" />
+        </div>
+        <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden' }}>
           <ReportFace data={data} onDone={handleReport} onFlip={handleFlip} activityLabel={activityLabel} variant="standalone" />
         </div>
         <div style={{ position: 'absolute', inset: 0, backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
