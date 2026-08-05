@@ -361,7 +361,13 @@ Respond in this exact JSON format with no other text:
         }
       }
     } catch (e) {
-      console.error('[game-room/challenge/generate] JSON parse failed:', raw)
+      // Log e.message (V8 includes the char position of the bad token) and
+      // JSON.stringify(raw) (escapes control/hidden characters so they're
+      // actually visible in the log, unlike printing raw directly) so a
+      // real failure is diagnosable without relying on copy/paste of raw text.
+      console.error('[game-room/challenge/generate] JSON parse failed:', e.message)
+      console.error('[game-room/challenge/generate] raw length:', raw.length)
+      console.error('[game-room/challenge/generate] raw (escaped):', JSON.stringify(raw))
       return Response.json({ error: 'Failed to parse Nora response' }, { status: 500 })
     }
 
