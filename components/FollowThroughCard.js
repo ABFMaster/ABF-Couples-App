@@ -10,7 +10,7 @@
 // is a wipe, not a reveal: it only ever means "this closed, here's today."
 // If there's nothing to show, this renders `children` directly, instantly.
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, cloneElement, isValidElement } from 'react'
 
 function ReportFace({ data, onDone, onFlip, activityLabel, variant = 'standalone' }) {
   const [note, setNote] = useState('')
@@ -249,14 +249,28 @@ export default function FollowThroughCard({ userId, coupleId, session, children,
 
   const isBlend = !!(data?.active && currentSourceId && data.sourceId === currentSourceId)
 
-  // Deliberate pause, then a slow drift into place — not a pop-in. Gives the
-  // user a beat to actually sit with the Bet reveal above before attention
-  // gets pulled toward the next thing.
+  // Primary trigger: the user sealed their reaction/rating on the activity
+  // above (BetCard's onSealed, wired below) — a real "I'm done looking"
+  // signal, better than any fixed clock. Fallback: reaction/rating pills are
+  // optional, so someone who never taps them still needs to see this
+  // eventually — a longer courtesy timer covers that case, less precisely
+  // timed but never permanently hidden.
+  const [sealed, setSealed] = useState(false)
+  const handleSealed = useCallback(() => setSealed(true), [])
+
   useEffect(() => {
-    if (!isBlend) { setBlendVisible(false); return }
-    const t = setTimeout(() => setBlendVisible(true), 1200)
-    return () => clearTimeout(t)
-  }, [isBlend])
+    if (!isBlend) { setBlendVisible(false); setSealed(false); return }
+    if (sealed) {
+      const t = setTimeout(() => setBlendVisible(true), 400)
+      return () => clearTimeout(t)
+    }
+    const fallback = setTimeout(() => setBlendVisible(true), 6000)
+    return () => clearTimeout(fallback)
+  }, [isBlend, sealed])
+
+  const blendChildren = isBlend && isValidElement(children)
+    ? cloneElement(children, { onSealed: handleSealed })
+    : children
 
   if (loading || !data?.active) {
     return children
@@ -308,7 +322,7 @@ export default function FollowThroughCard({ userId, coupleId, session, children,
     if (data.wildcard) {
       return (
         <>
-          {children}
+          {blendChildren}
           {followThroughBlock}
         </>
       )
@@ -316,7 +330,7 @@ export default function FollowThroughCard({ userId, coupleId, session, children,
 
     return (
       <div style={{ background: '#1C1510', borderRadius: '20px', overflow: 'hidden' }}>
-        {children}
+        {blendChildren}
         {followThroughBlock}
       </div>
     )

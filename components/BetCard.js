@@ -46,7 +46,7 @@ function CardBack({ label }) {
   )
 }
 
-export default function BetCard({ bet, mine, theirs, partnerId, partnerName, userId, coupleId }) {
+export default function BetCard({ bet, mine, theirs, partnerId, partnerName, userId, coupleId, onSealed }) {
   const [localMine, setLocalMine] = useState(mine)
   const [localTheirs, setLocalTheirs] = useState(theirs)
   const [actualText, setActualText] = useState('')
@@ -71,6 +71,14 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
   const activeReaction = localMine?.reaction_icon || selectedReaction
   const activeRating = localMine?.question_rating || selectedRating
   const isSealed = !!(activeReaction && activeRating)
+
+  // Sealing both pills is the real "I'm done looking at this" signal --
+  // a much better cue for a wrapping component (Follow-Through) to act on
+  // than any fixed clock. Optional chaining: this card renders fine with no
+  // listener when nothing's wrapping it.
+  useEffect(() => {
+    if (isSealed) onSealed?.()
+  }, [isSealed, onSealed])
 
   // Pre-set all reveal states only if THIS user has personally already
   // triggered their reveal before (mine.reveal_seen_at, set the first time
