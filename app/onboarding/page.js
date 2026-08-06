@@ -174,6 +174,24 @@ function OnboardingFlow() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Fixed Aug 5 2026 -- this used to check ONLY whether a completed
+  // assessment existed, and redirect straight to /dashboard the instant it
+  // did. That meant anyone who took the primary "Start assessment ->" path
+  // at step 2 permanently skipped step 3 (hobbies/date_preferences/
+  // preferred_checkin_time) with zero recovery path anywhere in the app --
+  // completing the assessment redirects to /assessment/results, which
+  // always continues to /dashboard, never back through onboarding, and any
+  // future /onboarding revisit saw the completed assessment and redirected
+  // straight back to /dashboard again. Confirmed there is no other editable
+  // UI for these fields anywhere in the live app (docs/DATABASE.md
+  // documents an app/settings/page.js that reads/writes them -- it does
+  // not exist in this repo and never has, per git history).
+  // Fix: treat "has completed assessment" and "has completed step 3" as
+  // two independent signals, and only skip to /dashboard once step 3 is
+  // genuinely done. Step 3 completion is tracked via user_profiles.
+  // completed_at -- a column that already existed in the schema but had
+  // zero live writers/readers anywhere in the app (confirmed dead before
+  // this fix) -- set now by handleStep3's upsert. No migration needed.
   const determineStep = async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser()
@@ -190,34 +208,20 @@ function OnboardingFlow() {
         return
       }
 
-      const { data: assessment } = await supabase
-        .from('relationship_assessments')
-        .select('id')
-        .eq('user_id', authUser.id)
-        .not('completed_at', 'is', null)
-        .limit(1)
-        .maybeSingle()
-
-      if (assessment) {
-        router.push('/dashboard')
-        return
-      }
-
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('display_name, partner_display_name, hobbies, date_preferences, preferred_checkin_time')
-        .eq('user_id', authUser.id)
-        .maybeSingle()
-
-      if (profile?.display_name) {
-        setDisplayName(profile.display_name)
-        setPartnerDisplayName(profile.partner_display_name || '')
-        setHobbies(profile.hobbies || [])
-        setDatePrefs(profile.date_preferences || [])
-        setCheckinTime(profile.preferred_checkin_time || null)
-        setStep(2)
-        return
-      }
+      const [{ data: assessment }, { data: profile }] = await Promise.all([
+        supabase
+          .from('relationship_assessments')
+          .select('id')
+          .eq('user_id', authUser.id)
+          .not('completed_at', 'is', null)
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('user_profiles')
+          .select('display_name, partner_display_name, hobbies, date_preferences, preferred_checkin_time, completed_at')
+          .eq('user_id', authUser.id)
+          .maybeSingle(),
+      ])
 
       if (profile) {
         setHobbies(profile.hobbies || [])
@@ -225,7 +229,31 @@ function OnboardingFlow() {
         setCheckinTime(profile.preferred_checkin_time || null)
       }
 
-      setStep(1)
+      if (!profile?.display_name) {
+        setStep(1)
+        return
+      }
+
+      setDisplayName(profile.display_name)
+      setPartnerDisplayName(profile.partner_display_name || '')
+
+      // Step 3 genuinely done -- the only remaining step that has no other
+      // recovery path in the app. Safe to consider onboarding's required
+      // portion complete regardless of assessment/pairing status (both of
+      // those have their own always-available entry points: /profile/
+      // assessment and /connect + dashboard's "Get your connect code").
+      if (profile.completed_at) {
+        router.push('/dashboard')
+        return
+      }
+
+      // Preferences not yet done. If they also haven't done the assessment,
+      // show the assessment prompt first (the original intended order) --
+      // its own "I'll do this later" link still reaches step 3 directly.
+      // If they HAVE completed the assessment (the exact bug case), skip
+      // straight to step 3 rather than re-prompting an assessment they
+      // already finished.
+      setStep(assessment ? 3 : 2)
     } catch (err) {
       console.error('Error determining onboarding step:', err)
       setStep(1)
@@ -322,6 +350,12 @@ function OnboardingFlow() {
           hobbies,
           date_preferences: datePrefs,
           preferred_checkin_time: checkinTime,
+          // Marks step 3 as genuinely finished -- see the long comment on
+          // determineStep() above for why this needed a real completion
+          // signal rather than inferring from field values (an empty
+          // hobbies/date_preferences selection is valid and indistinguishable
+          // from "never visited step 3" without one).
+          completed_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }, { onConflict: 'user_id' })
 
