@@ -467,7 +467,7 @@ function OnboardingFlow() {
                 />
               </div>
               <div>
-                <label style={labelStyle}>Partner's name <span style={{ fontWeight: 400, color: '#A09080' }}>(optional)</span></label>
+                <label style={labelStyle}>Partner&apos;s name <span style={{ fontWeight: 400, color: '#A09080' }}>(optional)</span></label>
                 <input
                   type="text"
                   value={partnerDisplayName}
@@ -522,7 +522,7 @@ function OnboardingFlow() {
               onClick={() => setStep(3)}
               style={{ width: '100%', marginTop: '12px', padding: '12px', background: 'transparent', color: '#A09080', fontSize: '14px', border: 'none', cursor: 'pointer' }}
             >
-              I'll do this later
+              I&apos;ll do this later
             </button>
           </div>
         )}

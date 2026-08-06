@@ -103,7 +103,7 @@ function NoraSuggestionCard({ noraText, suggestion, onSelect, onNext, submitting
         {suggestion.description && <p style={{ fontSize: '13px', color: '#7A8C6E', lineHeight: 1.5, marginTop: '6px', marginBottom: 0 }}>{suggestion.description}</p>}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <PrimaryBtn onClick={() => onSelect(suggestion)} disabled={submitting}>We'll try this one</PrimaryBtn>
+        <PrimaryBtn onClick={() => onSelect(suggestion)} disabled={submitting}>We&apos;ll try this one</PrimaryBtn>
         <GhostBtn onClick={onNext}>Show me another</GhostBtn>
       </div>
     </div>
@@ -386,8 +386,8 @@ export default function RitualPage() {
                   <div style={{ marginTop: '16px' }}>
                     <NoraBlock text={`Rituals only work when you both want them. Take a look at what ${partnerName} is suggesting.`} />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <PrimaryBtn onClick={() => handleConfirm(r.id, 'confirm')} disabled={submitting}>I'm in — add it</PrimaryBtn>
-                      <GhostBtn onClick={() => handleConfirm(r.id, 'discuss')}>Let's talk about it</GhostBtn>
+                      <PrimaryBtn onClick={() => handleConfirm(r.id, 'confirm')} disabled={submitting}>I&apos;m in — add it</PrimaryBtn>
+                      <GhostBtn onClick={() => handleConfirm(r.id, 'discuss')}>Let&apos;s talk about it</GhostBtn>
                     </div>
                   </div>
                 )}

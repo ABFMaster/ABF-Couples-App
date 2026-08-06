@@ -457,7 +457,7 @@ export default function Dashboard() {
         {/* SECTION 2 — TODAY'S FEATURE CARD */}
         {showSpark && !spark && (
           <div style={{ margin: '0 16px 14px', padding: '20px', background: 'white', borderRadius: '18px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)', textAlign: 'center' }}>
-            <p style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic', color: '#C4AA87', fontSize: '16px' }}>Loading today's Spark...</p>
+            <p style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic', color: '#C4AA87', fontSize: '16px' }}>Loading today&apos;s Spark...</p>
           </div>
         )}
         {showSpark && spark && (
@@ -479,7 +479,7 @@ export default function Dashboard() {
         )}
         {showBet && !bet && (
           <div style={{ margin: '0 16px 14px', padding: '20px', background: 'white', borderRadius: '18px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)', textAlign: 'center' }}>
-            <p style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic', color: '#C4AA87', fontSize: '16px' }}>Loading today's Bet...</p>
+            <p style={{ fontFamily: 'Cormorant Garamond, serif', fontStyle: 'italic', color: '#C4AA87', fontSize: '16px' }}>Loading today&apos;s Bet...</p>
           </div>
         )}
         {showBet && bet && (
@@ -681,7 +681,7 @@ export default function Dashboard() {
                 <button
                   onClick={() => { setShowPhotoSection(false) }}
                   style={{ width: '100%', background: 'transparent', border: 'none', padding: '8px', fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', cursor: 'pointer', marginTop: 4 }}>
-                  I'll add photos later
+                  I&apos;ll add photos later
                 </button>
               )}
             </div>
@@ -710,7 +710,7 @@ export default function Dashboard() {
                 setShowCatchupCard(false)
               }}
               style={{ width: '100%', background: 'transparent', border: 'none', padding: '8px', fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', cursor: 'pointer' }}>
-              I'll do this later
+              I&apos;ll do this later
             </button>
           </div>
         )}
@@ -791,7 +791,7 @@ export default function Dashboard() {
               <button
                 onClick={() => setShowDatesModal(false)}
                 style={{ width: '100%', background: 'transparent', border: 'none', padding: '8px', fontSize: 12, fontFamily: 'DM Sans, sans-serif', color: '#8B7355', cursor: 'pointer' }}>
-                I'll add these later
+                I&apos;ll add these later
               </button>
             </div>
           </div>

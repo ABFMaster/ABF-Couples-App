@@ -553,7 +553,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <PrimaryBtn onClick={() => handleConfirmPending('confirm')} disabled={submitting}>
-            I'm in — add it
+            I&apos;m in — add it
           </PrimaryBtn>
           <GhostBtn onClick={() => handleConfirmPending('discuss')}>
             Let's talk about it
@@ -662,7 +662,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
             Add to our library
           </PrimaryBtn>
           <GhostBtn onClick={() => setSuggestionMode(true)}>
-            We don't have one yet — suggest something
+            We don&apos;t have one yet — suggest something
           </GhostBtn>
         </div>
       </div>
@@ -749,7 +749,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
             <NoraBlock text={checkinReaction} />
           ) : (
             <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center' }}>
-              That's ok. The ritual is still there when you're ready.
+              That&apos;s ok. The ritual is still there when you&apos;re ready.
             </p>
           )}
         </div>
