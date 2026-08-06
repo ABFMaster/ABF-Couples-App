@@ -829,7 +829,7 @@ export default function Dashboard() {
                   Every relationship has a story. Add your first memory — your first date, a trip, anything that matters.
                 </p>
                 <button
-                  onClick={() => router.push('/timeline')}
+                  onClick={() => router.push('/us/add')}
                   className="text-[14px] font-semibold text-[#C4714A]"
                 >
                   Add a memory →
