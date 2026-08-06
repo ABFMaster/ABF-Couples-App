@@ -63,7 +63,12 @@ export async function POST(request) {
       .maybeSingle()
 
     if (couple) {
-      updateNoraMemory({ coupleId: couple.id, userId, signalType: SIGNAL_TYPES.FLIRT_SENT, inputData: { profile, conversation: messages } }).catch(() => {})
+      // Was SIGNAL_TYPES.FLIRT_SENT — structurally wrong signal type. This is
+      // building a flirt-style profile via Q&A, not sending an actual flirt;
+      // FLIRT_SENT's lens ("what the choice of flirt reveals about how they
+      // express desire in practice") doesn't fit this content. Fixed Aug 5
+      // 2026 by adding a dedicated FLIRT_PROFILE_BUILT signal type.
+      updateNoraMemory({ coupleId: couple.id, userId, signalType: SIGNAL_TYPES.FLIRT_PROFILE_BUILT, inputData: { profile, conversation: messages } }).catch(() => {})
     }
 
     return NextResponse.json({ success: true })
