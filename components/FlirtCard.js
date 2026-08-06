@@ -30,6 +30,8 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   const [timelineFilter, setTimelineFilter] = useState('all')
   const [selectedMemory, setSelectedMemory] = useState(null)
   const [metadata, setMetadata] = useState(null)
+  const [photoUploading, setPhotoUploading] = useState(false)
+  const [photoError, setPhotoError] = useState('')
   const fileInputRef = useRef(null)
   const spotifyTimeout = useRef(null)
   const gifTimeout = useRef(null)
@@ -128,10 +130,43 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
       setSpotifyResults([])
       setGifQuery('')
       setGifResults([])
+      setPhotoError('')
       setView('home')
       await fetchInbox()
     } catch {}
     setSending(false)
+  }
+
+  // Fixed Aug 6 2026 — Matt's report: "I tried to send a photo, but get no
+  // preview before or after sending." Root cause (before-sending half): the
+  // inline upload handler had zero error handling and no loading state —
+  // if the Supabase Storage upload failed (network blip, size limit, RLS)
+  // it threw silently, content never got set, and the button just sat
+  // there looking unchanged with no explanation. Extracted into a real
+  // handler with try/catch, an uploading indicator, and a visible error
+  // message. Also names the file with its real extension now (cheap
+  // correctness fix — Storage doesn't strictly require it since it serves
+  // Content-Type from the uploaded blob, but an extensionless path is a
+  // needless landmine for anything downstream that does infer type from
+  // the URL).
+  const handlePhotoUpload = async (file) => {
+    if (!file) return
+    setPhotoUploading(true)
+    setPhotoError('')
+    try {
+      const { createClient } = await import('@supabase/supabase-js')
+      const sc = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+      const ext = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
+      const path = `flirts/${userId}/${Date.now()}.${ext}`
+      const { error: uploadError } = await sc.storage.from('photos').upload(path, file, { upsert: true, contentType: file.type || undefined })
+      if (uploadError) throw uploadError
+      const { data } = sc.storage.from('photos').getPublicUrl(path)
+      setContent(data.publicUrl)
+    } catch (err) {
+      console.error('[FlirtCard] photo upload error:', err)
+      setPhotoError("Couldn't upload that photo — try again?")
+    }
+    setPhotoUploading(false)
   }
 
   const startHold = () => {
@@ -436,7 +471,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                       <div style={{ padding: '8px 10px', borderBottom: '0.5px solid #ddd0bc', display: 'flex', gap: 0, flexWrap: 'wrap' }}>
                         {['song','word','photo','gif','memory'].map((t,i,arr) => (
                           <span key={t} style={{ display: 'flex', alignItems: 'center' }}>
-                            <button onClick={() => setDropType(t)} style={{ background: 'none', border: 'none', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: dropType === t ? '#c4694f' : '#6b5a4a', cursor: 'pointer', padding: 0, fontFamily: 'system-ui', textDecoration: dropType === t ? 'underline' : 'none', textUnderlineOffset: 2 }}>{t.toUpperCase()}</button>
+                            <button onClick={() => { setDropType(t); setPhotoError(''); }} style={{ background: 'none', border: 'none', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: dropType === t ? '#c4694f' : '#6b5a4a', cursor: 'pointer', padding: 0, fontFamily: 'system-ui', textDecoration: dropType === t ? 'underline' : 'none', textUnderlineOffset: 2 }}>{t.toUpperCase()}</button>
                             {i < arr.length - 1 && <span style={{ color: '#c8b8a0', fontSize: 10, margin: '0 5px' }}>·</span>}
                           </span>
                         ))}
@@ -463,8 +498,16 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                           )}
                           {dropType === 'photo' && (
                             <div style={{ position: 'relative', zIndex: 1 }}>
-                              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={async e => { const file = e.target.files[0]; if (!file) return; const { createClient } = await import('@supabase/supabase-js'); const sc = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY); const path = `flirts/${userId}/${Date.now()}`; await sc.storage.from('photos').upload(path, file, { upsert: true }); const { data } = sc.storage.from('photos').getPublicUrl(path); setContent(data.publicUrl); }} />
-                              {!content ? <button onClick={() => fileInputRef.current?.click()} style={{ background: 'none', border: '0.5px solid #d4c4a8', borderRadius: 6, padding: '6px 12px', fontSize: 11, color: '#8b7355', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>tap to add photo</button> : <img src={content} style={{ maxWidth: '100%', maxHeight: 70, borderRadius: 4 }} />}
+                              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handlePhotoUpload(e.target.files[0])} />
+                              {!content && !photoUploading && <button onClick={() => fileInputRef.current?.click()} style={{ background: 'none', border: '0.5px solid #d4c4a8', borderRadius: 6, padding: '6px 12px', fontSize: 11, color: '#8b7355', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>tap to add photo</button>}
+                              {photoUploading && <div style={{ fontSize: 11, color: '#8b7355', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>uploading...</div>}
+                              {content && !photoUploading && <img src={content} style={{ maxWidth: '100%', maxHeight: 70, borderRadius: 4 }} />}
+                              {photoError && (
+                                <div style={{ marginTop: 4 }}>
+                                  <div style={{ fontSize: 10, color: '#C4694F', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>{photoError}</div>
+                                  <button onClick={() => fileInputRef.current?.click()} style={{ marginTop: 2, background: 'none', border: '0.5px solid #d4c4a8', borderRadius: 6, padding: '4px 10px', fontSize: 10, color: '#8b7355', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>try again</button>
+                                </div>
+                              )}
                             </div>
                           )}
                           {dropType === 'memory' && (
@@ -487,7 +530,18 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                             <div style={{ fontSize: 7, fontWeight: 700, letterSpacing: 2, color: '#8b7355', fontFamily: 'system-ui', marginBottom: 2 }}>To</div>
                             <div style={{ fontFamily: 'Georgia, serif', fontSize: 15, color: '#2a2015' }}>{partnerName}</div>
                           </div>
-                          {sent.length > 0 && <button onClick={() => { setCardFlipped(false); setView('sent') }} style={{ marginTop: 'auto', fontSize: 8, color: '#b0a090', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic', alignSelf: 'flex-end' }}>sent →</button>}
+                          {/* Fixed Aug 6 2026 — Matt's report: "no way to see what your
+                              partner sent you... I can see a list of what I sent, but no
+                              list of what was sent to me." Root cause: view='stack' (the
+                              received-flirt reader) was only reachable via the 'open
+                              flirt' CTA on the home face, which only appears while
+                              hasUnseen is true. Once everything's been opened, there was
+                              no way back in — unlike 'sent', which already had this exact
+                              button. Mirrors it. */}
+                          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                            {received.length > 0 && <button onClick={() => { setCardFlipped(false); setView('received') }} style={{ fontSize: 8, color: '#b0a090', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>received →</button>}
+                            {sent.length > 0 && <button onClick={() => { setCardFlipped(false); setView('sent') }} style={{ fontSize: 8, color: '#b0a090', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>sent →</button>}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -524,12 +578,17 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
               <div style={{ flex: 1, padding: '8px 10px', fontFamily: 'Georgia, serif', fontSize: 14, color: '#2a2015', lineHeight: 1.65, backgroundImage: 'repeating-linear-gradient(transparent, transparent 21px, #d8ccba 21px, #d8ccba 22px)', backgroundSize: '100% 22px', minHeight: 72 }}>
                 {renderFlirtContent(current)}
               </div>
-              {/* Address col with ABF stamp */}
-              <div style={{ width: 82, flexShrink: 0, borderLeft: '0.5px solid #c8b8a0', padding: '8px 7px', position: 'relative', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ fontSize: 6, fontWeight: 700, letterSpacing: 2, color: '#b0a090', fontFamily: 'system-ui', marginBottom: 2 }}>To</div>
-                <div style={{ fontFamily: 'Georgia, serif', fontSize: 13, color: '#2a2015' }}>{userName}</div>
-                {/* ABF coral stamp */}
-                <svg style={{ position: 'absolute', top: 6, right: 6 }} width="44" height="52" viewBox="0 0 44 52" fill="none">
+              {/* Address col with ABF stamp — fixed Aug 6 2026, Matt's report:
+                  "the stamp is still in the wrong spot." Root cause: this
+                  SVG was position:absolute (top:6/right:6) inside an 82px-
+                  wide column that ALSO held the To/name text in normal flow
+                  at the same top region — the two occupied overlapping
+                  space, and the stamp's opaque background painted over part
+                  of the name. Moved the stamp into normal flow, right-
+                  aligned, above the name, so they can never collide
+                  regardless of how long a name is. */}
+              <div style={{ width: 82, flexShrink: 0, borderLeft: '0.5px solid #c8b8a0', padding: '8px 7px', display: 'flex', flexDirection: 'column' }}>
+                <svg style={{ alignSelf: 'flex-end', marginBottom: 6 }} width="40" height="47" viewBox="0 0 44 52" fill="none">
                   <circle cx="4" cy="5" r="4" fill="#f5f0e4"/>
                   <circle cx="11" cy="1" r="4" fill="#f5f0e4"/>
                   <circle cx="22" cy="1" r="4" fill="#f5f0e4"/>
@@ -559,6 +618,8 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                   <text x="22" y="35" textAnchor="middle" fontSize="5" fontFamily="system-ui" fontWeight="700" letterSpacing="1.5" fill="rgba(253,248,244,0.85)">ABF</text>
                   <text x="22" y="40" textAnchor="middle" fontSize="3.5" fontFamily="system-ui" fill="rgba(253,248,244,0.55)">2026</text>
                 </svg>
+                <div style={{ fontSize: 6, fontWeight: 700, letterSpacing: 2, color: '#b0a090', fontFamily: 'system-ui', marginBottom: 2 }}>To</div>
+                <div style={{ fontFamily: 'Georgia, serif', fontSize: 13, color: '#2a2015' }}>{userName}</div>
               </div>
             </div>
             {/* Tap reactions — replacing hold mechanic */}
@@ -589,6 +650,44 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
     )
   }
 
+  // RECEIVED STATE — added Aug 6 2026 alongside the 'received →' button
+  // above, giving received flirts the same persistent, always-reachable
+  // list view 'sent' already had. Tapping a row opens it in the existing
+  // one-at-a-time stack reader (reactions, nav, etc. all unchanged).
+  if (view === 'received') {
+    return (
+      <div style={{ margin: '0 16px 16px' }}>
+        <style>{POSTCARD_STYLES}</style>
+        <div style={{ background: '#f5f0e4', border: '0.5px solid #c8b8a0', borderRadius: 6, overflow: 'hidden' }}>
+          <div style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '0.5px solid #ddd0bc' }}>
+            <span style={{ fontSize: 7, fontWeight: 700, letterSpacing: 3, color: '#c8b8a0', fontFamily: 'system-ui' }}>RECEIVED</span>
+            <button onClick={() => { setCardFlipped(false); setView('home') }} style={{ background: 'none', border: 'none', fontSize: 18, color: '#b0a8a0', cursor: 'pointer', padding: 0, lineHeight: 1 }}>×</button>
+          </div>
+          {received.length === 0 && (
+            <div style={{ padding: '20px 12px', fontFamily: 'Georgia, serif', fontSize: 13, color: '#8b7355', fontStyle: 'italic', textAlign: 'center' }}>Nothing yet — {partnerName} hasn't sent one.</div>
+          )}
+          {received.map((f, i) => (
+            <div key={f.id} onClick={() => { setCurrentIndex(i); setView('stack') }} style={{ padding: '10px 12px', borderBottom: '0.5px solid #EEE8DC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, cursor: 'pointer' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 1.5, color: '#C9A96E', textTransform: 'uppercase', marginBottom: 2 }}>{f.type}</div>
+                <div style={{ fontSize: 13, color: '#2A2420', fontFamily: f.type === 'word' || f.type === 'memory' ? 'Georgia, serif' : 'system-ui', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {f.type === 'song' ? (f.metadata?.track_name || 'Song') : f.type === 'found' ? (f.metadata?.title || f.metadata?.domain || 'Link') : f.type === 'photo' ? 'Photo' : f.type === 'gif' ? 'GIF' : f.content?.substring(0, 60)}
+                </div>
+                <div style={{ fontSize: 10, color: '#B0A8A0', fontFamily: 'Georgia, serif', fontStyle: 'italic', marginTop: 2 }}>{formatTimeAgo(f.created_at)}</div>
+              </div>
+              {(f.type === 'photo' || f.type === 'gif') && (
+                <img src={f.content} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />
+              )}
+              {!f.opened_at && (
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#c4694f', flexShrink: 0 }} />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
   // SENT STATE
   if (view === 'sent') {
     return (
@@ -601,6 +700,13 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
           </div>
           {sent.map(f => (
             <div key={f.id} style={{ padding: '10px 12px', borderBottom: '0.5px solid #EEE8DC', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              {/* Fixed Aug 6 2026 — Matt's report: "no preview... after
+                  sending." This row used to render the literal text "Photo"/
+                  "GIF" for those types instead of an actual thumbnail, unlike
+                  the received stack view's renderFlirtContent(). */}
+              {(f.type === 'photo' || f.type === 'gif') && (
+                <img src={f.content} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />
+              )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 1.5, color: '#C9A96E', textTransform: 'uppercase', marginBottom: 2 }}>{f.type}</div>
                 <div style={{ fontSize: 13, color: '#2A2420', fontFamily: f.type === 'word' || f.type === 'memory' ? 'Georgia, serif' : 'system-ui', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
