@@ -235,37 +235,10 @@ export default function MePage() {
     }
   }
 
-  const uploadProfilePhoto = async (file) => {
-    if (!file || !user?.id) return
-    try {
-      const path = `relationship/${coupleId || user.id}/${Date.now()}_${file.name.replace(/\s/g, '_')}`
-      const { data } = await supabase.storage.from('photos').upload(path, file, { upsert: true })
-      const { data: urlData } = supabase.storage.from('photos').getPublicUrl(path)
-      const publicUrl = urlData.publicUrl
-      if (session?.access_token) {
-        fetch('/api/timeline/event', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-          body: JSON.stringify({
-            coupleId: coupleId || null,
-            userId: user.id,
-            title: (() => {
-              const cleaned = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ').trim()
-              const isGeneric = /^IMG\s*\d+$/i.test(cleaned) || /^[A-F0-9\s]{10,}$/i.test(cleaned) || cleaned.length < 3
-              return isGeneric ? 'A moment from our story' : cleaned
-            })(),
-            eventType: 'custom',
-            eventDate: new Date().toISOString().split('T')[0] + 'T12:00:00',
-            photoUrls: [publicUrl],
-          })
-        }).catch(() => {})
-      }
-      setRelationshipPhotos(prev => [...prev, publicUrl])
-    } catch(e) {
-      console.error('Profile photo upload error:', e)
-    }
-  }
-
+  // Note: an earlier single-file uploadProfilePhoto() helper lived here —
+  // confirmed zero callers (superseded by handleProfilePhotoFiles below,
+  // which adds EXIF date detection and the multi-photo naming/enrichment
+  // sheet). Removed as dead code during the Aug 5 2026 audit.
   const handleProfilePhotoFiles = async (files) => {
     if (!files?.length) return
     const fileArray = Array.from(files)
