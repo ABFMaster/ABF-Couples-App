@@ -340,12 +340,31 @@ Respond in this exact JSON format with no other text:
 }`
     }
 
-    const response = await noraGenerate(userPrompt, { route: 'game-room/challenge/generate', system: systemPrompt, maxTokens: 600 })
+    // ROOT CAUSE FIX — Aug 6 2026. Matt's recurring "Something went wrong
+    // loading the challenge" report is specific to Memory Test and never
+    // the other challenge types. Memory is the only branch whose expected
+    // JSON has 5 separate free-text fields (memory_question, memory_answer,
+    // hint_1, hint_2, hint_3) instead of 1-2 — at the shared maxTokens: 600
+    // budget every other type uses comfortably, Memory has far less margin
+    // before a verbose response gets cut off mid-JSON by the token limit,
+    // which JSON.parse below then throws on. Give memory more headroom.
+    const response = await noraGenerate(userPrompt, {
+      route: 'game-room/challenge/generate',
+      system: systemPrompt,
+      maxTokens: challengeType === 'memory' ? 1100 : 600,
+    })
 
     let parsed
     const raw = response.replace(/```json|```/g, '').trim()
     try {
-      parsed = JSON.parse(raw)
+      // Nora is instructed to respond with JSON only, but on longer/more
+      // complex prompts (memory especially) she can still preface the JSON
+      // with a stray sentence despite that instruction. Extract the first
+      // {...} block rather than assuming the whole trimmed string parses on
+      // its own — makes parsing robust to stray preamble without needing to
+      // guess at exact wording to suppress it.
+      const jsonMatch = raw.match(/\{[\s\S]*\}/)
+      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : raw)
       // Validate: question must be about answerHolderName, not guesserName
       // If Nora wrote about the wrong person, fall back to the library prompt
       if (parsed?.memory_question && challengeType === 'memory') {

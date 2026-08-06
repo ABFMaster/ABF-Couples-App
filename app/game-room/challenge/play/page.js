@@ -642,7 +642,13 @@ function ChallengePlayContent() {
       }
 
       setPhase('challenge')
-    } catch {
+    } catch (err) {
+      // Was a bare `catch {}` — the real cause (network failure, a 500 with
+      // a specific message from the server, a parse error) never reached
+      // any log, client or server, making every "Something went wrong"
+      // report undiagnosable without a live repro. Log it now so the next
+      // occurrence is traceable.
+      console.error('[challenge/play] generateRound failed:', err)
       setError('Something went wrong loading the challenge.')
       setPhase('error')
     }
@@ -669,7 +675,8 @@ function ChallengePlayContent() {
 
       setNoraVerdict(data.noraVerdict)
       setPhase('verdict')
-    } catch {
+    } catch (err) {
+      console.error('[challenge/play] handleSubmit failed:', err)
       setError('Something went wrong submitting.')
       setSubmitted(false)
     } finally {
@@ -707,7 +714,8 @@ function ChallengePlayContent() {
         setCurrentRound(data.nextRound)
         generateRound(data.nextRound)
       }
-    } catch {
+    } catch (err) {
+      console.error('[challenge/play] handleNext failed:', err)
       setError('Something went wrong advancing to the next round.')
     }
   }
