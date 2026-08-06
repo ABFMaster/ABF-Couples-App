@@ -756,30 +756,54 @@ async function processWednesdayReveal(couple, user1, user2) {
     const hasUser1 = !!entry.user1_notice
     const hasUser2 = !!entry.user2_notice
 
-    let synthesis = ''
+    // ROOT CAUSE FIX — Aug 6 2026. Matt's live repro: both partners submitted
+    // after 7pm (past this reveal cron's window) but before the 10pm cutoff.
+    // Both submissions were captured, but no Nora commentary and no
+    // Follow-Through ever appeared. Cause: this function used to run the
+    // block below UNCONDITIONALLY — even with zero or one submission in
+    // hand, it still stamped the entry `status: 'revealed'` (with partial or
+    // empty synthesis, and Follow-Through skipped since that needs both).
+    // That status flip is what processWednesdayCutoff (the 10pm catch-all,
+    // below) gates on via `.eq('status', 'pending')` — once this function
+    // burned that status at 7pm, the entry was permanently invisible to the
+    // cutoff cron for the rest of the night, even after the remaining
+    // partner(s) went on to submit for real before 10pm. wednesday/send
+    // itself never blocked those late writes (it only rejects on 'revealed'
+    // status when it's also past Wednesday/10pm), so the data was captured —
+    // it just had nowhere left to be revealed from, and no chance left to
+    // generate Follow-Through.
+    //
+    // Fix: this 7pm cron's real job is an EARLY reveal for couples who
+    // finished on time — not a final pass. Only proceed if BOTH partners
+    // have already submitted by now; otherwise leave the entry 'pending'
+    // and let processWednesdayCutoff's already-correct partial/empty/full
+    // handling do the one and only real reveal at 10pm instead.
+    if (!hasUser1 || !hasUser2) return
 
-    if (hasUser1 || hasUser2) {
-      const synthesisPrompt = [
-        `You are Nora. Two partners sent each other a specific appreciation today — something they noticed but hadn't said out loud. Read what they sent and find the thread.`,
-        hasUser1 ? `${user1Name} sent to ${user2Name}: "${entry.user1_notice}"` : `${user1Name} did not send a notice today.`,
-        hasUser2 ? `${user2Name} sent to ${user1Name}: "${entry.user2_notice}"` : `${user2Name} did not send a notice today.`,
-        `Write 2 sentences maximum. Find what the two notices reveal about how this couple sees each other — not a summary, a connection. End with one warm observation, not a question. This is a moment of appreciation — honor it without over-analyzing it.`
-      ].filter(Boolean).join('\n\n')
+    // Both hasUser1 and hasUser2 are guaranteed true past the early return
+    // above, so this is always the full two-sided prompt now — no partial-
+    // submission branch needed here anymore (that case is processWednesdayCutoff's
+    // job at 10pm instead).
+    const synthesisPrompt = [
+      `You are Nora. Two partners sent each other a specific appreciation today — something they noticed but hadn't said out loud. Read what they sent and find the thread.`,
+      `${user1Name} sent to ${user2Name}: "${entry.user1_notice}"`,
+      `${user2Name} sent to ${user1Name}: "${entry.user2_notice}"`,
+      `Write 2 sentences maximum. Find what the two notices reveal about how this couple sees each other — not a summary, a connection. End with one warm observation, not a question. This is a moment of appreciation — honor it without over-analyzing it.`
+    ].join('\n\n')
 
-      const systemPrompt = `You are Nora — warm, specific, brief. Two people just said something kind and true about each other. Your job is to hold that moment and name what it reveals. Never generic. Never therapeutic. Just what you actually see.`
+    const systemPrompt = `You are Nora — warm, specific, brief. Two people just said something kind and true about each other. Your job is to hold that moment and name what it reveals. Never generic. Never therapeutic. Just what you actually see.`
 
-      synthesis = await noraChat(
-        [{ role: 'user', content: synthesisPrompt }],
-        { route: 'wednesday/reveal', system: systemPrompt, maxTokens: 150 }
-      ) || ''
-    }
+    const synthesis = await noraChat(
+      [{ role: 'user', content: synthesisPrompt }],
+      { route: 'wednesday/reveal', system: systemPrompt, maxTokens: 150 }
+    ) || ''
 
     await supabase
       .from('wednesday_notices')
       .update({ nora_synthesis: synthesis.trim(), status: 'revealed' })
       .eq('id', entry.id)
 
-    // Send evening reveal pushes
+    // Send evening reveal pushes.
     await sendPush(user1.user_id, 'The Notice', 'Nora noticed something in what you both sent today.', '/dashboard', 'wednesday/reveal')
     await sendPush(user2.user_id, 'The Notice', 'Nora noticed something in what you both sent today.', '/dashboard', 'wednesday/reveal')
 
