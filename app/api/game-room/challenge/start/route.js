@@ -1,152 +1,21 @@
-export const dynamic = 'force-dynamic'
-
-import { CHALLENGE_PROMPTS, MEMORY_UNLOCK } from '@/lib/challenge-prompts'
-import { noraGenerate } from '@/lib/nora'
-import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
-
-// Had ZERO authentication before this fix — found during the Aug 3 Game
-// Room audit. Took userId/coupleId straight from an unauthenticated
-// request body and used them to read nora_memory.memory_summary (private
-// couple notes) and user_profiles (love_language, attachment_style),
-// feeding both into an AI prompt. No live caller currently exists in
-// app/game-room (this route appears unused by the current UI), but it's
-// reachable directly regardless — fixed the same as every other unused-
-// but-vulnerable route found this engagement.
-export async function POST(request) {
-  try {
-    const { user, supabase, error: authError } = await requireUser(request)
-    if (authError) return Response.json(authError.body, { status: authError.status })
-
-    const { coupleId, sessionId, totalRounds } = await request.json()
-
-    if (!coupleId || !sessionId || !totalRounds) {
-      return Response.json({ error: 'Missing required fields' }, { status: 400 })
-    }
-
-    const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
-    if (!isMember) return Response.json({ error: 'Forbidden' }, { status: 403 })
-
-    const userId = user.id
-
-    if (![1, 3, 5].includes(totalRounds)) {
-      return Response.json({ error: 'totalRounds must be 1, 3, or 5' }, { status: 400 })
-    }
-
-    // Check memory unlock eligibility
-    const { count: timelineCount } = await supabase
-      .from('timeline_events')
-      .select('*', { count: 'exact', head: true })
-      .eq('couple_id', coupleId)
-
-    const { count: sparkBetCount } = await supabase
-      .from('spark_responses')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-
-    const { count: betCount } = await supabase
-      .from('bet_responses')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-
-    // Found alongside the auth fix: this queried user_profiles.id (an
-    // unrelated auto-generated PK, see docs/database/user_profiles.sql),
-    // not user_profiles.user_id — always missed, so userProfile was
-    // always null, accountAgeWeeks always 0, and the account-age leg of
-    // this route's own memoryUnlocked check could never pass. Also note:
-    // this duplicates lib/memory-unlock.js's checkMemoryUnlocked() instead
-    // of reusing it — separate finding, not fixed here since this route
-    // has no live caller to verify a behavior change against.
-    const { data: userProfile } = await supabase
-      .from('user_profiles')
-      .select('created_at')
-      .eq('user_id', userId)
-      .single()
-
-    const accountAgeWeeks = userProfile
-      ? (Date.now() - new Date(userProfile.created_at).getTime()) / (1000 * 60 * 60 * 24 * 7)
-      : 0
-
-    const { data: timelineEvents } = await supabase
-      .from('timeline_events')
-      .select('id', { count: 'exact' })
-      .eq('couple_id', coupleId)
-    const { data: sparkResponses } = await supabase
-      .from('today_responses')
-      .select('id', { count: 'exact' })
-      .eq('couple_id', coupleId)
-    const memoryUnlocked =
-      (timelineEvents?.length ?? 0) >= MEMORY_UNLOCK.minTimelineEvents &&
-      (sparkResponses?.length ?? 0) >= MEMORY_UNLOCK.minSparkBetResponses &&
-      accountAgeWeeks >= MEMORY_UNLOCK.minAccountAgeWeeks
-
-    // Fetch couple context for Nora recommendation
-    const { data: coupleData } = await supabase
-      .from('couples')
-      .select('user1_id, user2_id, created_at')
-      .eq('id', coupleId)
-      .single()
-
-    const { data: profiles } = await supabase
-      .from('user_profiles')
-      .select('id, display_name, love_language, attachment_style')
-      .in('user_id', [coupleData.user1_id, coupleData.user2_id])
-
-    const { data: noraMemory } = await supabase
-      .from('nora_memory')
-      .select('memory_summary')
-      .eq('couple_id', coupleId)
-      .single()
-
-    const coupleAgeWeeks = coupleData
-      ? (Date.now() - new Date(coupleData.created_at).getTime()) / (1000 * 60 * 60 * 24 * 7)
-      : 0
-
-    const availableTypes = ['story', 'pitch', 'rank', 'plan']
-    if (memoryUnlocked) availableTypes.push('memory')
-
-    const profileSummary = profiles
-      ? profiles.map(p => `${p.display_name}: love language ${p.love_language || 'unknown'}, attachment ${p.attachment_style || 'unknown'}`).join('; ')
-      : 'couple profiles unavailable'
-
-    const systemPrompt = `You recommend one challenge type for a couple. Be brief and warm. Your recommendation should feel personal, not generic.`
-
-    const userPrompt = `Recommend one challenge type for this couple and give a single sentence reason why it suits them right now.
-
-Couple context:
-- Together in ABF for ${Math.round(coupleAgeWeeks)} weeks
-- Profiles: ${profileSummary}
-- Memory: ${noraMemory?.memory_summary || 'none yet'}
-
-Available types: ${availableTypes.join(', ')}
-
-Respond in this exact JSON format with no other text:
-{
-  "recommendedType": "story|pitch|rank|memory|plan",
-  "reason": "one sentence, warm and specific to this couple"
-}`
-
-    const response = await noraGenerate(userPrompt, { route: 'game-room/challenge/start', system: systemPrompt, maxTokens: 200 })
-
-    let recommendation
-    const raw = response.replace(/```json|```/g, '').trim()
-    try {
-      recommendation = JSON.parse(raw)
-    } catch (e) {
-      console.error('[game-room/challenge/start] JSON parse failed:', raw)
-      return Response.json({ error: 'Failed to parse Nora response' }, { status: 500 })
-    }
-
-    if (!availableTypes.includes(recommendation.recommendedType)) {
-      recommendation.recommendedType = 'story'
-    }
-
-    return Response.json({
-      recommendedType: recommendation.recommendedType,
-      reason: recommendation.reason,
-      availableTypes,
-      memoryUnlocked,
-    })
-  } catch (err) {
-    return Response.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+// DEPRECATED / DEAD ROUTE — confirmed unused during the Aug 5 2026 full
+// code audit (zero callers anywhere in app/game-room or elsewhere; the only
+// matches for "game-room/challenge/start" in the whole codebase are this
+// file's own route label and error-log strings).
+//
+// This route was flagged back on July 31 as a decision needed: its
+// Memory Test eligibility check duplicated logic that has since been
+// rebuilt properly and centrally in lib/memory-unlock.js, enforced
+// server-side in the actual live confirm-type route. This file's version
+// was never wired into the current Game Room UI at all — Challenge mode's
+// real entry point is elsewhere (see app/api/game-room/challenge/next,
+// pitch, etc.).
+//
+// The route did already get a real auth fix earlier this engagement (see
+// git history) since it was reachable and vulnerable even though unused by
+// the UI — so it wasn't a live security hole by the time it was confirmed
+// dead here, just genuinely orphaned functionality.
+//
+// Could not delete this file from the sandbox this session (unlink/rm is
+// blocked on this mount). Matt: safe to run
+// `rm -rf app/api/game-room/challenge/start` locally.
