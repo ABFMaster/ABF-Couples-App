@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AiChatMessage from '@/components/AiChatMessage';
 import { analyzeUserPatterns } from '@/lib/checkin-patterns';
-import { generateNoraTrigger } from '@/lib/nora-triggers';
 
 function AiCoachContent() {
   const router = useRouter();
