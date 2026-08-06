@@ -134,7 +134,7 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
       const { data: { session } } = await supabase.auth.getSession()
       await fetch('/api/push/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({ userId: partnerId, title: "You've got a flirt 💌", body: "Open ABF to see what they sent you", url: "/dashboard" }),
       })
       await fetch('/api/flirts/mark-sent', {

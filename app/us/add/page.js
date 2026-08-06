@@ -122,9 +122,19 @@ export default function AddToStoryPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       if (partnerId) {
+        // Was authenticating with process.env.NEXT_PUBLIC_CRON_SECRET, which
+        // does not exist anywhere else in the codebase as a real env var —
+        // every other CRON_SECRET usage is the plain, server-only
+        // process.env.CRON_SECRET (never NEXT_PUBLIC_-prefixed, since that
+        // prefix bakes the value into the public client bundle). This meant
+        // the request always sent "Bearer undefined", always failed auth,
+        // and the partner-notification silently never fired (caught below).
+        // Fixed to authenticate as the calling user instead, same pattern
+        // every other client-side push/send call site in the app already
+        // uses. Found during the Aug 5 2026 Profile/Timeline audit.
         fetch('/api/push/send', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET}` },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
           body: JSON.stringify({
             userId: partnerId,
             title: 'A memory was added',
