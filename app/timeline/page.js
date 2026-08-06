@@ -25,12 +25,6 @@
 // Next.js page.js route file — an empty/no-export file would break
 // `next build`. A redirect is also the right behavior for anyone hitting
 // a stale bookmark/deep link to /timeline.
-//
-// Could not delete this file from the sandbox this session (unlink/rm is
-// blocked on this mount). Matt: once you're confident nothing depends on
-// this redirect, safe to run
-// `rm -rf app/timeline components/AddEventModal.js components/EventDetailModal.js`
-// locally.
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'

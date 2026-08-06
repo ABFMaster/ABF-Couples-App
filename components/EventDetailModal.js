@@ -14,8 +14,3 @@
 // Not part of the Next.js routing tree (a plain component, not a
 // page.js/route.js file), so a comment-only stub is safe here — nothing
 // imports it anymore.
-//
-// Could not delete this file from the sandbox this session (unlink/rm is
-// blocked on this mount). Matt: safe to run
-// `rm -rf app/timeline components/AddEventModal.js components/EventDetailModal.js`
-// locally.

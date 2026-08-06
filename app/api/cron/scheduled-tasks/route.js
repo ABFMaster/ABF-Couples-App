@@ -5,9 +5,10 @@ import { getSparkQuestion } from '@/lib/spark-questions'
 import { getBetQuestion } from '@/lib/bet-questions'
 import { getTodayString, getDayOfWeek, getHourInTimezone } from '@/lib/dates'
 import { noraGenerate, noraChat } from '@/lib/nora'
-import { getNoraMemory, getMemoryBriefing, getSurfaceableClaims } from '@/lib/nora-memory'
+import { getNoraMemory, getMemoryBriefing, getSurfaceableClaims, updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { getNoraTierContext } from '@/lib/nora-knowledge'
 import { generateFollowThrough } from '@/lib/follow-through'
+import { computeCouplePatterns } from '@/lib/checkin-patterns'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -286,6 +287,56 @@ async function processWeeklyReflection(couple) {
       })
     })
   } catch (err) { console.error('[reflection/generate] couple:', couple.id, err) }
+}
+
+// Weekly, alongside Weekly Reflection (same "look back at the week"
+// cadence) — checks whether check-in presence has been persistently
+// imbalanced between partners and, if so, feeds it into Nora's couple_notes
+// as a quiet observation. Never surfaced to users directly from here; see
+// lib/nora-memory.js's SIGNAL_TYPES.ENGAGEMENT_PATTERN lens for how Nora is
+// instructed to hold this (as weak, reversible evidence — never a stated
+// diagnosis) and lib/checkin-patterns.js's DRIFT_THRESHOLDS for why this
+// requires 2 consecutive weeks of the same imbalance before firing at all.
+//
+// Fetches with this route's own service-role supabase client rather than
+// calling analyzeCouplePatterns() directly — that function's module-level
+// client is anon-key/RLS-scoped for its browser caller (ai-coach page) and
+// would silently return zero rows here with no user session. See
+// computeCouplePatterns()'s comment in lib/checkin-patterns.js.
+async function processEngagementPatternCheck(couple) {
+  try {
+    const daysBack = 30
+    const startDate = new Date()
+    startDate.setDate(startDate.getDate() - daysBack)
+
+    const { data: checkins, error } = await supabase
+      .from('daily_checkins')
+      .select('check_date, user_id')
+      .eq('couple_id', couple.id)
+      .gte('check_date', startDate.toISOString().split('T')[0])
+      .order('check_date', { ascending: true })
+
+    if (error) {
+      console.error('[engagementPattern] fetch error, couple:', couple.id, error)
+      return
+    }
+
+    const { driftAlert } = computeCouplePatterns(checkins || [], daysBack)
+    if (!driftAlert) return
+
+    // No single "acting user" for this signal — couple-level observation,
+    // not something either partner did. See SIGNAL_TYPES.ENGAGEMENT_PATTERN's
+    // comment for why this is intentionally excluded from both signal-count
+    // weight dicts (fire-and-forget update, no userId).
+    updateNoraMemory({
+      coupleId: couple.id,
+      userId: null,
+      signalType: SIGNAL_TYPES.ENGAGEMENT_PATTERN,
+      inputData: driftAlert,
+    }).catch(err => console.error('[engagementPattern] updateNoraMemory failed, couple:', couple.id, err))
+  } catch (err) {
+    console.error('[engagementPattern] couple:', couple.id, err)
+  }
 }
 
 async function processThursdayGeneration(couple, user1, user2) {
@@ -909,6 +960,7 @@ export async function GET(request) {
         await processMorningAfterDates(couple, user1, user2)
         const day = getDayInTimezone(user1.timezone || user2.timezone || 'America/Los_Angeles')
         if (day === 0) { await processWeeklyReflection(couple); blocksFired.add('weeklyReflection') }
+        if (day === 0) { await processEngagementPatternCheck(couple); blocksFired.add('engagementPatternCheck') }
         if (day === 4) { await processThursdayGeneration(couple, user1, user2); blocksFired.add('thursdayGeneration') }
         if (new Date().getUTCDay() === 5 && new Date().getUTCHours() === 2) { await processThursdayReveal(couple, user1, user2); blocksFired.add('thursdayReveal') }
         if (day === 3) { await processWednesdayNotice(couple, user1, user2); blocksFired.add('wednesdayNotice') }
