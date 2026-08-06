@@ -149,18 +149,29 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   // Content-Type from the uploaded blob, but an extensionless path is a
   // needless landmine for anything downstream that does infer type from
   // the URL).
+  // ROOT CAUSE FIX — Aug 6 2026. Matt's report: "photo still doesn't load."
+  // This handler was spinning up a brand-new Supabase client via a bare
+  // createClient(url, anonKey) — that client has no session attached, so
+  // every upload went out unauthenticated. The 'photos' bucket's Storage
+  // RLS policies (same bucket every other upload in the app uses) require
+  // an authenticated request, so the anon-key client's upload was rejected
+  // by RLS every time, throwing uploadError and surfacing as "Couldn't
+  // upload that photo." The file already imports the real, session-aware
+  // client at the top (`import { supabase } from '@/lib/supabase'`, a
+  // createBrowserClient that carries the user's auth session) — every other
+  // photo upload in the app (dashboard, profile, /us, /us/add) uses that
+  // exact client for this exact bucket. Just reuse it instead of minting a
+  // second, unauthenticated one.
   const handlePhotoUpload = async (file) => {
     if (!file) return
     setPhotoUploading(true)
     setPhotoError('')
     try {
-      const { createClient } = await import('@supabase/supabase-js')
-      const sc = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
       const ext = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
       const path = `flirts/${userId}/${Date.now()}.${ext}`
-      const { error: uploadError } = await sc.storage.from('photos').upload(path, file, { upsert: true, contentType: file.type || undefined })
+      const { error: uploadError } = await supabase.storage.from('photos').upload(path, file, { upsert: true, contentType: file.type || undefined })
       if (uploadError) throw uploadError
-      const { data } = sc.storage.from('photos').getPublicUrl(path)
+      const { data } = supabase.storage.from('photos').getPublicUrl(path)
       setContent(data.publicUrl)
     } catch (err) {
       console.error('[FlirtCard] photo upload error:', err)
@@ -467,17 +478,31 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                         <span style={{ fontSize: 7, letterSpacing: 2, color: '#6b5a4a', textTransform: 'uppercase', fontFamily: 'system-ui', fontWeight: 600 }}>Postcard · ABF</span>
                         <button onClick={() => setCardFlipped(false)} style={{ background: 'none', border: 'none', fontSize: 11, color: '#6b5a4a', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>← flip back</button>
                       </div>
-                      {/* Type selector */}
-                      <div style={{ padding: '8px 10px', borderBottom: '0.5px solid #ddd0bc', display: 'flex', gap: 0, flexWrap: 'wrap' }}>
-                        {['song','word','photo','gif','memory'].map((t,i,arr) => (
-                          <span key={t} style={{ display: 'flex', alignItems: 'center' }}>
-                            <button onClick={() => { setDropType(t); setPhotoError(''); }} style={{ background: 'none', border: 'none', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: dropType === t ? '#c4694f' : '#6b5a4a', cursor: 'pointer', padding: 0, fontFamily: 'system-ui', textDecoration: dropType === t ? 'underline' : 'none', textUnderlineOffset: 2 }}>{t.toUpperCase()}</button>
-                            {i < arr.length - 1 && <span style={{ color: '#c8b8a0', fontSize: 10, margin: '0 5px' }}>·</span>}
-                          </span>
-                        ))}
-                      </div>
-                      {/* Content + address */}
-                      <div style={{ display: 'flex', alignItems: 'flex-start', overflow: 'hidden' }}>
+                      {/* Content + address — restructured Aug 6 2026. Matt's
+                          report: "the stamp is still in the wrong spot...
+                          the Song/Word/Photo line is blocking it from going
+                          into that space" — he diagnosed this correctly
+                          himself. The type-selector row used to span the
+                          FULL card width, sitting above the content/address
+                          split — which meant the address column (and the
+                          stamp inside it) could structurally never start any
+                          higher than below that row, no matter how the
+                          column itself was styled. Fix: the type selector
+                          now lives INSIDE the left (content) column instead
+                          of above the whole split, so the address column
+                          starts flush with the header row and the stamp
+                          lands at the actual top-right corner of the card. */}
+                      <div style={{ display: 'flex', alignItems: 'stretch', overflow: 'hidden' }}>
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                          {/* Type selector — now scoped to the content column's width only */}
+                          <div style={{ padding: '8px 10px', borderBottom: '0.5px solid #ddd0bc', display: 'flex', gap: 0, flexWrap: 'wrap' }}>
+                            {['song','word','photo','gif','memory'].map((t,i,arr) => (
+                              <span key={t} style={{ display: 'flex', alignItems: 'center' }}>
+                                <button onClick={() => { setDropType(t); setPhotoError(''); }} style={{ background: 'none', border: 'none', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: dropType === t ? '#c4694f' : '#6b5a4a', cursor: 'pointer', padding: 0, fontFamily: 'system-ui', textDecoration: dropType === t ? 'underline' : 'none', textUnderlineOffset: 2 }}>{t.toUpperCase()}</button>
+                                {i < arr.length - 1 && <span style={{ color: '#c8b8a0', fontSize: 10, margin: '0 5px' }}>·</span>}
+                              </span>
+                            ))}
+                          </div>
                         <div style={{ flex: 1, padding: '8px 10px', position: 'relative', overflow: 'hidden', maxHeight: 240 }}>
                           <div style={{ position: 'absolute', inset: '8px 10px', backgroundImage: 'repeating-linear-gradient(transparent, transparent 26px, #d8ccba 26px, #d8ccba 27px)', backgroundSize: '100% 27px', pointerEvents: 'none' }} />
                           {!dropType && <div style={{ fontFamily: 'Georgia, serif', fontSize: 14, color: '#8b7355', fontStyle: 'italic', position: 'relative', zIndex: 1 }}>choose a type above...</div>}
@@ -516,7 +541,10 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                             </div>
                           )}
                         </div>
-                        {/* Address side with stamp */}
+                        </div>
+                        {/* Address side with stamp — now starts flush with
+                            the header row instead of below the type
+                            selector row; see restructuring comment above. */}
                         <div style={{ width: 130, flexShrink: 0, borderLeft: '0.5px solid #d4c4a8', padding: '6px 6px 8px 8px', display: 'flex', flexDirection: 'column' }}>
                           {/* Stamp — top of column */}
                           <div onClick={async () => { const canSend = dropType === 'song' ? !!selectedTrack : dropType === 'memory' ? !!selectedMemory : !!content.trim(); if (!canSend || sending || !dropType) return; await handleSend(); setCardFlipped(false); setDropType(null); setContent(''); setSelectedTrack(null); setSelectedMemory(null); }} style={{ cursor: dropType ? 'pointer' : 'default' }}>
