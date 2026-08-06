@@ -526,7 +526,12 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                               <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handlePhotoUpload(e.target.files[0])} />
                               {!content && !photoUploading && <button onClick={() => fileInputRef.current?.click()} style={{ background: 'none', border: '0.5px solid #d4c4a8', borderRadius: 6, padding: '6px 12px', fontSize: 11, color: '#8b7355', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>tap to add photo</button>}
                               {photoUploading && <div style={{ fontSize: 11, color: '#8b7355', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>uploading...</div>}
-                              {content && !photoUploading && <img src={content} style={{ maxWidth: '100%', maxHeight: 70, borderRadius: 4 }} />}
+                              {/* Bumped from maxHeight:70 Aug 6 2026 — Matt: "preview is too
+                                  small." Content column has ~240px of vertical room and the
+                                  button/uploading states above it disappear once a photo is
+                                  set, so there's headroom to give the actual preview much more
+                                  presence instead of a tiny thumbnail. */}
+                              {content && !photoUploading && <img src={content} style={{ maxWidth: '100%', maxHeight: 160, borderRadius: 4, display: 'block' }} />}
                               {photoError && (
                                 <div style={{ marginTop: 4 }}>
                                   <div style={{ fontSize: 10, color: '#C4694F', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>{photoError}</div>
@@ -546,8 +551,16 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                             the header row instead of below the type
                             selector row; see restructuring comment above. */}
                         <div style={{ width: 130, flexShrink: 0, borderLeft: '0.5px solid #d4c4a8', padding: '6px 6px 8px 8px', display: 'flex', flexDirection: 'column' }}>
-                          {/* Stamp — top of column */}
-                          <div onClick={async () => { const canSend = dropType === 'song' ? !!selectedTrack : dropType === 'memory' ? !!selectedMemory : !!content.trim(); if (!canSend || sending || !dropType) return; await handleSend(); setCardFlipped(false); setDropType(null); setContent(''); setSelectedTrack(null); setSelectedMemory(null); }} style={{ cursor: dropType ? 'pointer' : 'default' }}>
+                          {/* Stamp — top of column, right-aligned. Fixed Aug 6 2026 —
+                              Matt: "Stamp should be further right, no?" Root cause: the
+                              column is a flex column with the browser default
+                              alignItems:'stretch', so this wrapper div (no explicit width)
+                              was stretching to the column's full width and the fixed-width
+                              stamp img inside it sat at the block start (left) of that
+                              stretched box, leaving a visible gap before the card's right
+                              edge. alignSelf:'flex-end' shrinks the wrapper to its content
+                              width and pins it to the end (right) of the column instead. */}
+                          <div onClick={async () => { const canSend = dropType === 'song' ? !!selectedTrack : dropType === 'memory' ? !!selectedMemory : !!content.trim(); if (!canSend || sending || !dropType) return; await handleSend(); setCardFlipped(false); setDropType(null); setContent(''); setSelectedTrack(null); setSelectedMemory(null); }} style={{ cursor: dropType ? 'pointer' : 'default', alignSelf: 'flex-end' }}>
                             <img src="/abf-stamp.png" alt="ABF stamp" style={{ width: 82, height: 82, display: 'block', opacity: dropType ? 1 : 0.4, transition: 'opacity 0.2s' }} />
                             {dropType && <div style={{ fontSize: 9, color: '#c4694f', fontFamily: 'Georgia, serif', fontStyle: 'italic', textAlign: 'center', marginTop: 2 }}>{sending ? 'sending...' : 'tap to mail →'}</div>}
                           </div>
