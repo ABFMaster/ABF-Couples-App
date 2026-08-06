@@ -7,6 +7,7 @@ import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { noraReact } from '@/lib/nora'
 import { generateFollowThrough } from '@/lib/follow-through'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
+import { notifyIfMemoryJustUnlocked } from '@/lib/memory-unlock'
 
 export async function POST(request) {
   try {
@@ -78,6 +79,10 @@ export async function POST(request) {
     }
 
     supabase.from('hero_cache').delete().eq('couple_id', resolvedCoupleId).then(() => {}).catch(() => {})
+
+    // Bet responses are one of Memory Test's three unlock inputs — check
+    // whether this write just crossed the threshold and notify once if so.
+    notifyIfMemoryJustUnlocked(supabase, resolvedCoupleId).catch(() => {})
 
     // Log activity to daily_checkins
     const { getTodayString } = await import('@/lib/dates')

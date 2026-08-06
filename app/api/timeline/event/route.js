@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
+import { notifyIfMemoryJustUnlocked } from '@/lib/memory-unlock'
 
 export async function POST(request) {
   try {
@@ -63,6 +64,10 @@ export async function POST(request) {
       signalType: SIGNAL_TYPES.TIMELINE_EVENT,
       inputData: { eventType, title, description, eventDate },
     }).catch(() => {})
+
+    // Timeline events are one of Memory Test's three unlock inputs — check
+    // whether this write just crossed the threshold and notify once if so.
+    notifyIfMemoryJustUnlocked(supabase, coupleId).catch(() => {})
 
     return NextResponse.json({ success: true, event })
   } catch (err) {

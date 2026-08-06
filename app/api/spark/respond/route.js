@@ -5,6 +5,7 @@ import { updateNoraMemory, SIGNAL_TYPES, getFullNoraContext } from '@/lib/nora-m
 import { noraReact } from '@/lib/nora'
 import { generateFollowThrough } from '@/lib/follow-through'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
+import { notifyIfMemoryJustUnlocked } from '@/lib/memory-unlock'
 
 export async function POST(request) {
   try {
@@ -45,6 +46,10 @@ export async function POST(request) {
       }, { onConflict: 'spark_id,user_id' })
 
     supabase.from('hero_cache').delete().eq('couple_id', coupleId).then(() => {}).catch(() => {})
+
+    // Spark responses are one of Memory Test's three unlock inputs — check
+    // whether this write just crossed the threshold and notify once if so.
+    notifyIfMemoryJustUnlocked(supabase, coupleId).catch(() => {})
 
     // Log activity to daily_checkins
     const { getTodayString } = await import('@/lib/dates')
