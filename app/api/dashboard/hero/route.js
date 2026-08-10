@@ -6,6 +6,7 @@ import { getNoraTierContext } from '@/lib/nora-knowledge'
 import { getSurfaceableClaims, getPrivateNotes } from '@/lib/nora-memory'
 import { getTodayString, getDayOfWeek, getDateDayLabel, getWeekStart } from '@/lib/dates'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
+import { checkMemoryUnlocked } from '@/lib/memory-unlock'
 
 export async function GET(request) {
   try {
@@ -267,6 +268,8 @@ const ritualCompletedThisWeek = !!completion?.completed
       }
     }
 
+    const isNewUser = !myPersonNotes && !coupleNotes && !structuredFacts
+
     // ── PART 4: Dates + pills + weather ──────────────────────────────────────
     const nowIso = new Date().toISOString()
     const { data: customDates } = await supabase
@@ -377,6 +380,134 @@ const ritualCompletedThisWeek = !!completion?.completed
       }
     }
 
+    // ── PART 5b: Promo rotation — quiet priority-5 slot only ──────────────────
+    // Fires only when nothing else claims the hero slot (weekend, Friday w/ no
+    // ritual, no date within 3 days) and the user has enough memory for Nora
+    // to speak personally — isNewUser keeps its own crafted first-session
+    // flow untouched below. v1 pool confirmed w/ Matt Aug 10 2026: Couples
+    // Session, AI Coach, Memory Test, Date Night. Anti-repeat + frequency cap
+    // tracked via hero_cache.promo_type — see
+    // docs/database/hero_cache_promo_type.sql. REPEAT_COOLDOWN_DAYS,
+    // FREQUENCY_WINDOW_DAYS, FREQUENCY_CAP below are reasonable defaults, not
+    // locked numbers — tune freely.
+    let promoType = null
+    let promoInstruction = null
+
+    if (priority === 5 && !isNewUser) {
+      const REPEAT_COOLDOWN_DAYS  = 5  // don't repeat the same promo within this many days
+      const FREQUENCY_WINDOW_DAYS = 7  // window the frequency cap looks back over
+      const FREQUENCY_CAP         = 2  // max promo appearances per window, per user
+
+      const cutoffDateStr = (days) => new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
+
+      const { data: recentPromoRows } = await supabase
+        .from('hero_cache')
+        .select('promo_type, cache_date')
+        .eq('user_id', userId)
+        .eq('type', 'hero')
+        .not('promo_type', 'is', null)
+        .gte('cache_date', cutoffDateStr(FREQUENCY_WINDOW_DAYS))
+
+      const recentPromoTypes = new Set(
+        (recentPromoRows || [])
+          .filter(r => r.cache_date >= cutoffDateStr(REPEAT_COOLDOWN_DAYS))
+          .map(r => r.promo_type)
+      )
+      const underFrequencyCap = (recentPromoRows || []).length < FREQUENCY_CAP
+
+      if (underFrequencyCap) {
+        const candidates = []
+
+        // Couples Session — skip Sunday entirely, the Weekly Reflection hook
+        // already owns that day; don't double-invite to the same thing.
+        if (dayOfWeek !== 0 && !recentPromoTypes.has('couples_session')) {
+          const { data: recentShared } = await supabase
+            .from('ai_conversations')
+            .select('id')
+            .eq('couple_id', coupleId)
+            .eq('type', 'shared')
+            .gte('updated_at', new Date(Date.now() - 5 * 86400000).toISOString())
+            .limit(1)
+          if (!recentShared?.length) {
+            candidates.push({
+              type: 'couples_session',
+              cta_label: 'Start a session →',
+              cta_href: '/couples-session?new=true',
+              instruction: `nudging them toward starting a Couples Session — a dedicated space where you facilitate a live conversation between both partners together, not solo coaching. Frame it as an invitation to bring something (big, small, funny, serious) to the table together, not a chore.`,
+            })
+          }
+        }
+
+        // AI Coach — solo, private conversation with Nora.
+        if (!recentPromoTypes.has('ai_coach')) {
+          const { data: recentSolo } = await supabase
+            .from('ai_conversations')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('type', 'solo')
+            .gte('updated_at', new Date(Date.now() - 4 * 86400000).toISOString())
+            .limit(1)
+          if (!recentSolo?.length) {
+            candidates.push({
+              type: 'ai_coach',
+              cta_label: 'Talk to Nora →',
+              cta_href: '/ai-coach',
+              instruction: `nudging them toward a private one-on-one conversation with you — just for them, not shared with their partner. Make it feel like an open door, not a task.`,
+            })
+          }
+        }
+
+        // Memory Test — needs the unlock gate AND no recent attempt.
+        if (!recentPromoTypes.has('memory_test')) {
+          const { unlocked } = await checkMemoryUnlocked(supabase, coupleId)
+          if (unlocked) {
+            const { data: recentMemorySession } = await supabase
+              .from('challenge_sessions')
+              .select('id')
+              .eq('couple_id', coupleId)
+              .eq('challenge_type', 'memory')
+              .gte('created_at', new Date(Date.now() - 7 * 86400000).toISOString())
+              .limit(1)
+            if (!recentMemorySession?.length) {
+              candidates.push({
+                type: 'memory_test',
+                cta_label: 'Play Memory Test →',
+                cta_href: '/game-room',
+                instruction: `nudging them toward Memory Test in the Game Room — a playful challenge testing how well they know their partner, built from their own shared history. Keep it light and a little playful, not a chore.`,
+              })
+            }
+          }
+        }
+
+        // Date Night — nothing upcoming, nothing wrapped up recently.
+        if (!nextDate && !recentPromoTypes.has('date_night')) {
+          const { data: recentCompleted } = await supabase
+            .from('custom_dates')
+            .select('id')
+            .eq('couple_id', coupleId)
+            .eq('status', 'completed')
+            .gte('completed_at', new Date(Date.now() - 14 * 86400000).toISOString())
+            .limit(1)
+          if (!recentCompleted?.length) {
+            candidates.push({
+              type: 'date_night',
+              cta_label: 'Plan a date →',
+              cta_href: '/dates',
+              instruction: `nudging them toward planning a date night together — nothing's on the calendar right now. Make it feel like an idea worth chasing, not a reminder they're behind.`,
+            })
+          }
+        }
+
+        if (candidates.length) {
+          const chosen = candidates[Math.floor(Math.random() * candidates.length)]
+          promoType     = chosen.type
+          promoInstruction = chosen.instruction
+          cta_label     = chosen.cta_label
+          cta_href      = chosen.cta_href
+        }
+      }
+    }
+
     // ── PART 6: Prompts ───────────────────────────────────────────────────────
     const name = userName || 'there'
     let message
@@ -390,11 +521,17 @@ const ritualCompletedThisWeek = !!completion?.completed
       : null
 
     if (mode === 'pre') {
-      const isNewUser = !myPersonNotes && !coupleNotes && !structuredFacts
       const PRE_SYSTEM_PROMPT = isNewUser
         ? `You are Nora — a sharp, warm relationship guide who has just finished a first session with someone. You've read their assessment. You have a real impression of them. This is the dashboard hero card — the first thing they see when they arrive home in the app. Write 2-3 sentences that feel like you've been thinking about them since they left. Reference something true and specific from what you know. Then end with one question or thread you genuinely want to pull on — something that creates an irresistible pull toward conversation. Do not restate their results. Do not explain what you're doing. Just speak. Tone: Esther Perel meets a wise friend — warm, direct, a little provocative. Never start with Hey or Hi. No exclamation points. The final sentence should make them want to tap 'Let's talk about it'. Your final sentence MUST be a direct question ending with a question mark. This question becomes the button the user taps to talk to you — make it specific enough that they feel seen just reading it, and irresistible enough that they have to answer it.`
         : `You are Nora — you have been paying attention to this person and you have something specific to say. Write one sentence (max 18 words) for the dashboard hero card. You are NOT announcing a feature or pointing at an activity. CRITICAL: Write TO this specific person using 'you' singular — never 'you two', 'you both', or any phrase that addresses them as part of a couple. This card is private. Nora is speaking to one person alone. If memory is rich, say something only sayable about THIS person — a pattern, a contradiction, something you've noticed about how they love or how they protect themselves. If memory is sparse, ask one warm specific question that makes them think about themselves. Never start with Hey or Hi. Never mention app features by name. Never be generic. Tone: like a sharp, warm friend who has been quietly paying attention.`
-      const systemPrompt = [PRE_SYSTEM_PROMPT, tierContext].filter(Boolean).join('\n\n')
+      // Promo rotation addendum (PART 5b) — only ever set when !isNewUser, so
+      // this never touches the crafted first-session flow above. Relaxes the
+      // strict one-sentence/18-word rule slightly to make room for a second,
+      // short, in-voice nudge — never a features-list, never like a push.
+      const PROMO_ADDENDUM = promoInstruction
+        ? `This one has an additional, specific job: after your usual one-sentence observation, add a short second sentence (max 15 words) that naturally, in your own voice, invites them toward ${promoInstruction} Never phrase it like an app notification or feature announcement — it should sound like something only Nora would say to this person.`
+        : null
+      const systemPrompt = [PRE_SYSTEM_PROMPT, PROMO_ADDENDUM, tierContext].filter(Boolean).join('\n\n')
 
       const userPrompt = [
         `User's name: ${name}`,
@@ -457,7 +594,7 @@ Do not label which mode you chose. Do not explain. Just write it. Never start wi
 
     // ── PART 7: Cache write ───────────────────────────────────────────────────
     await supabase.from('hero_cache').upsert(
-      { user_id: userId, couple_id: coupleId, cache_date: todayStr, message, cta_label, cta_href, pills: JSON.stringify(pills), mode, type: 'hero' },
+      { user_id: userId, couple_id: coupleId, cache_date: todayStr, message, cta_label, cta_href, pills: JSON.stringify(pills), mode, type: 'hero', promo_type: promoType },
       { onConflict: 'user_id,cache_date,type' }
     )
 
