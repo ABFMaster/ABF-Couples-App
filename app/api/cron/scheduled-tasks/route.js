@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { createClient } from '@supabase/supabase-js'
 import { getSparkQuestion } from '@/lib/spark-questions'
 import { getBetQuestion } from '@/lib/bet-questions'
-import { getTodayString, getDayOfWeek, getHourInTimezone } from '@/lib/dates'
+import { getTodayString, getDayOfWeek, getHourInTimezone, daysUntilNextOccurrence } from '@/lib/dates'
 import { noraGenerate, noraChat } from '@/lib/nora'
 import { getNoraMemory, getMemoryBriefing, getSurfaceableClaims, updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { getNoraTierContext } from '@/lib/nora-knowledge'
@@ -269,6 +269,73 @@ async function processMorningAfterDates(couple, user1, user2) {
       await supabase.from('custom_dates').update({ morning_after_prompt_sent_at: now.toISOString() }).eq('id', d.id)
     } catch (err) {
       console.error('[dates/morning-after] date:', d.id, err)
+    }
+  }
+}
+
+// Birthday / anniversary lead-time reminders — confirmed with Matt Aug 10
+// 2026: these were previously entirely passive (fed into AI Coach's system
+// prompt only, useful only if a conversation happened to touch on it — see
+// Sessions/PRODUCT_BACKLOG.md). Matt's explicit note: day-of surfacing gives
+// no lead time to actually plan/buy/book anything, so this fires twice —
+// 7 days out (time to plan) and 2 days out (closer reminder) — using
+// daysUntilNextOccurrence (lib/dates.js) so the exact-day match only trips
+// once per year per event, no dedupe column needed (same pattern as the
+// existing nextDate/daysUntilDate check in dashboard/hero). Gated on the
+// same once-daily 3am local hour as processDailyContent so it doesn't fire
+// on every cron tick.
+//
+// A birthday is only pushed to the PARTNER (they're the one planning/
+// buying), never to the person whose birthday it is. An anniversary is
+// mutual, so both partners get it. See app/api/dashboard/hero/route.js's
+// PART 0c for this reminder's dashboard-side companion (0-2 day window,
+// shown on open rather than pushed).
+async function processBirthdayAnniversaryReminders(couple, user1, user2) {
+  const timezone = user1.timezone || user2.timezone || 'America/Los_Angeles'
+  const hour = getHourInTimezone(timezone)
+  if (hour !== 9) return
+
+  const { data: profiles } = await supabase
+    .from('user_profiles')
+    .select('user_id, birthday, anniversary')
+    .in('user_id', [couple.user1_id, couple.user2_id])
+
+  const p1 = profiles?.find(p => p.user_id === couple.user1_id)
+  const p2 = profiles?.find(p => p.user_id === couple.user2_id)
+  const user1Name = user1.display_name || 'your partner'
+  const user2Name = user2.display_name || 'your partner'
+
+  // User1's birthday → surfaced to user2 only.
+  if (p1?.birthday) {
+    const daysUntil = daysUntilNextOccurrence(p1.birthday, timezone)
+    if (daysUntil === 7) {
+      await sendPush(couple.user2_id, 'Nora', `${user1Name}'s birthday is in a week — plenty of time to plan something good.`, '/dates', 'birthday/7day')
+    } else if (daysUntil === 2) {
+      await sendPush(couple.user2_id, 'Nora', `${user1Name}'s birthday is in 2 days.`, '/dates', 'birthday/2day')
+    }
+  }
+
+  // User2's birthday → surfaced to user1 only.
+  if (p2?.birthday) {
+    const daysUntil = daysUntilNextOccurrence(p2.birthday, timezone)
+    if (daysUntil === 7) {
+      await sendPush(couple.user1_id, 'Nora', `${user2Name}'s birthday is in a week — plenty of time to plan something good.`, '/dates', 'birthday/7day')
+    } else if (daysUntil === 2) {
+      await sendPush(couple.user1_id, 'Nora', `${user2Name}'s birthday is in 2 days.`, '/dates', 'birthday/2day')
+    }
+  }
+
+  // Anniversary → mutual, both partners. Stored per-user (user_profiles),
+  // not couple-level, so prefer whichever partner actually has it set.
+  const anniversaryDate = p1?.anniversary || p2?.anniversary || null
+  if (anniversaryDate) {
+    const daysUntil = daysUntilNextOccurrence(anniversaryDate, timezone)
+    if (daysUntil === 7) {
+      await sendPush(couple.user1_id, 'Nora', `Your anniversary is in a week — want to plan something together?`, '/dates', 'anniversary/7day')
+      await sendPush(couple.user2_id, 'Nora', `Your anniversary is in a week — want to plan something together?`, '/dates', 'anniversary/7day')
+    } else if (daysUntil === 2) {
+      await sendPush(couple.user1_id, 'Nora', `Your anniversary is in 2 days.`, '/dates', 'anniversary/2day')
+      await sendPush(couple.user2_id, 'Nora', `Your anniversary is in 2 days.`, '/dates', 'anniversary/2day')
     }
   }
 }
@@ -982,6 +1049,8 @@ export async function GET(request) {
         await processDailyContent(couple, user1, user2)
         blocksFired.add('dailyContent')
         await processMorningAfterDates(couple, user1, user2)
+        await processBirthdayAnniversaryReminders(couple, user1, user2)
+        blocksFired.add('birthdayAnniversaryReminders')
         const day = getDayInTimezone(user1.timezone || user2.timezone || 'America/Los_Angeles')
         if (day === 0) { await processWeeklyReflection(couple); blocksFired.add('weeklyReflection') }
         if (day === 0) { await processEngagementPatternCheck(couple); blocksFired.add('engagementPatternCheck') }

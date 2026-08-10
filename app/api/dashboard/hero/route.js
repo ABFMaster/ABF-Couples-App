@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 import { noraSignal, noraChat } from '@/lib/nora'
 import { getNoraTierContext } from '@/lib/nora-knowledge'
 import { getSurfaceableClaims, getPrivateNotes } from '@/lib/nora-memory'
-import { getTodayString, getDayOfWeek, getDateDayLabel, getWeekStart } from '@/lib/dates'
+import { getTodayString, getDayOfWeek, getDateDayLabel, getWeekStart, daysUntilNextOccurrence } from '@/lib/dates'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 import { checkMemoryUnlocked } from '@/lib/memory-unlock'
 
@@ -117,6 +117,60 @@ export async function GET(request) {
           cta_href: `/dashboard?ritualNote=${completionRow.id}`,
           pills: null,
           mode: 'ritual_partner_nudge',
+        })
+      }
+    }
+
+    // ── PART 0c: Birthday / anniversary lead-time nudge ────────────────────────
+    // Matt's note, Aug 10 2026: day-of surfacing gives no lead time to
+    // actually plan/buy/book anything. The cron (processBirthdayAnniversary-
+    // Reminders in app/api/cron/scheduled-tasks) handles the push side
+    // (7-day heads-up + 2-day reminder); this is the dashboard-side
+    // companion — shows on open for the 0-2 day window so it isn't missed
+    // if the exact 2-day push is skipped (app not opened, push denied). A
+    // birthday shows only to the PARTNER, never to the person whose
+    // birthday it is; an anniversary shows to both, it's mutual. Bypasses
+    // the daily cache like PART 0/0b — this is a hard pre-empt, not the
+    // regular Nora message, and it's fine for it to reappear on every open
+    // across the 3-day window rather than being a one-time nudge.
+    if (couple) {
+      const { data: bdayProfiles } = await supabase
+        .from('user_profiles')
+        .select('user_id, birthday, anniversary')
+        .in('user_id', [couple.user1_id, couple.user2_id])
+
+      const myProfile      = bdayProfiles?.find(p => p.user_id === userId)
+      const partnerProfile = bdayProfiles?.find(p => p.user_id === partnerId)
+
+      const partnerBirthdayDays = partnerProfile?.birthday
+        ? daysUntilNextOccurrence(partnerProfile.birthday, 'America/Los_Angeles')
+        : null
+      const anniversaryDate = myProfile?.anniversary || partnerProfile?.anniversary || null
+      const anniversaryDays = anniversaryDate
+        ? daysUntilNextOccurrence(anniversaryDate, 'America/Los_Angeles')
+        : null
+
+      if (partnerBirthdayDays !== null && partnerBirthdayDays >= 0 && partnerBirthdayDays <= 2) {
+        return NextResponse.json({
+          message: partnerBirthdayDays === 0
+            ? `${partnerName}'s birthday is today.`
+            : `${partnerName}'s birthday is in ${partnerBirthdayDays} day${partnerBirthdayDays === 1 ? '' : 's'} — still time to plan something.`,
+          cta_label: 'Plan something →',
+          cta_href: '/dates',
+          pills: null,
+          mode: 'birthday_nudge',
+        })
+      }
+
+      if (anniversaryDays !== null && anniversaryDays >= 0 && anniversaryDays <= 2) {
+        return NextResponse.json({
+          message: anniversaryDays === 0
+            ? `Your anniversary is today.`
+            : `Your anniversary is in ${anniversaryDays} day${anniversaryDays === 1 ? '' : 's'} — want to plan something together?`,
+          cta_label: 'Plan something →',
+          cta_href: '/dates',
+          pills: null,
+          mode: 'anniversary_nudge',
         })
       }
     }
