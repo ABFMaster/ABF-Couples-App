@@ -93,6 +93,16 @@ function CouplesSessionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isNewSession = searchParams.get('new') === 'true';
+  // Seed param — mirrors ai-coach/page.js's pendingSeed pattern. Lets a
+  // caller (e.g. the Weekly Reflection Sunday hook) hand Couples Session a
+  // grounded opening line instead of a cold start. Purely client-side/
+  // visual: never written to ai_messages until the couple actually sends a
+  // real message, which is when the session and its first real exchange
+  // get persisted. Presence of a seed implies starting fresh, same as
+  // ?new=true — a deliberate "let's talk about this" invite shouldn't
+  // silently resume an unrelated older session.
+  const seedParam = searchParams.get('seed');
+  const startFresh = isNewSession || !!seedParam;
 
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
@@ -136,8 +146,9 @@ function CouplesSessionContent() {
   }, [conversationId, sending]);
 
   const checkAuth = async () => {
-    const startingFresh = isNewSession;
-    if (isNewSession) window.history.replaceState({}, '', '/couples-session');
+    const startingFresh = startFresh;
+    const capturedSeed = seedParam;
+    if (isNewSession || seedParam) window.history.replaceState({}, '', '/couples-session');
 
     const { data: { user: authedUser }, error } = await supabase.auth.getUser();
     if (error || !authedUser) { router.push('/login'); return; }
@@ -173,6 +184,14 @@ function CouplesSessionContent() {
         .order('updated_at', { ascending: false })
         .limit(1);
       if (recent?.[0]?.id) await loadConversation(recent[0].id, couple.id);
+    } else if (capturedSeed) {
+      setMessages([{
+        id: 'opener-' + Date.now(),
+        role: 'assistant',
+        content: decodeURIComponent(capturedSeed),
+        created_at: new Date().toISOString(),
+        isOpener: true,
+      }]);
     }
 
     setLoading(false);

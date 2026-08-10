@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import BottomNav from '@/components/BottomNav'
-import NoraCouplesChat from '@/components/NoraCouplesChat'
 
 export default function WeeklyReflectionPage() {
   const router = useRouter()
@@ -195,20 +194,37 @@ export default function WeeklyReflectionPage() {
           </div>
         )}
 
-        {/* Talk to Nora */}
-        <div style={{ marginBottom: '16px' }}>
-          <NoraCouplesChat
-            coupleId={coupleId}
-            contextType="sunday_review"
-            contextId={reflection.week_start}
-            contextSummary={`Weekly reflection for the week of ${reflection.week_start}. Opening: ${reflection.opening} Pattern Nora noticed: ${reflection.pattern} Carry this forward: ${reflection.week_ahead}`}
-            userName={userName}
-            partnerName={partnerName}
-            userId={userId}
-            initialNoraMessage={reflection.pattern || reflection.opening}
-            mode="full"
-            defaultExpanded={true}
-          />
+        {/* Couples Session invite — replaces the previous inline
+            NoraCouplesChat widget (Aug 10 2026). Matt's directive: this is
+            the trained-cadence entry point — "1 day a week, usually after
+            the Sunday Weekly Reflection, for the couple to dedicate to a
+            couples session via Nora." The light inline-chat pattern is
+            still right for lower-stakes contexts (Rabbit Hole debrief
+            still uses it), but the flagship weekly moment deserves the
+            real surface, not a scaled-down stand-in. Seeds Couples Session
+            with this week's actual pattern/opening via the `seed` param
+            (mirrors ai-coach's ?seed= pattern) so Nora doesn't start cold —
+            she already knows what to reference the moment they arrive. */}
+        <div style={{ marginBottom: '16px', background: 'linear-gradient(160deg, #C4694F, #A8523D)', borderRadius: '14px', padding: '20px 18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+            <div style={{ display: 'flex' }}>
+              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#F0EAE0', border: '1.5px solid #C4694F' }} />
+              <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#E8B04B', marginLeft: '-4px', border: '1.5px solid #C4694F' }} />
+            </div>
+            <span style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#F5DDC8' }}>Nora · Together</span>
+          </div>
+          <p style={{ fontFamily: 'Georgia, serif', fontSize: '16px', fontStyle: 'italic', color: 'white', lineHeight: 1.5, margin: '0 0 16px' }}>
+            You just reflected on your week. Want to talk any of it through, together?
+          </p>
+          <button
+            onClick={() => {
+              const seed = `You two just finished this week's reflection together. ${reflection.pattern || reflection.opening || "Something from this week is worth sitting with."} What's alive for you both right now?`
+              router.push(`/couples-session?new=true&seed=${encodeURIComponent(seed)}`)
+            }}
+            style={{ background: 'white', color: '#A8523D', border: 'none', borderRadius: '100px', padding: '10px 20px', fontSize: '13px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', cursor: 'pointer' }}
+          >
+            Start your Sunday session →
+          </button>
         </div>
 
         {/* History link */}
