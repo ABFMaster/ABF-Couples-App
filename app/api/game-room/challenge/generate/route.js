@@ -1,4 +1,13 @@
 export const dynamic = 'force-dynamic'
+// ROOT CAUSE FIX Aug 11 2026 — see the Promise.all comments below for the
+// full story. This route was running ~9 sequential DB round-trips before
+// even calling the LLM (more than any other challenge type, since Memory
+// alone pulls Spark/Bet/Timeline/Dates/Flirts context), on top of no
+// explicit function-duration budget, so it was relying entirely on
+// whatever Vercel's platform default happened to be. Setting this
+// explicitly gives the slowest path (memory, with its larger maxTokens
+// completion) real headroom instead of an implicit, unverifiable ceiling.
+export const maxDuration = 30
 
 import { CHALLENGE_PROMPTS } from '@/lib/challenge-prompts'
 import { noraGenerate } from '@/lib/nora'
@@ -85,22 +94,17 @@ export async function POST(request) {
     const basePrompt = source[Math.floor(Math.random() * source.length)]
 
     // Fetch couple context for Nora personalisation
-    const { data: coupleData } = await supabase
-      .from('couples')
-      .select('user1_id, user2_id')
-      .eq('id', coupleId)
-      .single()
+    // noraMemory only needs coupleId (already known) — no reason to wait on
+    // coupleData first. Independent reads, run together.
+    const [{ data: coupleData }, { data: noraMemory }] = await Promise.all([
+      supabase.from('couples').select('user1_id, user2_id').eq('id', coupleId).single(),
+      supabase.from('nora_memory').select('memory_summary').eq('couple_id', coupleId).single(),
+    ])
 
     const { data: profiles } = await supabase
       .from('user_profiles')
       .select('id, user_id, display_name')
       .in('user_id', [coupleData.user1_id, coupleData.user2_id])
-
-    const { data: noraMemory } = await supabase
-      .from('nora_memory')
-      .select('memory_summary')
-      .eq('couple_id', coupleId)
-      .single()
 
     const profileSummary = profiles
       ? profiles.map(p => p.display_name).join(' and ')
@@ -161,49 +165,70 @@ Respond in this exact JSON format with no other text:
       // (the app moved to the spark_responses/bet_responses per-user-row
       // model). Fixed July 31 2026 to read from the tables Bet/Spark
       // actually write to. See Sessions/PRODUCT_BACKLOG.md.
-      const { data: sparkAnswers } = await supabase
-        .from('spark_responses')
-        .select('response_text, user_id, responded_at, sparks(question)')
-        .eq('couple_id', coupleId)
-        .not('response_text', 'is', null)
-        .order('responded_at', { ascending: false })
-        .limit(20)
-
-      const { data: betAnswers } = await supabase
-        .from('bet_responses')
-        .select('actual_answer, user_id, responded_at, bets(question)')
-        .eq('couple_id', coupleId)
-        .not('actual_answer', 'is', null)
-        .order('responded_at', { ascending: false })
-        .limit(20)
-
-      const { data: timelineEvents } = await supabase
-        .from('timeline_events')
-        .select('title, event_date, event_type, description')
-        .eq('couple_id', coupleId)
-        .order('event_date', { ascending: true })
-        .limit(30)
-
-      // Completed dates — real reactions/reviews from actual dates, same
-      // specific-and-quotable quality as Spark/Bet answers.
-      const { data: completedDates } = await supabase
-        .from('custom_dates')
-        .select('title, date_time, user1_reaction, user1_review, user2_reaction, user2_review')
-        .eq('couple_id', coupleId)
-        .eq('status', 'completed')
-        .order('date_time', { ascending: false })
-        .limit(15)
-
-      // Sent Flirts — mode/type and column names differ between
-      // Nora-generated flirts (mode + suggestion) and freeform ones sent
-      // via FlirtCard (type + content); normalise both below.
-      const { data: sentFlirts } = await supabase
-        .from('flirts')
-        .select('sender_id, receiver_id, mode, type, suggestion, content, reaction, created_at')
-        .eq('couple_id', coupleId)
-        .not('sent_at', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(15)
+      // ROOT CAUSE FIX Aug 11 2026 — Matt's "Memory Test still failing to
+      // launch" report was the SAME client-side message as the Aug 6 JSON-
+      // parse bug, but that fix (maxTokens 600->1100, regex JSON extraction)
+      // was confirmed still intact and working. These 5 queries are all
+      // independent (each just filtered by coupleId) but were being awaited
+      // one at a time — 5 extra sequential round-trips, unique to Memory,
+      // stacked on top of the couple/profile/history queries above and
+      // landing right before the (now larger, slower) LLM call. With no
+      // maxDuration set on this route, that full chain was riding on
+      // whatever Vercel's platform default happened to be; if it ever ran
+      // long, the function gets killed mid-flight with no log on either
+      // side — the client's fetch just fails, and generateRound's catch
+      // shows the same generic "Something went wrong loading the
+      // challenge" text regardless of cause, making a timeout and a parse
+      // failure indistinguishable to Matt even though they're different
+      // bugs. Parallelising these (see also maxDuration above) removes the
+      // extra latency without changing what's fetched.
+      const [
+        { data: sparkAnswers },
+        { data: betAnswers },
+        { data: timelineEvents },
+        { data: completedDates },
+        { data: sentFlirts },
+      ] = await Promise.all([
+        supabase
+          .from('spark_responses')
+          .select('response_text, user_id, responded_at, sparks(question)')
+          .eq('couple_id', coupleId)
+          .not('response_text', 'is', null)
+          .order('responded_at', { ascending: false })
+          .limit(20),
+        supabase
+          .from('bet_responses')
+          .select('actual_answer, user_id, responded_at, bets(question)')
+          .eq('couple_id', coupleId)
+          .not('actual_answer', 'is', null)
+          .order('responded_at', { ascending: false })
+          .limit(20),
+        supabase
+          .from('timeline_events')
+          .select('title, event_date, event_type, description')
+          .eq('couple_id', coupleId)
+          .order('event_date', { ascending: true })
+          .limit(30),
+        // Completed dates — real reactions/reviews from actual dates, same
+        // specific-and-quotable quality as Spark/Bet answers.
+        supabase
+          .from('custom_dates')
+          .select('title, date_time, user1_reaction, user1_review, user2_reaction, user2_review')
+          .eq('couple_id', coupleId)
+          .eq('status', 'completed')
+          .order('date_time', { ascending: false })
+          .limit(15),
+        // Sent Flirts — mode/type and column names differ between
+        // Nora-generated flirts (mode + suggestion) and freeform ones sent
+        // via FlirtCard (type + content); normalise both below.
+        supabase
+          .from('flirts')
+          .select('sender_id, receiver_id, mode, type, suggestion, content, reaction, created_at')
+          .eq('couple_id', coupleId)
+          .not('sent_at', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(15),
+      ])
 
       // Determine guesser vs answer-holder for this round
       // Odd rounds (1, 3): host guesses, partner holds answer
