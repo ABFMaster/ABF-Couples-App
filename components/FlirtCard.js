@@ -1,8 +1,10 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 export default function FlirtCard({ userId, coupleId, partnerId, partnerName, userName, session }) {
+  const router = useRouter()
   const [unopened, setUnopened] = useState([])
   const [received, setReceived] = useState([])
   const [sent, setSent] = useState([])
@@ -113,6 +115,14 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
           type: dropType,
           content: dropType === 'song' ? selectedTrack.spotifyUrl : dropType === 'memory' ? (selectedMemory?.title || 'a memory') : content.trim(),
           metadata: dropType === 'song' ? {
+            // track_id added Aug 11 2026 (Mixtape data-flow fix) — previously
+            // selectedTrack.id was captured from the Spotify search result
+            // but never actually sent anywhere, so spotify_track_id could
+            // never be populated even after the send route was fixed to
+            // write it. Mixtape's own eligibility check doesn't require this
+            // (keys off track_name instead, which historical rows do have),
+            // but it's good to actually capture it going forward.
+            track_id: selectedTrack.id,
             track_name: selectedTrack.name,
             artist: selectedTrack.artist,
             album_art: selectedTrack.albumArt,
@@ -579,9 +589,18 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                               hasUnseen is true. Once everything's been opened, there was
                               no way back in — unlike 'sent', which already had this exact
                               button. Mirrors it. */}
-                          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                            {received.length > 0 && <button onClick={() => { setCardFlipped(false); setView('received') }} style={{ fontSize: 8, color: '#b0a090', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>received →</button>}
-                            {sent.length > 0 && <button onClick={() => { setCardFlipped(false); setView('sent') }} style={{ fontSize: 8, color: '#b0a090', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>sent →</button>}
+                          {/* Bumped from fontSize:8 Aug 11 2026 — Matt: "very
+                              small and hard to see." Also added a third
+                              'mixtape →' link here (Mixtape's own back
+                              button already assumed it lived one tap from
+                              Flirt; it just never had a way in). Kept the
+                              same italic Georgia treatment as the rest of
+                              this card face, just legible now, with real
+                              tap padding instead of padding:0. */}
+                          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                            {received.length > 0 && <button onClick={() => { setCardFlipped(false); setView('received') }} style={{ fontSize: 12, color: '#8b7355', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>received →</button>}
+                            {sent.length > 0 && <button onClick={() => { setCardFlipped(false); setView('sent') }} style={{ fontSize: 12, color: '#8b7355', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>sent →</button>}
+                            <button onClick={() => router.push('/mixtape')} style={{ fontSize: 12, color: '#8b7355', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>mixtape →</button>
                           </div>
                         </div>
                       </div>

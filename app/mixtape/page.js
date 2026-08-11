@@ -66,12 +66,23 @@ export default function Mixtape() {
   }
 
   const fetchSongs = async (coupleId) => {
+    // Fixed Aug 11 2026 (Mixtape data-flow fix) — this used to filter on
+    // spotify_track_id, which the current Flirt send path never populated
+    // (song data was refactored into a `metadata` JSONB column and nothing
+    // updated this query or the flat spotify_* columns to match, so every
+    // song sent since that refactor was invisible here even though it
+    // rendered fine inside Flirt). spotify_track_id also isn't something
+    // historical rows can ever get retroactively, since the app never
+    // captured it before now. spotify_track_name has been present on every
+    // real song send since the column existed, so it's both the actual
+    // "this is a valid song" signal and the one the backfill migration
+    // (docs/database/mixtape_data_flow_fix.sql) can restore for old rows.
     const { data, error } = await supabase
       .from('flirts')
       .select('*')
       .eq('couple_id', coupleId)
       .eq('type', 'song')
-      .not('spotify_track_id', 'is', null)
+      .not('spotify_track_name', 'is', null)
       .order('created_at', { ascending: false })
 
     if (!error) {
@@ -133,144 +144,124 @@ export default function Mixtape() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#1DB954] border-t-transparent mx-auto mb-4"></div>
-          <p className="text-[#1DB954] text-lg">Loading your mixtape...</p>
-        </div>
+      <div style={{ minHeight: '100vh', background: '#FAF6F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#C4AA87', fontStyle: 'italic' }}>Loading your mixtape...</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-black pb-24">
-      {/* Header */}
-      <div className="bg-gradient-to-b from-[#1DB954]/20 to-transparent">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <button
-            onClick={() => router.push('/flirts')}
-            className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors mb-6"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            <span>Back to Flirts</span>
-          </button>
+    <div style={{ minHeight: '100vh', background: '#FAF6F0', paddingBottom: playingId ? '120px' : '80px', fontFamily: 'DM Sans, sans-serif' }}>
+      {/* Header — restyled Aug 11 2026 to match the app's actual palette
+          (Cormorant Garamond / DM Sans / cream, same tokens as /dates)
+          instead of the leftover dark Spotify-green look this page shipped
+          with before the design refresh. Back button now goes to /dashboard
+          — Flirt isn't its own page, it's the FlirtCard component embedded
+          there, so the old /flirts target was a dead link. */}
+      <div style={{ background: '#FAF6F0', padding: '52px 24px 28px', borderBottom: '1px solid #EDE4D8' }}>
+        <button
+          onClick={() => router.push('/dashboard')}
+          style={{ fontSize: '12px', color: '#8B7355', background: 'none', border: 'none', cursor: 'pointer', marginBottom: '20px', padding: 0, fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.04em' }}
+        >
+          ← Back
+        </button>
 
-          <div className="flex items-center gap-4">
-            <div className="w-20 h-20 bg-gradient-to-br from-[#1DB954] to-[#1ed760] rounded-xl flex items-center justify-center shadow-2xl">
-              <span className="text-4xl">🎵</span>
-            </div>
-            <div>
-              <p className="text-gray-400 text-sm uppercase tracking-wider">Playlist</p>
-              <h1 className="text-3xl md:text-4xl font-bold text-white">Our Mixtape</h1>
-              <p className="text-gray-400 mt-1">
-                {songs.length} song{songs.length !== 1 ? 's' : ''} • You & {partnerName}
-              </p>
-            </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 14px rgba(139,74,42,0.25)' }}>
+            <span style={{ fontSize: '28px' }}>🎵</span>
           </div>
-        </div>
-      </div>
-
-      {/* Coming Soon Banner */}
-      <div className="max-w-4xl mx-auto px-4 py-4">
-        <div className="bg-gradient-to-r from-indigo-600/20 to-coral-600/20 border border-purple-500/30 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">✨</span>
-            <div>
-              <p className="text-white font-medium">Premium Features Coming Soon</p>
-              <p className="text-gray-400 text-sm">
-                Collaborative playlists, Spotify export, and more!
-              </p>
-            </div>
+          <div>
+            <p style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#C4AA87', margin: 0, marginBottom: '2px' }}>Playlist</p>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '38px', fontWeight: 300, color: '#1C1410', letterSpacing: '-0.02em', lineHeight: 1 }}>Our Mixtape</div>
+            <p style={{ fontSize: '13px', color: '#8B7355', margin: 0, marginTop: '6px' }}>
+              {songs.length} song{songs.length !== 1 ? 's' : ''} · You &amp; {partnerName}
+            </p>
           </div>
         </div>
       </div>
 
       {/* Songs List */}
-      <div className="max-w-4xl mx-auto px-4 py-4">
+      <div style={{ maxWidth: '640px', margin: '0 auto', padding: '20px 16px' }}>
         {songs.length > 0 ? (
-          <div className="space-y-2">
+          <div>
             {songs.map((song, index) => {
               const isFromMe = song.sender_id === user?.id
               const senderLabel = isFromMe ? 'You' : partnerName
+              const isPlaying = playingId === song.id
 
               return (
                 <div
                   key={song.id}
-                  className={`group flex items-center gap-4 p-3 rounded-lg hover:bg-white/10 transition-colors ${
-                    playingId === song.id ? 'bg-white/10' : ''
-                  }`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '14px',
+                    padding: '10px 8px',
+                    borderRadius: '12px',
+                    background: isPlaying ? 'rgba(196,113,74,0.08)' : 'transparent',
+                    marginBottom: '2px',
+                  }}
                 >
                   {/* Track Number / Play Button */}
-                  <div className="w-8 text-center flex-shrink-0">
+                  <div style={{ width: '24px', textAlign: 'center', flexShrink: 0 }}>
                     {song.spotify_preview_url ? (
                       <button
                         onClick={() => togglePlay(song)}
-                        className="w-8 h-8 flex items-center justify-center"
+                        style={{ width: '24px', height: '24px', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
-                        {playingId === song.id ? (
-                          <svg className="w-5 h-5 text-[#1DB954]" fill="currentColor" viewBox="0 0 24 24">
+                        {isPlaying ? (
+                          <svg width="16" height="16" fill="#C4714A" viewBox="0 0 24 24">
                             <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
                           </svg>
                         ) : (
-                          <>
-                            <span className="text-gray-400 group-hover:hidden">{index + 1}</span>
-                            <svg className="w-5 h-5 text-white hidden group-hover:block" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M8 5v14l11-7z"/>
-                            </svg>
-                          </>
+                          <svg width="16" height="16" fill="#8B7355" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                          </svg>
                         )}
                       </button>
                     ) : (
-                      <span className="text-gray-500">{index + 1}</span>
+                      <span style={{ color: '#D9CBBA', fontSize: '13px' }}>{index + 1}</span>
                     )}
                   </div>
 
                   {/* Album Art */}
-                  <div className="w-12 h-12 flex-shrink-0 relative">
+                  <div style={{ width: '44px', height: '44px', flexShrink: 0, position: 'relative' }}>
                     {song.spotify_album_art ? (
                       <img
                         src={song.spotify_album_art}
                         alt="Album art"
-                        className="w-full h-full rounded object-cover"
+                        style={{ width: '100%', height: '100%', borderRadius: '8px', objectFit: 'cover' }}
                       />
                     ) : (
-                      <div className="w-full h-full rounded bg-gray-700 flex items-center justify-center">
-                        <span className="text-xl">🎵</span>
+                      <div style={{ width: '100%', height: '100%', borderRadius: '8px', background: '#F0E6D8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '16px' }}>🎵</span>
                       </div>
                     )}
 
-                    {/* Playing Indicator */}
-                    {playingId === song.id && (
-                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-700 rounded-b overflow-hidden">
-                        <div
-                          className="h-full bg-[#1DB954] transition-all duration-100"
-                          style={{ width: `${progress}%` }}
-                        />
+                    {isPlaying && (
+                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '3px', background: 'rgba(0,0,0,0.15)', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${progress}%`, background: '#C4714A', transition: 'width 0.1s linear' }} />
                       </div>
                     )}
                   </div>
 
                   {/* Track Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className={`font-medium truncate ${
-                      playingId === song.id ? 'text-[#1DB954]' : 'text-white'
-                    }`}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: '14px', fontWeight: 500, color: isPlaying ? '#C4714A' : '#1C1410', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {song.spotify_track_name}
                     </p>
-                    <p className="text-gray-400 text-sm truncate">
+                    <p style={{ fontSize: '12px', color: '#8B7355', margin: 0, marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {song.spotify_artist}
                     </p>
                   </div>
 
                   {/* Sent By */}
-                  <div className="hidden md:block text-gray-400 text-sm">
+                  <div style={{ fontSize: '12px', color: '#C4AA87', flexShrink: 0, display: 'none' }} className="mixtape-sender">
                     {senderLabel}
                   </div>
 
                   {/* Date */}
-                  <div className="hidden md:block text-gray-500 text-sm w-24 text-right">
+                  <div style={{ fontSize: '11px', color: '#D9CBBA', flexShrink: 0, width: '76px', textAlign: 'right', display: 'none' }} className="mixtape-date">
                     {formatDate(song.created_at)}
                   </div>
 
@@ -280,10 +271,10 @@ export default function Mixtape() {
                       href={song.spotify_track_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-gray-500 hover:text-[#1DB954] transition-colors"
+                      style={{ color: '#D9CBBA', flexShrink: 0, display: 'flex' }}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
                       </svg>
                     </a>
@@ -293,15 +284,15 @@ export default function Mixtape() {
             })}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <div className="text-6xl mb-4">🎧</div>
-            <h2 className="text-2xl font-bold text-white mb-2">No songs yet</h2>
-            <p className="text-gray-400 mb-6">
+          <div style={{ background: 'rgba(250,246,240,0.7)', border: '1px dashed #D9CBBA', borderRadius: '18px', padding: '48px 20px', textAlign: 'center' }}>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🎧</div>
+            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', color: '#C4AA87', marginBottom: '8px' }}>No songs yet</div>
+            <p style={{ fontSize: '13px', color: '#8B7355', marginBottom: '20px' }}>
               Start sharing songs with {partnerName} to build your mixtape
             </p>
             <button
-              onClick={() => router.push('/flirts')}
-              className="bg-[#1DB954] text-white px-6 py-3 rounded-full font-semibold hover:bg-[#1ed760] transition-colors"
+              onClick={() => router.push('/dashboard')}
+              style={{ fontSize: '12px', fontWeight: 500, color: '#FAF6F0', background: '#1C1410', border: 'none', padding: '10px 24px', borderRadius: '24px', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', letterSpacing: '0.04em' }}
             >
               Send a Song
             </button>
@@ -309,10 +300,10 @@ export default function Mixtape() {
         )}
       </div>
 
-      {/* Now Playing Bar (when playing) */}
+      {/* Now Playing Bar */}
       {playingId && (
-        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black to-gray-900 border-t border-gray-800 p-4">
-          <div className="max-w-4xl mx-auto flex items-center gap-4">
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#FFFDF9', borderTop: '1px solid #EDE4D8', padding: '12px 16px', boxShadow: '0 -4px 14px rgba(28,20,16,0.06)' }}>
+          <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
             {(() => {
               const currentSong = songs.find(s => s.id === playingId)
               if (!currentSong) return null
@@ -322,17 +313,17 @@ export default function Mixtape() {
                   <img
                     src={currentSong.spotify_album_art}
                     alt="Album art"
-                    className="w-14 h-14 rounded shadow-lg"
+                    style={{ width: '44px', height: '44px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(28,20,16,0.15)' }}
                   />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-medium truncate">{currentSong.spotify_track_name}</p>
-                    <p className="text-gray-400 text-sm truncate">{currentSong.spotify_artist}</p>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: '13px', fontWeight: 500, color: '#1C1410', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentSong.spotify_track_name}</p>
+                    <p style={{ fontSize: '12px', color: '#8B7355', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{currentSong.spotify_artist}</p>
                   </div>
                   <button
                     onClick={() => togglePlay(currentSong)}
-                    className="w-10 h-10 bg-white rounded-full flex items-center justify-center hover:scale-105 transition-transform"
+                    style={{ width: '36px', height: '36px', background: '#C4714A', borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
                   >
-                    <svg className="w-5 h-5 text-black" fill="currentColor" viewBox="0 0 24 24">
+                    <svg width="14" height="14" fill="white" viewBox="0 0 24 24">
                       <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
                     </svg>
                   </button>
@@ -342,6 +333,12 @@ export default function Mixtape() {
           </div>
         </div>
       )}
+
+      <style>{`
+        @media (min-width: 640px) {
+          .mixtape-sender, .mixtape-date { display: block !important; }
+        }
+      `}</style>
     </div>
   )
 }

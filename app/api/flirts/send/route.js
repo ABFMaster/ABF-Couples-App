@@ -45,6 +45,24 @@ export async function POST(request) {
       }
     }
 
+    // Song sends also get mirrored into the flat spotify_* columns, not
+    // just `metadata` — Mixtape (app/mixtape/page.js) reads from those flat
+    // columns (a leftover from an earlier version of this send flow, see
+    // docs/database/song_flirts.sql) and was never updated when this route
+    // moved to storing everything in `metadata` JSONB instead. That left
+    // Mixtape unable to see any song sent since that refactor, even though
+    // it displays fine inside Flirt itself — root-caused and fixed Aug 11
+    // 2026, see docs/database/mixtape_data_flow_fix.sql for the matching
+    // backfill of historical rows.
+    const spotifyColumns = (type === 'song' && resolvedMetadata) ? {
+      spotify_track_id: resolvedMetadata.track_id || null,
+      spotify_track_name: resolvedMetadata.track_name || null,
+      spotify_artist: resolvedMetadata.artist || null,
+      spotify_album_art: resolvedMetadata.album_art || null,
+      spotify_preview_url: resolvedMetadata.preview_url || null,
+      spotify_track_url: resolvedMetadata.track_url || null,
+    } : {}
+
     const { data: flirt, error: insertError } = await supabase
       .from('flirts')
       .insert({
@@ -53,7 +71,8 @@ export async function POST(request) {
         receiver_id: receiverId,
         type,
         content: content.trim(),
-        metadata: resolvedMetadata
+        metadata: resolvedMetadata,
+        ...spotifyColumns
       })
       .select()
       .single()
