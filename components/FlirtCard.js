@@ -560,7 +560,20 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                         {/* Address side with stamp — now starts flush with
                             the header row instead of below the type
                             selector row; see restructuring comment above. */}
-                        <div style={{ width: 130, flexShrink: 0, borderLeft: '0.5px solid #d4c4a8', padding: '6px 6px 8px 8px', display: 'flex', flexDirection: 'column' }}>
+                        {/* Widened 130->144 and right padding 6->12 Aug 11 2026 —
+                            Matt: "mixtape" being covered by the card's edge on
+                            mobile (fine on desktop). Best-reasoned cause without
+                            a live device to test against: this column sat right
+                            up against the row's overflow:hidden boundary (line
+                            ~505) with only 6px of right padding, and Georgia
+                            italic's trailing slant commonly renders a few px
+                            wider than its logical glyph box — mobile Safari in
+                            particular is prone to clipping that overhang against
+                            a hard overflow boundary. Widening the column and its
+                            right padding gives real buffer regardless of the
+                            exact mechanism; if it's still clipped after this,
+                            it's something else and needs a live repro. */}
+                        <div style={{ width: 144, flexShrink: 0, borderLeft: '0.5px solid #d4c4a8', padding: '6px 12px 8px 8px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
                           {/* Stamp — top of column, right-aligned. Fixed Aug 6 2026 —
                               Matt: "Stamp should be further right, no?" Root cause: the
                               column is a flex column with the browser default
@@ -597,10 +610,10 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                               same italic Georgia treatment as the rest of
                               this card face, just legible now, with real
                               tap padding instead of padding:0. */}
-                          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                            {received.length > 0 && <button onClick={() => { setCardFlipped(false); setView('received') }} style={{ fontSize: 12, color: '#8b7355', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>received →</button>}
-                            {sent.length > 0 && <button onClick={() => { setCardFlipped(false); setView('sent') }} style={{ fontSize: 12, color: '#8b7355', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>sent →</button>}
-                            <button onClick={() => router.push('/mixtape')} style={{ fontSize: 12, color: '#8b7355', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>mixtape →</button>
+                          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, width: '100%' }}>
+                            {received.length > 0 && <button onClick={() => { setCardFlipped(false); setView('received') }} style={{ fontSize: 11, color: '#8b7355', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', fontFamily: 'Georgia, serif', fontStyle: 'italic', whiteSpace: 'nowrap' }}>received →</button>}
+                            {sent.length > 0 && <button onClick={() => { setCardFlipped(false); setView('sent') }} style={{ fontSize: 11, color: '#8b7355', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', fontFamily: 'Georgia, serif', fontStyle: 'italic', whiteSpace: 'nowrap' }}>sent →</button>}
+                            <button onClick={() => router.push('/mixtape')} style={{ fontSize: 11, color: '#8b7355', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', fontFamily: 'Georgia, serif', fontStyle: 'italic', whiteSpace: 'nowrap' }}>mixtape →</button>
                           </div>
                         </div>
                       </div>

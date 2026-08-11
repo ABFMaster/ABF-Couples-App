@@ -7,6 +7,46 @@ import { noraReact } from '@/lib/nora'
 import { updateNoraMemory, SIGNAL_TYPES, getFullNoraContext } from '@/lib/nora-memory'
 import { verifyCoupleMembership } from '@/lib/api-auth'
 
+// Idempotent — claims notified_at first (only proceeds if it can flip it
+// from null), so two near-simultaneous callers (e.g. two Sunday cron
+// windows both landing close together) can't double-push. Worst case on a
+// race is zero sends instead of two, same safer-failure-direction pattern
+// used elsewhere in this app (notifyIfMemoryJustUnlocked).
+async function notifyReflectionReady(supabase, coupleId, reflectionId) {
+  const { data: claimed } = await supabase
+    .from('weekly_reflections')
+    .update({ notified_at: new Date().toISOString() })
+    .eq('id', reflectionId)
+    .is('notified_at', null)
+    .select('id')
+    .maybeSingle()
+
+  if (!claimed) return // another concurrent call already claimed it
+
+  const { data: couple } = await supabase
+    .from('couples')
+    .select('user1_id, user2_id')
+    .eq('id', coupleId)
+    .maybeSingle()
+  if (!couple) return
+
+  const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
+  const sendOne = (userId) =>
+    fetch(`${appBase}/api/push/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
+      body: JSON.stringify({
+        userId,
+        title: 'Weekly Reflection',
+        body: 'Your week together is ready to reflect on.',
+        url: '/dashboard',
+        route: 'reflection/generate',
+      }),
+    }).catch(() => {})
+
+  await Promise.all([sendOne(couple.user1_id), sendOne(couple.user2_id)])
+}
+
 export async function POST(request) {
   try {
     const authHeader = request.headers.get('authorization') || ''
@@ -56,6 +96,17 @@ export async function POST(request) {
       .maybeSingle()
 
     if (existing) {
+      // Push-reliability fix, Aug 11 2026 — this used to return immediately
+      // here with no push, meaning the ONLY notification path was the
+      // hour===3-gated block in processDailyContent (cron/scheduled-tasks).
+      // If that one window was ever missed, the reflection could exist with
+      // nobody ever told. Ensures the push still goes out exactly once, from
+      // whichever caller (any of the 3 Sunday-touching cron windows, or the
+      // client-side on-demand fallback in weekly-reflection/page.js) happens
+      // to be the first to notice notified_at is still null.
+      if (!existing.notified_at) {
+        await notifyReflectionReady(supabase, coupleId, existing.id)
+      }
       return NextResponse.json({ reflection: existing, alreadyExists: true })
     }
 
@@ -278,41 +329,14 @@ Return only the JSON object. No markdown, no explanation, no wrapper text.`
       .then(() => {})
       .catch(() => {})
 
-    // Notify both users that this week's reflection is ready
-    const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
+    // Notify both users that this week's reflection is ready — same
+    // idempotent helper as the `existing` early-return path above, so
+    // there's exactly one notify code path instead of two.
     try {
-      const { data: couple } = await supabase
-        .from('couples')
-        .select('user1_id, user2_id')
-        .eq('id', coupleId)
-        .maybeSingle()
-      if (couple) {
-        await Promise.all([
-          fetch(`${appBase}/api/push/send`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
-            body: JSON.stringify({
-              userId: couple.user1_id,
-              title: 'Weekly Reflection',
-              body: "Your week together is ready to reflect on.",
-              url: '/dashboard',
-              route: 'reflection/generate',
-            }),
-          }).catch(() => {}),
-          fetch(`${appBase}/api/push/send`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
-            body: JSON.stringify({
-              userId: couple.user2_id,
-              title: 'Weekly Reflection',
-              body: "Your week together is ready to reflect on.",
-              url: '/dashboard',
-              route: 'reflection/generate',
-            }),
-          }).catch(() => {}),
-        ])
-      }
-    } catch { /* non-blocking */ }
+      await notifyReflectionReady(supabase, coupleId, savedReflection.id)
+    } catch (notifyErr) {
+      console.error('[reflection/generate] notify error:', notifyErr)
+    }
 
     return NextResponse.json({ reflection: savedReflection, alreadyExists: false })
   } catch (err) {

@@ -191,10 +191,16 @@ async function processDailyContent(couple, user1, user2) {
     }
   }
 
-  if (day === 0) {
-    await sendPush(user1.user_id, 'Weekly Reflection', `Your week with ${user2Name} — Nora is ready when you are.`, '/weekly-reflection', 'cron/reflection')
-    await sendPush(user2.user_id, 'Weekly Reflection', `Your week with ${user1Name} — Nora is ready when you are.`, '/weekly-reflection', 'cron/reflection')
-  }
+  // Weekly Reflection push removed from here Aug 11 2026 — this fired
+  // unconditionally on the single hour===3 && day===0 tick regardless of
+  // whether generation had actually succeeded yet (processWeeklyReflection
+  // runs later in the main loop below, so this could even fire BEFORE
+  // content existed). Push-sending now lives inside reflection/generate's
+  // idempotent notifyReflectionReady(), triggered by processWeeklyReflection
+  // — which itself already runs unconditionally on every Sunday-touching
+  // cron tick (10 UTC daily, 13 UTC Sunday, 17 UTC daily), so real
+  // redundancy replaces this single fragile window instead of duplicating
+  // it. See docs/database/weekly_reflections_notified_at.sql.
 
   if (day === 0) {
     await sendReengagementPush(couple, user1, user2, noraMemory)
@@ -293,7 +299,14 @@ async function processMorningAfterDates(couple, user1, user2) {
 async function processBirthdayAnniversaryReminders(couple, user1, user2) {
   const timezone = user1.timezone || user2.timezone || 'America/Los_Angeles'
   const hour = getHourInTimezone(timezone)
-  if (hour !== 9) return
+  // Self-caught bug, Aug 11 2026 — this originally gated on hour===9, but
+  // vercel.json's cron entries land at UTC 10/13(Sun)/1-2/5(Thu)/17 — none
+  // of which is 16:00 UTC (9am America/Los_Angeles). That gate could never
+  // once evaluate true, so this whole feature has never actually fired
+  // since it shipped. Reusing hour===3, the same proven-firing daily 10 UTC
+  // window processDailyContent already uses, instead of adding a new
+  // vercel.json cron entry for one more specific hour.
+  if (hour !== 3) return
 
   const { data: profiles } = await supabase
     .from('user_profiles')
