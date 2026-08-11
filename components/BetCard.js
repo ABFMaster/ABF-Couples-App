@@ -409,7 +409,18 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
   const RatingIcon = ratingObj?.icon
 
   return (
-    <div style={{ background: '#1C1510', borderRadius: '20px', padding: '24px', minHeight: '680px' }}>
+    // ROOT CAUSE FIX Aug 11 2026 — Matt: "a lot of real estate between Daily
+    // Activity reveal and Follow Through." minHeight:680px was fixed
+    // regardless of state, sized for the tallest content this card ever
+    // shows (4 flip cards + the full 4-reaction/2-rating button picker) so
+    // the reveal transition doesn't jump. Once sealed, the picker collapses
+    // to two short summary lines — but the 680px floor stayed, leaving a
+    // large dead gap below the real content. FollowThroughCard's blended
+    // variant appends directly below this with zero margin (by design, to
+    // read as one continuous card), so that dead space read as a gap before
+    // Follow-Through instead of just a tall Bet card. Only enforce the
+    // floor pre-seal, when the taller picker is still the shown content.
+    <div style={{ background: '#1C1510', borderRadius: '20px', padding: '24px', minHeight: isSealed ? undefined : '680px' }}>
       <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '18px', color: '#C4B49A', textAlign: 'center', lineHeight: 1.35, marginBottom: '20px', fontWeight: 400 }}>
         {bet.question}
       </p>
