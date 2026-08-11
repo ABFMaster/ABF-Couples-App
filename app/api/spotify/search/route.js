@@ -6,53 +6,64 @@ import { NextResponse } from 'next/server'
 const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID
 const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET
 
-// Refresh Spotify access token
-async function refreshAccessToken(refreshToken) {
+// Switched from per-user OAuth to Client Credentials — Aug 11 2026.
+//
+// This route used to look up a per-user access/refresh token pair from
+// user_spotify_connections and refresh it via grant_type=refresh_token
+// whenever it neared expiry. Matt forwarded a Spotify for Developers email:
+// starting July 20 2026, refresh tokens issued on a user's behalf expire
+// after six months, and apps must discard the token and send the user back
+// through sign-in rather than retry the refresh. The old code here did
+// neither — a failed refresh threw, the outer catch turned that into a
+// generic 500, and Flirt's own search UI swallows fetch failures in a bare
+// catch{}, so an expired token would have meant song search silently
+// stopped working with zero explanation, indistinguishable from every other
+// silent-failure class this app has had fixed this session.
+//
+// Rather than patch in discard-and-reauth handling, this route doesn't need
+// a per-user token at all: the OAuth connection only ever requested
+// user-read-email/user-read-private, neither of which search uses, and
+// Spotify's search endpoint works fine on catalog-level Client Credentials
+// (client_id + client_secret, no user login, token isn't tied to any
+// person). The Spotify email explicitly exempts Client Credentials from
+// the refresh-token expiry change — this removes the failure mode instead
+// of just handling it. Also fixes a separate, pre-existing gap: this route
+// never actually required the caller to have gone through Spotify connect
+// in the first place (see app/shared/add/page.js's now-removed
+// spotifyConnected gate) — with Client Credentials there's no connect step
+// needed for anyone.
+//
+// user_spotify_connections and the /api/spotify/auth, /callback, /disconnect
+// routes are now orphaned — nothing else in the app uses a real per-user
+// Spotify token. Left in place rather than deleted in this pass; flagged in
+// Sessions/PRODUCT_BACKLOG.md for a follow-up cleanup.
+
+let cachedToken = null
+let cachedTokenExpiresAt = 0
+
+async function getAppAccessToken() {
+  if (cachedToken && Date.now() < cachedTokenExpiresAt) {
+    return cachedToken
+  }
+
   const response = await fetch('https://accounts.spotify.com/api/token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       'Authorization': `Basic ${Buffer.from(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`).toString('base64')}`,
     },
-    body: new URLSearchParams({
-      grant_type: 'refresh_token',
-      refresh_token: refreshToken,
-    }),
+    body: new URLSearchParams({ grant_type: 'client_credentials' }),
   })
 
   if (!response.ok) {
-    throw new Error('Failed to refresh token')
+    throw new Error('Failed to get Spotify app token')
   }
 
-  return response.json()
-}
-
-// Get valid access token, refreshing if needed
-async function getValidAccessToken(supabase, userId, connection) {
-  const now = new Date()
-  const expiresAt = new Date(connection.expires_at)
-
-  // If token expires in less than 5 minutes, refresh it
-  if (expiresAt.getTime() - now.getTime() < 5 * 60 * 1000) {
-    const tokens = await refreshAccessToken(connection.refresh_token)
-
-    const newExpiresAt = new Date(Date.now() + tokens.expires_in * 1000)
-
-    // Update tokens in database
-    await supabase
-      .from('user_spotify_connections')
-      .update({
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token || connection.refresh_token,
-        expires_at: newExpiresAt.toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', userId)
-
-    return tokens.access_token
-  }
-
-  return connection.access_token
+  const data = await response.json()
+  cachedToken = data.access_token
+  // Refresh a couple minutes early rather than cutting it exactly at expiry.
+  cachedTokenExpiresAt = Date.now() + (data.expires_in - 120) * 1000
+  return cachedToken
 }
 
 export async function GET(request) {
@@ -64,7 +75,9 @@ export async function GET(request) {
       return NextResponse.json({ tracks: [] })
     }
 
-    // Verify user is authenticated
+    // Still require a logged-in ABF user — this is about removing the
+    // Spotify-specific per-user token, not about opening search up
+    // unauthenticated.
     const authHeader = request.headers.get('Authorization')
     const token = authHeader?.replace('Bearer ', '')
 
@@ -83,21 +96,8 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
-    // Get user's Spotify connection
-    const { data: connection, error: connectionError } = await supabase
-      .from('user_spotify_connections')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle()
+    const accessToken = await getAppAccessToken()
 
-    if (connectionError || !connection) {
-      return NextResponse.json({ error: 'Spotify not connected' }, { status: 400 })
-    }
-
-    // Get valid access token
-    const accessToken = await getValidAccessToken(supabase, user.id, connection)
-
-    // Search Spotify
     const searchResponse = await fetch(
       `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`,
       {
@@ -108,29 +108,23 @@ export async function GET(request) {
     )
 
     if (!searchResponse.ok) {
+      // Cached app token might have been invalidated early — clear it and
+      // retry once with a fresh one before giving up.
       if (searchResponse.status === 401) {
-        // Token might be invalid, try to refresh once more
+        cachedToken = null
         try {
-          const tokens = await refreshAccessToken(connection.refresh_token)
+          const freshToken = await getAppAccessToken()
           const retryResponse = await fetch(
             `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`,
-            {
-              headers: {
-                'Authorization': `Bearer ${tokens.access_token}`,
-              },
-            }
+            { headers: { 'Authorization': `Bearer ${freshToken}` } }
           )
-
           if (retryResponse.ok) {
             const retryData = await retryResponse.json()
-            return NextResponse.json({
-              tracks: formatTracks(retryData.tracks?.items || []),
-            })
+            return NextResponse.json({ tracks: formatTracks(retryData.tracks?.items || []) })
           }
         } catch (e) {
-          console.error('Token refresh failed:', e)
+          console.error('[spotify/search] retry after 401 failed:', e)
         }
-
         return NextResponse.json({ error: 'Spotify authentication failed' }, { status: 401 })
       }
 

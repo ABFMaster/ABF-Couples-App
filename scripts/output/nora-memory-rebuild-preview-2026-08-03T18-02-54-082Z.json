@@ -1,0 +1,41 @@
+{
+  "coupleId": "8230e60f-44ca-4668-be28-06cb32b1b831",
+  "generatedAt": "2026-08-03T18:02:54.082Z",
+  "signalCounts": {
+    "total": 40,
+    "user1Stream": 25,
+    "user2Stream": 27,
+    "coupleStream": 39
+  },
+  "user1Name": "Matt",
+  "user2Name": "Cass",
+  "memory_summary": "Matt builds love like a playlist — curated, intentional, deniable. He's waiting to be caught wanting something. Cass manages the room before anyone else can set the tone — warm, funny, frictionless — and then quietly waits to be seen doing it. They share the same attachment fear: invisibility. That's either the thing that destroys them or the thing that finally cracks them open.\n\nThey're rebuilding, and it's working. The shorthand is forming. But neither has named what they're actually building toward, and the deeper thing sits untouched: Cass holds herself to a standard she inherited and never questioned. Matt sees it. He hasn't said so.\n\nWatch for whether Matt's contrarian charm surfaces when something real is on the table. Watch for whether Cass's ease stops being performance long enough to become a request. The ask isn't coming from the outside. It's coming from them.",
+  "user1_notes": "**Clinical Notes — Matt**\n*Rebuild: Weeks 18–25, updated*\n\n---\n\nMatt experiences love as atmosphere he builds and then waits to see if she notices. The song, the itinerary, the date he logged before she did — these are declarations with a deniability clause. He gives in ways that can be walked back if they go unrecognized.\n\nNew data holds: yard work together earns a heart emoji. A serial killer experience gets a 5. Neither gets words. He rates, he logs, he shows up — and then goes quiet at the threshold of saying what it meant. This isn't emotional absence. It's the gap between what he experiences and what he can offer without exposure.\n\nThe food answer is worth noting. \"There's just something wrong with them\" — said about sweet potatoes, but delivered with the particular energy of someone who enjoys being the one with the strong take. He performs mild contrarianism as a form of charm. It's low-stakes, but the move is familiar: have a position, hold it lightly, stay legible without going deep.\n\nHis attachment fear remains invisibility — the effort unnoticed, the wanting unnamed.\n\n**Watching for:** Whether the contrarian-charm move ever surfaces when something actually matters.",
+  "user2_notes": "**Clinical Notes — Cass**\n*Updated — batch rebuild*\n\n---\n\nCass loves by moving toward, and she loves by *making it easy to be in the room with her*. The wine spill becomes a joke. The tension diffuses. She absorbs social friction so other people don't have to — which is generous, and also a form of control. She decides the register. She sets the tone before anyone else can.\n\nThe cooking question is the crack in that competence: *scratch every night is a reasonable standard.* Not for most people — for her. She didn't negotiate down because she doesn't know she could. That's not discipline. That's a standard she inherited and never interrogated. The ledger I flagged earlier may be less about grievances toward Matt and more about what she silently expects of herself — and whether he'll ever see the effort underneath the ease.\n\nHer attachment fear isn't abandonment. It's invisibility. She manages so well that nobody notices she's managing.\n\nShe also believes she changed more in this relationship. Matt disagrees. That's significant data, if she knows he thinks so.\n\n**Now watching for:** whether Cass's competence and humor function as a waiting room — and whether she ever stops performing ease long enough to ask to be witnessed in it.",
+  "couple_notes": "**Matt & Cass — Couple Notes**\n*Updated. Weeks 21–25 batch rebuild.*\n\n---\n\n**The cycle.** Largely unchanged in structure, but the temperature has dropped. Matt's generosity-as-armor is stable. Cass reads him accurately from a distance — game room data confirms she understands his intellectual confidence, his ease in a room — but still arrives one beat early in close quarters. She predicted catastrophe where Matt was methodical. She predicted solidarity where he cracked a joke. Her model of him is almost right, which means she's filling the gaps with herself.\n\n**Repair.** Actively working. Consistent dates, five-star reviews without words, yard work logged with a heart, a Forensic Files bit that they both called correctly without coaching. They are building a shared shorthand that neither of them has named aloud yet.\n\n**Trajectory.** The handbrake is loosening — more ease, less performance — but neither has said what they want this to be, explicitly.\n\n**The unsaid thing.** Cass holds herself to a standard she didn't choose and hasn't examined — the cooking question cracked it open. Matt sees her doing it. He hasn't said so. That's the room neither of them has walked into yet.",
+  "structured_facts": {
+    "negative_cycle_type": "pursue-withdraw",
+    "pursuer": "Cass",
+    "withdrawer": "Matt",
+    "trajectory": "toward",
+    "love_signals": {
+      "Matt": [
+        "built a curated date with logged itinerary before Cass could",
+        "showed up for yard work together and tracked it"
+      ],
+      "Cass": [
+        "turned the wine spill into a joke to absorb social friction",
+        "gave five-star ratings and a heart emoji to mark moments that mattered"
+      ]
+    },
+    "threat_signals": {
+      "Matt": [
+        "effort goes unrecognized or unnamed"
+      ],
+      "Cass": [
+        "manages so seamlessly that the effort underneath the ease stays invisible"
+      ]
+    },
+    "unsaid_thing": "Matt sees Cass holding herself to a standard she never chose — and hasn't told her so."
+  }
+}

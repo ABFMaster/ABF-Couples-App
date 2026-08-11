@@ -1,0 +1,206 @@
+{
+  "coupleId": "8230e60f-44ca-4668-be28-06cb32b1b831",
+  "generatedAt": "2026-08-05T19:32:21.540Z",
+  "user1Name": "Matt",
+  "user2Name": "Cass",
+  "perUser": {
+    "user1": {
+      "userId": "fe1e0be6-4574-4bc1-8c89-9cb1b6bbe870",
+      "answers": {
+        "le_1": "service",
+        "le_2": "gifts",
+        "le_3": "gifts"
+      },
+      "results": {
+        "modules": [
+          {
+            "moduleId": "attachment_profile",
+            "title": "How You Attach",
+            "style": "secure",
+            "anxietyScore": 1,
+            "avoidanceScore": 1,
+            "headline": "Securely Attached",
+            "description": "You move toward intimacy with ease and handle distance without alarm. This is a strong foundation.",
+            "percentage": 25
+          },
+          {
+            "moduleId": "conflict_profile",
+            "title": "How You Fight",
+            "primary": "volatile",
+            "tally": {
+              "volatile": 0,
+              "validating": 0,
+              "avoiding": 0
+            },
+            "headline": "Volatile",
+            "description": "You move toward conflict directly and with intensity. You'd rather have the fight than carry the tension. That directness is a strength — regulating intensity is the work.",
+            "percentage": 0
+          },
+          {
+            "moduleId": "love_expression",
+            "title": "How You Love",
+            "primary": "gifts",
+            "tally": {
+              "words": 0,
+              "time": 0,
+              "touch": 0,
+              "service": 1,
+              "gifts": 2
+            },
+            "profile": [
+              {
+                "language": "gifts",
+                "label": "Thoughtful Gestures",
+                "count": 2,
+                "percentage": 67
+              },
+              {
+                "language": "service",
+                "label": "Acts of Service",
+                "count": 1,
+                "percentage": 33
+              },
+              {
+                "language": "words",
+                "label": "Words of Affirmation",
+                "count": 0,
+                "percentage": 0
+              },
+              {
+                "language": "time",
+                "label": "Quality Time",
+                "count": 0,
+                "percentage": 0
+              },
+              {
+                "language": "touch",
+                "label": "Physical Touch",
+                "count": 0,
+                "percentage": 0
+              }
+            ],
+            "headline": "Thoughtful Gestures",
+            "description": "It's never about the thing — it's about the thought behind it. Evidence that someone was thinking about you specifically.",
+            "percentage": 67
+          }
+        ],
+        "overallPercentage": 31,
+        "completedAt": "2026-08-05T19:31:50.595Z"
+      },
+      "newNotes": "**CLINICAL NOTES — MATT**\n*Signals: flirt_sent / word, bet_reveal x4, flirt_sent / song x3, weekly_reflection x3, spark_reveal, timeline_event x7, weekly_reflection x2, nora_conversation x93+, date_completed x4, weekly_reflection, ritual_checkin, assessment_complete*\n\n---\n\n**What love feels like in practice:** Being chosen in the specific — not because he's lovable in general, but because someone tracked *him* closely enough to land the right thing. Gifts score highest, but the assessment clarifies why: it was never about the object. It's about the evidence of attention. Someone thought of him, *particularly*. That's what opens him.\n\n**Attachment in action:** Secure, and genuinely so — he moves toward without grasping, holds distance without alarm. The volatile conflict style sits interestingly alongside this. He's not conflict-avoidant; he'd rather have the fight. The risk isn't that he withdraws — it's that his intensity can outpace the conversation before he knows it.\n\n**Underneath the volatility:** Not anxiety. More likely impatience with ambiguity — he wants resolution, and intensity is his fastest route there.\n\n**Still holding:** Whether Cass initiates the aesthetic territory, or whether Matt always sets the coordinates.\n\n**Now watching:** How he receives a gift from Cass. That's the purest read on whether the secure presentation holds under genuine vulnerability."
+    },
+    "user2": {
+      "userId": "7d1ef6c1-5fac-4ae0-9c04-e73158a1eff0",
+      "answers": {
+        "as_1": "as1_c",
+        "as_2": "as2_b",
+        "as_3": "as3_a",
+        "as_4": "as4_a",
+        "as_5": "as5_a",
+        "as_6": "as6_b",
+        "as_7": "as7_b",
+        "as_8": "as8_b",
+        "cs_1": "cs1_a",
+        "cs_2": "cs2_a",
+        "cs_3": "cs3_a",
+        "cs_4": "cs4_a",
+        "cs_5": "cs5_a",
+        "cs_6": "cs6_a",
+        "fr_1": "fr1_b",
+        "fr_2": "fr2_a",
+        "fr_3": "fr3_b",
+        "fr_4": "fr4_d",
+        "ll_1": "ll1_c",
+        "ll_2": "ll2_d",
+        "ll_3": "ll3_c",
+        "ll_4": "ll4_a",
+        "ll_5": "ll5_a",
+        "ll_6": "ll6_a",
+        "ll_7": "ll7_b",
+        "ll_8": "ll8_a",
+        "ll_9": "ll9_b",
+        "ll_10": "ll10_c"
+      },
+      "results": {
+        "modules": [
+          {
+            "moduleId": "attachment_profile",
+            "title": "How You Attach",
+            "style": "secure",
+            "anxietyScore": 1,
+            "avoidanceScore": 1,
+            "headline": "Securely Attached",
+            "description": "You move toward intimacy with ease and handle distance without alarm. This is a strong foundation.",
+            "percentage": 25
+          },
+          {
+            "moduleId": "conflict_profile",
+            "title": "How You Fight",
+            "primary": "volatile",
+            "tally": {
+              "volatile": 0,
+              "validating": 0,
+              "avoiding": 0
+            },
+            "headline": "Volatile",
+            "description": "You move toward conflict directly and with intensity. You'd rather have the fight than carry the tension. That directness is a strength — regulating intensity is the work.",
+            "percentage": 0
+          },
+          {
+            "moduleId": "love_expression",
+            "title": "How You Love",
+            "primary": "words",
+            "tally": {
+              "words": 0,
+              "time": 0,
+              "touch": 0,
+              "service": 0,
+              "gifts": 0
+            },
+            "profile": [
+              {
+                "language": "words",
+                "label": "Words of Affirmation",
+                "count": 0,
+                "percentage": 0
+              },
+              {
+                "language": "time",
+                "label": "Quality Time",
+                "count": 0,
+                "percentage": 0
+              },
+              {
+                "language": "touch",
+                "label": "Physical Touch",
+                "count": 0,
+                "percentage": 0
+              },
+              {
+                "language": "service",
+                "label": "Acts of Service",
+                "count": 0,
+                "percentage": 0
+              },
+              {
+                "language": "gifts",
+                "label": "Thoughtful Gestures",
+                "count": 0,
+                "percentage": 0
+              }
+            ],
+            "headline": "Words of Affirmation",
+            "description": "You feel most loved when someone tells you — specifically, not generically. A well-chosen sentence means more to you than most gestures.",
+            "percentage": 0
+          }
+        ],
+        "overallPercentage": 8,
+        "completedAt": "2026-08-05T19:31:59.504Z"
+      },
+      "newNotes": "**Updated notes on Cass.**\n\n---\n\nShe memorializes. She thinks in narrative. She uses the word *our*. That shape holds.\n\nHumor as metabolizer — still holds. Joke is the door and the lock.\n\nThe silence-after-superlative pattern holds. The internal standard holds — demanding, inherited, unaudited.\n\nNew today, and significant: she's securely attached and volatile in conflict. That combination is rarer than it sounds. Most volatile people are fighting because they're frightened. Cass fights because she'd rather burn it clean than let it fester. She moves *toward* — toward the argument, toward the intimacy, toward the resolution. Distance doesn't alarm her. She just goes and closes it.\n\nBut here's the edge: volatile conflict without an anxious core still needs a landing pad. She can escalate. Can she de-escalate without winning? Watch for whether she knows the difference between resolution and victory.\n\nLove lands through words — and not just any words. The specific sentence. The one that proves you were paying attention to *her*, not to the category of person she represents. Generic warmth will slide off. Named warmth will open her completely.\n\n**What I'm now watching for:** Whether Cass can receive a repair bid — and whether she needs it to be perfectly worded before she'll take it in."
+    }
+  },
+  "memory_summary_preview": "Matt leads with intensity and lands with charm — his volatility comes from impatience, not fear. He knows Cass clearly enough, but frames her as the sensible foil to his own mythology. Watch whether he notices he's doing it.\n\nCass memorializes, moves toward, fights clean. She'd rather burn it clean than let it fester — and she's capable of escalating faster than she can land. The question isn't whether she can resolve conflict. It's whether she knows the difference between resolution and winning.\n\nTogether: genuinely attuned, genuinely earned. But the center of gravity is slightly off. Cass is doing math Matt hasn't seen. She may have drifted into supporting cast without deciding to.\n\nThis session, watch whose story this relationship is living inside — and whether Cass has named that to herself yet. Don't push. Just notice if the door opens.",
+  "user1_notes_preview": "**CLINICAL NOTES — MATT**\n*Signals: flirt_sent / word, bet_reveal x4, flirt_sent / song x3, weekly_reflection x3, spark_reveal, timeline_event x7, weekly_reflection x2, nora_conversation x93+, date_completed x4, weekly_reflection, ritual_checkin, assessment_complete*\n\n---\n\n**What love feels like in practice:** Being chosen in the specific — not because he's lovable in general, but because someone tracked *him* closely enough to land the right thing. Gifts score highest, but the assessment clarifies why: it was never about the object. It's about the evidence of attention. Someone thought of him, *particularly*. That's what opens him.\n\n**Attachment in action:** Secure, and genuinely so — he moves toward without grasping, holds distance without alarm. The volatile conflict style sits interestingly alongside this. He's not conflict-avoidant; he'd rather have the fight. The risk isn't that he withdraws — it's that his intensity can outpace the conversation before he knows it.\n\n**Underneath the volatility:** Not anxiety. More likely impatience with ambiguity — he wants resolution, and intensity is his fastest route there.\n\n**Still holding:** Whether Cass initiates the aesthetic territory, or whether Matt always sets the coordinates.\n\n**Now watching:** How he receives a gift from Cass. That's the purest read on whether the secure presentation holds under genuine vulnerability.",
+  "user2_notes_preview": "**Updated notes on Cass.**\n\n---\n\nShe memorializes. She thinks in narrative. She uses the word *our*. That shape holds.\n\nHumor as metabolizer — still holds. Joke is the door and the lock.\n\nThe silence-after-superlative pattern holds. The internal standard holds — demanding, inherited, unaudited.\n\nNew today, and significant: she's securely attached and volatile in conflict. That combination is rarer than it sounds. Most volatile people are fighting because they're frightened. Cass fights because she'd rather burn it clean than let it fester. She moves *toward* — toward the argument, toward the intimacy, toward the resolution. Distance doesn't alarm her. She just goes and closes it.\n\nBut here's the edge: volatile conflict without an anxious core still needs a landing pad. She can escalate. Can she de-escalate without winning? Watch for whether she knows the difference between resolution and victory.\n\nLove lands through words — and not just any words. The specific sentence. The one that proves you were paying attention to *her*, not to the category of person she represents. Generic warmth will slide off. Named warmth will open her completely.\n\n**What I'm now watching for:** Whether Cass can receive a repair bid — and whether she needs it to be perfectly worded before she'll take it in."
+}
