@@ -48,8 +48,9 @@ export default function AddSharedItemPage() {
   const [selected, setSelected]         = useState(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
 
-  // Spotify search mode (song)
-  const [spotifyConnected, setSpotifyConnected]   = useState(null) // null=loading, true, false
+  // Spotify search mode (song) — no longer gated on a per-user connection;
+  // search/route.js moved to Client Credentials Aug 11 2026, so there's
+  // nothing to connect anymore.
   const [spotifyQuery, setSpotifyQuery]           = useState('')
   const [spotifyResults, setSpotifyResults]       = useState([])
   const [spotifySearching, setSpotifySearching]   = useState(false)
@@ -75,15 +76,6 @@ export default function AddSharedItemPage() {
 
       if (!couple) { router.push('/connect'); return }
       setCoupleId(couple.id)
-
-      // Check Spotify connection
-      const { data: spotifyConn } = await supabase
-        .from('user_spotify_connections')
-        .select('user_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      setSpotifyConnected(!!spotifyConn)
     }
     load()
   }, [router])
@@ -124,7 +116,7 @@ export default function AddSharedItemPage() {
 
   // Debounced Spotify search
   useEffect(() => {
-    if (!SPOTIFY_TYPES.includes(type) || !spotifyConnected || !spotifyQuery.trim()) {
+    if (!SPOTIFY_TYPES.includes(type) || !spotifyQuery.trim()) {
       setSpotifyResults([])
       return
     }
@@ -141,7 +133,7 @@ export default function AddSharedItemPage() {
       setSpotifySearching(false)
     }, 500)
     return () => clearTimeout(spotifyDebounceRef.current)
-  }, [spotifyQuery, type, spotifyConnected, sessionToken])
+  }, [spotifyQuery, type, sessionToken])
 
   const handleSelect = async (result) => {
     setResults([])
@@ -337,16 +329,12 @@ export default function AddSharedItemPage() {
             )}
           </>
         ) : isSpotify ? (
-          /* ── Spotify search flow ──────────────────────────────────────── */
+          /* ── Spotify search flow ──────────────────────────────────────────
+             No longer gated on a per-user Spotify connection — search moved
+             to Client Credentials (app-level token, no user login) Aug 11
+             2026, so there's nothing to connect and no "not connected" state
+             to show. See app/api/spotify/search/route.js. */
           <>
-            {spotifyConnected === null ? (
-              /* Loading */
-              <div className="flex items-center justify-center py-10">
-                <div className="w-6 h-6 border-2 border-[#C4714A] border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : spotifyConnected ? (
-              /* Connected — search UI */
-              <>
                 {spotifySelected ? (
                   /* Selected track card */
                   <div className="bg-white rounded-2xl overflow-hidden shadow-sm mb-4">
@@ -423,28 +411,6 @@ export default function AddSharedItemPage() {
                     )}
                   </div>
                 )}
-              </>
-            ) : (
-              /* Not connected — plain text + nudge */
-              <>
-                <div className="bg-[#F0FDF4] border border-[#1DB954]/20 rounded-2xl p-4 mb-4 flex items-start gap-3">
-                  <span className="text-2xl flex-shrink-0">🎵</span>
-                  <div>
-                    <p className="text-[#2D3648] font-semibold text-sm">Connect Spotify for song search</p>
-                    <p className="text-[#6B7280] text-xs mt-0.5">Or just type the song title below.</p>
-                  </div>
-                </div>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleSave()}
-                  placeholder="🎵 Song title…"
-                  className="w-full px-4 py-3.5 rounded-2xl border-2 border-gray-100 focus:border-[#C4714A] focus:outline-none text-[#2D3648] bg-white mb-3 text-base"
-                  autoFocus
-                />
-              </>
-            )}
           </>
         ) : (
           /* ── Plain text flow ──────────────────────────────────────────── */
