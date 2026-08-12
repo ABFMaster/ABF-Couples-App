@@ -238,12 +238,24 @@ export default function Dashboard() {
           .then(d => { if (d.temp != null) setWeather(d) })
           .catch(() => {})
       }
+      // ROOT CAUSE FIX Aug 12 2026 — .then(r => r.json()) alone treats a
+      // non-2xx response the same as success: fetch only rejects on network
+      // failure, never on HTTP error status. A hero/route.js 500 (or a
+      // request that got killed by the platform's function-duration limit)
+      // used to resolve here with an error body that has no `message`
+      // field, silently falling through to the plain "Good {timeOfDay}"
+      // client default with zero trace of what actually happened — see the
+      // ROOT CAUSE FIX comment in hero/route.js for the matching server
+      // side. Now logs instead of failing silently.
       fetch(`/api/dashboard/hero?${params}`, {
         headers: { 'Authorization': `Bearer ${session.access_token}` },
       })
-        .then(r => r.json())
-        .then(d => setHeroData(d))
-        .catch(() => {})
+        .then(async (r) => {
+          const d = await r.json().catch(() => ({}))
+          if (!r.ok) { console.error('[dashboard] hero fetch failed:', r.status, d.error); return }
+          setHeroData(d)
+        })
+        .catch((err) => console.error('[dashboard] hero fetch failed:', err))
         .finally(() => setHeroLoading(false))
     }
     if (typeof navigator !== 'undefined' && navigator.geolocation) {

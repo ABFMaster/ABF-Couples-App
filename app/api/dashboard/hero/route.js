@@ -1,4 +1,22 @@
 export const dynamic = 'force-dynamic'
+// ROOT CAUSE FIX Aug 12 2026 — same bug class already fixed in
+// game-room/challenge/generate (Aug 11): this route runs a long chain of
+// mostly-sequential DB reads (PART 0/0b/0c couple checks, feature
+// detection, Nora memory, getPrivateNotes, getSurfaceableClaims,
+// assessmentContext, customDates), an external fetch to open-meteo.com
+// with no timeout at all, and finally an LLM call — all with no explicit
+// function-duration budget, riding on Vercel's implicit platform default.
+// Matt's dashboard showed the bare "Good morning, Matt." + "Tell Nora →"
+// fallback (app/dashboard/page.js line ~579/600) while Cass's showed real
+// generated commentary — that fallback only renders when heroData.message
+// is falsy, which happens on ANY non-2xx response (fetch resolves
+// normally on a 500, doesn't throw, and dashboard/page.js's fetchHero
+// had no res.ok check) or a request that never completed. Fixed here with
+// an explicit maxDuration and a hard timeout on the weather fetch so one
+// slow external call can't stall the whole card; client-side check added
+// in dashboard/page.js so a real failure logs instead of silently
+// rendering as a generic greeting.
+export const maxDuration = 30
 
 import { NextResponse } from 'next/server'
 import { noraSignal, noraChat } from '@/lib/nora'
@@ -362,9 +380,17 @@ const ritualCompletedThisWeek = !!completion?.completed
     let weather = null
     if (lat && lon) {
       try {
+        // Hard timeout — this had none before, so a slow/hanging open-meteo
+        // response could stall the entire route (and therefore the whole
+        // card, including the Nora message below) with nothing to show for
+        // it. This is a "nice to have" pill, never worth blocking on.
+        const weatherController = new AbortController()
+        const weatherTimeout = setTimeout(() => weatherController.abort(), 4000)
         const wRes = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode&temperature_unit=fahrenheit`
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode&temperature_unit=fahrenheit`,
+          { signal: weatherController.signal }
         )
+        clearTimeout(weatherTimeout)
         if (wRes.ok) {
           const wData = await wRes.json()
           const temp = wData.current?.temperature_2m
