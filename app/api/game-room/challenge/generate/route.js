@@ -182,6 +182,26 @@ Respond in this exact JSON format with no other text:
       // failure indistinguishable to Matt even though they're different
       // bugs. Parallelising these (see also maxDuration above) removes the
       // extra latency without changing what's fetched.
+      // ROOT CAUSE FIX Aug 12 2026 — Matt: consistent "Something went wrong
+      // loading the challenge" on Memory Test's very first round, every
+      // time, since this data-fetch was introduced July 31 2026 (the same
+      // shape of error as before the Aug 6/11 fixes, but those fixed
+      // different things — JSON truncation and query sequencing — and
+      // never actually resolved this). PostgREST embedded-relation syntax
+      // (`bets(question)` inside a bet_responses select) only resolves if
+      // an ACTUAL foreign-key constraint exists in Postgres — an app-level
+      // convention like "bet_responses.bet_id points at bets.id" is not
+      // enough on its own. If that FK constraint was never formally added
+      // when bet_id was, this embed fails immediately and deterministically
+      // on every single call with "Could not find a relationship... in the
+      // schema cache" — exactly matching a same-error-since-day-one report.
+      // Can't confirm this against the live schema from here (sandbox has
+      // no Supabase network access) — flagging as the leading hypothesis,
+      // not a confirmed diagnosis. Fixed defensively either way: replaced
+      // both embedded-relation selects with explicit two-step lookups
+      // (fetch the FK ids, then batch-fetch the question text separately),
+      // which can't fail on relationship-cache resolution at all. Costs one
+      // extra small `.in()` round-trip, comfortably inside maxDuration.
       const [
         { data: sparkAnswers },
         { data: betAnswers },
@@ -191,14 +211,14 @@ Respond in this exact JSON format with no other text:
       ] = await Promise.all([
         supabase
           .from('spark_responses')
-          .select('response_text, user_id, responded_at, sparks(question)')
+          .select('response_text, user_id, responded_at, spark_id')
           .eq('couple_id', coupleId)
           .not('response_text', 'is', null)
           .order('responded_at', { ascending: false })
           .limit(20),
         supabase
           .from('bet_responses')
-          .select('actual_answer, user_id, responded_at, bets(question)')
+          .select('actual_answer, user_id, responded_at, bet_id')
           .eq('couple_id', coupleId)
           .not('actual_answer', 'is', null)
           .order('responded_at', { ascending: false })
@@ -230,6 +250,16 @@ Respond in this exact JSON format with no other text:
           .limit(15),
       ])
 
+      // Second-step lookup for the question text — see ROOT CAUSE FIX above.
+      const sparkIds = [...new Set((sparkAnswers || []).map(s => s.spark_id).filter(Boolean))]
+      const betIds = [...new Set((betAnswers || []).map(b => b.bet_id).filter(Boolean))]
+      const [{ data: sparkQuestionRows }, { data: betQuestionRows }] = await Promise.all([
+        sparkIds.length ? supabase.from('sparks').select('id, question').in('id', sparkIds) : Promise.resolve({ data: [] }),
+        betIds.length ? supabase.from('bets').select('id, question').in('id', betIds) : Promise.resolve({ data: [] }),
+      ])
+      const sparkQuestionMap = Object.fromEntries((sparkQuestionRows || []).map(s => [s.id, s.question]))
+      const betQuestionMap = Object.fromEntries((betQuestionRows || []).map(b => [b.id, b.question]))
+
       // Determine guesser vs answer-holder for this round
       // Odd rounds (1, 3): host guesses, partner holds answer
       // Even rounds (2): partner guesses, host holds answer
@@ -252,25 +282,21 @@ Respond in this exact JSON format with no other text:
       const usedQuestions = (usedRounds || []).map(r => r.memory_question).filter(Boolean)
 
       // Build context strings — resolve each response's user_id to a name
-      // via the profiles already fetched above, and unwrap the embedded
-      // question (Supabase returns a singular object for a many-to-one
-      // embed, but code defensively in case it's an array).
+      // via the profiles already fetched above, and its question text via
+      // the id-based maps built above (see ROOT CAUSE FIX) instead of an
+      // embedded-relation lookup.
       const nameFor = (uid) => profiles?.find(p => p.user_id === uid)?.display_name || 'Someone'
-      const questionOf = (row, table) => {
-        const embedded = row[table]
-        return (Array.isArray(embedded) ? embedded[0]?.question : embedded?.question) || null
-      }
 
       const sparkContext = sparkAnswers && sparkAnswers.length > 0
         ? sparkAnswers
-            .map(s => { const q = questionOf(s, 'sparks'); return q ? `Q: ${q} — ${nameFor(s.user_id)}: ${s.response_text}` : null })
+            .map(s => { const q = sparkQuestionMap[s.spark_id]; return q ? `Q: ${q} — ${nameFor(s.user_id)}: ${s.response_text}` : null })
             .filter(Boolean)
             .join('\n')
         : 'No Spark answers yet'
 
       const betContext = betAnswers && betAnswers.length > 0
         ? betAnswers
-            .map(b => { const q = questionOf(b, 'bets'); return q ? `Q: ${q} — ${nameFor(b.user_id)}: ${b.actual_answer}` : null })
+            .map(b => { const q = betQuestionMap[b.bet_id]; return q ? `Q: ${q} — ${nameFor(b.user_id)}: ${b.actual_answer}` : null })
             .filter(Boolean)
             .join('\n')
         : 'No Bet answers yet'
