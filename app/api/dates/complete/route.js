@@ -5,6 +5,7 @@ import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { noraChat } from '@/lib/nora'
 import { REACTION_LABELS } from '@/lib/date-night'
 import { requireUser } from '@/lib/api-auth'
+import { checkSensitiveContent, resolveSafetyAction } from '@/lib/safety'
 
 async function sendPush(userId, title, body, url, route) {
   try {
@@ -69,6 +70,22 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Failed to save completion' }, { status: 500 })
     }
 
+    // ── SENSITIVE-CONTENT SAFETY GATE ────────────────────────────────
+    // Checked once, on this request's own review text — the reaction/
+    // review save above already happened regardless, same "your own data
+    // still saves" contract as the other free-text routes. This route is
+    // different from those in one way: below, when bothDone, it doesn't
+    // just write to Nora's memory — it calls noraChat directly to
+    // generate a "Nora observation" from both reviews and pushes it to
+    // both partners. That generation step is gated on this too, by direct
+    // analogy to AI Coach/Couples Session (skip generation when flagged),
+    // not a separate decision. Task #193, Aug 12 2026.
+    const safety = await checkSensitiveContent(review?.trim() || '')
+    const safetyAction = resolveSafetyAction(safety)
+    if (safetyAction !== 'GENERATE_AND_REMEMBER') {
+      console.warn('[safety] date review skipped Nora observation + memory write', { route: 'dates/complete', action: safetyAction, category: safety.category })
+    }
+
     // Check if both partners have now completed
     const partnerAlreadyDone = isUser1 ? !!date.user2_completed_at : !!date.user1_completed_at
     const bothDone = partnerAlreadyDone
@@ -80,58 +97,66 @@ export async function POST(request) {
         .update({ status: 'completed', completed_at: new Date().toISOString() })
         .eq('id', dateId)
 
-      // Generate a Nora observation now that both partners have reflected
-      try {
-        const { data: profiles } = await supabase
-          .from('user_profiles')
-          .select('user_id, display_name')
-          .in('user_id', [couple.user1_id, couple.user2_id])
-        const nameFor = (uid) => profiles?.find(p => p.user_id === uid)?.display_name || 'One partner'
-        const user1Name = nameFor(couple.user1_id)
-        const user2Name = nameFor(couple.user2_id)
+      // Generate a Nora observation now that both partners have reflected —
+      // skipped entirely if this request's review was flagged or couldn't
+      // be classified (see safety gate above). The "Nora noticed
+      // something" push below is gated the same way — there's nothing to
+      // notify about if generation never ran.
+      if (safetyAction === 'GENERATE_AND_REMEMBER') {
+        try {
+          const { data: profiles } = await supabase
+            .from('user_profiles')
+            .select('user_id, display_name')
+            .in('user_id', [couple.user1_id, couple.user2_id])
+          const nameFor = (uid) => profiles?.find(p => p.user_id === uid)?.display_name || 'One partner'
+          const user1Name = nameFor(couple.user1_id)
+          const user2Name = nameFor(couple.user2_id)
 
-        const myReaction = reaction
-        const myReview = review?.trim() || null
-        const partnerReaction = isUser1 ? date.user2_reaction : date.user1_reaction
-        const partnerReview = isUser1 ? date.user2_review : date.user1_review
-        const finalUser1 = isUser1 ? { reaction: myReaction, review: myReview } : { reaction: partnerReaction, review: partnerReview }
-        const finalUser2 = isUser1 ? { reaction: partnerReaction, review: partnerReview } : { reaction: myReaction, review: myReview }
+          const myReaction = reaction
+          const myReview = review?.trim() || null
+          const partnerReaction = isUser1 ? date.user2_reaction : date.user1_reaction
+          const partnerReview = isUser1 ? date.user2_review : date.user1_review
+          const finalUser1 = isUser1 ? { reaction: myReaction, review: myReview } : { reaction: partnerReaction, review: partnerReview }
+          const finalUser2 = isUser1 ? { reaction: partnerReaction, review: partnerReview } : { reaction: myReaction, review: myReview }
 
-        const prompt = [
-          `${user1Name} and ${user2Name} just went on a date night called "${date.title}".`,
-          `${user1Name} said: ${REACTION_LABELS[finalUser1.reaction] || finalUser1.reaction}${finalUser1.review ? ` — "${finalUser1.review}"` : ''}`,
-          `${user2Name} said: ${REACTION_LABELS[finalUser2.reaction] || finalUser2.reaction}${finalUser2.review ? ` — "${finalUser2.review}"` : ''}`,
-          `Write one warm, specific observation about how this date landed for them as a couple — 1-2 sentences max. No question. Never generic.`,
-        ].join('\n')
+          const prompt = [
+            `${user1Name} and ${user2Name} just went on a date night called "${date.title}".`,
+            `${user1Name} said: ${REACTION_LABELS[finalUser1.reaction] || finalUser1.reaction}${finalUser1.review ? ` — "${finalUser1.review}"` : ''}`,
+            `${user2Name} said: ${REACTION_LABELS[finalUser2.reaction] || finalUser2.reaction}${finalUser2.review ? ` — "${finalUser2.review}"` : ''}`,
+            `Write one warm, specific observation about how this date landed for them as a couple — 1-2 sentences max. No question. Never generic.`,
+          ].join('\n')
 
-        const observation = await noraChat(
-          [{ role: 'user', content: prompt }],
-          { route: 'dates/reflection', system: 'You are Nora — warm, specific, brief. Observe how a shared date landed for a couple. Never generic.', maxTokens: 80 }
-        )
-        if (observation) {
-          noraObservation = observation.trim()
-          await supabase.from('custom_dates').update({
-            nora_observation: noraObservation,
-            nora_observation_at: new Date().toISOString(),
-          }).eq('id', dateId)
+          const observation = await noraChat(
+            [{ role: 'user', content: prompt }],
+            { route: 'dates/reflection', system: 'You are Nora — warm, specific, brief. Observe how a shared date landed for a couple. Never generic.', maxTokens: 80 }
+          )
+          if (observation) {
+            noraObservation = observation.trim()
+            await supabase.from('custom_dates').update({
+              nora_observation: noraObservation,
+              nora_observation_at: new Date().toISOString(),
+            }).eq('id', dateId)
+          }
+        } catch (err) {
+          console.error('[dates/complete] Nora observation error:', err)
         }
-      } catch (err) {
-        console.error('[dates/complete] Nora observation error:', err)
-      }
 
-      sendPush(couple.user1_id, 'Nora', `Nora noticed something about your date "${date.title}".`, `/dates/${dateId}`, 'dates/reflection').catch(() => {})
-      sendPush(couple.user2_id, 'Nora', `Nora noticed something about your date "${date.title}".`, `/dates/${dateId}`, 'dates/reflection').catch(() => {})
+        sendPush(couple.user1_id, 'Nora', `Nora noticed something about your date "${date.title}".`, `/dates/${dateId}`, 'dates/reflection').catch(() => {})
+        sendPush(couple.user2_id, 'Nora', `Nora noticed something about your date "${date.title}".`, `/dates/${dateId}`, 'dates/reflection').catch(() => {})
+      }
     } else {
       // Only one partner has reflected so far — nudge the other
       sendPush(partnerId, 'Date Night', `Your date "${date.title}" is marked done. Add your side of it.`, `/dates/${dateId}?reflect=1`, 'dates/complete').catch(() => {})
     }
 
-    updateNoraMemory({
-      coupleId: date.couple_id,
-      userId,
-      signalType: SIGNAL_TYPES.DATE_COMPLETED,
-      inputData: { dateId, title: date.title, dateTime: date.date_time, stops: date.stops, reaction, review, bothDone },
-    }).catch(() => {})
+    if (safetyAction === 'GENERATE_AND_REMEMBER') {
+      updateNoraMemory({
+        coupleId: date.couple_id,
+        userId,
+        signalType: SIGNAL_TYPES.DATE_COMPLETED,
+        inputData: { dateId, title: date.title, dateTime: date.date_time, stops: date.stops, reaction, review, bothDone },
+      }).catch(() => {})
+    }
 
     return NextResponse.json({ success: true, bothDone, noraObservation })
   } catch (err) {

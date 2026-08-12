@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
+import { checkSensitiveContent, resolveSafetyAction } from '@/lib/safety'
 
 // POST /api/ritual/partner-note { userId, coupleId, ritualCompletionId, note }
 // The lightweight capture point for the partner-loop nudge (piece 4 of
@@ -51,14 +52,25 @@ export async function POST(request) {
         .eq('id', completion.ritual_id)
         .maybeSingle()
 
-      updateNoraMemory({
-        coupleId,
-        signalType: SIGNAL_TYPES.RITUAL_CHECKIN,
-        inputData: {
-          ritualTitle: ritual?.title,
-          partnerNote: note.trim(),
-        },
-      }).catch(() => {})
+      // ── SENSITIVE-CONTENT SAFETY GATE ──────────────────────────────
+      // The note itself always saves above regardless — this only decides
+      // whether it goes on to reach Nora's shared notes/claims pipeline.
+      // Same contract as app/api/notebook/entry/route.js. Task #191,
+      // Aug 12 2026.
+      const safety = await checkSensitiveContent(note.trim())
+      const safetyAction = resolveSafetyAction(safety)
+      if (safetyAction === 'GENERATE_AND_REMEMBER') {
+        updateNoraMemory({
+          coupleId,
+          signalType: SIGNAL_TYPES.RITUAL_CHECKIN,
+          inputData: {
+            ritualTitle: ritual?.title,
+            partnerNote: note.trim(),
+          },
+        }).catch(() => {})
+      } else {
+        console.warn('[safety] partner note skipped memory write', { route: 'ritual/partner-note', action: safetyAction, category: safety.category })
+      }
     }
 
     return NextResponse.json({ success: true })

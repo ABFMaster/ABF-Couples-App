@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 import { notifyIfMemoryJustUnlocked } from '@/lib/memory-unlock'
+import { checkSensitiveContent, resolveSafetyAction } from '@/lib/safety'
 
 export async function POST(request) {
   try {
@@ -58,12 +59,24 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Failed to create timeline event' }, { status: 500 })
     }
 
-    updateNoraMemory({
-      coupleId,
-      userId,
-      signalType: SIGNAL_TYPES.TIMELINE_EVENT,
-      inputData: { eventType, title, description, eventDate },
-    }).catch(() => {})
+    // ── SENSITIVE-CONTENT SAFETY GATE ────────────────────────────────
+    // The timeline event itself always saves above regardless — this only
+    // decides whether it reaches Nora's shared notes/claims pipeline.
+    // Checks title + description together since either could carry a
+    // disclosure. Same contract as app/api/notebook/entry/route.js.
+    // Task #192, Aug 12 2026.
+    const safety = await checkSensitiveContent([title, description].filter(Boolean).join(' — '))
+    const safetyAction = resolveSafetyAction(safety)
+    if (safetyAction === 'GENERATE_AND_REMEMBER') {
+      updateNoraMemory({
+        coupleId,
+        userId,
+        signalType: SIGNAL_TYPES.TIMELINE_EVENT,
+        inputData: { eventType, title, description, eventDate },
+      }).catch(() => {})
+    } else {
+      console.warn('[safety] timeline event skipped memory write', { route: 'timeline/event', action: safetyAction, category: safety.category })
+    }
 
     // Timeline events are one of Memory Test's three unlock inputs — check
     // whether this write just crossed the threshold and notify once if so.

@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
+import { checkSensitiveContent, resolveSafetyAction } from '@/lib/safety'
 
 export async function POST(request) {
   try {
@@ -73,18 +74,28 @@ export async function POST(request) {
       })
     if (timelineError) return Response.json({ error: 'Failed to write timeline' }, { status: 500 })
 
-    // Fire Nora memory update — fire and forget
-    updateNoraMemory({
-      coupleId: couple.id,
-      userId: userId || null,
-      signalType: SIGNAL_TYPES.SHARED_ITEM_COMPLETED,
-      inputData: {
-        title: item.title,
-        type: item.type,
-        completionNote: completionNote || null,
-        completedBy: userId,
-      }
-    }).catch(() => {})
+    // ── SENSITIVE-CONTENT SAFETY GATE ────────────────────────────────
+    // The item completion + timeline write above always happen regardless
+    // — this only decides whether it reaches Nora's shared notes/claims
+    // pipeline. Same contract as the other free-text routes. Task #194,
+    // Aug 12 2026.
+    const safety = await checkSensitiveContent(completionNote || '')
+    const safetyAction = resolveSafetyAction(safety)
+    if (safetyAction === 'GENERATE_AND_REMEMBER') {
+      updateNoraMemory({
+        coupleId: couple.id,
+        userId: userId || null,
+        signalType: SIGNAL_TYPES.SHARED_ITEM_COMPLETED,
+        inputData: {
+          title: item.title,
+          type: item.type,
+          completionNote: completionNote || null,
+          completedBy: userId,
+        }
+      }).catch(() => {})
+    } else {
+      console.warn('[safety] ahead completion note skipped memory write', { route: 'ahead/complete', action: safetyAction, category: safety.category })
+    }
 
     return Response.json({ success: true })
   } catch (err) {

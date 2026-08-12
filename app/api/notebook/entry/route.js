@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { getOwnCoupleId } from '@/lib/api-auth'
+import { checkSensitiveContent, resolveSafetyAction } from '@/lib/safety'
 
 const VALID_ENTRY_TYPES = ['noticed', 'working_on', 'reflection']
 
@@ -53,12 +54,28 @@ export async function POST(request) {
 
     if (error) return NextResponse.json({ error: 'Failed to save entry' }, { status: 500 })
 
-    updateNoraMemory({
-      coupleId: coupleId || null,
-      userId: user.id,
-      signalType: SIGNAL_TYPES.NOTEBOOK_ENTRY,
-      inputData: { entryType, content: content.trim(), timestamp: now },
-    }).catch(() => {})
+    // ── SENSITIVE-CONTENT SAFETY GATE ────────────────────────────────
+    // This is the user's own notebook entry, not a chat turn — unlike
+    // AI Coach/Couples Session, there's no generated reply to suppress and
+    // no reason to block them from saving their own private note. The
+    // entry above always saves regardless of what this returns. What's
+    // gated is only whether it goes on to reach Nora's shared notes/claims
+    // pipeline. Same resolveSafetyAction() contract as the chat routes:
+    // GENERATE_AND_REMEMBER is the only outcome that writes to memory —
+    // flagged content, and content the classifier couldn't evaluate, both
+    // skip the memory write. Task #190, Aug 12 2026.
+    const safety = await checkSensitiveContent(content.trim())
+    const safetyAction = resolveSafetyAction(safety)
+    if (safetyAction === 'GENERATE_AND_REMEMBER') {
+      updateNoraMemory({
+        coupleId: coupleId || null,
+        userId: user.id,
+        signalType: SIGNAL_TYPES.NOTEBOOK_ENTRY,
+        inputData: { entryType, content: content.trim(), timestamp: now },
+      }).catch(() => {})
+    } else {
+      console.warn('[safety] notebook entry skipped memory write', { route: 'notebook/entry', action: safetyAction, category: safety.category })
+    }
 
     return NextResponse.json({ entry })
   } catch (err) {
