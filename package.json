@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.72.1",
@@ -26,6 +27,7 @@
     "canvas": "^3.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.4",
-    "tailwindcss": "^4"
+    "tailwindcss": "^4",
+    "vitest": "^4.1.10"
   }
 }
