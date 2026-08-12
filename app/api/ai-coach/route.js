@@ -6,6 +6,7 @@ import { getNoraMemory, updateNoraMemory, maybeUpdateNoraMemory, shouldUpdateMem
 import { noraChat, noraReact, buildCoachSystem } from '@/lib/nora'
 import { getNoraBriefing, getNoraTierContext } from '@/lib/nora-knowledge'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
+import { checkSensitiveContent, resolveSafetyAction, SAFETY_RESPONSE } from '@/lib/safety'
 
 // ── NORA PERSONA ──────────────────────────────────────────────────────────────
 
@@ -279,6 +280,46 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Failed to save message' }, { status: 500 });
     }
 
+    // ── SENSITIVE-CONTENT SAFETY GATE ────────────────────────────────
+    // Runs after the user's message is saved (conversation history stays
+    // complete) but before any context building or generation. A flagged
+    // disclosure never reaches noraChat and never reaches the notes/claims
+    // pipeline — no updateNoraMemory, no claim extraction, no narrative
+    // notes, no couple-shared content, for this turn. See lib/safety.js for
+    // the flagged/ok contract. The in-prompt CRISIS DETECTION instruction
+    // in OPERATIONAL_RULES stays as a secondary net; this gate doesn't
+    // replace it. Task #187, Aug 11 2026.
+    const safety = await checkSensitiveContent(message.trim());
+    const safetyAction = resolveSafetyAction(safety);
+    if (safetyAction === 'SAFETY_RESPONSE_ONLY') {
+      console.warn('[safety] sensitive content flagged', { route: 'ai-coach', category: safety.category });
+
+      const { data: savedSafetyResponse, error: safetyMsgError } = await supabase
+        .from('ai_messages')
+        .insert({ conversation_id: activeConversationId, role: 'assistant', content: SAFETY_RESPONSE })
+        .select('*')
+        .maybeSingle();
+      if (safetyMsgError) {
+        console.error('Error saving safety response:', safetyMsgError);
+        return NextResponse.json({ error: 'Failed to save AI response' }, { status: 500 });
+      }
+
+      // A flagged turn does not count against the free-tier weekly limit —
+      // it produced no real coaching value, and a distressed user shouldn't
+      // burn a limited message on a canned safety response.
+      const messagesRemaining = premium
+        ? null
+        : Math.max(0, FREE_TIER_WEEKLY_LIMIT - await getWeeklyUsage(supabase, user.id));
+
+      return NextResponse.json({
+        success: true,
+        conversationId: activeConversationId,
+        message: savedSafetyResponse,
+        messagesRemaining,
+        isPremium: premium,
+      });
+    }
+
     // ── BUILD CONTEXT ──────────────────────────────────────────────
     const context = await buildCoachContext(user.id, coupleId, supabase);
     const contextString = formatContextForPrompt(context);
@@ -422,25 +463,37 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Failed to save AI response' }, { status: 500 });
     }
 
-    updateNoraMemory({
-      coupleId,
-      userId: user.id,
-      signalType: SIGNAL_TYPES.NORA_CONVERSATION,
-      inputData: { messages: updatedMessages },
-    }).catch(() => {})
-
-    const lastTwoMessages = updatedMessages.slice(-2)
-    if (lastTwoMessages.length >= 2) {
-      shouldUpdateMemory(lastTwoMessages).then(meaningful => {
-        if (meaningful) {
-          updateNoraMemory({
-            coupleId,
-            userId: user.id,
-            signalType: SIGNAL_TYPES.NORA_CONVERSATION,
-            inputData: { messages: lastTwoMessages, midSession: true },
-          }).catch(() => {})
-        }
+    // Gated on the same resolveSafetyAction() call from above — 'flagged'
+    // already returned early, so the only remaining question is whether the
+    // classifier actually ran successfully (GENERATE_AND_REMEMBER) or
+    // errored (GENERATE_ONLY, safety.ok === false). If it errored,
+    // generation was still allowed to proceed (fail-open, above) so Nora
+    // stays usable through a transient classifier hiccup — but the memory
+    // write is fail-closed: a turn the classifier couldn't evaluate must
+    // never enter notes/claims "by default." See lib/safety.js.
+    if (safetyAction === 'GENERATE_AND_REMEMBER') {
+      updateNoraMemory({
+        coupleId,
+        userId: user.id,
+        signalType: SIGNAL_TYPES.NORA_CONVERSATION,
+        inputData: { messages: updatedMessages },
       }).catch(() => {})
+
+      const lastTwoMessages = updatedMessages.slice(-2)
+      if (lastTwoMessages.length >= 2) {
+        shouldUpdateMemory(lastTwoMessages).then(meaningful => {
+          if (meaningful) {
+            updateNoraMemory({
+              coupleId,
+              userId: user.id,
+              signalType: SIGNAL_TYPES.NORA_CONVERSATION,
+              inputData: { messages: lastTwoMessages, midSession: true },
+            }).catch(() => {})
+          }
+        }).catch(() => {})
+      }
+    } else {
+      console.warn('[safety] classifier error this turn — skipping memory write', { route: 'ai-coach' });
     }
 
     // ── INCREMENT USAGE (after successful AI call) ─────────────────

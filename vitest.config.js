@@ -1,8 +1,17 @@
 import { defineConfig } from 'vitest/config'
 
 // Minimal config — no aliases, no jsdom. These tests exercise plain
-// exported functions from lib/, not React components or Next.js routing,
-// so Vitest's Node environment defaults are all that's needed.
+// exported functions from lib/, not React components or Next.js routing.
+// A full route-handler test (importing app/api/.../route.js directly via
+// the '@/*' alias from jsconfig.json) was attempted for the sensitive-
+// content gate (task #187) but abandoned: this sandbox's Vitest couldn't
+// resolve '@/*' imports inside route files even with resolve.alias/
+// test.alias configured, and chasing that further would have meant
+// building test-infrastructure plumbing Matt explicitly said not to build.
+// Instead, the gate's exact branching logic was extracted into
+// lib/safety.js's resolveSafetyAction() — a pure function both routes call
+// — and is unit-tested directly (tests/safety-gate-decision.test.js),
+// which pins the same behavior without needing route-level resolution.
 //
 // lib/nora.js and lib/nora-memory.js both instantiate real clients
 // (Anthropic, Supabase) at module load time — importing them at all

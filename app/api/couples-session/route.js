@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { noraChat, buildCoachSystem } from '@/lib/nora'
 import { getFullNoraContext, updateNoraMemory, shouldUpdateMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
+import { checkSensitiveContent, resolveSafetyAction, SAFETY_RESPONSE } from '@/lib/safety'
 
 // ── COUPLES SESSION FOUNDATION — Aug 7 2026 ─────────────────────────────
 // Backend for the new "Couples Nora Session" feature: both partners
@@ -163,6 +164,35 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Failed to save message' }, { status: 500 })
     }
 
+    // ── SENSITIVE-CONTENT SAFETY GATE ────────────────────────────────
+    // Same gate as app/api/ai-coach/route.js — see lib/safety.js for the
+    // flagged/ok contract. Both partners are present here, so a flagged
+    // disclosure gets the fixed safety response in front of both of them,
+    // same as it would in solo AI Coach; it never reaches noraChat and
+    // never reaches updateNoraMemory (no couple_notes, no claims, nothing
+    // written for either partner from this turn). Task #187, Aug 11 2026.
+    const safety = await checkSensitiveContent(message.trim())
+    const safetyAction = resolveSafetyAction(safety)
+    if (safetyAction === 'SAFETY_RESPONSE_ONLY') {
+      console.warn('[safety] sensitive content flagged', { route: 'couples-session', category: safety.category })
+
+      const { data: savedSafetyResponse, error: safetyMsgError } = await supabase
+        .from('ai_messages')
+        .insert({ conversation_id: activeConversationId, role: 'assistant', content: SAFETY_RESPONSE })
+        .select('*')
+        .maybeSingle()
+      if (safetyMsgError) {
+        console.error('[couples-session] Error saving safety response:', safetyMsgError)
+        return NextResponse.json({ error: 'Failed to save AI response' }, { status: 500 })
+      }
+
+      return NextResponse.json({
+        success: true,
+        conversationId: activeConversationId,
+        message: savedSafetyResponse,
+      })
+    }
+
     // ── BUILD CONTEXT ──────────────────────────────────────────────
     // getFullNoraContext returns a claimsBlock (individual hypotheses meant
     // to be gently surfaced 1:1 in solo AI Coach) — deliberately NOT used
@@ -231,8 +261,14 @@ export async function POST(request) {
       ...history.map(m => ({ role: m.role, content: m.content })),
       { role: 'assistant', content: aiResponse },
     ]
+    // Gated on the same resolveSafetyAction() call from above — flagged
+    // already returned early, so this is specifically the fail-closed-on-
+    // memory branch: if the classifier errored this turn
+    // (safetyAction === 'GENERATE_ONLY'), generation still happened
+    // (fail-open), but the write to notes/claims is skipped anyway. Same
+    // decision as app/api/ai-coach/route.js; see lib/safety.js.
     const lastTwo = updatedMessages.slice(-2)
-    if (lastTwo.length >= 2) {
+    if (safetyAction === 'GENERATE_AND_REMEMBER' && lastTwo.length >= 2) {
       shouldUpdateMemory(lastTwo).then(meaningful => {
         if (meaningful) {
           updateNoraMemory({
@@ -243,6 +279,8 @@ export async function POST(request) {
           }).catch(() => {})
         }
       }).catch(() => {})
+    } else if (safetyAction === 'GENERATE_ONLY') {
+      console.warn('[safety] classifier error this turn — skipping memory write', { route: 'couples-session' })
     }
 
     return NextResponse.json({
