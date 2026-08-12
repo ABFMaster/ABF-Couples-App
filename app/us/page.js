@@ -75,7 +75,7 @@ function UsPageContent() {
       .order('event_date', { ascending: false })
     setTimelineEvents(events || [])
     computeMissingMilestones(events || [])
-    computeNoraSurfaced(events || [])
+    computeNoraSurfaced(events || [], coupleId)
     setTimelineLoading(false)
     // Deep link — open specific event if eventId param is present
     const eventId = searchParams?.get('eventId')
@@ -85,12 +85,28 @@ function UsPageContent() {
     }
   }
 
-  const computeNoraSurfaced = (events) => {
+  // ROOT CAUSE FIX Aug 12 2026 — Matt reported the "Nora surfaced this" card
+  // sticking on the same memory for weeks, only changing once he deleted
+  // that item outright. Math.random() here only ever runs once per mount —
+  // on a PWA (installed to the home screen, per Matt's later question about
+  // badge support) the OS commonly suspends rather than truly kills the app
+  // when backgrounded, so "reopening" it often resumes the same long-lived
+  // JS context instead of a fresh page load. This component's state was
+  // never actually recomputed for weeks at a time, not just unlucky.
+  // Fixed by seeding the pick off today's date (+ coupleId, so different
+  // couples with similarly-sized candidate pools don't coincidentally
+  // sync) instead of Math.random() — deterministic within a day, so it
+  // doesn't flicker on re-renders, but genuinely advances daily regardless
+  // of how long the component instance has been alive.
+  const computeNoraSurfaced = (events, coupleIdForSeed) => {
     const permanent = events.filter(e => e.event_type !== 'game_echo')
     if (permanent.length <= 3) { setNoraSurfacedEvent(null); return }
     const candidates = permanent.slice(3)
-    const random = candidates[Math.floor(Math.random() * candidates.length)]
-    setNoraSurfacedEvent(random)
+    const seed = `${new Date().toISOString().slice(0, 10)}:${coupleIdForSeed || ''}`
+    let hash = 0
+    for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) | 0
+    const index = Math.abs(hash) % candidates.length
+    setNoraSurfacedEvent(candidates[index])
   }
 
   const computeMissingMilestones = (events) => {
