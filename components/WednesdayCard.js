@@ -1,6 +1,12 @@
 'use client'
 import { useState, useEffect } from 'react'
 
+// NOTE Aug 12 2026 — this used to self-apply margin: '0 16px 16px' on every
+// branch's root div. Moved to the dashboard's wrapping div (matches Spark/
+// Bet's pattern) so FollowThroughCard's own ReportFace — which has no
+// margin of its own and previously rendered edge-to-edge whenever a
+// Follow-Through was showing instead of this card — gets it too. See
+// app/dashboard/page.js's showNotice block for the full explanation.
 export default function WednesdayCard({ userId, coupleId, userName, partnerName, session, onSourceLoaded, onSealed }) {
   const [entry, setEntry] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -70,7 +76,7 @@ export default function WednesdayCard({ userId, coupleId, userName, partnerName,
   // POST-7PM LATE SUBMISSION — not yet submitted, still within 10pm cutoff
   if (!submitted && !entry.myNotice && isPastReveal && !isPastCutoff && isWednesday) {
     return (
-      <div style={{ margin: '0 16px 16px', background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, overflow: 'hidden' }}>
+      <div style={{ background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, overflow: 'hidden' }}>
         <div style={{ padding: '16px 18px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#C9A96E' }}></div>
@@ -110,7 +116,7 @@ export default function WednesdayCard({ userId, coupleId, userName, partnerName,
   // PRE-SEND VIEW
   if (!submitted && !isRevealed) {
     return (
-      <div style={{ margin: '0 16px 16px', background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, overflow: 'hidden' }}>
+      <div style={{ background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, overflow: 'hidden' }}>
         <div style={{ padding: '16px 18px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#C9A96E' }}></div>
@@ -146,7 +152,7 @@ export default function WednesdayCard({ userId, coupleId, userName, partnerName,
   if (submitted && !isRevealed) {
     const partnerSent = !!entry.partnerSentAt
     return (
-      <div style={{ margin: '0 16px 16px', background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, padding: '16px 18px' }}>
+      <div style={{ background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, padding: '16px 18px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#C9A96E' }}></div>
           <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: '#C9A96E', textTransform: 'uppercase' }}>The Notice · Wednesday</span>
@@ -166,7 +172,7 @@ export default function WednesdayCard({ userId, coupleId, userName, partnerName,
   // REVEAL VIEW
   if (isRevealed) {
     return (
-      <div style={{ margin: '0 16px 16px', background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, overflow: 'hidden' }}>
+      <div style={{ background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, overflow: 'hidden' }}>
         <div style={{ padding: '16px 18px 12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#C9A96E' }}></div>

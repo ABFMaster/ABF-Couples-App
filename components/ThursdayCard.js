@@ -1,6 +1,9 @@
 'use client'
 import { useState, useEffect } from 'react'
 
+// NOTE Aug 12 2026 — see matching comment in WednesdayCard.js. Margin moved
+// to the dashboard's wrapping div so FollowThroughCard's ReportFace state
+// gets it too, not just this card's own content.
 export default function ThursdayCard({ userId, coupleId, userName, partnerName, session, onSourceLoaded, onSealed }) {
   const [entry, setEntry] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -54,7 +57,7 @@ export default function ThursdayCard({ userId, coupleId, userName, partnerName, 
   // PRE-RESPONSE VIEW
   if (!submitted && !isRevealed) {
     return (
-      <div style={{ margin: '0 16px 16px', background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, overflow: 'hidden' }}>
+      <div style={{ background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, overflow: 'hidden' }}>
         <div style={{ padding: '16px 18px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#C9A96E' }}></div>
@@ -87,7 +90,7 @@ export default function ThursdayCard({ userId, coupleId, userName, partnerName, 
   // POST-RESPONSE, PRE-REVEAL VIEW
   if (submitted && !isRevealed) {
     return (
-      <div style={{ margin: '0 16px 16px', background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, padding: '16px 18px' }}>
+      <div style={{ background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, padding: '16px 18px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#C9A96E' }}></div>
           <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: '#C9A96E', textTransform: 'uppercase' }}>Nora · Thursday</span>
@@ -101,7 +104,7 @@ export default function ThursdayCard({ userId, coupleId, userName, partnerName, 
   // REVEAL VIEW
   if (isRevealed) {
     return (
-      <div style={{ margin: '0 16px 16px', background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, overflow: 'hidden' }}>
+      <div style={{ background: 'white', border: '0.5px solid #E8E0D8', borderRadius: 16, overflow: 'hidden' }}>
         <div style={{ padding: '16px 18px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#C9A96E' }}></div>

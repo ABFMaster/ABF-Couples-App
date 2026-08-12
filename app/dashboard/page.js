@@ -498,16 +498,29 @@ export default function Dashboard() {
           </div>
         )}
         {showNotice && (
-          <FollowThroughCard userId={user?.id} coupleId={couple?.id} session={session} activityLabel="Notice" currentSourceId={noticeSourceId}>
-            <WednesdayCard
-              userId={user?.id}
-              coupleId={couple?.id}
-              userName={userName}
-              partnerName={partnerName}
-              session={session}
-              onSourceLoaded={setNoticeSourceId}
-            />
-          </FollowThroughCard>
+          // ROOT CAUSE FIX Aug 12 2026 — unlike the Spark/Bet blocks above,
+          // this had no margin wrapper div. WednesdayCard applies its own
+          // internal '0 16px 16px' margin on every branch, which happened
+          // to look right when FollowThroughCard is just passing `children`
+          // through, but FollowThroughCard's own ReportFace (the standalone
+          // Follow-Through invitation/report card) has zero margin of its
+          // own and depends entirely on whatever wraps it — so it rendered
+          // edge-to-edge, wider than every other dashboard module. Matt
+          // caught this via screenshot (Aug 12). Fixed by matching Spark/
+          // Bet's pattern: wrap here, strip the now-redundant internal
+          // margin from WednesdayCard.js so it isn't double-margined.
+          <div style={{ margin: '0 16px 14px' }}>
+            <FollowThroughCard userId={user?.id} coupleId={couple?.id} session={session} activityLabel="Notice" currentSourceId={noticeSourceId}>
+              <WednesdayCard
+                userId={user?.id}
+                coupleId={couple?.id}
+                userName={userName}
+                partnerName={partnerName}
+                session={session}
+                onSourceLoaded={setNoticeSourceId}
+              />
+            </FollowThroughCard>
+          </div>
         )}
         {showRitual && user?.id && couple?.id && (
           <div style={{ margin: '0 16px 14px' }}>
@@ -617,16 +630,19 @@ export default function Dashboard() {
 
         {/* SECTION 3.5 — THURSDAY CARD */}
         {showThursday && (
-          <FollowThroughCard userId={user?.id} coupleId={couple?.id} session={session} activityLabel="Thursday" currentSourceId={thursdaySourceId}>
-            <ThursdayCard
-              userId={user?.id}
-              coupleId={couple?.id}
-              userName={userName}
-              partnerName={partnerName}
-              session={session}
-              onSourceLoaded={setThursdaySourceId}
-            />
-          </FollowThroughCard>
+          // Same fix as the Notice block above — see comment there.
+          <div style={{ margin: '0 16px 14px' }}>
+            <FollowThroughCard userId={user?.id} coupleId={couple?.id} session={session} activityLabel="Thursday" currentSourceId={thursdaySourceId}>
+              <ThursdayCard
+                userId={user?.id}
+                coupleId={couple?.id}
+                userName={userName}
+                partnerName={partnerName}
+                session={session}
+                onSourceLoaded={setThursdaySourceId}
+              />
+            </FollowThroughCard>
+          </div>
         )}
 
         {isSolo && (
