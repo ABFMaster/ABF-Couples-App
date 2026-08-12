@@ -1,4 +1,21 @@
 export const dynamic = 'force-dynamic'
+// ROOT CAUSE FIX Aug 12 2026 — Matt reported Weekly Reflection stuck on the
+// week of 7/20 with nothing generated since, across multiple Sundays. This
+// route runs 5 parallel queries, 2 more sequential ones, and 2
+// getFullNoraContext() calls (each of which does its own further reads)
+// before ever calling the LLM — the same shape of sequential-heavy, no-
+// duration-budget route already diagnosed and fixed twice elsewhere
+// (game-room/challenge/generate, dashboard/hero). Had no maxDuration,
+// riding on Vercel's implicit platform default. Compounding this: its only
+// caller, processWeeklyReflection() in cron/scheduled-tasks/route.js, threw
+// away the fetch response entirely — never checked status, never read the
+// body — so a 500 here produced literally zero trace anywhere, not even a
+// console.error, every single week. Can't fully confirm this was THE cause
+// without production log access (sandbox has none), but it's a real,
+// definite bug matching Matt's standing rule that any signal silently not
+// reaching Nora is high priority. Fixed both sides — see matching comment
+// in cron/scheduled-tasks/route.js.
+export const maxDuration = 45
 
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'

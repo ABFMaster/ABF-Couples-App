@@ -355,7 +355,15 @@ async function processBirthdayAnniversaryReminders(couple, user1, user2) {
 
 async function processWeeklyReflection(couple) {
   try {
-    await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/reflection/generate`, {
+    // ROOT CAUSE FIX Aug 12 2026 — this used to await the fetch and stop,
+    // never inspecting the response at all. fetch() only rejects on network
+    // failure, never on an HTTP error status, so a 500 from reflection/
+    // generate (see maxDuration comment added there) produced zero trace —
+    // not in this try/catch, not anywhere — every week it happened. Matt
+    // reported Weekly Reflection stuck for multiple weeks with no error
+    // visible anywhere; this is why. Now logs the real status + error body
+    // on failure.
+    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/reflection/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -366,6 +374,10 @@ async function processWeeklyReflection(couple) {
         coupleId: couple.id
       })
     })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      console.error('[reflection/generate] non-ok response, couple:', couple.id, res.status, body.error)
+    }
   } catch (err) { console.error('[reflection/generate] couple:', couple.id, err) }
 }
 
