@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react'
 // margin of its own and previously rendered edge-to-edge whenever a
 // Follow-Through was showing instead of this card — gets it too. See
 // app/dashboard/page.js's showNotice block for the full explanation.
-export default function WednesdayCard({ userId, coupleId, userName, partnerName, session, onSourceLoaded, onSealed }) {
+export default function WednesdayCard({ userId, coupleId, userName, partnerName, session, onSourceLoaded, onRevealed }) {
   const [entry, setEntry] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notice, setNotice] = useState('')
@@ -31,7 +31,7 @@ export default function WednesdayCard({ userId, coupleId, userName, partnerName,
 
   // Separate from the fetch above on purpose -- these callbacks shouldn't
   // trigger a refetch if their reference changes (e.g. FollowThroughCard
-  // only starts passing a real onSealed once it knows Follow-Through is
+  // only starts passing a real onRevealed once it knows Follow-Through is
   // active for this source, which happens after this card has already
   // loaded). Notice has no live reveal animation to protect the way Bet/
   // Spark do -- it's either still pending or already fully resolved the
@@ -40,8 +40,8 @@ export default function WednesdayCard({ userId, coupleId, userName, partnerName,
   useEffect(() => {
     if (!entry) return
     onSourceLoaded?.(entry.id ?? null)
-    onSealed?.()
-  }, [entry, onSourceLoaded, onSealed])
+    onRevealed?.()
+  }, [entry, onSourceLoaded, onRevealed])
 
   const handleSend = async () => {
     if (!notice.trim() || submitting) return

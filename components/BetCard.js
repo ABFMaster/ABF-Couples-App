@@ -46,7 +46,7 @@ function CardBack({ label }) {
   )
 }
 
-export default function BetCard({ bet, mine, theirs, partnerId, partnerName, userId, coupleId, onSealed }) {
+export default function BetCard({ bet, mine, theirs, partnerId, partnerName, userId, coupleId, onRevealed }) {
   const [localMine, setLocalMine] = useState(mine)
   const [localTheirs, setLocalTheirs] = useState(theirs)
   const [actualText, setActualText] = useState('')
@@ -71,14 +71,6 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
   const activeReaction = localMine?.reaction_icon || selectedReaction
   const activeRating = localMine?.question_rating || selectedRating
   const isSealed = !!(activeReaction && activeRating)
-
-  // Sealing both pills is the real "I'm done looking at this" signal --
-  // a much better cue for a wrapping component (Follow-Through) to act on
-  // than any fixed clock. Optional chaining: this card renders fine with no
-  // listener when nothing's wrapping it.
-  useEffect(() => {
-    if (isSealed) onSealed?.()
-  }, [isSealed, onSealed])
 
   // Pre-set all reveal states only if THIS user has personally already
   // triggered their reveal before (mine.reveal_seen_at, set the first time
@@ -118,6 +110,20 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
     const t2 = setTimeout(() => setPillsShown(true), 3500)
     return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [allFlipped])
+
+  // ROOT CAUSE FIX Aug 12 2026 — this used to fire onSealed only once BOTH
+  // reaction AND rating pills were tapped (isSealed above), which is a
+  // two-step optional interaction most people don't complete quickly, if
+  // ever. FollowThroughCard's blend was gated almost entirely on this, with
+  // only a tab-return or a 45s timer as backup — in practice the 45s timer
+  // was the common case, which is exactly the "Follow-Through shows up 45
+  // seconds after the reveal" lag Matt flagged. pillsShown is this card's
+  // own reveal choreography finishing (3.5s after all 4 cards flip, or
+  // instantly on a revisit) — it's the real "the reveal is done" moment,
+  // independent of whether the user ever taps a pill at all.
+  useEffect(() => {
+    if (pillsShown) onRevealed?.()
+  }, [pillsShown, onRevealed])
 
   const poll = useCallback(async () => {
     try {

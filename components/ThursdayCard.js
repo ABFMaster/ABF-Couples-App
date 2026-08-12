@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 // NOTE Aug 12 2026 — see matching comment in WednesdayCard.js. Margin moved
 // to the dashboard's wrapping div so FollowThroughCard's ReportFace state
 // gets it too, not just this card's own content.
-export default function ThursdayCard({ userId, coupleId, userName, partnerName, session, onSourceLoaded, onSealed }) {
+export default function ThursdayCard({ userId, coupleId, userName, partnerName, session, onSourceLoaded, onRevealed }) {
   const [entry, setEntry] = useState(null)
   const [loading, setLoading] = useState(true)
   const [response, setResponse] = useState('')
@@ -32,8 +32,8 @@ export default function ThursdayCard({ userId, coupleId, userName, partnerName, 
   useEffect(() => {
     if (!entry) return
     onSourceLoaded?.(entry.id ?? null)
-    onSealed?.()
-  }, [entry, onSourceLoaded, onSealed])
+    onRevealed?.()
+  }, [entry, onSourceLoaded, onRevealed])
 
   const handleSubmit = async () => {
     if (!response.trim() || submitting) return

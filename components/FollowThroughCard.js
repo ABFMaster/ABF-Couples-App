@@ -283,48 +283,33 @@ export default function FollowThroughCard({ userId, coupleId, session, children,
 
   const isBlend = !!(data?.active && currentSourceId && data.sourceId === currentSourceId)
 
-  // Primary trigger: the user sealed their reaction/rating on the activity
-  // above (BetCard's onSealed, wired below) — a real "I'm done looking"
-  // signal, better than any fixed clock.
-  const [sealed, setSealed] = useState(false)
-  const handleSealed = useCallback(() => setSealed(true), [])
-
-  // Secondary trigger: reaction/rating are optional, so plenty of people
-  // won't tap them at all. A fixed short timer for that case risks
-  // interrupting someone who's simply still reading — the same problem this
-  // whole redesign was meant to fix, just on a shorter clock. Backgrounding
-  // the tab and coming back (switching apps, locking the phone) is a much
-  // better "I stepped away and I'm done with this" signal than any guess at
-  // elapsed time, so use that instead.
-  const [returned, setReturned] = useState(false)
-  useEffect(() => {
-    if (!isBlend) return
-    let wasHidden = false
-    const onVisibility = () => {
-      if (document.visibilityState === 'hidden') {
-        wasHidden = true
-      } else if (document.visibilityState === 'visible' && wasHidden) {
-        setReturned(true)
-      }
-    }
-    document.addEventListener('visibilitychange', onVisibility)
-    return () => document.removeEventListener('visibilitychange', onVisibility)
-  }, [isBlend])
+  // ROOT CAUSE FIX Aug 12 2026 — the previous design gated the blend fade-in
+  // almost entirely on the user tapping BOTH a reaction pill AND a rating
+  // pill (a two-step optional interaction most people don't complete
+  // quickly, if ever), with a tab-return or a 45-second timer as backup. In
+  // practice the 45s timer was doing most of the work, which is exactly the
+  // "Follow-Through shows up 45 seconds after the reveal" lag Matt flagged
+  // via screenshot — and a tab-return signal doesn't fire at all for anyone
+  // who just keeps reading in the foreground. Replaced with a single
+  // `onRevealed` signal: each activity card now calls this the moment ITS
+  // OWN reveal choreography finishes (BetCard/SparkCard's pillsShown;
+  // Wednesday/Thursday still fire immediately on load, since neither has a
+  // reveal animation to protect) — independent of whether the user ever
+  // taps anything. Follow-Through then slides in shortly after, as a
+  // continuation of the reveal moment itself rather than a delayed, separate
+  // pop-in.
+  const [revealed, setRevealed] = useState(false)
+  const handleRevealed = useCallback(() => setRevealed(true), [])
 
   useEffect(() => {
-    if (!isBlend) { setBlendVisible(false); setSealed(false); setReturned(false); return }
-    if (sealed || returned) {
-      const t = setTimeout(() => setBlendVisible(true), 400)
-      return () => clearTimeout(t)
-    }
-    // True last resort — nobody is realistically still mid-read after this
-    // long with the tab continuously in the foreground the whole time.
-    const fallback = setTimeout(() => setBlendVisible(true), 45000)
-    return () => clearTimeout(fallback)
-  }, [isBlend, sealed, returned])
+    if (!isBlend) { setBlendVisible(false); setRevealed(false); return }
+    if (!revealed) return
+    const t = setTimeout(() => setBlendVisible(true), 500)
+    return () => clearTimeout(t)
+  }, [isBlend, revealed])
 
   const blendChildren = isBlend && isValidElement(children)
-    ? cloneElement(children, { onSealed: handleSealed })
+    ? cloneElement(children, { onRevealed: handleRevealed })
     : children
 
   if (loading || !data?.active) {

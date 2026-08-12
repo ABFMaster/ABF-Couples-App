@@ -26,7 +26,7 @@ export default function SparkCard({
   onSkip,
   onReact,
   onInvite,
-  onSealed,
+  onRevealed,
 }) {
   const [answerText, setAnswerText] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -48,19 +48,23 @@ export default function SparkCard({
     if (mine?.reaction_icon && mine?.question_rating) setReactionComplete(true)
   }, [mine?.reaction_icon, mine?.question_rating])
 
-  // Same "I'm done looking" signal as Bet's isSealed -- reactionComplete is
-  // the moment both reaction/rating pills are locked in. Mirrors BetCard's
-  // onSealed so FollowThroughCard can trigger the blended fade-in off a
-  // real action here too, instead of a fixed clock.
-  useEffect(() => {
-    if (reactionComplete) onSealed?.()
-  }, [reactionComplete, onSealed])
-
   // State C reveal animation states
   const [partnerCardShown, setPartnerCardShown] = useState(false)
   const [myCardShown, setMyCardShown] = useState(false)
   const [noraShown, setNoraShown] = useState(false)
   const [pillsShown, setPillsShown] = useState(false)
+
+  // ROOT CAUSE FIX Aug 12 2026 — see matching comment in BetCard.js. This
+  // used to fire onSealed only once both reaction/rating pills were tapped
+  // (reactionComplete), a two-step optional interaction most people never
+  // get to quickly — in practice FollowThroughCard's blend was landing off
+  // its 45s fallback timer far more often than off real engagement, which
+  // is exactly the "shows up 45 seconds after the reveal" lag Matt flagged.
+  // pillsShown is this card's own 5-step reveal choreography finishing —
+  // the real "the reveal is done" moment, independent of pill taps.
+  useEffect(() => {
+    if (pillsShown) onRevealed?.()
+  }, [pillsShown, onRevealed])
 
   // Reaction pill tap pulse
   const [pulsingDown, setPulsingDown] = useState(null)
