@@ -56,7 +56,27 @@ export async function POST(request) {
       .select('user_id, display_name')
       .in('user_id', [coupleData.user1_id, coupleData.user2_id])
 
+    const guesserProfile = profiles?.find(p => p.user_id === round.guesser_user_id)
+    const answerHolderProfile = profiles?.find(p => p.user_id !== round.guesser_user_id)
+    const guesserName = guesserProfile?.display_name || 'Partner 1'
+    const answerHolderName = answerHolderProfile?.display_name || 'Partner 2'
+
     // Check if answer-holder flagged a delta this round (answer has changed since original)
+    // ROOT CAUSE FIX Aug 12 2026 — this block used to run BEFORE the
+    // guesserName/answerHolderName consts above (which is why they used to
+    // sit after it), but deltaContext's template literal references
+    // answerHolderName. Referencing a `const` before its own declaration
+    // line executes is a TDZ ReferenceError in JS, not just "undefined" —
+    // whenever an answer-holder used the "It's changed" path (delta_flagged
+    // true), this route threw before ever calling noraVerdict, and returned
+    // a 500. The client's verdict trigger in challenge/play/page.js fires
+    // this via a bare `fetch(...).catch()` — fetch only rejects on network
+    // failure, never on a non-2xx status, so the 500 was silently
+    // swallowed, memoryVerdictCalledRef stayed true (no retry), and the
+    // round was left with no nora_verdict forever. From Matt's side this
+    // looked exactly like "Memory Test just hangs/fails" with no visible
+    // error, precisely matching the recurring report. Fixed by moving the
+    // name consts above this block so they're initialized before use.
     const { data: deltaRecord } = await supabase
       .from('love_map_updates')
       .select('original_answer, current_answer, source, delta_flagged')
@@ -70,11 +90,6 @@ export async function POST(request) {
     const deltaContext = hasDelta
       ? `IMPORTANT: ${answerHolderName} indicated their answer has changed since they last addressed this. They used to say: "${deltaRecord.original_answer}" — tonight they said: "${deltaRecord.current_answer}". This shift is significant and worth noting in your verdict.`
       : ''
-
-    const guesserProfile = profiles?.find(p => p.user_id === round.guesser_user_id)
-    const answerHolderProfile = profiles?.find(p => p.user_id !== round.guesser_user_id)
-    const guesserName = guesserProfile?.display_name || 'Partner 1'
-    const answerHolderName = answerHolderProfile?.display_name || 'Partner 2'
 
     const noraMemory = await getNoraMemory(coupleId)
     const noraBriefing = noraMemory ? getMemoryBriefing(noraMemory, guesserName, answerHolderName) : null

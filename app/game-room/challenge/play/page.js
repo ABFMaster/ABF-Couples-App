@@ -400,13 +400,28 @@ function ChallengePlayContent() {
         if (!memRound.hint_pending) setMemoryHintResponding(false)
 
         // Host-only: trigger verdict generation when answer is revealed and verdict not yet written
+        // ROOT CAUSE FIX Aug 12 2026 — a bare fetch().catch() only rejects on
+        // network failure; a server-side 500 (see verdict/route.js TDZ bug
+        // just fixed) resolved normally and was never caught, so
+        // memoryVerdictCalledRef stayed true forever with no retry — the
+        // round was silently stuck with no nora_verdict, indistinguishable
+        // from "the game just hangs." Now checks res.ok explicitly, logs,
+        // and resets the ref so the next 3s poll tick retries instead of
+        // giving up permanently.
         if (memRound.answer_revealed && !memRound.nora_verdict && isScribeRef.current && !memoryVerdictCalledRef.current) {
           memoryVerdictCalledRef.current = true
           supabase.auth.getSession().then(({ data: { session } }) => fetch('/api/game-room/challenge/memory/verdict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
             body: JSON.stringify({ sessionId: challengeSessionId, roundNumber: memRound.round_number }),
-          })).catch(() => {
+          })).then(async (res) => {
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}))
+              console.error('[challenge/play] verdict generation failed:', res.status, data.error)
+              memoryVerdictCalledRef.current = false
+            }
+          }).catch((err) => {
+            console.error('[challenge/play] verdict fetch failed:', err)
             memoryVerdictCalledRef.current = false
           })
         }
