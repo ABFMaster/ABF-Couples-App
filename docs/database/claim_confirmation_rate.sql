@@ -35,23 +35,13 @@
 -- writeup. REINFORCE was NOT modified as part of this work — this query
 -- only makes its footprint queryable.
 --
--- WHY user_responded_at/updated_at, NOT created_at:
--- nora_claims is never inserted with an explicit created_at in any code
--- path (lib/nora-memory.js, both the extractAndUpdateClaims insert and
--- the CORRECTED-path insert), and no query anywhere in the app selects
--- created_at either. This sandbox has no live Supabase connection to
--- confirm whether the column exists at all (e.g. as a Postgres/Supabase
--- default). Per instruction, this query does not add a column solely for
--- this metric — it uses updated_at as the time dimension throughout,
--- which every row has (set on every write path). If you want to confirm
--- whether created_at actually exists before relying on this further, run:
---
---   SELECT column_name FROM information_schema.columns
---   WHERE table_name = 'nora_claims';
---
--- If it turns out created_at does exist, swap updated_at -> created_at in
--- query 1's date_trunc line below and you get true creation-time cohorts
--- instead of last-write-time cohorts.
+-- created_at CONFIRMED TO EXIST (checked against the live schema Aug 12
+-- 2026) — it's a Supabase/Postgres default column, never set explicitly by
+-- any insert in lib/nora-memory.js and never selected anywhere in the app
+-- either, which is why earlier code-only inspection couldn't confirm it.
+-- Query 1 below uses created_at as the true "when did this claim first
+-- appear" cohort, and updated_at separately as "when was it last touched"
+-- — the two answer different questions and are both kept.
 --
 -- A REAL LIMITATION, STATED PLAINLY:
 -- nora_claims stores current cumulative state, not a per-event log. There
@@ -110,8 +100,9 @@ SELECT
   count(*) AS claim_count,
   round(avg(confidence)::numeric, 3) AS avg_confidence,
   round(avg(supporting_signal_count)::numeric, 2) AS avg_supporting_signals,
-  min(updated_at) AS earliest_last_write,
-  max(updated_at) AS latest_last_write
+  min(created_at) AS earliest_created,
+  max(created_at) AS latest_created,
+  max(updated_at) AS most_recent_write
 
 FROM nora_claims
 GROUP BY 1, 2, 3, 4, 5
@@ -167,3 +158,27 @@ FROM nora_claims
 WHERE status <> 'active' OR supporting_signal_count > 1 OR user_responded_at IS NOT NULL
 GROUP BY claim_type
 ORDER BY reinforced_only_pct DESC NULLS LAST;
+
+
+-- ── QUERY 4: Weekly trend, by claim creation date ───────────────────────────
+-- Now that created_at is confirmed to exist, this is the real "over time"
+-- view: for each week of claims created, how many were later retired vs.
+-- corrected-once vs. still active, and what fraction of that week's claims
+-- were ever explicitly confirmed by a person at all. A rising retired/
+-- corrected share in recent weeks (with enough claims to be meaningful —
+-- watch total_claims, don't read into small-sample weeks) is the clearest
+-- "is this getting better or worse" signal this file can produce.
+SELECT
+  date_trunc('week', created_at) AS week_created,
+  count(*) AS total_claims,
+  count(*) FILTER (WHERE status = 'retired') AS retired,
+  count(*) FILTER (WHERE status = 'dormant') AS corrected_once,
+  count(*) FILTER (WHERE status = 'active') AS still_active,
+  count(*) FILTER (WHERE user_responded_at IS NOT NULL) AS ever_explicitly_responded_to,
+  round(
+    100.0 * count(*) FILTER (WHERE user_responded_at IS NOT NULL) / NULLIF(count(*), 0),
+    1
+  ) AS explicit_response_pct
+FROM nora_claims
+GROUP BY 1
+ORDER BY 1 DESC;
