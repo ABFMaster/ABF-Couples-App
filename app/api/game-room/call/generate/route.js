@@ -70,11 +70,33 @@ export async function POST(request) {
     // Tier based on round number
     const tier = roundNumber <= 2 ? 1 : roundNumber <= 4 ? 2 : 3
 
+    // ROOT CAUSE FIX Aug 12 2026 — Matt: "I get the same 3-5 Ikea or Wine
+    // questions" every time he plays. Two real causes, both fixed here:
+    // (1) the old tier-1 instruction literally said "IKEA, restaurants" as
+    // examples — the model was echoing those exact nouns back as actual
+    // content instead of treating them as loose texture, a common failure
+    // mode when a prompt hands the model ready-made nouns instead of a
+    // category. Reworded to describe the KIND of scenario without naming
+    // specific ones. (2) there was no repeat-avoidance at all across
+    // sessions — Memory Test tracks used questions per-couple over 90 days,
+    // this had nothing, so the same handful of scenarios the model
+    // gravitates toward by default could recur indefinitely. Added a query
+    // for this couple's recent scenarios and an explicit avoid-these
+    // instruction, same pattern as Memory Test's usedQuestions.
     const tierInstructions = {
-      1: 'Absurd and light. Mundane situations with funny reveal potential. IKEA, restaurants, small social moments.',
-      2: 'Revealing but fun. Everyday situations that show personality. Who is late, who apologizes first, social dynamics.',
+      1: 'Absurd and light. Mundane, everyday situations with funny reveal potential — vary the specific domain round to round (errands, small purchases, minor social friction, tiny decisions, etc.) rather than defaulting to the same kind of setting every time.',
+      2: 'Revealing but fun. Everyday situations that show personality and social dynamics — timing, apologies, boundaries, small disagreements.',
       3: 'Instinct under real pressure. Bigger life moments that reveal values and priorities.',
     }
+
+    const { data: recentCallRounds } = await supabase
+      .from('call_rounds')
+      .select('scenario')
+      .eq('couple_id', coupleId)
+      .not('scenario', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(15)
+    const recentScenarios = (recentCallRounds || []).map(r => r.scenario).filter(Boolean)
 
     const prompt = `You are Nora, game master for a couples game called The Call. You are generating a scenario for round ${roundNumber} of 5.
 
@@ -93,6 +115,7 @@ Rules:
 - Draw from their interests or memory if it makes it more specific and fun
 - Never be clinical or therapy-adjacent
 - Can be funny, mundane, or pressure-filled depending on tier
+- The tier description above sets a category, not a script — invent a genuinely new specific situation each time, never reuse or lightly reword a setting you've used before for this couple${recentScenarios.length > 0 ? `\n- This couple has already had these scenarios — do not repeat any of them or anything close to them: ${recentScenarios.map(s => `"${s}"`).join(', ')}` : ''}
 
 Respond ONLY with valid JSON, no markdown:
 {
