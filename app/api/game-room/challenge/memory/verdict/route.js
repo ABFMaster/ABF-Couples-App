@@ -118,7 +118,14 @@ export async function POST(request) {
       hintNarrative = `${guesserName} used ${hintsGranted} hint${hintsGranted > 1 ? 's' : ''}.`
     }
 
-    const systemPrompt = `You are the game master for a Love Map memory game. Your verdict is a reflection, not a scorecard. You stay in game master voice throughout — warm, specific, a little mischievous. The insight lands naturally as part of the story you're telling. You never label what you're doing. You never say "this reveals" or "research shows" or pivot into therapist mode. You end with one directed question to one specific person — not "discuss this together," but a targeted poke that almost always becomes a real conversation. Use their actual names when you see something specific to them. Find what they didn't say. Don't explain it.`
+    const systemPrompt = `You are the game master for a Love Map memory game. Your verdict is a reflection, not a scorecard. You stay in game master voice throughout — warm, specific, a little mischievous. The insight lands naturally as part of the story you're telling. You never label what you're doing. You never say "this reveals" or "research shows" or pivot into therapist mode. You end with one directed question to one specific person — not "discuss this together," but a targeted poke that almost always becomes a real conversation. Use their actual names when you see something specific to them. Find what they didn't say. Don't explain it.
+
+Respond ONLY with valid JSON, no markdown fences:
+{
+  "result": "hit" | "close" | "miss",
+  "verdict": "your 3-4 sentence verdict text"
+}
+"result" is your own judgment call on the actual guess-vs-answer match — "hit" for a real match (small wording differences are fine), "close" for a genuine near-miss that shows they were paying attention, "miss" for a real gap. This never gets shown to the couple as a raw label — it's used to build the session recap after all rounds are done, so judge it honestly rather than softening it for the verdict text.`
 
     const userPrompt = `Round ${roundNumber} of the Love Map memory game just finished.
 
@@ -145,21 +152,49 @@ PHILOSOPHY: A miss is not a failure — it's a map gap worth knowing about. A hi
       maxTokens: 400,
     })
 
-    const verdict = response
+    // ROOT CAUSE FIX Aug 12 2026 — Game Room audit: this route's own code
+    // comment used to say "Determine if correct — fuzzy match, Nora
+    // decides" directly above a block that never actually asked Nora for a
+    // structured judgment or stored one anywhere — only prose. That's why
+    // Memory Test has no score: there was nothing to score with. Now asks
+    // for JSON (result + verdict) and falls back to treating the whole
+    // response as verdict text with a null result if parsing fails, so a
+    // malformed response degrades to today's behavior instead of a 500.
+    const cleaned = response.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
+    let verdict, result
+    try {
+      const parsed = JSON.parse(cleaned)
+      verdict = parsed.verdict
+      result = ['hit', 'close', 'miss'].includes(parsed.result) ? parsed.result : null
+    } catch {
+      verdict = response
+      result = null
+    }
 
-    // Write verdict to DB
+    // Write verdict + result to DB. `result` needs the migration in
+    // docs/database/memory_test_session_verdict.sql — until Matt runs it,
+    // the update below fails (unknown column) and falls back to the
+    // pre-existing single-field update, so the round verdict still saves
+    // and the game isn't blocked on migration timing either way.
     const { error: updateError } = await supabase
       .from('challenge_rounds')
-      .update({ nora_verdict: verdict })
+      .update({ nora_verdict: verdict, result })
       .eq('session_id', sessionId)
       .eq('round_number', roundNumber)
 
     if (updateError) {
-      return Response.json({ error: 'Failed to save verdict' }, { status: 500 })
+      const { error: fallbackError } = await supabase
+        .from('challenge_rounds')
+        .update({ nora_verdict: verdict })
+        .eq('session_id', sessionId)
+        .eq('round_number', roundNumber)
+      if (fallbackError) {
+        return Response.json({ error: 'Failed to save verdict' }, { status: 500 })
+      }
     }
 
-    updateNoraMemory({ coupleId, userId: round.guesser_user_id, signalType: SIGNAL_TYPES.GAME_ROOM_DEBRIEF, inputData: { gameType: 'love_map_memory', question: round.memory_question, correctAnswer, guesserAnswer, verdict } }).catch(() => {})
-    return Response.json({ ok: true, verdict })
+    updateNoraMemory({ coupleId, userId: round.guesser_user_id, signalType: SIGNAL_TYPES.GAME_ROOM_DEBRIEF, inputData: { gameType: 'love_map_memory', question: round.memory_question, correctAnswer, guesserAnswer, verdict, result } }).catch(() => {})
+    return Response.json({ ok: true, verdict, result })
   } catch (err) {
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
