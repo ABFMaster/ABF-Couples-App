@@ -83,13 +83,39 @@ export async function POST(request) {
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
 
     const pool = CHALLENGE_PROMPTS[challengeType] || CHALLENGE_PROMPTS.story
-    const available = pool.filter(p => {
+
+    // ROOT CAUSE FIX Aug 12 2026 — Game Room audit: Memory Test's 3 rounds
+    // picked randomly from the ENTIRE pool every time, with zero
+    // sequencing — round 1 could land on "favorite ice cream flavor" and
+    // round 3 (meant to be the finale) could land on the exact same
+    // shallow tier. The Call ramps intensity by round via its tier system;
+    // Memory had the ingredients for the same thing (each prompt already
+    // carries a category in lib/challenge-prompts.js — small_things,
+    // inner_world, present_day, shared_history) but nothing used it. This
+    // sequences light-to-deep: round 1 small_things, round 2
+    // inner_world/present_day, round 3 shared_history/inner_world. Other
+    // challenge types (story/pitch/rank/plan) are single-round and
+    // untouched by this.
+    const MEMORY_ROUND_CATEGORIES = {
+      1: ['small_things'],
+      2: ['inner_world', 'present_day'],
+      3: ['shared_history', 'inner_world'],
+    }
+    const categoryFilteredPool = (challengeType === 'memory' && MEMORY_ROUND_CATEGORIES[roundNumber])
+      ? pool.filter(p => MEMORY_ROUND_CATEGORIES[roundNumber].includes(p.category))
+      : pool
+
+    const available = categoryFilteredPool.filter(p => {
       if (!usedKeys.includes(p.key)) return true
       if (!p.recyclable) return false
       const lastUsed = recentMemoryRounds.find(r => r.prompt_key === p.key)
       return lastUsed && lastUsed.created_at < ninetyDaysAgo
     })
-    const source = available.length > 0 ? available : pool
+    // Fallback order: unused-in-category -> anything in-category (rare —
+    // would need a couple to have exhausted 9+ shared_history prompts
+    // without any going recyclable) -> the full pool, same safety valve
+    // this already had before category sequencing existed.
+    const source = available.length > 0 ? available : (categoryFilteredPool.length > 0 ? categoryFilteredPool : pool)
 
     const basePrompt = source[Math.floor(Math.random() * source.length)]
 
