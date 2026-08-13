@@ -1033,6 +1033,42 @@ Respond in this exact JSON format:
   }
 }
 
+// Added Aug 13 2026 — Matt: "we just don't do a good enough job of making
+// the approval clear... I do think we need to auto clear the approval once
+// the actual date of the event passes." The pre-date approval gate on
+// shared custom_dates (State 2 in dates/[id]/page.js) was never designed to
+// resolve itself — if either partner forgot to tap Approve, the invite sat
+// open indefinitely even after the date was actually lived, which is
+// exactly what fed a permanently-stuck Us-tab red dot (found investigating
+// Matt's report). Once a date's own date_time is in the past, asking
+// whether to approve it is moot — it happened or it didn't; there's nothing
+// left to confirm. This sweeps once per cron tick and silently resolves
+// both sides. Deliberately sets status to 'approved', not 'completed' —
+// completion is a separate, per-user flow (user1_completed_at/
+// user2_completed_at, ratings, the post-date reflection) that this must not
+// fake or interfere with. approved_at's exact timestamp isn't surfaced
+// anywhere in the UI (only its null-ness gates the approve button/badge), so
+// overwriting both sides with "now" is safe even if one side had already
+// genuinely approved.
+async function autoClearPastDueDateApprovals() {
+  try {
+    const nowIso = new Date().toISOString()
+    const { data: cleared, error } = await supabase
+      .from('custom_dates')
+      .update({ user1_approved_at: nowIso, user2_approved_at: nowIso, status: 'approved' })
+      .not('shared_with', 'is', null)
+      .eq('status', 'planned')
+      .lt('date_time', nowIso)
+      .or('user1_approved_at.is.null,user2_approved_at.is.null')
+      .select('id')
+    if (error) throw error
+    return cleared?.length || 0
+  } catch (err) {
+    console.error('[cron] autoClearPastDueDateApprovals error:', err)
+    return 0
+  }
+}
+
 export async function GET(request) {
   const authHeader = request.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -1094,6 +1130,8 @@ export async function GET(request) {
 
     processNoraSynthesis(couples, profileMap)
     await processRabbitHoleConvergence()
+    const dateApprovalsCleared = await autoClearPastDueDateApprovals()
+    if (dateApprovalsCleared > 0) blocksFired.add('autoClearPastDueDateApprovals')
 
     // Non-blocking — a logging failure must never affect the actual cron
     // work above, which has already completed by this point.
