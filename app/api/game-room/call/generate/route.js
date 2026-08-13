@@ -67,8 +67,15 @@ export async function POST(request) {
     const predictorName = predictorProfile?.display_name || 'their partner'
     const interests = hotSeatProfile?.game_interests || {}
 
-    // Tier based on round number
-    const tier = roundNumber <= 2 ? 1 : roundNumber <= 4 ? 2 : 3
+    // Tier based on round number.
+    // ROOT CAUSE FIX Aug 12 2026 — Game Room audit: the old 2/2/1 split
+    // (tiers 1-2 get 2 rounds each, tier 3 — "instinct under real pressure,
+    // bigger life moments" — only got round 5) meant 80% of every Call
+    // session stayed in light/revealing territory before a single
+    // pressure-tier scenario closed it out. Rebalanced to 2/1/2 so tier 3
+    // gets equal weight to tier 1, and the intensity ramp actually lands
+    // two rounds instead of one.
+    const tier = roundNumber <= 2 ? 1 : roundNumber === 3 ? 2 : 3
 
     // ROOT CAUSE FIX Aug 12 2026 — Matt: "I get the same 3-5 Ikea or Wine
     // questions" every time he plays. Two real causes, both fixed here:
