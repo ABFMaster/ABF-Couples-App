@@ -31,12 +31,25 @@ export async function POST(request) {
       return Response.json({ error: 'Session not found' }, { status: 404 })
     }
 
-    const { data: profiles } = await supabase
-      .from('user_profiles')
-      .select('display_name')
-      .eq('couple_id', coupleId)
+    // ROOT CAUSE FIX Aug 12 2026 — Game Room audit: this always returned
+    // zero rows and silently fell back to "you two" for every nudge.
+    // user_profiles has no couple_id column (only user_id) — the correct
+    // path is couples.user1_id/user2_id -> user_profiles.user_id, same
+    // pattern used elsewhere (e.g. game-room/call/generate/route.js).
+    const { data: couple } = await supabase
+      .from('couples')
+      .select('user1_id, user2_id')
+      .eq('id', coupleId)
+      .maybeSingle()
 
-    const names = profiles?.map(p => p.display_name).join(' and ') || 'you two'
+    const { data: profiles } = couple
+      ? await supabase
+          .from('user_profiles')
+          .select('display_name')
+          .in('user_id', [couple.user1_id, couple.user2_id])
+      : { data: null }
+
+    const names = profiles?.map(p => p.display_name).filter(Boolean).join(' and ') || 'you two'
 
     const findsText = finds?.length
       ? finds.map(f => `• ${f.find_text}`).join('\n')
