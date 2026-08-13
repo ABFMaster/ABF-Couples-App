@@ -16,6 +16,16 @@ function ReportFace({ data, onDone, onFlip, activityLabel, variant = 'standalone
   const [note, setNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [pickSubmitting, setPickSubmitting] = useState(null)
+  // ROOT CAUSE FIX Aug 13 2026 — Matt reported tapping "Did it" (with a note
+  // typed first), seeing it seemingly go through, then finding it reverted
+  // to the unresolved entry card with the note gone when he came back later.
+  // handleReport's fetch had no res.ok check, so any failed write (auth
+  // hiccup, flaky connection — Matt's screenshot shows 1-2 signal bars) was
+  // silently swallowed: load() would just re-fetch the still-unresolved row
+  // and the note, which only ever lived in this component's local state,
+  // was gone on next mount. Now a failed submit surfaces inline and keeps
+  // the note in the box so the user can just retry instead of losing it.
+  const [submitError, setSubmitError] = useState(false)
 
   // Blended (same-source, same-session) gets quieter chrome — it's appended
   // below the activity card the user is already looking at, not a takeover.
@@ -26,8 +36,11 @@ function ReportFace({ data, onDone, onFlip, activityLabel, variant = 'standalone
   const submit = async (status) => {
     if (submitting) return
     setSubmitting(true)
+    setSubmitError(false)
     try {
       await onDone(status, note.trim() || null)
+    } catch {
+      setSubmitError(true)
     } finally {
       setSubmitting(false)
     }
@@ -36,8 +49,11 @@ function ReportFace({ data, onDone, onFlip, activityLabel, variant = 'standalone
   const pick = async (index) => {
     if (pickSubmitting !== null) return
     setPickSubmitting(index)
+    setSubmitError(false)
     try {
       await onDone('pick', null, index)
+    } catch {
+      setSubmitError(true)
     } finally {
       setPickSubmitting(null)
     }
@@ -84,6 +100,11 @@ function ReportFace({ data, onDone, onFlip, activityLabel, variant = 'standalone
             </button>
           ))}
         </div>
+        {submitError && (
+          <p style={{ fontSize: '11px', color: '#C4714A', textAlign: 'center', margin: '10px 0 0' }}>
+            Didn&apos;t save — check your connection and try again.
+          </p>
+        )}
       </div>
     )
   }
@@ -124,7 +145,20 @@ function ReportFace({ data, onDone, onFlip, activityLabel, variant = 'standalone
         <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: isBlended ? '15px' : '18px', color: '#F5ECD7', textAlign: 'center', lineHeight: 1.4, marginBottom: isBlended ? '16px' : '22px' }}>
           {data.mine.actionText}
         </p>
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+        {/* Note field moved above the buttons — Did it/Didn't get to it submit
+            immediately using whatever's in this box at tap time, so it has to
+            come first or a note typed afterward never makes it into the
+            report. The old order (buttons, then textarea below) visually
+            implied you could add a note after tapping, which isn't how it
+            actually works. */}
+        <textarea
+          value={note}
+          onChange={e => setNote(e.target.value)}
+          placeholder="What happened? (optional)"
+          rows={2}
+          style={{ width: '100%', background: '#2A1E14', border: '1.5px solid #3D2E1E', borderRadius: '10px', padding: '10px 12px', fontSize: '13px', color: '#F5ECD7', fontFamily: 'inherit', resize: 'none', outline: 'none', boxSizing: 'border-box', marginBottom: '10px' }}
+        />
+        <div style={{ display: 'flex', gap: '8px', marginBottom: submitError ? '8px' : 0 }}>
           <button
             onClick={() => submit('done')}
             disabled={submitting}
@@ -140,13 +174,11 @@ function ReportFace({ data, onDone, onFlip, activityLabel, variant = 'standalone
             Didn&apos;t get to it
           </button>
         </div>
-        <textarea
-          value={note}
-          onChange={e => setNote(e.target.value)}
-          placeholder="What happened? (optional)"
-          rows={2}
-          style={{ width: '100%', background: '#2A1E14', border: '1.5px solid #3D2E1E', borderRadius: '10px', padding: '10px 12px', fontSize: '13px', color: '#F5ECD7', fontFamily: 'inherit', resize: 'none', outline: 'none', boxSizing: 'border-box' }}
-        />
+        {submitError && (
+          <p style={{ fontSize: '11px', color: '#C4714A', textAlign: 'center', margin: 0 }}>
+            Didn&apos;t save — check your connection and try again.
+          </p>
+        )}
       </div>
     )
   }
@@ -318,7 +350,7 @@ export default function FollowThroughCard({ userId, coupleId, session, children,
 
   const handleReport = async (status, note, candidateIndex) => {
     const isPick = status === 'pick'
-    await fetch('/api/follow-through/report', {
+    const res = await fetch('/api/follow-through/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
       body: JSON.stringify(
@@ -327,6 +359,12 @@ export default function FollowThroughCard({ userId, coupleId, session, children,
           : { action: 'report', followThroughId: data.id, coupleId, status, note }
       ),
     })
+    // ROOT CAUSE FIX Aug 13 2026 — this used to ignore the response entirely,
+    // so a failed write (fetch only rejects on network failure, not on a
+    // non-2xx status) still fell through to load(), which just re-fetched
+    // the unchanged row and silently reverted the UI to "unresolved" with no
+    // error shown. See matching comment in ReportFace's submit().
+    if (!res.ok) throw new Error('Follow-Through report failed')
     await load()
   }
 

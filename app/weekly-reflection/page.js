@@ -57,12 +57,18 @@ export default function WeeklyReflectionPage() {
         if (statusData.hasReflection) {
           setReflection(statusData.reflection)
           setReacted(statusData.reflection.moment_reactions || {})
-          // Mark viewed
+          // Mark viewed. Was previously fire-and-forget with no res.ok check
+          // — a failed write here (same silent-swallow shape as the cron
+          // fix) leaves viewed_by_userX false forever, which is exactly what
+          // produces an Us-tab red dot that never clears even after the
+          // reflection has genuinely been read. Logged, not retried — a
+          // stuck dot is low-stakes and self-heals next time this page loads.
           fetch('/api/reflection/viewed', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ userId: uid, coupleId: couple.id, weekStart: statusData.reflection.week_start })
-          }).catch(() => {})
+          }).then(r => { if (!r.ok) console.error('[weekly-reflection] mark-viewed failed:', r.status) })
+            .catch(err => console.error('[weekly-reflection] mark-viewed failed:', err))
         } else {
           // Generate
           setLoading(false)
@@ -80,7 +86,8 @@ export default function WeeklyReflectionPage() {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
               body: JSON.stringify({ userId: uid, coupleId: couple.id, weekStart: genData.reflection.week_start })
-            }).catch(() => {})
+            }).then(r => { if (!r.ok) console.error('[weekly-reflection] mark-viewed failed:', r.status) })
+              .catch(err => console.error('[weekly-reflection] mark-viewed failed:', err))
           } else {
             setError('Could not generate reflection. Try again later.')
           }

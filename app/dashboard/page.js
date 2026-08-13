@@ -258,11 +258,40 @@ export default function Dashboard() {
         .catch((err) => console.error('[dashboard] hero fetch failed:', err))
         .finally(() => setHeroLoading(false))
     }
-    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+    // Location caching added Aug 13 2026 — Matt: gets the iOS location
+    // permission prompt on every single app open and it "does not seem to
+    // persist." This is a known WebKit limitation on installed (Add to Home
+    // Screen) standalone PWAs — the OS often tears down and relaunches the
+    // app's process on each cold open rather than keeping it warm the way a
+    // real Safari tab stays alive, and permission state doesn't reliably
+    // carry over across that relaunch the way it does for a normal browser
+    // tab. That's a platform behavior, not something fixable from here. What
+    // IS fixable: this used to call getCurrentPosition unconditionally on
+    // every mount, which forces a fresh permission check every time. Now it
+    // reuses a cached fix for 3 hours before asking again — doesn't remove
+    // the underlying iOS prompt-persistence issue, but cuts how often it's
+    // actually triggered.
+    const CACHE_KEY = 'abf_last_location'
+    const CACHE_MS = 3 * 60 * 60 * 1000
+    let cached = null
+    try {
+      const raw = localStorage.getItem(CACHE_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed?.lat != null && parsed?.lon != null && Date.now() - parsed.at < CACHE_MS) cached = parsed
+      }
+    } catch {}
+
+    if (cached) {
+      doFetch(cached.lat, cached.lon)
+    } else if (typeof navigator !== 'undefined' && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        pos => doFetch(pos.coords.latitude, pos.coords.longitude),
+        pos => {
+          try { localStorage.setItem(CACHE_KEY, JSON.stringify({ lat: pos.coords.latitude, lon: pos.coords.longitude, at: Date.now() })) } catch {}
+          doFetch(pos.coords.latitude, pos.coords.longitude)
+        },
         () => doFetch(null, null),
-        { timeout: 5000 }
+        { timeout: 5000, maximumAge: CACHE_MS }
       )
     } else {
       doFetch(null, null)
