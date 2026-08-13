@@ -59,10 +59,16 @@ export default function NavBadges() {
       return false
     }
 
-    // Us — badge when a Weekly Reflection is ready and this user hasn't
-    // viewed it yet. Mirrors the "current or last week" staleness window
-    // from app/api/reflection/status/route.js so this doesn't badge on a
-    // stale reflection the status route would refuse to serve anyway.
+    // Us — badge on any of: an unviewed Weekly Reflection, a Date Night
+    // invite waiting on this user's response, or a shared custom date
+    // waiting on this user's approval. Added Aug 12 2026 — Matt: "We should
+    // probably have red dots for Us/Ahead with Date Night, Events, Trips."
+    // Shared Ideas (shared_items) and Trips aren't included here — neither
+    // table has a viewed/seen column, so there's no way to tell "partner
+    // just added this" from "this has existed for weeks." That needs new
+    // schema (viewed_by_user1/2, same pattern as weekly_reflections) before
+    // it can badge correctly — flagged to Matt rather than building a dot
+    // that never clears.
     async function checkUsBadge(user, couple) {
       const { data: reflection } = await supabase
         .from('weekly_reflections')
@@ -71,19 +77,49 @@ export default function NavBadges() {
         .order('week_start', { ascending: false })
         .limit(1)
         .maybeSingle()
-      if (!reflection) return false
 
-      const currentWeekStart = getWeekStart()
-      const lastWeekStart = (() => {
-        const d = new Date(currentWeekStart + 'T12:00:00')
-        d.setDate(d.getDate() - 7)
-        return d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })
-      })()
-      const isCurrentOrLastWeek = reflection.week_start === currentWeekStart || reflection.week_start === lastWeekStart
-      if (!isCurrentOrLastWeek) return false
+      if (reflection) {
+        const currentWeekStart = getWeekStart()
+        const lastWeekStart = (() => {
+          const d = new Date(currentWeekStart + 'T12:00:00')
+          d.setDate(d.getDate() - 7)
+          return d.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' })
+        })()
+        const isCurrentOrLastWeek = reflection.week_start === currentWeekStart || reflection.week_start === lastWeekStart
+        if (isCurrentOrLastWeek) {
+          const viewed = couple.user1_id === user.id ? reflection.viewed_by_user1 : reflection.viewed_by_user2
+          if (!viewed) return true
+        }
+      }
 
-      const viewed = couple.user1_id === user.id ? reflection.viewed_by_user1 : reflection.viewed_by_user2
-      return !viewed
+      // Date Night invite (date_plans) suggested to this user, not yet
+      // responded to.
+      const { data: pendingInvites } = await supabase
+        .from('date_plans')
+        .select('id')
+        .eq('couple_id', couple.id)
+        .eq('suggested_to', user.id)
+        .is('responded_at', null)
+        .limit(1)
+      if (pendingInvites?.length) return true
+
+      // Shared custom date (custom_dates) awaiting this user's approval —
+      // user1_approved_at is the creator's (date.user_id) side,
+      // user2_approved_at is the recipient's (date.shared_with) side. See
+      // app/dates/[id]/page.js lines ~370-380 for the same mapping.
+      const { data: sharedDates } = await supabase
+        .from('custom_dates')
+        .select('user_id, shared_with, user1_approved_at, user2_approved_at')
+        .eq('couple_id', couple.id)
+        .not('shared_with', 'is', null)
+      const needsMyApproval = (sharedDates || []).some(d => {
+        if (d.user_id === user.id) return !d.user1_approved_at
+        if (d.shared_with === user.id) return !d.user2_approved_at
+        return false
+      })
+      if (needsMyApproval) return true
+
+      return false
     }
 
     // Game Room — badge when the partner is sitting in a lobby waiting on
