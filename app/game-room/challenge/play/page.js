@@ -219,8 +219,11 @@ function ChallengePlayContent() {
   const [memoryIsUpdated, setMemoryIsUpdated] = useState(false)
   const [memoryReadySubmitting, setMemoryReadySubmitting] = useState(false)
   const [memoryHintResponding, setMemoryHintResponding] = useState(false)
+  const [memoryRecap, setMemoryRecap] = useState(null)
+  const [memoryRecapLoading, setMemoryRecapLoading] = useState(false)
   const pollRef = useRef(null)
   const memoryVerdictCalledRef = useRef(false)
+  const sessionVerdictCalledRef = useRef(false)
   const storyVerdictCalledRef = useRef(false)
   const completePollRef = useRef(null)
   const roundRef = useRef(null)
@@ -578,6 +581,66 @@ function ChallengePlayContent() {
     return () => clearInterval(intervalId)
   }, [challengeSessionId, currentRound])
 
+  // Memory Test recap — Game Room audit's top finding: this used to end on
+  // a generic static card with no recap of what was asked, guessed, or
+  // missed. Fires once when the session completes: loads all rounds (with
+  // their hit/close/miss result from memory/verdict/route.js), then — if
+  // no session verdict exists yet and this client is the scribe, to avoid
+  // both partners double-generating — triggers session-verdict to produce
+  // the closing reflection. Same fetch/retry shape as the other verdict
+  // triggers in this file: fetch never throws on a non-2xx status, so
+  // res.ok is checked explicitly and the ref is reset on failure so a
+  // later render of this same complete screen can retry.
+  useEffect(() => {
+    if (phase !== 'complete' || challengeType !== 'memory' || !challengeSessionId) return
+    let cancelled = false
+
+    async function loadRecap() {
+      setMemoryRecapLoading(true)
+      const [{ data: rounds }, { data: challengeSessionRow }] = await Promise.all([
+        supabase
+          .from('challenge_rounds')
+          .select('round_number, memory_question, memory_answer, guesser_answer, guesser_user_id, result, nora_verdict')
+          .eq('session_id', challengeSessionId)
+          .order('round_number', { ascending: true }),
+        supabase
+          .from('challenge_sessions')
+          .select('nora_verdict')
+          .eq('id', challengeSessionId)
+          .maybeSingle(),
+      ])
+      if (cancelled) return
+      setMemoryRecap({ rounds: rounds || [], verdict: challengeSessionRow?.nora_verdict || null })
+
+      if (!challengeSessionRow?.nora_verdict && isScribeRef.current && !sessionVerdictCalledRef.current) {
+        sessionVerdictCalledRef.current = true
+        const { data: { session: authSession } } = await supabase.auth.getSession()
+        fetch('/api/game-room/challenge/memory/session-verdict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authSession?.access_token}` },
+          body: JSON.stringify({ challengeSessionId }),
+        }).then(async (res) => {
+          if (cancelled) return
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}))
+            console.error('[challenge/play] session-verdict generation failed:', res.status, data.error)
+            sessionVerdictCalledRef.current = false
+            return
+          }
+          const data = await res.json().catch(() => ({}))
+          setMemoryRecap(prev => prev ? { ...prev, verdict: data.verdict } : prev)
+        }).catch((err) => {
+          console.error('[challenge/play] session-verdict fetch failed:', err)
+          sessionVerdictCalledRef.current = false
+        })
+      }
+      if (!cancelled) setMemoryRecapLoading(false)
+    }
+    loadRecap()
+
+    return () => { cancelled = true }
+  }, [phase, challengeType, challengeSessionId])
+
   // Poll for partner starting a new lobby session — complete screen only
   useEffect(() => {
     if ((phase !== 'complete' && phase !== 'verdict') || !coupleId || !userId) return
@@ -909,6 +972,49 @@ function ChallengePlayContent() {
             {totalRounds === 1 ? 'One round. Well played.' : `${totalRounds} rounds. Nora's impressed.`}
           </p>
         </div>
+        {challengeType === 'memory' && memoryRecap && (
+          <div style={{ width: '100%', maxWidth: '400px', marginBottom: '16px', textAlign: 'left' }}>
+            {memoryRecap.rounds.some(r => r.result) && (
+              <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', marginBottom: '16px' }}>
+                {['hit', 'close', 'miss'].map(kind => {
+                  const count = memoryRecap.rounds.filter(r => r.result === kind).length
+                  if (!count) return null
+                  const color = kind === 'hit' ? '#059669' : kind === 'close' ? '#B45309' : '#DC2626'
+                  return (
+                    <div key={kind} style={{ textAlign: 'center' }}>
+                      <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '22px', color, margin: '0 0 2px' }}>{count}</p>
+                      <p style={{ fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9CA3AF', margin: 0 }}>{kind}{count === 1 ? '' : (kind === 'miss' ? 'es' : 's')}</p>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            {memoryRecap.verdict ? (
+              <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '16px', padding: '18px 20px', marginBottom: '16px' }}>
+                <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: 'italic', fontSize: '15px', color: '#1C1510', margin: 0, lineHeight: 1.5 }}>{memoryRecap.verdict}</p>
+              </div>
+            ) : memoryRecapLoading ? (
+              <p style={{ fontSize: '13px', color: '#9CA3AF', textAlign: 'center', marginBottom: '16px' }}>Nora's putting it together…</p>
+            ) : null}
+            {memoryRecap.rounds.map(r => (
+              <div key={r.round_number} style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '12px', padding: '14px 16px', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '6px' }}>
+                  <p style={{ fontSize: '13px', color: '#1C1510', fontWeight: 600, margin: 0, flex: 1 }}>{r.memory_question}</p>
+                  {r.result && (
+                    <span style={{
+                      fontSize: '10px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
+                      padding: '2px 8px', borderRadius: '10px', flexShrink: 0,
+                      background: r.result === 'hit' ? '#ECFDF5' : r.result === 'close' ? '#FEF3C7' : '#FEF2F2',
+                      color: r.result === 'hit' ? '#059669' : r.result === 'close' ? '#B45309' : '#DC2626',
+                    }}>{r.result}</span>
+                  )}
+                </div>
+                <p style={{ fontSize: '12px', color: '#9CA3AF', margin: '0 0 2px' }}>Answer: {r.memory_answer}</p>
+                <p style={{ fontSize: '12px', color: '#9CA3AF', margin: 0 }}>Guess: {r.guesser_answer || '—'}</p>
+              </div>
+            ))}
+          </div>
+        )}
         {newLobbySession ? (
             <div style={{ width: '100%', maxWidth: '400px' }}>
               <div style={{ background: '#EEF2FF', border: '0.5px solid #C4B5FD', borderRadius: '16px', padding: '16px 20px', marginBottom: '12px', textAlign: 'center' }}>
