@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
 import { NextResponse } from 'next/server'
-import { noraSignal, noraChat } from '@/lib/nora'
+import { noraReact, noraChat } from '@/lib/nora'
 import { getNoraTierContext } from '@/lib/nora-knowledge'
 import { getSurfaceableClaims, getPrivateNotes } from '@/lib/nora-memory'
 import { getTodayString, getDayOfWeek, getDateDayLabel, getWeekStart, daysUntilNextOccurrence } from '@/lib/dates'
@@ -634,7 +634,19 @@ const ritualCompletedThisWeek = !!completion?.completed
         cta_label = "Tell Nora →"
         cta_href = `/ai-coach?seed=${encodeURIComponent(response || '')}`
       } else {
-        response = await noraSignal(userPrompt, { route: 'dashboard/hero', system: systemPrompt, maxTokens: 200 })
+        // ROOT CAUSE FIX Aug 12 2026 — this was noraSignal: no NORA_VOICE,
+        // Haiku only, and per its own doc comment in lib/nora.js "Never
+        // user-facing" — yet its output was displayed directly as the
+        // daily hero card text, the single most-seen Nora surface in the
+        // app. Every other Nora surface gets her full voice; this one
+        // didn't. Matt: "Nora IS the product... needs to have her present
+        // as incredible." Swapped to noraReact (Sonnet, full NORA_VOICE,
+        // context: 'daily' for the calm/grounded register note) now that
+        // NORA_VOICE is cache_control-marked in lib/nora.js — full voice
+        // here costs roughly 2x today's per-call cost instead of ~6x
+        // uncached, and today's absolute cost is ~$0.31/month at current
+        // volume either way. Same word cap, same route, same fallback.
+        response = await noraReact(userPrompt, { route: 'dashboard/hero', system: systemPrompt, context: 'daily', maxTokens: 200 })
       }
       message = response || `Good to see you, ${name}.`
 
