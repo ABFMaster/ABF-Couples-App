@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing, getSurfaceableClaims } from '@/lib/nora-memory'
-import { noraVerdict } from '@/lib/nora'
+import { noraVerdict, parseNoraJSON } from '@/lib/nora'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
@@ -108,10 +108,9 @@ ${noraBriefing ? `\nWhat Nora knows about this couple:\n${noraBriefing}` : ''}${
     const response = await noraVerdict(prompt, { route: 'game-room/generate-debrief', maxTokens: 500, system: 'Two people went down separate threads of the same rabbit hole and surfaced different things. Your job is to find what their specific choices reveal about them — not about the topic. The convergence_reveal is the only place you speak about them directly. Make it land. Never summarize their finds. Never use "both of you" as a lazy bridge. The debrief questions open territory they haven\'t named yet — never ask something they just answered. Use their names when you see something specific. Two sentences. Find what they didn\'t say. Don\'t explain it.' })
 
     const raw = response
-    const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
     let debrief
     try {
-      debrief = JSON.parse(cleaned)
+      debrief = parseNoraJSON(raw)
     } catch (err) {
       console.error('[generate-debrief] Parse error:', err)
       return NextResponse.json({ error: 'Failed to parse debrief' }, { status: 500 })

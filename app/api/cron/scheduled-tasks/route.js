@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { getSparkQuestion } from '@/lib/spark-questions'
 import { getBetQuestion } from '@/lib/bet-questions'
 import { getTodayString, getDayOfWeek, getHourInTimezone, daysUntilNextOccurrence } from '@/lib/dates'
-import { noraGenerate, noraChat } from '@/lib/nora'
+import { noraGenerate, noraChat, parseNoraJSON } from '@/lib/nora'
 import { getNoraMemory, getMemoryBriefing, getSurfaceableClaims, updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { getNoraTierContext } from '@/lib/nora-knowledge'
 import { generateFollowThrough } from '@/lib/follow-through'
@@ -1010,10 +1010,10 @@ Respond in this exact JSON format:
       const response = await noraGenerate(prompt, { route: 'cron/scheduled-tasks', system: 'You are closing out a Rabbit Hole investigation that a couple started but never finished. Be the game master who brings it home — find what neither of them said explicitly.', maxTokens: 1000 })
 
       let parsed
-      const raw = response.replace(/```json|```/g, '').trim()
       try {
-        parsed = JSON.parse(raw)
+        parsed = parseNoraJSON(response)
       } catch {
+        console.error('[cron] Rabbit Hole convergence JSON parse failed:', response)
         return Response.json({ error: 'Failed to parse Nora response' }, { status: 500 })
       }
 

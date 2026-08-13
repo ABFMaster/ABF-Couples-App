@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { noraGenerate } from '@/lib/nora'
+import { noraGenerate, parseNoraJSON } from '@/lib/nora'
 import { requireUser } from '@/lib/api-auth'
 
 const EXTRACTION_PROMPT = `Read this conversation and extract the following as a JSON object with no other text:
@@ -29,9 +29,8 @@ export async function POST(request) {
     try {
       const response = await noraGenerate(`${EXTRACTION_PROMPT}\n\n${conversationText}`, { route: 'game-room/save-interests', maxTokens: 600 })
       const raw = response
-      const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
       try {
-        interests = JSON.parse(cleaned)
+        interests = parseNoraJSON(raw)
       } catch (e) {
         console.error('[game-room/save-interests] JSON parse failed:', raw)
         return NextResponse.json({ error: 'Failed to parse Nora response' }, { status: 500 })

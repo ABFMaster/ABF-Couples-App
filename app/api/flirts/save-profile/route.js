@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { noraGenerate } from '@/lib/nora'
+import { noraGenerate, parseNoraJSON } from '@/lib/nora'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { requireUser } from '@/lib/api-auth'
 
@@ -32,10 +32,8 @@ export async function POST(request) {
       const response = await noraGenerate(prompt, { route: 'flirts/save-profile', maxTokens: 600 })
 
       const raw = response
-      // Strip markdown code fences if present
-      const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
       try {
-        profile = JSON.parse(cleaned)
+        profile = parseNoraJSON(raw)
       } catch (e) {
         console.error('[flirts/save-profile] JSON parse failed:', raw)
         return NextResponse.json({ error: 'Failed to parse Nora response' }, { status: 500 })

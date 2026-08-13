@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { noraGenerate } from '@/lib/nora'
+import { noraGenerate, parseNoraJSON } from '@/lib/nora'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
@@ -124,7 +124,7 @@ Examples:
     const raw = response
     let starters
     try {
-      starters = JSON.parse(raw)
+      starters = parseNoraJSON(raw)
     } catch (e) {
       console.error('[conversation-starters] JSON parse failed:', raw)
       return NextResponse.json({ error: 'Failed to parse suggestions' }, { status: 500 })

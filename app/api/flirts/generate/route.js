@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { noraGenerate } from '@/lib/nora'
+import { noraGenerate, parseNoraJSON } from '@/lib/nora'
 import { searchGifs } from '@/lib/giphy'
 import { searchMovies, searchShows } from '@/lib/omdb'
 import { searchSpotifyTracks } from '@/lib/spotify'
@@ -102,9 +102,8 @@ Respond with a JSON object only, no other text:
       const response = await noraGenerate(prompt, { route: 'flirts/generate', system: systemPrompt, maxTokens: 400 })
 
       const raw = response
-      const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
       try {
-        flirtData = JSON.parse(cleaned)
+        flirtData = parseNoraJSON(raw)
       } catch (e) {
         console.error('[flirts/generate] JSON parse failed:', raw)
         return NextResponse.json({ error: 'Failed to parse Nora response' }, { status: 500 })

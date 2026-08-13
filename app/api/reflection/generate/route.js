@@ -20,7 +20,7 @@ export const maxDuration = 45
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { getWeekStart } from '@/lib/dates'
-import { noraReact } from '@/lib/nora'
+import { noraReact, parseNoraJSON } from '@/lib/nora'
 import { updateNoraMemory, SIGNAL_TYPES, getFullNoraContext } from '@/lib/nora-memory'
 import { verifyCoupleMembership } from '@/lib/api-auth'
 
@@ -278,11 +278,14 @@ Return only the JSON object. No markdown, no explanation, no wrapper text.`
       maxTokens: 1200,
     })
 
-    // STEP 6 — Parse response
+    // STEP 6 — Parse response. Was a bare JSON.parse with no fence-stripping
+    // or preamble-extraction at all — the highest-risk shape in the whole
+    // sweep, on a 4-field response with a nested moments array. See
+    // parseNoraJSON in lib/nora.js.
     const rawText = message || ''
     let parsed
     try {
-      parsed = JSON.parse(rawText)
+      parsed = parseNoraJSON(rawText)
     } catch {
       console.error('[reflection/generate] Failed to parse Claude response:', rawText)
       return NextResponse.json({ error: 'Failed to parse reflection' }, { status: 500 })

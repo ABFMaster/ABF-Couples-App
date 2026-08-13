@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { noraChat } from '@/lib/nora'
+import { noraChat, parseNoraJSON } from '@/lib/nora'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 const WANDER_SYSTEM_PROMPT = `RESPONSE RULES:
@@ -119,8 +119,11 @@ Pick one specific unexpected destination for them — not Paris, not Bali, not t
 
     // For itinerary, parse JSON
     if (action === 'itinerary') {
+      // Also had zero fence-stripping/preamble-extraction — a multi-day
+      // itinerary is exactly the "complex nested JSON" shape most prone to
+      // the Memory Test bug class. See parseNoraJSON in lib/nora.js.
       try {
-        const parsed = JSON.parse(text)
+        const parsed = parseNoraJSON(text)
         return NextResponse.json({ itinerary: parsed })
       } catch {
         return NextResponse.json({ error: 'Failed to parse itinerary' }, { status: 500 })

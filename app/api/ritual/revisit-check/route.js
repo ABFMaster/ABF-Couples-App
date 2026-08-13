@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 // rituals.pending_revisit_message.
 
 import { NextResponse } from 'next/server'
-import { noraGenerate } from '@/lib/nora'
+import { noraGenerate, parseNoraJSON } from '@/lib/nora'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 const DORMANCY_MS = 6 * 7 * 24 * 3600 * 1000 // ~6 weeks, tunable
@@ -72,8 +72,7 @@ Return ONLY this JSON, no other text:
         system: 'You write warm, specific, non-judgmental relationship check-ins. Return only the requested JSON.',
         maxTokens: 120,
       })
-      const cleaned = raw.replace(/```json|```/g, '').trim()
-      const parsed = JSON.parse(cleaned)
+      const parsed = parseNoraJSON(raw)
       message = parsed.message || null
     } catch (genErr) {
       console.error('[ritual/revisit-check] generation error:', genErr)

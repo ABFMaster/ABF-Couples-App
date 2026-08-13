@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { noraGenerate } from '@/lib/nora'
+import { noraGenerate, parseNoraJSON } from '@/lib/nora'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
@@ -203,10 +203,9 @@ Respond ONLY with JSON, no markdown:
     const response = await noraGenerate(prompt, { route: 'game-room/generate-hole', maxTokens: 800, system: 'You are sending someone down a rabbit hole on a topic you chose on purpose. The thread should pull them one level deeper than they expected to go. Specific, surprising, slightly unsettling in the best way. Never academic. Never obvious. The best rabbit hole thread makes someone think "I didn\'t know I needed to know this."' })
 
     const raw = response
-    const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
     let generated
     try {
-      generated = JSON.parse(cleaned)
+      generated = parseNoraJSON(raw)
     } catch (e) {
       console.error('[game-room/generate-hole] JSON parse failed:', raw)
       return NextResponse.json({ error: 'Failed to parse Nora response' }, { status: 500 })

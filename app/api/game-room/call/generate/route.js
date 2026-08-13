@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
-import { noraGenerate } from '@/lib/nora'
+import { noraGenerate, parseNoraJSON } from '@/lib/nora'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
@@ -135,10 +135,9 @@ Respond ONLY with valid JSON, no markdown:
     const response = await noraGenerate(prompt, { route: 'game-room/call/generate', maxTokens: 300 })
 
     const raw = response
-    const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
     let generated
     try {
-      generated = JSON.parse(cleaned)
+      generated = parseNoraJSON(raw)
     } catch (e) {
       console.error('[game-room/call/generate] JSON parse failed:', raw)
       return NextResponse.json({ error: 'Failed to parse Nora response' }, { status: 500 })

@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { getAvailableMissions, ALL_HUNT_MISSIONS } from '@/lib/hunt-missions'
-import { noraGenerate } from '@/lib/nora'
+import { noraGenerate, parseNoraJSON } from '@/lib/nora'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 
 export async function POST(request) {
@@ -143,9 +143,8 @@ Respond in this exact JSON format with no other text:
     const response = await noraGenerate(userPrompt, { route: 'game-room/hunt/start', system: systemPrompt, maxTokens: 100 })
 
     let selectedKey
-    const raw = response.replace(/```json|```/g, '').trim()
     try {
-      const parsed = JSON.parse(raw)
+      const parsed = parseNoraJSON(response)
       selectedKey = parsed.selected_key
     } catch (e) {
       console.error('[game-room/hunt/start] JSON parse failed:', raw)
