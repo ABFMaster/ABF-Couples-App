@@ -219,7 +219,30 @@ Use `app/api/notebook/entry/route.js` (simple case) or `app/api/dates/complete/r
 
 ---
 
-## 7. Changelog
+## 7. Model Choice & Voice Grounding (Aug 13 2026)
+
+Written for portability — Matt is shifting build focus to Nora Standalone next and wants this logic ported and evolved there, not rediscovered from scratch. This section documents *why*, not just *what*, so it transfers even if the surrounding code doesn't.
+
+### Model
+Every Nora-voiced call (`noraChat` / `noraReact` / `noraVerdict` / `noraGenerate` in `lib/nora.js`) defaults to `claude-sonnet-5`. `noraSignal` (internal routing only, never user-facing) stays on `claude-haiku-4-5-20251001` — deliberately not upgraded, since it never reaches Nora's voice and a stronger model buys nothing there.
+
+Sonnet 5 was chosen over Sonnet 4.6 (the prior default) on two independent grounds, not a tradeoff between them: it's the newer, stronger model, *and* it's priced lower ($2/$10 per million input/output tokens vs. $3/$15) — Anthropic made Sonnet 5's introductory pricing permanent Aug 10 2026. At this app's current volume (~617 Nora calls/30d, ~1.38M input + ~77K output tokens/30d across all routes) that's roughly $5.29/mo → $3.53/mo. The number is small at this scale, but the direction — better model, lower cost, no tradeoff — is what should carry over to Standalone regardless of its own volume.
+
+### Voice grounding
+Root cause: Nora stated an inferred detail (who organized a birthday-weekend event) as settled fact when it was never actually reported to her — reconstructed from adjacent signals, not told. This is a known LLM failure mode with a known, minimal fix: give the model explicit permission not to assert what it isn't sure of (Anthropic's own hallucination-reduction guidance names this as the primary lever, ahead of more invasive options like added verification steps or heavier role-constraints).
+
+The fix is one added sentence in `CONTEXT_NOTES['daily']` and `CONTEXT_NOTES['conversation']` in `lib/nora.js` — *not* a spoken disclaimer text ("I don't know who planned this"), which would read as hedging and undercut the confident voice that's the entire point of Nora. The instruction operates upstream of the sentence: don't manufacture an unconfirmed specific to begin with; narrate from what's actually confirmed instead. Deliberately scoped to just these two registers (not `verdict` or `game_room`, and not layered into the shared `NORA_VOICE` block) — those are the two places Nora synthesizes across remembered signals to narrate something as true about a person's life; `verdict`/`game_room` narrate live round data, a different failure surface entirely. This follows Invariant 11 (prompt governance — hand-edited, human-reviewed) and the engagement's standing "don't layer" principle: smallest change that reaches every affected call site, not a new mechanism.
+
+**Open finding, not yet fixed:** the Thursday/Wednesday reveal calls in `app/api/cron/scheduled-tasks/route.js` (`thursday/generate-user1`, `thursday/generate-user2`, `thursday/reveal`, `wednesday/reveal`, `wednesday/cutoff`) call `noraChat` without a `context` param at all, so they silently inherit the `'conversation'` default rather than being explicitly tagged `'daily'` — despite being one-shot narrated reveals, not two-way dialogue. The grounding line reaches them either way (added to `'conversation'` too, specifically because of this), but the mislabeling itself is real and worth a deliberate tagging pass later — flagged here rather than silently fixed alongside the grounding change, since retagging context changes *tone* (a different, larger-blast-radius kind of change) and deserves its own review.
+
+**Still open, deliberately not addressed this pass:** the hero-card / Thursday-reveal near-duplicate content problem Matt flagged. That's a cross-surface coordination gap (`app/api/dashboard/hero/route.js` and the cron Thursday path independently synthesize from the same `nora_memory` row with no awareness of what the other already said today) — a different, larger fix than grounding, still pending Matt's go-ahead.
+
+### For Nora Standalone
+If `NORA_VOICE`/`CONTEXT_NOTES`/`lib/nora.js` turn out to be a separately duplicated copy in that codebase rather than shared code, this section is the porting spec: same model reasoning (stronger + cheaper, not a tradeoff), same grounding sentence in the same two registers, same explicit exclusion of `verdict`/`game_room`, same open Thursday/Wednesday tagging question to resolve independently there.
+
+---
+
+## 8. Changelog
 
 The commits from the Aug 2026 trust/safety/memory-integrity phase, in order:
 
@@ -231,6 +254,7 @@ The commits from the Aug 2026 trust/safety/memory-integrity phase, in order:
 6. `7024c13` — Correct REINFORCE architecture language in code
 7. `2e7424a` — Switch confirmation-rate query to `created_at` now that it's confirmed to exist
 8. `cf465f2` — Extend sensitive-content safety gate to 5 free-text data-entry routes
+9. (pending) — Default model → `claude-sonnet-5`; grounding addition to `CONTEXT_NOTES['daily']`/`['conversation']` in `lib/nora.js` (see Section 7)
 
 ---
 

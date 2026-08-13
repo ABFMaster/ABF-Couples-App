@@ -295,7 +295,7 @@ Source: `Sessions/NORA_ARCHITECTURE_STRESS_TEST_2026_08_11.md` (Aug 11 2026 disc
 - 📋 Minimal CI (lint + pure-function tests) + deployment gate.
 - 📋 Confirm existing feedback signals (reaction pills, Follow-Through decline) actually influence future content selection, not just sit as stored telemetry.
 - 📋 Extend the verification-loop pattern (the claim classifier) to 1-2 more surfaces once observability shows where it's most needed.
-- 📋 Centralize context assembly for routes still doing inline fetching instead of `getFullNoraContext()`.
+- 📋 Centralize context assembly for routes still doing inline fetching instead of `getFullNoraContext()` — `app/api/dashboard/hero/route.js` and the Thursday/Wednesday paths in `app/api/cron/scheduled-tasks/route.js` both still hand-roll their own memory-assembly rather than using the shared function. Investigated Aug 13 2026 as a possible vehicle for the voice-grounding fix — turned out unnecessary for that (grounding landed as a 2-line `CONTEXT_NOTES` addition instead, see BOTH PRODUCTS > Voice + Quality) and would have been riskier surgery on hero's already-tuned prompt shape than the fix needed. Still real tech debt, and likely a real prerequisite for fixing the hero/Thursday duplicate-content problem below — just not coupled to this task.
 
 ### DO NEXT — done since this draft was written
 - ✅ Aggregate the claim-confirmation/rejection rate `classifyClaimResponse` already computes into a real, visible quality metric — `docs/database/claim_confirmation_rate.sql`, commits `f83d554`/`2e7424a` (task #188). Read-only saved query, not a dashboard/job; framed explicitly as a relative behavioral signal, not an accuracy metric.
@@ -340,6 +340,8 @@ Agent frameworks (LangGraph, etc.); vector databases / RAG infrastructure; multi
 
 ### Voice + Quality
 - 🟢 Nora voice refinement — reduce response restatement, vary entry points, cut affirmation formula before substance, closing questions should open new territory not summarize. System prompt pass needed on BOTH products.
+- ✅ Grounding fix, ABF side, Aug 13 2026 — Matt caught Nora asserting an inferred detail (who planned a birthday-weekend event) as settled fact when it was never actually reported. Root cause + fix documented in `docs/NORA_ARCHITECTURE.md` Section 7 (written specifically for Standalone portability — model choice reasoning, exact grounding sentence, why it's scoped to `daily`/`conversation` only, and an open finding that Thursday/Wednesday reveal calls default to `conversation` context rather than being explicitly tagged). Also swapped default model `claude-sonnet-4-6` → `claude-sonnet-5` in `lib/nora.js` — strictly better and cheaper, not a tradeoff ($2/$10 vs $3/$15 per million tokens, ~$5.29/mo → ~$3.53/mo at current ABF volume). **Not yet ported to Nora Standalone** — Matt wants it evolved there next; check first whether `NORA_VOICE`/`CONTEXT_NOTES`/`lib/nora.js` are shared code or a separately duplicated copy in that codebase before porting.
+- 📋 Hero-card / Thursday-reveal near-duplicate content — separate, larger problem from the grounding fix above. `app/api/dashboard/hero/route.js` and the Thursday-reveal path in `app/api/cron/scheduled-tasks/route.js` independently synthesize commentary from the same `nora_memory` row with no cross-surface awareness of what the other already said that day. Needs a coordination mechanism, not a prompt tweak — deferred, no design started.
 
 ### UX
 - 📋 Pinch to zoom in photo viewer — blocked by PWA viewport restrictions. Log for native app era.
