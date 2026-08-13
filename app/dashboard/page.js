@@ -563,6 +563,27 @@ export default function Dashboard() {
             </FollowThroughCard>
           </div>
         )}
+        {/* ROOT CAUSE FIX Aug 13 2026 — Matt: "the Nora daily module is above
+            our daily activity. Every other day has that blue module below
+            the activity." Thursday's card was the one day-of-week module
+            left in "SECTION 3.5", positioned AFTER the Section 3 Nora hero
+            card, while Spark/Bet/Notice all live in Section 2, BEFORE the
+            hero card. Moved here to match — this is now the last thing
+            checked before the hero card, same slot Notice/Bet/Spark use. */}
+        {showThursday && (
+          <div style={{ margin: '0 16px 14px' }}>
+            <FollowThroughCard userId={user?.id} coupleId={couple?.id} session={session} activityLabel="Thursday" currentSourceId={thursdaySourceId}>
+              <ThursdayCard
+                userId={user?.id}
+                coupleId={couple?.id}
+                userName={userName}
+                partnerName={partnerName}
+                session={session}
+                onSourceLoaded={setThursdaySourceId}
+              />
+            </FollowThroughCard>
+          </div>
+        )}
         {showRitual && user?.id && couple?.id && (
           <div style={{ margin: '0 16px 14px' }}>
             <RitualCard
@@ -666,23 +687,6 @@ export default function Dashboard() {
                 Skip
               </button>
             </div>
-          </div>
-        )}
-
-        {/* SECTION 3.5 — THURSDAY CARD */}
-        {showThursday && (
-          // Same fix as the Notice block above — see comment there.
-          <div style={{ margin: '0 16px 14px' }}>
-            <FollowThroughCard userId={user?.id} coupleId={couple?.id} session={session} activityLabel="Thursday" currentSourceId={thursdaySourceId}>
-              <ThursdayCard
-                userId={user?.id}
-                coupleId={couple?.id}
-                userName={userName}
-                partnerName={partnerName}
-                session={session}
-                onSourceLoaded={setThursdaySourceId}
-              />
-            </FollowThroughCard>
           </div>
         )}
 
