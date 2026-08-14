@@ -141,6 +141,23 @@ export async function POST(request) {
     let guesserUserId = coupleData.user1_id
     let personalizedPrompt = ''
     let userPrompt
+    // ROOT CAUSE FIX Aug 14 2026 — Matt's recurring "Something went wrong"
+    // on every single Memory Test round, since day one, misdiagnosed as a
+    // JSON-parsing problem across 5-6 prior fix attempts (token budget,
+    // query sequencing, embedded-relation lookups). Real cause, confirmed
+    // from a live Vercel log Matt pulled: the raw Nora response was
+    // completely well-formed JSON — the catch block below was actually
+    // catching a ReferenceError ("guesserName is not defined"), not a
+    // SyntaxError, but both get the same generic "Failed to parse Nora
+    // response" message, making them indistinguishable without the raw log.
+    // guesserName/answerHolderName were declared with const INSIDE the
+    // `else if (challengeType === 'memory')` block below (block-scoped),
+    // then referenced again in the validation step inside the try/catch
+    // AFTER that block closes — out of scope on every single call, 100% of
+    // the time, for every memory round. Hoisted here so both scopes share
+    // the same variables.
+    let guesserName = ''
+    let answerHolderName = ''
     if (challengeType === 'rank') {
       userPrompt = `Personalise this ranking challenge for ${profileSummary}.
 
@@ -295,8 +312,8 @@ Respond in this exact JSON format with no other text:
       const answerHolderUserId = isOddRound ? partnerId : userId
       const guesserProfile = profiles?.find(p => p.user_id === guesserUserId || p.id === guesserUserId)
       const answerHolderProfile = profiles?.find(p => p.user_id === answerHolderUserId || p.id === answerHolderUserId)
-      const guesserName = guesserProfile?.display_name || 'Partner 1'
-      const answerHolderName = answerHolderProfile?.display_name || 'Partner 2'
+      guesserName = guesserProfile?.display_name || 'Partner 1'
+      answerHolderName = answerHolderProfile?.display_name || 'Partner 2'
       personalizedPrompt = basePrompt.prompt.replace(/\{answerHolder\}/g, answerHolderName)
 
       // Fetch previously used questions for this session to prevent repeats

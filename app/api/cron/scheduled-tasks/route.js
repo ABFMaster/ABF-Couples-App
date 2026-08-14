@@ -666,12 +666,20 @@ async function processThursdayReveal(couple, user1, user2) {
     await sendPush(user1.user_id, 'Nora', 'Something to see together tonight.', '/dashboard', 'thursday/reveal')
     await sendPush(user2.user_id, 'Nora', 'Something to see together tonight.', '/dashboard', 'thursday/reveal')
 
-    // Follow-Through hook — same cron-triggered pattern as Wednesday/Notice,
-    // skipped unless both actually responded. Thursday gives each partner a
-    // DIFFERENT individualized observation+question rather than one shared
-    // question, so this passes myQuestion/theirQuestion instead of
-    // sourceQuestion — see lib/follow-through.js.
-    if (hasUser1 && hasUser2) {
+    // Follow-Through hook — cron-triggered like Wednesday/Notice, but unlike
+    // Wednesday/Bet/Spark this fires as soon as EITHER partner responded, not
+    // only when both did. Root cause of the old both-required gate: it was
+    // copied from Bet/Spark's rule without re-checking whether it actually
+    // applied here. Bet/Spark's Follow-Through content is built by comparing
+    // both answers against each other, so it genuinely needs both. Thursday
+    // was already built to give each partner a DIFFERENT, individualized
+    // observation+question (not a shared one) — there's no structural reason
+    // the partner who did respond should be blocked from getting their own
+    // Follow-Through just because the other didn't answer. Matt, Aug 14 2026:
+    // "why would I not want to follow through even if my partner did not
+    // answer." generateFollowThrough (lib/follow-through.js) now generates
+    // single-sided when one answer is missing rather than fabricating one.
+    if (hasUser1 || hasUser2) {
       try {
         await generateFollowThrough({
           supabase,

@@ -313,6 +313,10 @@ Agent frameworks (LangGraph, etc.); vector databases / RAG infrastructure; multi
 
 ## NORA STANDALONE
 
+### Single-User Arc — DO NOW, vital to launch (Matt, Aug 14 2026)
+- 🔴 Full design conversation needed, not yet scheduled. Prior discussion happened only in chat, never saved to a doc — reconstructing from Matt's summary, not a prior artifact. Core question: what's the entry point and ongoing experience for a single user who joins ABF (or Nora Standalone) alone, before their partner joins if ever — how do they find real purpose and enjoyment in the meantime, not just a waiting room. Explored previously through the lens of "could a single user thrive here on their own" — Nora Standalone may have originally spun out of that exploration specifically to serve this need, meaning some of the answer may already exist in Standalone's product shape rather than needing to be invented fresh. Distinct from (but related to) the narrower asymmetric-engagement question below — that one's about an already-matched couple where one partner skips a single activity; this one is about whether ABF/Standalone has a real answer for someone with no partner in the system at all.
+- ✅ Narrower, related fix shipped same day: Thursday's Follow-Through no longer requires both partners to have responded — see BOTH PRODUCTS section below. Doesn't resolve the bigger onboarding question, just stops penalizing the partner who did show up.
+
 ### App Store
 - 🔴 Apple Developer account — $99/year enrollment at developer.apple.com/programs/enroll. Blocks device signing and submission. Everything else is ready.
 - 🟡 App Store assets — screenshots, description, keywords. Not yet created.
