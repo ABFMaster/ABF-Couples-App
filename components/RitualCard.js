@@ -500,8 +500,20 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
   }
 
   const handleDiscoverMore = async (suggestion) => {
+    // ROOT CAUSE FIX Aug 14 2026 — this is the second of two handlers that
+    // both POST to /api/ritual/start (handleSelectSuggestion is the other).
+    // The Aug 13 fix only added the res.ok check + visible error state to
+    // handleSelectSuggestion, since that was the specific handler behind the
+    // bug reported that day. This one — used by Library's "discover another
+    // ritual" flow AND the inline next-suggestion prompt shown on the
+    // Friday Home card ("We'll try this one" under "Ready to try another?")
+    // — kept the same silent-catch shape the whole component used to have:
+    // a failed write (auth hiccup, non-2xx, flaky connection) fell through
+    // with nothing shown, indistinguishable from doing nothing at all.
+    // Matched to handleSelectSuggestion's pattern for consistency.
     if (submitting) return
     setSubmitting(true)
+    setStartError(null)
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/ritual/start', {
@@ -517,20 +529,24 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
         }),
       })
       const data = await res.json()
-      if (data.ritual) {
-        setRituals(prev => [...prev.filter(r => r.id !== data.ritual.id), data.ritual])
-        setDiscoverMode(false)
-        setCheckinResult(null)
-        setAdoptionReady(false)
-        setUpdatedStreak(null)
-        if (suggestion.id) {
-          const newUsed = [...usedSuggestionIds, suggestion.id]
-          setUsedSuggestionIds(newUsed)
-          const tier1 = getStarterRituals()
-          setNextSuggestion(tier1.find(s => !newUsed.includes(s.id)) || null)
-        }
+      if (!res.ok || !data.ritual) {
+        setStartError("Didn't save — check your connection and try again.")
+        return
       }
-    } catch {} finally {
+      setRituals(prev => [...prev.filter(r => r.id !== data.ritual.id), data.ritual])
+      setDiscoverMode(false)
+      setCheckinResult(null)
+      setAdoptionReady(false)
+      setUpdatedStreak(null)
+      if (suggestion.id) {
+        const newUsed = [...usedSuggestionIds, suggestion.id]
+        setUsedSuggestionIds(newUsed)
+        const tier1 = getStarterRituals()
+        setNextSuggestion(tier1.find(s => !newUsed.includes(s.id)) || null)
+      }
+    } catch {
+      setStartError("Didn't save — check your connection and try again.")
+    } finally {
       setSubmitting(false)
     }
   }
@@ -867,6 +883,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
           onSelect={handleDiscoverMore}
           submitting={submitting}
         />
+        {startError && <p style={{ fontSize: '12px', color: '#B4453A', textAlign: 'center', marginTop: '10px' }}>{startError}</p>}
         <div style={{ marginTop: '10px' }}>
           <GhostBtn onClick={() => setDiscoverMode(false)}>Back to your rituals</GhostBtn>
         </div>
@@ -1023,6 +1040,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
               </PrimaryBtn>
               <GhostBtn onClick={handleNextLibrarySuggestion}>Show me another</GhostBtn>
             </div>
+            {startError && <p style={{ fontSize: '12px', color: '#B4453A', textAlign: 'center', margin: '10px 0 0' }}>{startError}</p>}
           </div>
           <a href="/ritual" style={{ display: 'block', textAlign: 'center', fontSize: '13px', color: '#7A8C6E', textDecoration: 'none', padding: '8px 0' }}>
             See all rituals →
