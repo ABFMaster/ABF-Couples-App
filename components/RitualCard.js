@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { RITUAL_SUGGESTIONS, getStarterRituals } from '@/lib/ritual-suggestions'
 import { getWeekStart } from '@/lib/dates'
+import { supabase } from '@/lib/supabase'
 
 const TIER1 = RITUAL_SUGGESTIONS.filter(r => r.tier === 1)
 
@@ -163,6 +164,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
   const [discoverIndex, setDiscoverIndex] = useState(0)
 
   const [submitting, setSubmitting] = useState(false)
+  const [startError, setStartError] = useState(null)
   const [pendingConfirmation, setPendingConfirmation] = useState(null)
   const [discussConfirmed, setDiscussConfirmed] = useState(false)
   const [nextSuggestion, setNextSuggestion] = useState(null)
@@ -175,9 +177,11 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
   const [revisitChecked, setRevisitChecked] = useState(false)
 
   useEffect(() => {
-    fetch(`/api/ritual/status?coupleId=${coupleId}`, {
-      headers: { 'Authorization': `Bearer ${session?.access_token}` },
-    })
+    supabase.auth.getSession().then(({ data: { session: freshSession } }) =>
+      fetch(`/api/ritual/status?coupleId=${coupleId}`, {
+        headers: { 'Authorization': `Bearer ${freshSession?.access_token}` },
+      })
+    )
       .then(r => r.json())
       .then(data => {
         setHasRituals(data.hasRituals || false)
@@ -229,11 +233,13 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
       return
     }
     if (adoptedRituals.length === 0) return
-    fetch('/api/ritual/revisit-check', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
-      body: JSON.stringify({ coupleId }),
-    })
+    supabase.auth.getSession().then(({ data: { session: freshSession } }) =>
+      fetch('/api/ritual/revisit-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${freshSession?.access_token}` },
+        body: JSON.stringify({ coupleId }),
+      })
+    )
       .then(r => r.json())
       .then(data => { if (data.ritual) setRevisitRitual(data.ritual) })
       .catch(() => {})
@@ -244,6 +250,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     if (!revisitRitual || submitting) return
     setSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       await fetch('/api/ritual/revisit-respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
@@ -259,6 +266,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     if (!revisitRitual || submitting) return
     setSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/ritual/revisit-respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
@@ -277,6 +285,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
   // ─── Handlers ───────────────────────────────────────────────────────────────
 
   const refetchAndCheckPending = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
     const res = await fetch(`/api/ritual/status?coupleId=${coupleId}`, {
       headers: { 'Authorization': `Bearer ${session?.access_token}` },
     })
@@ -298,6 +307,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     if (submitting || !pendingConfirmation) return
     setSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       await fetch('/api/ritual/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
@@ -321,6 +331,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     if (submitting) return
     setSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/ritual/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
@@ -347,6 +358,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     if (!textarea1.trim() || submitting) return
     setSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/ritual/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
@@ -372,7 +384,9 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
   const handleSelectSuggestion = async (suggestion) => {
     if (submitting) return
     setSubmitting(true)
+    setStartError(null)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/ritual/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
@@ -386,18 +400,22 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
         }),
       })
       const data = await res.json()
-      if (data.ritual) {
-        setRituals(prev => [data.ritual, ...prev.filter(r => r.id !== data.ritual.id)])
-        setHasRituals(true)
-        setSuggestionMode(false)
-        setCheckinResult(null)
-        setAdoptionReady(false)
-        // If pending, show confirmation prompt to partner
-        if (data.ritual.status === 'pending') {
-          setPendingConfirmation(null) // partner will see it on their next load
-        }
+      if (!res.ok || !data.ritual) {
+        setStartError("Didn't save — check your connection and try again.")
+        return
       }
-    } catch {} finally {
+      setRituals(prev => [data.ritual, ...prev.filter(r => r.id !== data.ritual.id)])
+      setHasRituals(true)
+      setSuggestionMode(false)
+      setCheckinResult(null)
+      setAdoptionReady(false)
+      // If pending, show confirmation prompt to partner
+      if (data.ritual.status === 'pending') {
+        setPendingConfirmation(null) // partner will see it on their next load
+      }
+    } catch {
+      setStartError("Didn't save — check your connection and try again.")
+    } finally {
       setSubmitting(false)
     }
   }
@@ -406,6 +424,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     if (submitting) return
     setSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/ritual/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
@@ -438,6 +457,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     if (submitting) return
     setSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/ritual/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
@@ -461,6 +481,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     if (submitting) return
     setSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/ritual/adopt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
@@ -482,6 +503,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     if (submitting) return
     setSubmitting(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch('/api/ritual/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
@@ -583,6 +605,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
             submitting={submitting}
             usedIds={usedSuggestionIds}
           />
+          {startError && <p style={{ fontSize: '12px', color: '#B4453A', textAlign: 'center', marginTop: '10px' }}>{startError}</p>}
           <div style={{ marginTop: '10px' }}>
             <GhostBtn onClick={() => setSuggestionMode(false)}>Add something we already do</GhostBtn>
           </div>
@@ -691,6 +714,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
             onSelect={handleSelectSuggestion}
             submitting={submitting}
           />
+          {startError && <p style={{ fontSize: '12px', color: '#B4453A', textAlign: 'center', marginTop: '10px' }}>{startError}</p>}
         </div>
       )
     }
