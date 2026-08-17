@@ -748,27 +748,44 @@ function UsPageContent() {
             </div>
           </div>
 
-          {/* Ritual card */}
-          <div style={{ background: 'white', borderRadius: '14px', padding: '16px', marginBottom: '10px', boxShadow: '0 1px 4px rgba(28,20,16,0.05)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }} onClick={() => router.push('/ritual')}>
-            <div>
-              <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '3px' }}>
-                The Ritual
+          {/* Ritual card — Aug 17 2026: pending-proposal state shown inline
+              here now, not just inside /ritual once you tap through. The
+              new Us-tab red dot (NavBadges.js) can fire for 4 different
+              reasons (reflection, date invite, date approval, ritual
+              proposal); without a visible marker on the actual row that's
+              lit, this becomes a guessing game — Matt's exact "bad UX will
+              be searching for what is firing it" concern. This makes the
+              row itself say why before you tap into it. */}
+          {(() => {
+            const pendingOnMe = ritual?.status === 'pending' && ritual?.proposed_by && user?.id
+              && String(ritual.proposed_by) !== String(user.id) && !ritual?.needs_discussion
+            return (
+              <div style={{ background: 'white', borderRadius: '14px', padding: '16px', marginBottom: '10px', boxShadow: '0 1px 4px rgba(28,20,16,0.05)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: pendingOnMe ? '1px solid #C1440E' : 'none' }} onClick={() => router.push('/ritual')}>
+                <div>
+                  <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: pendingOnMe ? '#C1440E' : '#C4AA87', marginBottom: '3px' }}>
+                    The Ritual
+                  </div>
+                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#1C1410' }}>
+                    {ritual?.title || 'No ritual set yet'}
+                  </div>
+                  {pendingOnMe ? (
+                    <div style={{ fontSize: '11px', color: '#C1440E', marginTop: '2px' }}>{partnerName || 'Your partner'} wants to add this</div>
+                  ) : ritual?.streak > 0 && (
+                    <div style={{ fontSize: '11px', color: '#7A8C7E', marginTop: '2px' }}>{ritual.streak} week streak</div>
+                  )}
+                </div>
+                {pendingOnMe ? (
+                  <div style={{ fontSize: '11px', fontWeight: 500, color: '#FFFFFF', background: '#C1440E', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap' }}>Respond →</div>
+                ) : ritualCompletedThisWeek ? (
+                  <div style={{ fontSize: '11px', fontWeight: 500, color: '#7A9E7E', background: '#F0F7F0', border: '1px solid #C5DEC5', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap' }}>✓ Done this week</div>
+                ) : (
+                  <div style={{ fontSize: '11px', fontWeight: 500, color: '#1C1208', border: '1px solid #1C1208', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
+                    {todayName === 'Friday' ? 'Do it →' : 'See ritual'}
+                  </div>
+                )}
               </div>
-              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#1C1410' }}>
-                {ritual?.title || 'No ritual set yet'}
-              </div>
-              {ritual?.streak > 0 && (
-                <div style={{ fontSize: '11px', color: '#7A8C7E', marginTop: '2px' }}>{ritual.streak} week streak</div>
-              )}
-            </div>
-            {ritualCompletedThisWeek ? (
-              <div style={{ fontSize: '11px', fontWeight: 500, color: '#7A9E7E', background: '#F0F7F0', border: '1px solid #C5DEC5', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap' }}>✓ Done this week</div>
-            ) : (
-              <div style={{ fontSize: '11px', fontWeight: 500, color: '#1C1208', border: '1px solid #1C1208', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap', cursor: 'pointer' }}>
-                {todayName === 'Friday' ? 'Do it →' : 'See ritual'}
-              </div>
-            )}
-          </div>
+            )
+          })()}
 
           {/* Weekly reflection */}
           <div style={{ background: 'white', borderRadius: '14px', padding: '14px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(28,20,16,0.05)', cursor: 'pointer' }} onClick={() => router.push('/weekly-reflection')}>

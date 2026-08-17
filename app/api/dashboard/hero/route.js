@@ -61,83 +61,20 @@ export async function GET(request) {
       ? (couple.user1_id === userId ? couple.user2_id : couple.user1_id)
       : null
 
-    // ── PART 0: Follow-Through asymmetric-completion nudge — highest priority ──
-    // If the partner finished a Follow-Through and this user never engaged with
-    // it, surface a quiet, content-free nudge here rather than building any new
-    // UI for it — see Sessions/FOLLOW_THROUGH_GENERATION_SPEC.md. Shown once,
-    // marked via the per-user notified flag, then falls through to normal
-    // messaging on every subsequent call.
-    if (couple) {
-      const isUser1 = couple.user1_id === userId
-      const myPrefix = isUser1 ? 'user1' : 'user2'
-      const theirPrefix = isUser1 ? 'user2' : 'user1'
-
-      const { data: ftRow } = await supabase
-        .from('follow_throughs')
-        .select('id')
-        .eq('couple_id', coupleId)
-        .eq(`${myPrefix}_status`, 'pending')
-        .in(`${theirPrefix}_status`, ['done', 'declined'])
-        .eq(`${myPrefix}_partner_notified`, false)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (ftRow) {
-        await supabase
-          .from('follow_throughs')
-          .update({ [`${myPrefix}_partner_notified`]: true })
-          .eq('id', ftRow.id)
-
-        return NextResponse.json({
-          message: `Something happened after last night's Bet — worth asking ${partnerName} about it.`,
-          cta_label: null,
-          cta_href: null,
-          pills: null,
-          mode: 'follow_through_nudge',
-        })
-      }
-    }
-
-    // ── PART 0b: Ritual partner-loop nudge — second priority ──────────────────
-    // Whoever didn't personally tap this week's ritual check-in gets a quiet,
-    // one-time nudge next time they open the app. See
-    // Sessions/RITUAL_ENRICHMENT_DESIGN.md piece 4. Same reused slot as PART 0
-    // above — retargeted at ritual check-ins instead of Follow-Through reports.
-    // Only reached if PART 0 didn't already fire, so at most one nudge shows.
-    if (couple) {
-      const { data: completionRow } = await supabase
-        .from('ritual_completions')
-        .select('id, ritual_id')
-        .eq('couple_id', coupleId)
-        .neq('completed_by', userId)
-        .eq('completed', true)
-        .eq('partner_notified', false)
-        .order('week_start', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      if (completionRow) {
-        const { data: ritualRow } = await supabase
-          .from('rituals')
-          .select('title')
-          .eq('id', completionRow.ritual_id)
-          .maybeSingle()
-
-        await supabase
-          .from('ritual_completions')
-          .update({ partner_notified: true })
-          .eq('id', completionRow.id)
-
-        return NextResponse.json({
-          message: `${partnerName} logged ${ritualRow?.title ? `"${ritualRow.title}"` : 'your ritual'} this week — want to add a line about it?`,
-          cta_label: 'Add a note',
-          cta_href: `/dashboard?ritualNote=${completionRow.id}`,
-          pills: null,
-          mode: 'ritual_partner_nudge',
-        })
-      }
-    }
+    // PART 0 / 0b — Follow-Through asymmetric-completion nudge and Ritual
+    // partner-loop nudge both removed Aug 17 2026, Matt's call. Both used to
+    // take over this card's exact slot (same chrome, fixed non-Nora-voice
+    // text, no CTA) to point at something happening on a different surface.
+    // Follow-Through already persists visibly on the Daily Activity card
+    // until resolved — a second mention here was redundant exposure, not
+    // added value. Ritual's version is superseded by a real fix instead: a
+    // persistent Us-tab red dot (NavBadges.js) plus an inline "wants to add
+    // this" marker directly on the Ritual row in Us/Now (app/us/page.js) —
+    // both fire off the same pending-ritual condition this used to nudge
+    // toward, but point at the actual surface instead of borrowing Nora's
+    // card for it. `follow_throughs.user{N}_partner_notified` and
+    // `ritual_completions.partner_notified` are now dead columns, left in
+    // place rather than migrated out — no other code reads them.
 
     // ── PART 0c: Birthday / anniversary lead-time nudge ────────────────────────
     // Matt's note, Aug 10 2026: day-of surfacing gives no lead time to
