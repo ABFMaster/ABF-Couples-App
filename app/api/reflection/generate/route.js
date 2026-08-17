@@ -64,32 +64,79 @@ async function notifyReflectionReady(supabase, coupleId, reflectionId) {
   await Promise.all([sendOne(couple.user1_id), sendOne(couple.user2_id)])
 }
 
+// Diagnostic log, Aug 17 2026 — see docs/database/reflection-generation-log.sql.
+// This route has been silently failing every Sunday for months with zero
+// trace anywhere Matt can see (1hr Vercel log retention on his plan). Logs
+// every single call — cron or on-demand, success or the specific reason it
+// didn't — so the next real Sunday run is diagnosable with one query.
+// Non-blocking, never throws, matches the pattern already proven by
+// cron_runs and nora_calls' own logging.
+function logAttempt(supabase, { coupleId, weekStart, caller, outcome, detail }) {
+  try {
+    supabase
+      .from('reflection_generation_log')
+      .insert({
+        couple_id: coupleId || null,
+        week_start: weekStart || null,
+        caller: caller || 'unknown',
+        outcome,
+        detail: detail ? String(detail).slice(0, 500) : null,
+      })
+      .then(() => {})
+      .catch(() => {})
+  } catch {
+    // never throw
+  }
+}
+
 export async function POST(request) {
+  // Body is parsed up front, before auth branching, purely so coupleId is
+  // available to logAttempt() even when the request fails auth — otherwise
+  // a misconfigured caller (wrong secret, stale token) logs as an
+  // unattributable row, which is exactly the ambiguity this exists to kill.
+  let coupleId, userId
+  // Hoisted out of the try block below (not `const` inside it) so the
+  // top-level catch can still log an exception against a real client
+  // instead of throwing a second, masking ReferenceError trying to reach a
+  // block-scoped variable that's already out of scope by the time it fails.
+  let supabase
+  try {
+    const body = await request.json()
+    userId = body.userId
+    coupleId = body.coupleId
+  } catch {
+    // malformed body — fall through, the checks below will 400/401 as before
+  }
+
   try {
     const authHeader = request.headers.get('authorization') || ''
-    const supabase = createClient(
+    supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     )
 
     let callingUserId = null
+    let caller = 'unknown'
     if (authHeader === `Bearer ${process.env.CRON_SECRET}`) {
       // cron caller — trusted, no couple-membership check applies (there's
       // no "acting user" for a scheduled job iterating every couple).
+      caller = 'cron'
     } else if (authHeader.startsWith('Bearer ')) {
+      caller = 'user'
       const token = authHeader.replace('Bearer ', '')
       const { data: { user }, error: authError } = await supabase.auth.getUser(token)
       if (authError || !user) {
+        logAttempt(supabase, { coupleId, caller, outcome: 'unauthorized', detail: authError?.message || 'invalid user token' })
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
       callingUserId = user.id
     } else {
+      logAttempt(supabase, { coupleId, caller: 'unknown', outcome: 'unauthorized', detail: 'no matching auth header' })
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { userId, coupleId } = await request.json()
-
     if (!userId || !coupleId) {
+      logAttempt(supabase, { coupleId, caller, outcome: 'bad_request', detail: 'missing userId or coupleId' })
       return NextResponse.json({ error: 'userId and coupleId required' }, { status: 400 })
     }
 
@@ -98,7 +145,10 @@ export async function POST(request) {
     // supplying a guessed coupleId.
     if (callingUserId) {
       const isMember = await verifyCoupleMembership(supabase, callingUserId, coupleId)
-      if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      if (!isMember) {
+        logAttempt(supabase, { coupleId, caller, outcome: 'forbidden', detail: 'caller not a member of coupleId' })
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
     }
 
     // STEP 1 — Compute Monday of current week in Pacific time
@@ -124,6 +174,7 @@ export async function POST(request) {
       if (!existing.notified_at) {
         await notifyReflectionReady(supabase, coupleId, existing.id)
       }
+      logAttempt(supabase, { coupleId, weekStart, caller, outcome: 'already_existed' })
       return NextResponse.json({ reflection: existing, alreadyExists: true })
     }
 
@@ -286,14 +337,17 @@ Return only the JSON object. No markdown, no explanation, no wrapper text.`
     let parsed
     try {
       parsed = parseNoraJSON(rawText)
-    } catch {
+    } catch (parseErr) {
       console.error('[reflection/generate] Failed to parse Claude response:', rawText)
+      logAttempt(supabase, { coupleId, weekStart, caller, outcome: 'parse_failed', detail: `${parseErr?.message || 'parse error'} | raw: ${rawText.slice(0, 200)}` })
       return NextResponse.json({ error: 'Failed to parse reflection' }, { status: 500 })
     }
 
     const { opening, moments, pattern, week_ahead } = parsed
 
     if (!opening || !moments || !pattern || !week_ahead) {
+      const missing = ['opening', 'moments', 'pattern', 'week_ahead'].filter(k => !parsed[k])
+      logAttempt(supabase, { coupleId, weekStart, caller, outcome: 'incomplete', detail: `missing: ${missing.join(', ')}` })
       return NextResponse.json({ error: 'Incomplete reflection from Claude' }, { status: 500 })
     }
 
@@ -315,6 +369,7 @@ Return only the JSON object. No markdown, no explanation, no wrapper text.`
 
     if (insertError) {
       console.error('[reflection/generate] Insert error:', insertError)
+      logAttempt(supabase, { coupleId, weekStart, caller, outcome: 'insert_failed', detail: insertError.message })
       return NextResponse.json({ error: 'Failed to save reflection' }, { status: 500 })
     }
 
@@ -358,9 +413,13 @@ Return only the JSON object. No markdown, no explanation, no wrapper text.`
       console.error('[reflection/generate] notify error:', notifyErr)
     }
 
+    logAttempt(supabase, { coupleId, weekStart, caller, outcome: 'success' })
     return NextResponse.json({ reflection: savedReflection, alreadyExists: false })
   } catch (err) {
     console.error('[reflection/generate] Error:', err)
+    if (supabase) {
+      logAttempt(supabase, { coupleId, caller: 'unknown', outcome: 'exception', detail: err?.message || String(err) })
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
