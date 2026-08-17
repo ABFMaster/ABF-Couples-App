@@ -119,6 +119,25 @@ export default function NavBadges() {
       })
       if (needsMyApproval) return true
 
+      // Ritual proposed by the partner, waiting on this user to confirm or
+      // discuss — same condition RitualCard.js already uses client-side to
+      // decide whether to show its own "wants to add a ritual" state. Added
+      // Aug 17 2026, replacing the dashboard-hero-card nudge (PART 0b) that
+      // used to be the only surfacing for this — Matt's call: that nudge
+      // duplicated a surface Ritual already fully owns, a persistent dot
+      // pointing at the real thing is cleaner than a one-time message in a
+      // card meant to be Nora's personal read, not a notifications feed.
+      const { data: pendingRituals } = await supabase
+        .from('rituals')
+        .select('id, needs_discussion')
+        .eq('couple_id', couple.id)
+        .eq('status', 'pending')
+        .neq('proposed_by', user.id)
+      // Filtered in JS, not the query, to match RitualCard.js's exact falsy
+      // check (!r.needs_discussion) rather than assuming null is the only
+      // "not flagged" value the column can hold.
+      if ((pendingRituals || []).some(r => !r.needs_discussion)) return true
+
       return false
     }
 

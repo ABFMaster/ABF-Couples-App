@@ -47,4 +47,6 @@ ALTER TABLE public.cron_runs ENABLE ROW LEVEL SECURITY;
 -- select * from cron_runs where couples_errored > 0 order by ran_at desc;
 -- ============================================================================
 
--- STATUS: Not yet applied by Matt.
+-- STATUS: Applied — table exists live (confirmed Aug 17 2026 when a query
+-- against it returned a column-name error, not a missing-relation error).
+-- This note was stale.
