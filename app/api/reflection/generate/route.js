@@ -214,7 +214,7 @@ export async function POST(request) {
         .maybeSingle(),
       supabase
         .from('user_profiles')
-        .select('display_name, hobbies, date_preferences, stress_response, preferred_checkin_time')
+        .select('user_id, display_name, hobbies, date_preferences, stress_response, preferred_checkin_time')
         .eq('couple_id', coupleId),
     ])
     const { data: coupleRowForContext } = await supabase
@@ -231,8 +231,22 @@ export async function POST(request) {
       .order('created_at', { ascending: true })
 
     // STEP 4 — Build context string
-    const profile1 = userProfiles?.[0]
-    const profile2 = userProfiles?.[1]
+    // ROOT CAUSE FIX Aug 17 2026 — Matt: Nora attributing a comment/action to
+    // the wrong partner "will quickly kill all credibility." Traced the same
+    // failure shape here: userProfiles was never keyed by user_id (the query
+    // didn't even select it), so profile1/profile2 were just array position
+    // [0]/[1] with no guarantee that matched user1_id/user2_id. Worse,
+    // sparkLines below quoted every Spark response with ZERO name attached at
+    // all, and betLines joined every partner's prediction into one
+    // undifferentiated string — so the reflection prompt's own instruction to
+    // tag each "moment" with the correct subject (user1/user2) had no real
+    // data to ground that decision in; it was guessing from tone alone.
+    // Fixed by resolving every partner-authored line through an explicit
+    // user_id -> display_name map instead of position or vibes.
+    const profilesByUserId = Object.fromEntries((userProfiles || []).map(p => [p.user_id, p]))
+    const profile1 = coupleRowForContext ? profilesByUserId[coupleRowForContext.user1_id] : userProfiles?.[0]
+    const profile2 = coupleRowForContext ? profilesByUserId[coupleRowForContext.user2_id] : userProfiles?.[1]
+    const nameForUserId = (uid) => profilesByUserId[uid]?.display_name || 'Partner'
     const [user1FullContext, user2FullContext] = coupleRowForContext
       ? await Promise.all([
           getFullNoraContext(coupleId, coupleRowForContext.user1_id, profile1?.display_name || 'Partner 1', profile2?.display_name || 'Partner 2'),
@@ -241,12 +255,14 @@ export async function POST(request) {
       : [{ fullContextBlock: '' }, { fullContextBlock: '' }]
 
     const sparkLines = (sparkResponses || [])
-      .map(r => `- Spark: "${r.sparks?.question || 'unknown'}" → Response: "${r.response}"`)
+      .map(r => `- Spark: "${r.sparks?.question || 'unknown'}" → ${nameForUserId(r.user_id)}: "${r.response}"`)
       .join('\n')
 
     const betLines = (betData || [])
       .map(b => {
-        const responses = (b.bet_responses || []).map(r => `"${r.prediction}"`).join(', ')
+        const responses = (b.bet_responses || [])
+          .map(r => `${nameForUserId(r.user_id)}: "${r.prediction}"`)
+          .join(', ')
         return `- Bet: "${b.question}" → Predictions: ${responses || 'none'}`
       })
       .join('\n')
@@ -322,7 +338,7 @@ Return only the JSON object. No markdown, no explanation, no wrapper text.`
 
     const user1Name = profile1?.display_name || 'Partner 1'
     const user2Name = profile2?.display_name || 'Partner 2'
-    const message = await noraReact(`Here is the data for this couple's week:\n\n${contextString}\n\nGenerate their weekly reflection.\n\nIMPORTANT: In the moments array, set "subject" to "user1" when the moment is primarily about ${user1Name}, and "user2" when it is primarily about ${user2Name}. If a moment is about both equally, assign it to whichever partner's action or statement it centers on.`, {
+    const message = await noraReact(`Here is the data for this couple's week:\n\n${contextString}\n\nGenerate their weekly reflection.\n\nIMPORTANT: In the moments array, set "subject" to "user1" when the moment is primarily about ${user1Name}, and "user2" when it is primarily about ${user2Name}. Every Spark and Bet line above is already labeled with the exact name of who said it — use that label, never guess from tone or phrasing, and never swap which partner an answer or action belongs to. If a moment is about both equally, assign it to whichever partner's action or statement it centers on.`, {
       route: 'reflection/generate',
       system: systemPrompt,
       context: 'daily',

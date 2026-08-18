@@ -596,7 +596,8 @@ const ritualCompletedThisWeek = !!completion?.completed
 MICRO-ACTION: one tiny specific thing to do today — a text, a touch, a word. Derived directly from their answers.
 PATTERN: connect what just happened to something you've seen before in this couple. The holy shit moment. Only use this if you have real memory to draw on.
 CONVERSATION SEED: one question to ask each other tonight. Specific to their answers, not generic.
-Do not label which mode you chose. Do not explain. Just write it. Never start with Hey or Hi. Never be generic. Tone: warm, direct, occasionally surprising.`
+Do not label which mode you chose. Do not explain. Just write it. Never start with Hey or Hi. Never be generic. Tone: warm, direct, occasionally surprising.
+Never reassign whose statement, task, or item something is. ${name}'s answer and ${partnerName}'s answer are each labeled below by name — pronouns like "you"/"your" inside a quoted answer belong to whoever that answer is addressed to, not automatically to the speaker. Do not invent or swap ownership of a fact to make a mode fit better.`
 
       const userPrompt = [
         `User's name: ${name}`,
