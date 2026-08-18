@@ -274,9 +274,20 @@ Respond in this exact JSON format with no other text:
           .limit(30),
         // Completed dates — real reactions/reviews from actual dates, same
         // specific-and-quotable quality as Spark/Bet answers.
+        // ROOT CAUSE FIX Aug 17 2026 — Matt: a date's actual stops (specific
+        // restaurant/venue/movie names, each with a real name field — see
+        // app/dates/custom/page.js's itinerary builder) were never selected
+        // here at all, so Memory could never ask a specific "which stop"
+        // question, or connect a written review to the exact place it was
+        // about. Reactions/reviews are still couple-date-level, not
+        // per-stop, but a review that names a specific stop ("the wax
+        // museum was the scariest part") is now visible to the model
+        // alongside the stop list, so grounded synthesis (see instruction
+        // #2 below) can connect the two instead of only ever working at
+        // the whole-date level.
         supabase
           .from('custom_dates')
-          .select('title, date_time, user1_reaction, user1_review, user2_reaction, user2_review')
+          .select('title, date_time, stops, user1_reaction, user1_review, user2_reaction, user2_review')
           .eq('couple_id', coupleId)
           .eq('status', 'completed')
           .order('date_time', { ascending: false })
@@ -354,11 +365,37 @@ Respond in this exact JSON format with no other text:
               const u1 = d.user1_reaction ? `${nameFor(coupleData.user1_id)}: ${REACTION_LABELS[d.user1_reaction] || d.user1_reaction}${d.user1_review ? ` — "${d.user1_review}"` : ''}` : null
               const u2 = d.user2_reaction ? `${nameFor(coupleData.user2_id)}: ${REACTION_LABELS[d.user2_reaction] || d.user2_reaction}${d.user2_review ? ` — "${d.user2_review}"` : ''}` : null
               const reactions = [u1, u2].filter(Boolean).join(' | ')
-              return reactions ? `Date "${d.title}": ${reactions}` : null
+              // Stop names (restaurant/venue/movie/show — see comment on the
+              // query above) so a question or review can reference a
+              // specific place, not just the date's overall title.
+              const stopNames = Array.isArray(d.stops)
+                ? d.stops.map(s => s?.name).filter(Boolean).join(', ')
+                : ''
+              const line = [
+                stopNames ? `stops: ${stopNames}` : null,
+                reactions || null,
+              ].filter(Boolean).join(' | ')
+              return line ? `Date "${d.title}": ${line}` : null
             })
             .filter(Boolean)
             .join('\n')
         : 'No completed dates yet'
+
+      // Repeat-venue pattern — Matt: "if repeat spots come up" that's a
+      // sturdier memory fact than any single date's specifics (nobody
+      // remembers the exact date, everybody remembers "the place we keep
+      // going back to"). Counts stop names across the same completedDates
+      // sample above; only surfaces names hit 2+ times.
+      const venueCounts = {}
+      for (const d of completedDates || []) {
+        for (const s of (Array.isArray(d.stops) ? d.stops : [])) {
+          if (s?.name) venueCounts[s.name] = (venueCounts[s.name] || 0) + 1
+        }
+      }
+      const repeatVenueContext = Object.entries(venueCounts)
+        .filter(([, count]) => count >= 2)
+        .map(([name, count]) => `${name} (visited ${count} times)`)
+        .join('\n') || 'No repeat venues yet'
 
       const flirtContext = sentFlirts && sentFlirts.length > 0
         ? sentFlirts
@@ -395,6 +432,9 @@ ${timelineContext}
 
 Completed dates:
 ${dateContext}
+
+Places you keep going back to:
+${repeatVenueContext}
 
 Recent Flirts sent:
 ${flirtContext}
