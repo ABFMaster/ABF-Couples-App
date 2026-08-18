@@ -2,7 +2,25 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
+import { Search, X, ArrowLeft, Play, Pause, Music } from 'lucide-react'
 
+// ROOT CAUSE FIX Aug 18 2026 — this modal was built as a standalone "send a
+// song" flow but never wired into the app anywhere (dead code alongside
+// FlirtSheet.js). Wiring it in surfaced two real problems, both fixed here:
+// 1. handleSend used to insert directly into `flirts` from the browser via
+//    the client Supabase call, bypassing /api/flirts/send entirely — no
+//    server-side couple-membership check beyond RLS, and it skipped the
+//    updateNoraMemory(FLIRT_SENT) signal that route fires, so Nora never
+//    found out a song was sent this way. Now posts through the same route
+//    FlirtCard.js uses, with the same content/metadata shape, so it's
+//    authenticated and Nora-aware like every other flirt send.
+// 2. Fully off-brand styling (Spotify-green gradients, rounded-3xl Tailwind
+//    SaaS look) — restyled to match the app's actual cream/serif design
+//    language (see Mixtape's own restyle, task #169).
+// The old optional "message" textarea wrote to a `message` column nothing
+// downstream ever reads for song flirts (checked: no `.message` reference
+// for songs in FlirtCard.js or app/mixtape/page.js) — dropped rather than
+// carried forward as dead functionality.
 export default function SendSongModal({
   isOpen,
   onClose,
@@ -15,7 +33,6 @@ export default function SendSongModal({
   const [tracks, setTracks] = useState([])
   const [searching, setSearching] = useState(false)
   const [selectedTrack, setSelectedTrack] = useState(null)
-  const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [playingPreview, setPlayingPreview] = useState(null)
@@ -27,17 +44,13 @@ export default function SendSongModal({
       setSearchQuery('')
       setTracks([])
       setSelectedTrack(null)
-      setMessage('')
       setError('')
       stopPreview()
     }
   }, [isOpen])
 
   useEffect(() => {
-    // Debounced search
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
-    }
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
 
     if (searchQuery.trim().length >= 2) {
       searchTimeoutRef.current = setTimeout(() => {
@@ -48,9 +61,7 @@ export default function SendSongModal({
     }
 
     return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
-      }
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
     }
   }, [searchQuery])
 
@@ -68,17 +79,11 @@ export default function SendSongModal({
       }
 
       const response = await fetch(`/api/spotify/search?q=${encodeURIComponent(query)}`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
       })
 
       if (!response.ok) {
-        if (response.status === 400) {
-          setError('Please connect your Spotify account first')
-        } else {
-          setError('Search failed. Please try again.')
-        }
+        setError(response.status === 400 ? 'Please connect your Spotify account first' : 'Search failed. Please try again.')
         setSearching(false)
         return
       }
@@ -95,15 +100,9 @@ export default function SendSongModal({
 
   const playPreview = (track) => {
     if (!track.previewUrl) return
-
-    if (playingPreview === track.id) {
-      stopPreview()
-      return
-    }
-
+    if (playingPreview === track.id) { stopPreview(); return }
     stopPreview()
     setPlayingPreview(track.id)
-
     audioRef.current = new Audio(track.previewUrl)
     audioRef.current.volume = 0.5
     audioRef.current.play()
@@ -111,50 +110,49 @@ export default function SendSongModal({
   }
 
   const stopPreview = () => {
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current = null
-    }
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
     setPlayingPreview(null)
   }
 
-  const handleSelectTrack = (track) => {
-    stopPreview()
-    setSelectedTrack(track)
-  }
-
-  const handleBack = () => {
-    setSelectedTrack(null)
-    setMessage('')
-  }
+  const handleSelectTrack = (track) => { stopPreview(); setSelectedTrack(track) }
+  const handleBack = () => setSelectedTrack(null)
 
   const handleSend = async () => {
-    if (!selectedTrack) return
+    if (!selectedTrack || !coupleId || !partnerId) return
 
     setSending(true)
     setError('')
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setError('Please log in again')
+        setSending(false)
+        return
+      }
 
-      const { error: insertError } = await supabase
-        .from('flirts')
-        .insert({
-          couple_id: coupleId,
-          sender_id: user.id,
-          receiver_id: partnerId,
+      // Same route + payload shape as components/FlirtCard.js's song send —
+      // see comment at the top of this file.
+      const res = await fetch('/api/flirts/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          coupleId,
+          receiverId: partnerId,
           type: 'song',
-          message: message.trim() || null,
-          spotify_track_id: selectedTrack.id,
-          spotify_track_name: selectedTrack.name,
-          spotify_artist: selectedTrack.artist,
-          spotify_album_art: selectedTrack.albumArt,
-          spotify_preview_url: selectedTrack.previewUrl,
-          spotify_track_url: selectedTrack.spotifyUrl,
-        })
+          content: selectedTrack.spotifyUrl,
+          metadata: {
+            track_id: selectedTrack.id,
+            track_name: selectedTrack.name,
+            artist: selectedTrack.artist,
+            album_art: selectedTrack.albumArt,
+            preview_url: selectedTrack.previewUrl,
+            track_url: selectedTrack.spotifyUrl,
+          },
+        }),
+      })
 
-      if (insertError) {
-        console.error('Error sending song:', insertError)
+      if (!res.ok) {
         setError('Failed to send song. Please try again.')
         setSending(false)
         return
@@ -170,229 +168,128 @@ export default function SendSongModal({
     setSending(false)
   }
 
-  const handleClose = () => {
-    stopPreview()
-    onClose()
-  }
+  const handleClose = () => { stopPreview(); onClose() }
 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-end md:items-center justify-center">
-      <div className="bg-white w-full md:w-[500px] md:max-h-[90vh] max-h-[calc(85vh-80px)] rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden animate-slideUp flex flex-col">
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(28,20,16,0.5)', zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', fontFamily: 'DM Sans, sans-serif' }}>
+      <div style={{ background: '#FAF6F0', width: '100%', maxWidth: '480px', maxHeight: '85vh', borderRadius: '20px 20px 0 0', boxShadow: '0 -4px 24px rgba(28,20,16,0.15)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#1DB954] to-[#1ed760] text-white p-6 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">🎵</span>
+        <div style={{ padding: '22px 22px 18px', borderBottom: '1px solid #EDE4D8', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Music size={18} color="#8B7355" strokeWidth={1.75} />
               <div>
-                <h2 className="text-xl font-bold">
-                  {selectedTrack ? 'Send Song' : 'Search Songs'}
-                </h2>
-                <p className="text-green-100 text-sm">
-                  {selectedTrack ? `to ${partnerName}` : 'Find the perfect song'}
-                </p>
+                <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', color: '#1C1410' }}>
+                  {selectedTrack ? 'Send this song' : 'Find a song'}
+                </div>
+                <div style={{ fontSize: '11px', color: '#8B7355', marginTop: '1px' }}>
+                  {selectedTrack ? `to ${partnerName}` : 'Search to add to your mixtape'}
+                </div>
               </div>
             </div>
-            <button
-              onClick={handleClose}
-              className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+            <button onClick={handleClose} aria-label="Close" style={{ width: '30px', height: '30px', borderRadius: '50%', border: '1px solid #D9CBBA', background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8B7355' }}>
+              <X size={15} strokeWidth={1.75} />
             </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div style={{ flex: 1, overflowY: 'auto', padding: '18px 22px' }}>
           {!selectedTrack ? (
-            // Search View
-            <div className="p-4">
-              {/* Search Input */}
-              <div className="relative mb-4">
+            <div>
+              <div style={{ position: 'relative', marginBottom: '16px' }}>
+                <Search size={15} strokeWidth={1.75} color="#C4AA87" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search for a song..."
-                  className="w-full px-4 py-3 pl-10 border-2 border-gray-200 rounded-xl focus:border-[#1DB954] focus:outline-none transition-colors"
                   autoFocus
+                  style={{ width: '100%', padding: '12px 14px 12px 38px', border: '1px solid #D9CBBA', borderRadius: '12px', fontSize: '14px', color: '#1C1410', background: '#FFFFFF', outline: 'none', fontFamily: 'DM Sans, sans-serif' }}
                 />
-                <svg
-                  className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
                 {searching && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <div className="w-5 h-5 border-2 border-[#1DB954] border-t-transparent rounded-full animate-spin"></div>
-                  </div>
+                  <div style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', border: '2px solid #D9CBBA', borderTopColor: '#8B7355', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                 )}
               </div>
 
               {error && (
-                <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm mb-4">
-                  {error}
-                </div>
+                <div style={{ padding: '10px 14px', background: '#FBEAE7', color: '#B4432E', borderRadius: '10px', fontSize: '12px', marginBottom: '14px' }}>{error}</div>
               )}
 
-              {/* Search Results */}
-              <div className="space-y-2">
+              <div>
                 {tracks.map((track) => (
-                  <div
-                    key={track.id}
-                    onClick={() => handleSelectTrack(track)}
-                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors group"
-                  >
-                    {/* Album Art */}
-                    <div className="relative w-12 h-12 flex-shrink-0">
+                  <div key={track.id} onClick={() => handleSelectTrack(track)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', borderRadius: '12px', cursor: 'pointer' }}>
+                    <div style={{ position: 'relative', width: '44px', height: '44px', flexShrink: 0 }}>
                       {track.albumArtSmall ? (
-                        <img
-                          src={track.albumArtSmall}
-                          alt={track.album}
-                          className="w-full h-full rounded-lg object-cover"
-                        />
+                        <img src={track.albumArtSmall} alt="" style={{ width: '100%', height: '100%', borderRadius: '8px', objectFit: 'cover' }} />
                       ) : (
-                        <div className="w-full h-full rounded-lg bg-gray-200 flex items-center justify-center">
-                          <span className="text-xl">🎵</span>
+                        <div style={{ width: '100%', height: '100%', borderRadius: '8px', background: '#EDE4D8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Music size={16} color="#C4AA87" strokeWidth={1.75} />
                         </div>
                       )}
-
-                      {/* Preview Play Button */}
                       {track.previewUrl && (
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            playPreview(track)
-                          }}
-                          className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => { e.stopPropagation(); playPreview(track) }}
+                          aria-label={playingPreview === track.id ? 'Pause preview' : 'Play preview'}
+                          style={{ position: 'absolute', inset: 0, background: 'rgba(28,20,16,0.35)', border: 'none', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#FFFFFF' }}
                         >
-                          {playingPreview === track.id ? (
-                            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
-                            </svg>
-                          ) : (
-                            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M8 5v14l11-7z"/>
-                            </svg>
-                          )}
+                          {playingPreview === track.id ? <Pause size={14} strokeWidth={2} /> : <Play size={14} strokeWidth={2} />}
                         </button>
                       )}
                     </div>
-
-                    {/* Track Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-800 truncate">{track.name}</p>
-                      <p className="text-sm text-gray-500 truncate">{track.artist}</p>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', color: '#1C1410', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.name}</div>
+                      <div style={{ fontSize: '12px', color: '#8B7355', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{track.artist}</div>
                     </div>
-
-                    {/* Select Arrow */}
-                    <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
                   </div>
                 ))}
 
                 {searchQuery.length >= 2 && !searching && tracks.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>No songs found</p>
-                    <p className="text-sm mt-1">Try a different search</p>
+                  <div style={{ textAlign: 'center', padding: '28px 0', color: '#C4AA87' }}>
+                    <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '16px' }}>No songs found</div>
+                    <div style={{ fontSize: '12px', marginTop: '2px' }}>Try a different search</div>
                   </div>
                 )}
 
                 {searchQuery.length < 2 && (
-                  <div className="text-center py-8 text-gray-400">
-                    <span className="text-4xl mb-2 block">🎧</span>
-                    <p>Search for a song to send</p>
+                  <div style={{ textAlign: 'center', padding: '28px 0', color: '#C4AA87' }}>
+                    <Music size={26} strokeWidth={1.5} style={{ marginBottom: '6px' }} />
+                    <div style={{ fontSize: '13px' }}>Search for a song to send</div>
                   </div>
                 )}
               </div>
             </div>
           ) : (
-            // Selected Track View
-            <div className="p-6">
-              {/* Back Button */}
-              <button
-                onClick={handleBack}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
+            <div>
+              <button onClick={handleBack} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: '#8B7355', fontSize: '12px', cursor: 'pointer', padding: 0, marginBottom: '16px' }}>
+                <ArrowLeft size={14} strokeWidth={1.75} />
                 Back to search
               </button>
 
-              {/* Selected Track Display */}
-              <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 text-white mb-4">
-                <div className="flex items-center gap-4">
-                  {selectedTrack.albumArt ? (
-                    <img
-                      src={selectedTrack.albumArt}
-                      alt={selectedTrack.album}
-                      className="w-24 h-24 rounded-xl shadow-lg"
-                    />
-                  ) : (
-                    <div className="w-24 h-24 rounded-xl bg-gray-700 flex items-center justify-center">
-                      <span className="text-4xl">🎵</span>
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-lg truncate">{selectedTrack.name}</p>
-                    <p className="text-gray-400 truncate">{selectedTrack.artist}</p>
-                    <p className="text-gray-500 text-sm truncate">{selectedTrack.album}</p>
-
-                    {/* Preview Button */}
-                    {selectedTrack.previewUrl && (
-                      <button
-                        onClick={() => playPreview(selectedTrack)}
-                        className="mt-2 flex items-center gap-2 text-[#1DB954] text-sm font-medium hover:text-[#1ed760]"
-                      >
-                        {playingPreview === selectedTrack.id ? (
-                          <>
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
-                            </svg>
-                            Pause Preview
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M8 5v14l11-7z"/>
-                            </svg>
-                            Play Preview
-                          </>
-                        )}
-                      </button>
-                    )}
+              <div style={{ background: '#1C1410', borderRadius: '16px', padding: '18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                {selectedTrack.albumArt ? (
+                  <img src={selectedTrack.albumArt} alt="" style={{ width: '76px', height: '76px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: '76px', height: '76px', borderRadius: '10px', background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Music size={24} color="#C4AA87" strokeWidth={1.5} />
                   </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '18px', color: '#FAF6F0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedTrack.name}</div>
+                  <div style={{ fontSize: '12px', color: 'rgba(250,246,240,0.6)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedTrack.artist}</div>
+                  {selectedTrack.previewUrl && (
+                    <button onClick={() => playPreview(selectedTrack)} style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '8px', background: 'none', border: 'none', color: '#C4AA87', fontSize: '11px', cursor: 'pointer', padding: 0 }}>
+                      {playingPreview === selectedTrack.id ? <Pause size={12} strokeWidth={2} /> : <Play size={12} strokeWidth={2} />}
+                      {playingPreview === selectedTrack.id ? 'Pause preview' : 'Play preview'}
+                    </button>
+                  )}
                 </div>
-              </div>
-
-              {/* Message Input */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Add a message <span className="text-gray-400">(optional)</span>
-                </label>
-                <textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="This song made me think of you..."
-                  rows={3}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#1DB954] focus:outline-none transition-colors resize-none"
-                  maxLength={500}
-                />
-                <p className="text-right text-gray-400 text-xs mt-1">{message.length}/500</p>
               </div>
 
               {error && (
-                <div className="p-3 bg-red-50 text-red-600 rounded-xl text-sm mb-4">
-                  {error}
-                </div>
+                <div style={{ padding: '10px 14px', background: '#FBEAE7', color: '#B4432E', borderRadius: '10px', fontSize: '12px', marginTop: '14px' }}>{error}</div>
               )}
             </div>
           )}
@@ -400,43 +297,20 @@ export default function SendSongModal({
 
         {/* Footer */}
         {selectedTrack && (
-          <div className="p-6 border-t border-gray-100 bg-gray-50 flex-shrink-0">
+          <div style={{ padding: '16px 22px 22px', borderTop: '1px solid #EDE4D8', flexShrink: 0 }}>
             <button
               onClick={handleSend}
               disabled={sending}
-              className="w-full py-4 bg-gradient-to-r from-[#1DB954] to-[#1ed760] text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              style={{ width: '100%', padding: '14px', background: '#1C1410', color: '#FAF6F0', border: 'none', borderRadius: '30px', fontSize: '14px', fontWeight: 500, cursor: sending ? 'not-allowed' : 'pointer', opacity: sending ? 0.7 : 1 }}
             >
-              {sending ? (
-                <>
-                  <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <span>🎵</span>
-                  Send to {partnerName}
-                </>
-              )}
+              {sending ? 'Sending...' : `Send to ${partnerName}`}
             </button>
           </div>
         )}
       </div>
 
-      {/* Animation styles */}
       <style jsx>{`
-        @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translateY(100%);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-slideUp {
-          animation: slideUp 0.3s ease-out forwards;
-        }
+        @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
       `}</style>
     </div>
   )

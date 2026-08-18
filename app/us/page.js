@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import SharedItemCard from '@/components/SharedItemCard'
+import SendSongModal from '@/components/SendSongModal'
 import { getWeekStart } from '@/lib/dates'
 function UsPageContent() {
   const router = useRouter()
@@ -25,6 +26,11 @@ function UsPageContent() {
   const [ritualCompletedThisWeek, setRitualCompletedThisWeek] = useState(false)
   const [lastReflectionWeek, setLastReflectionWeek] = useState(null)
   const [heroData, setHeroData] = useState(null)
+  // Mixtape row card (task #239) — styled after Game Room's card, not
+  // Ritual's: no streak/pending state, just a live count + last-added date,
+  // since Mixtape has no cadence or due date, unlike Ritual/Reflection.
+  const [mixtapeSongs, setMixtapeSongs] = useState([])
+  const [sendSongModalOpen, setSendSongModalOpen] = useState(false)
 
   // Ahead data
   const [nextDate, setNextDate] = useState(null)
@@ -347,6 +353,19 @@ function UsPageContent() {
       if (reflections?.[0]) {
         setLastReflectionWeek(reflections[0].week_start)
       }
+
+      // Mixtape song count + last-added for Now — same eligibility filter
+      // as app/mixtape/page.js's own fetchSongs (task #168: key off
+      // spotify_track_name, not spotify_track_id, since historical rows
+      // never got a track_id backfilled).
+      const { data: mixtapeData } = await supabase
+        .from('flirts')
+        .select('created_at')
+        .eq('couple_id', cid)
+        .eq('type', 'song')
+        .not('spotify_track_name', 'is', null)
+        .order('created_at', { ascending: false })
+      setMixtapeSongs(mixtapeData || [])
 
       // Next date for Ahead
       const { data: datePlans } = await supabase
@@ -799,13 +818,39 @@ function UsPageContent() {
           </div>
 
           {/* Game Room suggestion */}
-          <div style={{ background: 'white', borderRadius: '14px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(28,20,16,0.05)', cursor: 'pointer' }} onClick={() => router.push('/game-room')}>
+          <div style={{ background: 'white', borderRadius: '14px', padding: '14px 16px', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(28,20,16,0.05)', cursor: 'pointer' }} onClick={() => router.push('/game-room')}>
             <div>
               <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '2px' }}>Game Room</div>
               <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: '#1C1410' }}>This week: {suggestedGame.label}</div>
               <div style={{ fontSize: '11px', color: '#8B7355', marginTop: '2px' }}>Nora will guide the game</div>
             </div>
             <div style={{ fontSize: '11px', fontWeight: 500, color: '#1C1208', border: '1px solid #1C1208', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap' }}>Let's play</div>
+          </div>
+
+          {/* Mixtape — task #239. Styled after Game Room's card above, not
+              Ritual's: no streak/pending state, just a live count and
+              last-added date, since Mixtape has no cadence or due date.
+              Empty state opens SendSongModal directly rather than linking
+              to /mixtape (which would just show the same "no songs yet"
+              message with nothing actionable there). */}
+          <div
+            style={{ background: 'white', borderRadius: '14px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 1px 3px rgba(28,20,16,0.05)', cursor: 'pointer' }}
+            onClick={() => mixtapeSongs.length > 0 ? router.push('/mixtape') : setSendSongModalOpen(true)}
+          >
+            <div>
+              <div style={{ fontSize: '9px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#C4AA87', marginBottom: '2px' }}>Mixtape</div>
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '17px', color: '#1C1410' }}>
+                {mixtapeSongs.length > 0 ? `${mixtapeSongs.length} song${mixtapeSongs.length !== 1 ? 's' : ''} together` : 'No songs yet'}
+              </div>
+              <div style={{ fontSize: '11px', color: '#8B7355', marginTop: '2px' }}>
+                {mixtapeSongs.length > 0
+                  ? `Last added ${new Date(mixtapeSongs[0].created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                  : 'Send one to start'}
+              </div>
+            </div>
+            <div style={{ fontSize: '11px', fontWeight: 500, color: '#1C1208', border: '1px solid #1C1208', padding: '6px 14px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+              {mixtapeSongs.length > 0 ? 'Open →' : 'Send →'}
+            </div>
           </div>
         </div>
       )}
@@ -1405,6 +1450,21 @@ function UsPageContent() {
         </div>
       )}
 
+      <SendSongModal
+        isOpen={sendSongModalOpen}
+        onClose={() => setSendSongModalOpen(false)}
+        coupleId={couple?.id}
+        partnerId={couple ? (couple.user1_id === user?.id ? couple.user2_id : couple.user1_id) : null}
+        partnerName={partnerName}
+        onSent={() => couple && supabase
+          .from('flirts')
+          .select('created_at')
+          .eq('couple_id', couple.id)
+          .eq('type', 'song')
+          .not('spotify_track_name', 'is', null)
+          .order('created_at', { ascending: false })
+          .then(({ data }) => setMixtapeSongs(data || []))}
+      />
     </div>
   )
 }

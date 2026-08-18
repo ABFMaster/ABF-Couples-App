@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import SendSongModal from '@/components/SendSongModal'
 
 export default function Mixtape() {
   const router = useRouter()
@@ -15,6 +16,11 @@ export default function Mixtape() {
   const [progress, setProgress] = useState(0)
   const [sessionToken, setSessionToken] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
+  // Task #239/scoped-out send-path fix (Aug 18 2026) — Mixtape previously had
+  // no direct creation path at all; songs could only land here as a side
+  // effect of the daily FlirtCard happening to be in "song" mode. This gives
+  // the archive its own real "+ Add a song" action, independent of that.
+  const [sendModalOpen, setSendModalOpen] = useState(false)
   const audioRef = useRef(null)
   const progressIntervalRef = useRef(null)
 
@@ -196,19 +202,36 @@ export default function Mixtape() {
           ← Back
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 14px rgba(139,74,42,0.25)' }}>
-            <span style={{ fontSize: '28px' }}>🎵</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0 }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: 'linear-gradient(135deg, #8B4A2A 0%, #C4714A 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 4px 14px rgba(139,74,42,0.25)' }}>
+              <span style={{ fontSize: '28px' }}>🎵</span>
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#C4AA87', margin: 0, marginBottom: '2px' }}>Playlist</p>
+              <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '38px', fontWeight: 300, color: '#1C1410', letterSpacing: '-0.02em', lineHeight: 1 }}>Our Mixtape</div>
+              <p style={{ fontSize: '13px', color: '#8B7355', margin: 0, marginTop: '6px' }}>
+                {songs.length} song{songs.length !== 1 ? 's' : ''} · You &amp; {partnerName}
+              </p>
+            </div>
           </div>
-          <div>
-            <p style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#C4AA87', margin: 0, marginBottom: '2px' }}>Playlist</p>
-            <div style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '38px', fontWeight: 300, color: '#1C1410', letterSpacing: '-0.02em', lineHeight: 1 }}>Our Mixtape</div>
-            <p style={{ fontSize: '13px', color: '#8B7355', margin: 0, marginTop: '6px' }}>
-              {songs.length} song{songs.length !== 1 ? 's' : ''} · You &amp; {partnerName}
-            </p>
-          </div>
+          <button
+            onClick={() => setSendModalOpen(true)}
+            style={{ fontSize: '11px', fontWeight: 500, color: '#8B7355', background: 'none', border: '1px solid #D9CBBA', padding: '8px 14px', borderRadius: '20px', cursor: 'pointer', letterSpacing: '0.06em', whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
+            + Add
+          </button>
         </div>
       </div>
+
+      <SendSongModal
+        isOpen={sendModalOpen}
+        onClose={() => setSendModalOpen(false)}
+        coupleId={couple?.id}
+        partnerId={couple ? (couple.user1_id === user?.id ? couple.user2_id : couple.user1_id) : null}
+        partnerName={partnerName}
+        onSent={() => couple && fetchSongs(couple.id)}
+      />
 
       {/* Songs List */}
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '20px 16px' }}>
