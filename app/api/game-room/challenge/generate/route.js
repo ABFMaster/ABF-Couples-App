@@ -268,7 +268,7 @@ Respond in this exact JSON format with no other text:
           .limit(20),
         supabase
           .from('timeline_events')
-          .select('title, event_date, event_type, description')
+          .select('title, event_date, event_type, description, photo_descriptions')
           .eq('couple_id', coupleId)
           .order('event_date', { ascending: true })
           .limit(30),
@@ -287,7 +287,7 @@ Respond in this exact JSON format with no other text:
         // the whole-date level.
         supabase
           .from('custom_dates')
-          .select('title, date_time, stops, user1_reaction, user1_review, user2_reaction, user2_review')
+          .select('title, date_time, stops, photo_descriptions, user1_reaction, user1_review, user2_reaction, user2_review')
           .eq('couple_id', coupleId)
           .eq('status', 'completed')
           .order('date_time', { ascending: false })
@@ -355,8 +355,14 @@ Respond in this exact JSON format with no other text:
             .join('\n')
         : 'No Bet answers yet'
 
+      // photo_descriptions is a JSONB map of { [photoUrl]: description } —
+      // see docs/database/photo-descriptions.sql. Only the description text
+      // is useful here, not the URLs.
       const timelineContext = timelineEvents && timelineEvents.length > 0
-        ? timelineEvents.map(e => `${e.title} (${e.event_date})${e.description ? ': ' + e.description : ''}`).join('\n')
+        ? timelineEvents.map(e => {
+            const photoNotes = Object.values(e.photo_descriptions || {})
+            return `${e.title} (${e.event_date})${e.description ? ': ' + e.description : ''}${photoNotes.length ? ` [photos show: ${photoNotes.join('; ')}]` : ''}`
+          }).join('\n')
         : 'No timeline events yet'
 
       const dateContext = completedDates && completedDates.length > 0
@@ -367,13 +373,18 @@ Respond in this exact JSON format with no other text:
               const reactions = [u1, u2].filter(Boolean).join(' | ')
               // Stop names (restaurant/venue/movie/show — see comment on the
               // query above) so a question or review can reference a
-              // specific place, not just the date's overall title.
+              // specific place, not just the date's overall title. Stop
+              // photo_description (set per-stop, not a separate column —
+              // see docs/database/photo-descriptions.sql) rides alongside
+              // the name when present.
               const stopNames = Array.isArray(d.stops)
-                ? d.stops.map(s => s?.name).filter(Boolean).join(', ')
+                ? d.stops.map(s => s?.name ? `${s.name}${s.photo_description ? ` (photo shows: ${s.photo_description})` : ''}` : null).filter(Boolean).join(', ')
                 : ''
+              const datePhotoNotes = Object.values(d.photo_descriptions || {})
               const line = [
                 stopNames ? `stops: ${stopNames}` : null,
                 reactions || null,
+                datePhotoNotes.length ? `photos show: ${datePhotoNotes.join('; ')}` : null,
               ].filter(Boolean).join(' | ')
               return line ? `Date "${d.title}": ${line}` : null
             })
