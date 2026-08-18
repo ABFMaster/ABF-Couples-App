@@ -633,6 +633,17 @@ export default function EditDatePage({ params }) {
         console.error('Starters regeneration failed:', e)
       }
 
+      // Fire-and-forget photo vision captioning for any stop photos — never
+      // awaited, doesn't block save/navigation. See lib/photo-descriptions.js.
+      try {
+        const { data: { session: visionSession } } = await supabase.auth.getSession()
+        fetch('/api/dates/photos/describe-stops', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${visionSession?.access_token}` },
+          body: JSON.stringify({ dateId: id }),
+        }).catch(() => {})
+      } catch { /* non-blocking */ }
+
       setSaveStage('done')
       setTimeout(() => router.push(`/dates/${id}`), 800)
     } catch (err) {

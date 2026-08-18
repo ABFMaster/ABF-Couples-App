@@ -665,6 +665,14 @@ export default function CustomDateBuilderPage() {
         console.error('Starters generation failed:', e)
       }
 
+      // Fire-and-forget photo vision captioning for any stop photos — never
+      // awaited, doesn't block save/navigation. See lib/photo-descriptions.js.
+      fetch('/api/dates/photos/describe-stops', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ dateId: newDate.id }),
+      }).catch(() => {})
+
       setSaveStage('done')
       setTimeout(() => router.push(`/dates/${newDate.id}`), 800)
     } catch (err) {

@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { describeAndStorePhotos } from '@/lib/photo-descriptions'
 
 // Any couple member can append photos to a date (during/after) —
 // merges with existing photos rather than overwriting, so one partner's
@@ -61,6 +62,11 @@ export async function POST(request) {
       console.error('dates/photos/add update error:', updateError)
       return NextResponse.json({ error: 'Failed to save photos' }, { status: 500 })
     }
+
+    // Fire-and-forget vision captioning — never blocks the upload response.
+    // See lib/photo-descriptions.js.
+    describeAndStorePhotos(supabase, { table: 'custom_dates', id: dateId, photoUrls: newPhotos })
+      .catch(() => {})
 
     return NextResponse.json({ success: true, photos: updated.photos })
   } catch (err) {

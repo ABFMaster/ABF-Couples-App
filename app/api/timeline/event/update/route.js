@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { noraChat } from '@/lib/nora'
+import { describeAndStorePhotos } from '@/lib/photo-descriptions'
 
 export const dynamic = 'force-dynamic'
 
@@ -76,6 +77,12 @@ export async function PATCH(request) {
     if (updateError) {
       console.error('timeline update error:', updateError)
       return NextResponse.json({ error: 'Failed to update' }, { status: 500 })
+    }
+
+    // Fire-and-forget vision captioning — never blocks the response.
+    if (updates.photo_urls?.length) {
+      describeAndStorePhotos(supabase, { table: 'timeline_events', id: eventId, photoUrls: updates.photo_urls })
+        .catch(() => {})
     }
 
     // Trigger Nora observation when partner adds photos to creator's memory

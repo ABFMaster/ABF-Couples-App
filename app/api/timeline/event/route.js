@@ -5,6 +5,7 @@ import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 import { notifyIfMemoryJustUnlocked } from '@/lib/memory-unlock'
 import { checkSensitiveContent, resolveSafetyAction } from '@/lib/safety'
+import { describeAndStorePhotos } from '@/lib/photo-descriptions'
 
 export async function POST(request) {
   try {
@@ -81,6 +82,10 @@ export async function POST(request) {
     // Timeline events are one of Memory Test's three unlock inputs — check
     // whether this write just crossed the threshold and notify once if so.
     notifyIfMemoryJustUnlocked(supabase, coupleId).catch(() => {})
+
+    // Fire-and-forget vision captioning — never blocks the response.
+    describeAndStorePhotos(supabase, { table: 'timeline_events', id: event.id, photoUrls: photoUrls || [] })
+      .catch(() => {})
 
     return NextResponse.json({ success: true, event })
   } catch (err) {
