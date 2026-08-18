@@ -363,7 +363,7 @@ function ChallengePlayContent() {
         // Fetch round by DB session round — not client ref
         const { data: memRound } = await supabase
           .from('challenge_rounds')
-          .select('answer_holder_ready, guesser_answer, answer_revealed, hint_requests, hints_granted, hint_denials, hint_pending, nora_verdict, memory_answer, guesser_user_id, memory_question, hint_1, hint_2, hint_3, prompt_key, round_number, id')
+          .select('answer_holder_ready, guesser_answer, answer_revealed, hint_requests, hints_granted, hint_denials, hint_pending, nora_verdict, memory_answer, guesser_user_id, memory_question, hint_1, hint_2, hint_3, prompt_key, round_number, id, photo_url')
           .eq('session_id', challengeSessionId)
           .eq('round_number', challengeSession.current_round)
           .maybeSingle()
@@ -600,7 +600,7 @@ function ChallengePlayContent() {
       const [{ data: rounds }, { data: challengeSessionRow }] = await Promise.all([
         supabase
           .from('challenge_rounds')
-          .select('round_number, memory_question, memory_answer, guesser_answer, guesser_user_id, result, nora_verdict')
+          .select('round_number, memory_question, memory_answer, guesser_answer, guesser_user_id, result, nora_verdict, photo_url')
           .eq('session_id', challengeSessionId)
           .order('round_number', { ascending: true }),
         supabase
@@ -999,6 +999,13 @@ function ChallengePlayContent() {
             {memoryRecap.rounds.map(r => (
               <div key={r.round_number} style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '12px', padding: '14px 16px', marginBottom: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '6px' }}>
+                  {r.photo_url && (
+                    <img
+                      src={r.photo_url}
+                      alt=""
+                      style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }}
+                    />
+                  )}
                   <p style={{ fontSize: '13px', color: '#1C1510', fontWeight: 600, margin: 0, flex: 1 }}>{r.memory_question}</p>
                   {r.result && (
                     <span style={{
@@ -1084,6 +1091,17 @@ function ChallengePlayContent() {
             <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
             {challengeType === 'rank' && rankData?.intro && (
               <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginBottom: '10px', fontStyle: 'italic' }}>{rankData.intro}</p>
+            )}
+            {challengeType === 'memory' && round?.photo_url && (
+              // Photo-as-question round — the photo itself is the prompt,
+              // shown above the question text so the guesser answers by
+              // looking at it, not by blind recall. See generate/route.js's
+              // photoRound branch.
+              <img
+                src={round.photo_url}
+                alt=""
+                style={{ width: '100%', maxHeight: '260px', objectFit: 'cover', borderRadius: '14px', marginBottom: '16px', position: 'relative' }}
+              />
             )}
             <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '20px', lineHeight: 1.5, color: '#FFFFFF', margin: '0 0 12px', position: 'relative' }}>
               {challengeType === 'rank' ? rankData?.prompt : challengeType === 'memory' ? round?.memory_question : round?.prompt}
@@ -1855,6 +1873,13 @@ function ChallengePlayContent() {
             ) : challengeType === 'memory' ? (
               <div style={{ marginBottom: '24px' }}>
                 <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '12px', padding: '16px', marginBottom: '12px' }}>
+                  {round?.photo_url && (
+                    <img
+                      src={round.photo_url}
+                      alt=""
+                      style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', borderRadius: '10px', marginBottom: '10px' }}
+                    />
+                  )}
                   <p style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#9CA3AF', textTransform: 'uppercase', margin: '0 0 6px' }}>The question</p>
                   <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '16px', color: '#1C1510', margin: 0, fontStyle: 'italic' }}>{round?.memory_question}</p>
                 </div>

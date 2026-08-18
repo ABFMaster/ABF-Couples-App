@@ -158,6 +158,11 @@ export async function POST(request) {
     // the same variables.
     let guesserName = ''
     let answerHolderName = ''
+    // Same block-scoping trap as guesserName/answerHolderName above —
+    // photoRound gets assigned inside the memory branch below but is read
+    // again down in the JSON-validation and upsertPayload code after that
+    // branch closes. Hoisted for the same reason.
+    let photoRound = null
     if (challengeType === 'rank') {
       userPrompt = `Personalise this ranking challenge for ${profileSummary}.
 
@@ -327,13 +332,46 @@ Respond in this exact JSON format with no other text:
       answerHolderName = answerHolderProfile?.display_name || 'Partner 2'
       personalizedPrompt = basePrompt.prompt.replace(/\{answerHolder\}/g, answerHolderName)
 
-      // Fetch previously used questions for this session to prevent repeats
+      // Fetch previously used questions/photos for this session to prevent repeats
       const { data: usedRounds } = await supabase
         .from('challenge_rounds')
-        .select('memory_question')
+        .select('memory_question, photo_url')
         .eq('session_id', challengeSessionId)
         .not('memory_question', 'is', null)
       const usedQuestions = (usedRounds || []).map(r => r.memory_question).filter(Boolean)
+      const usedPhotoUrls = new Set((usedRounds || []).map(r => r.photo_url).filter(Boolean))
+
+      // ── PHOTO-AS-QUESTION CANDIDATES ─────────────────────────────────────
+      // Aug 17 2026, Matt: "photo as question is better" than photo-as-hint —
+      // show the real photo up front as the prompt itself, rather than
+      // holding it back as a late-stage hint. Built from the same
+      // photo_descriptions data already wired into timelineContext/
+      // dateContext above (docs/database/photo-descriptions.sql), just
+      // flattened into one list of {url, description, context} — context is
+      // the real, already-true fact (a stop name or event title) so the
+      // generated round is essentially always answerType 'known', unlike
+      // text prompts which can legitimately land on 'unknown'.
+      const photoCandidates = []
+      for (const e of (timelineEvents || [])) {
+        for (const [url, description] of Object.entries(e.photo_descriptions || {})) {
+          if (!usedPhotoUrls.has(url)) photoCandidates.push({ url, description, context: e.title })
+        }
+      }
+      for (const d of (completedDates || [])) {
+        for (const [url, description] of Object.entries(d.photo_descriptions || {})) {
+          if (!usedPhotoUrls.has(url)) photoCandidates.push({ url, description, context: d.title })
+        }
+        for (const s of (Array.isArray(d.stops) ? d.stops : [])) {
+          if (s?.photo_url && s?.photo_description && !usedPhotoUrls.has(s.photo_url)) {
+            photoCandidates.push({ url: s.photo_url, description: s.photo_description, context: s.name || d.title })
+          }
+        }
+      }
+      // Coin flip when a candidate exists — keeps variety instead of every
+      // round becoming a photo round once a couple has real photo history.
+      photoRound = photoCandidates.length > 0 && Math.random() < 0.5
+        ? photoCandidates[Math.floor(Math.random() * photoCandidates.length)]
+        : null
 
       // Build context strings — resolve each response's user_id to a name
       // via the profiles already fetched above, and its question text via
@@ -422,7 +460,38 @@ Respond in this exact JSON format with no other text:
             .join('\n')
         : 'No Flirts sent yet'
 
-      userPrompt = `You are Nora running a Love Map memory game for ${guesserName} and ${answerHolderName}.
+      if (photoRound) {
+        // PHOTO-AS-QUESTION — Aug 17 2026, Matt: "photo as question is
+        // better" than photo-as-hint. The photo itself is the prompt;
+        // ${guesserName} sees it directly (client renders round.photo_url
+        // above the question — see app/game-room/challenge/play/page.js).
+        // No "look across all data" instruction needed here — the answer is
+        // already the real, true context the photo came from (a stop name
+        // or event title), not something the model has to go find.
+        userPrompt = `You are Nora running a Love Map memory game for ${guesserName} and ${answerHolderName}. This round shows a real photo from their own history as the prompt itself — ${guesserName} sees the photo directly while answering.
+
+THE GAME: ${guesserName} is the GUESSER and can see the photo. ${answerHolderName} is the ANSWER HOLDER and privately confirms the true answer before the clock starts.
+
+THE PHOTO shows: ${photoRound.description}
+It's from: "${photoRound.context}"
+
+YOUR JOB:
+1. Write one short question ${guesserName} answers by looking at the photo — where it was, what was happening, what it was for. Do not describe the photo back to them in the question text (they can already see it) — ask about it instead. Address the couple directly, "you"/"your", personal and warm, not clinical.
+2. The true answer is grounded in "${photoRound.context}" — write memory_answer as that, phrased naturally, not just the raw label.
+3. Write 3 progressive hints anyway, in case ${guesserName} still needs help beyond the photo — even with the image visible, a specific name can be worth hinting toward. Hint 1: a loose clue. Hint 2: narrows further. Hint 3: basically gives it away.
+
+NORA'S VOICE: Warm game master energy. Specific. Never generic.
+
+Respond in this exact JSON format with no other text:
+{
+  "memory_question": "the question about the photo",
+  "memory_answer": "the true answer, grounded in the real context above",
+  "hint_1": "evocative, indirect hint",
+  "hint_2": "narrows territory significantly",
+  "hint_3": "basically gives it away"
+}`
+      } else {
+        userPrompt = `You are Nora running a Love Map memory game for ${guesserName} and ${answerHolderName}.
 
 THE GAME: ${guesserName} is the GUESSER. ${answerHolderName} is the ANSWER HOLDER — the question is about ${answerHolderName}, and ${answerHolderName} knows the correct answer about themselves.
 
@@ -470,6 +539,7 @@ Respond in this exact JSON format with no other text:
   "answerType": "known or unknown",
   "guesser_user_id": "${guesserUserId}"
 }`
+      }
     } else {
       userPrompt = `Personalise this challenge prompt for ${profileSummary}.
 
@@ -518,8 +588,14 @@ Respond in this exact JSON format with no other text:
         const gNameLower = guesserName.toLowerCase()
         const aNameLower = answerHolderName.toLowerCase()
         if (q.includes(gNameLower) && !q.includes(aNameLower)) {
-          parsed.memory_question = basePrompt.prompt
-          parsed.memory_answer = ''
+          // Photo rounds have no basePrompt.prompt to fall back to (that's
+          // an unrelated static-pool question, not connected to the photo
+          // being shown) — build a generic photo-anchored fallback instead
+          // that stays true to the real grounded answer.
+          parsed.memory_question = photoRound
+            ? `What's this photo from?`
+            : basePrompt.prompt
+          parsed.memory_answer = photoRound ? photoRound.context : ''
           parsed.hint_1 = ''
           parsed.hint_2 = ''
           parsed.hint_3 = ''
@@ -543,12 +619,18 @@ Respond in this exact JSON format with no other text:
         : parsed.prompt
 
     // Build upsert payload — memory writes extra fields
+    // Photo rounds: prompt_key doesn't come from the static pool (there was
+    // no basePrompt selection for these), so key off the photo URL itself —
+    // this stays human-diagnosable in the DB and the actual per-session
+    // dedup work is already done above via usedPhotoUrls/photo_url, not by
+    // this key's 90-day-recycle logic (that logic is pool-prompt-specific
+    // and doesn't apply to photo rounds).
     const upsertPayload = {
       session_id: challengeSessionId,
       couple_id: coupleId,
       round_number: roundNumber,
       prompt: finalPrompt,
-      prompt_key: basePrompt.key,
+      prompt_key: photoRound ? `photo:${photoRound.url.slice(-60)}` : basePrompt.key,
       current_turn_user_id: challengeType === 'story' ? userId : null,
       ...(challengeType === 'memory' && {
         memory_question: parsed.memory_question,
@@ -557,6 +639,7 @@ Respond in this exact JSON format with no other text:
         hint_2: parsed.hint_2,
         hint_3: parsed.hint_3,
         guesser_user_id: guesserUserId,
+        photo_url: photoRound?.url || null,
       }),
     }
 
