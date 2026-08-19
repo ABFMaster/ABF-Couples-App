@@ -525,6 +525,35 @@ const ritualCompletedThisWeek = !!completion?.completed
       }
     }
 
+    // ROOT CAUSE FIX Aug 19 2026 — Matt reported the hero card showing the
+    // exact same observation 2+ days running ("Four songs in, and this one
+    // wasn't about wanting Cass — it was about grief." verbatim on both Aug
+    // 18 and Aug 19). PART 5b's promo rotation already has real anti-repeat/
+    // frequency-cap logic (confirmed working — promo_type genuinely changed
+    // day to day), but the underlying Nora observation line never did: she
+    // just re-mines whatever's the single most recent/salient anchor in her
+    // memory notes every time nothing newer has come in, with nothing
+    // telling her she already used it. Same pattern flirts/generate already
+    // uses via previousSuggestion — hand her yesterday's line and tell her
+    // not to reuse it. Scoped to mode==='pre' && !isNewUser: 'post' mode is
+    // event-driven off that day's actual Spark/Bet/Ritual answers (a
+    // different real anchor every day by construction), and isNewUser has
+    // its own one-time crafted flow with nothing yet to repeat.
+    let previousMessage = null
+    if (mode === 'pre' && !isNewUser) {
+      const { data: priorCache } = await supabase
+        .from('hero_cache')
+        .select('message')
+        .eq('user_id', userId)
+        .eq('type', 'hero')
+        .eq('mode', 'pre')
+        .lt('cache_date', todayStr)
+        .order('cache_date', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      previousMessage = priorCache?.message || null
+    }
+
     // ── PART 6: Prompts ───────────────────────────────────────────────────────
     const name = userName || 'there'
     let message
@@ -557,7 +586,10 @@ If you don't have much to draw on yet, use CURIOUS QUESTION about who they are, 
       const PROMO_ADDENDUM = promoInstruction
         ? `This one has an additional, specific job: after your usual one-sentence observation, add a short second sentence (max 15 words) that naturally, in your own voice, invites them toward ${promoInstruction} Never phrase it like an app notification or feature announcement — it should sound like something only Nora would say to this person.`
         : null
-      const systemPrompt = [PRE_SYSTEM_PROMPT, PROMO_ADDENDUM, tierContext].filter(Boolean).join('\n\n')
+      const REPEAT_GUARD = previousMessage
+        ? `You already said this yesterday: "${previousMessage}" — do not reuse that same anchor, story, or detail today, even reworded. Find a different real, specific thing to notice.`
+        : null
+      const systemPrompt = [PRE_SYSTEM_PROMPT, REPEAT_GUARD, PROMO_ADDENDUM, tierContext].filter(Boolean).join('\n\n')
 
       const userPrompt = [
         `User's name: ${name}`,
