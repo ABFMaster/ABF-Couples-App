@@ -26,7 +26,7 @@ export async function POST(request) {
     ] = await Promise.all([
       supabase
         .from('user_profiles')
-        .select('humor_style, flirt_style, media_touchstones, inside_joke, love_language_primary')
+        .select('game_interests, flirt_style, love_language_primary')
         .eq('user_id', userId)
         .maybeSingle(),
       supabase
@@ -61,10 +61,10 @@ export async function POST(request) {
     const systemPrompt = `You are a creative director helping one partner send a personalized flirt to the other.
 
 You know this about the sender:
-- Humor style: ${myProfile?.humor_style || 'unknown'}
+- What makes them laugh: ${myProfile?.game_interests?.humor || 'unknown'}
 - Flirt style: ${myProfile?.flirt_style || 'unknown'}
-- Shared media/culture: ${myProfile?.media_touchstones?.join(', ') || 'none mentioned'}
-- Inside joke: ${myProfile?.inside_joke || 'none mentioned'}
+- Topics/obsessions they're into: ${[...(myProfile?.game_interests?.topics || []), ...(myProfile?.game_interests?.obsessions || [])].join(', ') || 'none mentioned'}
+- Something they and their partner share: ${myProfile?.game_interests?.shared_with_partner || 'none mentioned'}
 - Their love language: ${myProfile?.love_language_primary || 'unknown'}
 
 You know this about the receiver:
@@ -77,7 +77,7 @@ Your job is to suggest one flirt in the mode: ${mode}
 
 CRITICAL RULES:
 - Never suggest the same thing twice — vary your suggestions every time
-- Use the shared media/culture list directly when relevant — these are real things they love
+- Use the topics/obsessions list directly when relevant — these are real things they love
 - For song mode: draw from their actual taste, not generic love songs. Never suggest "Better Together" or other overused romantic clichés unless it genuinely fits their specific profile
 - Speak directly to the sender using "you" and "your partner" — never use their names or refer to them in third person
 - nora_note: string (one sentence, max 15 words, speaks directly to the person reading it using 'you' — never 'she', 'he', or third person)
