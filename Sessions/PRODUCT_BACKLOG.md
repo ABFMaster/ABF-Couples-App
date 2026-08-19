@@ -414,6 +414,10 @@ Agent frameworks (LangGraph, etc.); vector databases / RAG infrastructure; multi
 
 ## COMPLETED (recent)
 
+- ✅ Aug 19 — Ask Nora live 500 fix: `noraCall()` was reading the Anthropic response's text unguarded and outside any try/catch, plus `logCall()` was fire-and-forget so the failure left zero trace in `nora_calls`. Guarded + awaited.
+- ✅ Aug 19 — Hero card repeating the same Nora observation 2+ days running: promo rotation (PART 5b) already had real anti-repeat/frequency-cap logic and was working correctly, but the observation line itself had no repeat-guard. Now passes yesterday's message and tells her not to reuse the same anchor.
+- ✅ Aug 19 — Received Flirt photo showing cut off / red-tinted: `maxHeight:120` + `objectFit:cover` hard-cropped any portrait photo at default center. Switched to `contain` so a received photo is never cropped.
+- ✅ Aug 19 — Sent-list thumbnail missing for song/movie_show: box only ever checked `type === 'photo' || 'gif'`; extended to album_art/media_poster.
 - ✅ FlirtCard redesign — retro postcard front, 3D flip, airmail back, ABF stamp, tap reactions
 - ✅ Memory / Photo feature — /us/add, partner photo append, Nora observation, photo gallery viewer
 - ✅ Notice late submission — extended to 10pm Pacific, 6pm evening reminder push
