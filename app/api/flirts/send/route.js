@@ -7,7 +7,7 @@ export async function POST(request) {
     const { user, supabase, error: authError } = await requireUser(request)
     if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    const { coupleId, receiverId, type, content, metadata } = await request.json()
+    const { coupleId, receiverId, type, content, metadata, nora_generated } = await request.json()
 
     if (!coupleId || !receiverId || !type || !content?.trim()) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -16,7 +16,11 @@ export async function POST(request) {
     const isMember = await verifyCoupleMembership(supabase, user.id, coupleId)
     if (!isMember) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    const validTypes = ['song', 'photo', 'word', 'found', 'memory', 'gif']
+    // movie_show and prompt added Aug 18 2026 — Ask Nora now composes
+    // through this same route instead of its own separate draft-then-mark-
+    // sent flow (see /api/flirts/generate), so every flirt type needs to be
+    // sendable here.
+    const validTypes = ['song', 'photo', 'word', 'found', 'memory', 'gif', 'movie_show', 'prompt']
     if (!validTypes.includes(type)) {
       return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
     }
@@ -72,6 +76,8 @@ export async function POST(request) {
         type,
         content: content.trim(),
         metadata: resolvedMetadata,
+        sent_at: new Date().toISOString(),
+        ...(nora_generated ? { nora_generated: true } : {}),
         ...spotifyColumns
       })
       .select()
@@ -92,6 +98,18 @@ export async function POST(request) {
         inputData: { type, content: content.trim(), metadata: resolvedMetadata }
       })
     } catch {}
+
+    // ROOT CAUSE FIX Aug 18 2026 — couples.flirts_sent was only ever
+    // incremented by /api/flirts/mark-sent, which only FlirtSheet's fully
+    // orphaned sendFlirt() ever called (zero live entry points, confirmed
+    // via grep). Every real flirt sent through this route — the only send
+    // path the live app has ever actually used — has never incremented
+    // this counter. Fixing it here so it counts what it's named for.
+    try {
+      await supabase.rpc('increment_flirts_sent', { couple_id_input: coupleId })
+    } catch (err) {
+      console.error('[flirts/send] flirts_sent increment failed:', err)
+    }
 
     return NextResponse.json({ success: true, flirt })
 

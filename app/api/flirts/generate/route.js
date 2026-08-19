@@ -155,27 +155,25 @@ Respond with a JSON object only, no other text:
       }
     }
 
-    const { data: saved, error: saveError } = await supabase
-      .from('flirts')
-      .insert({
-        couple_id: couple?.id,
-        sender_id: userId,
-        receiver_id: partnerId,
+    // ROOT CAUSE FIX Aug 18 2026 — this used to insert a draft row here,
+    // then FlirtSheet's separate sendFlirt() flow (push + mark-sent) would
+    // deliver it. That path never went through /api/flirts/send, so it
+    // never fired the FLIRT_SENT nora-memory signal and never incremented
+    // couples.flirts_sent — both real, silent gaps for any flirt sent that
+    // way (moot in practice since FlirtSheet had zero live entry points).
+    // Now that Ask Nora is integrated into FlirtCard's own compose flow,
+    // this route is a pure propose-and-enrich step — no DB write. The
+    // chosen suggestion gets persisted and delivered through the same
+    // /api/flirts/send every other flirt type already uses, so it's
+    // correctly signaled and counted like everything else.
+    return NextResponse.json({
+      flirt: {
         mode: flirtData.mode,
         suggestion: flirtData.suggestion,
         nora_note: flirtData.nora_note,
-        nora_generated: true,
         ...enriched,
-      })
-      .select('id, mode, suggestion, nora_note, gif_url, gif_id, spotify_track_id, spotify_track_name, spotify_artist, spotify_album_art, spotify_track_url, media_title, media_year, media_poster')
-      .maybeSingle()
-
-    if (saveError) {
-      console.error('[FlirtGenerate] Save error:', saveError)
-      return NextResponse.json({ error: 'save failed' }, { status: 500 })
-    }
-
-    return NextResponse.json({ flirt: saved })
+      },
+    })
   } catch (err) {
     console.error('[FlirtGenerate] Error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
