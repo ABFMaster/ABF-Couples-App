@@ -973,8 +973,20 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                   sending." This row used to render the literal text "Photo"/
                   "GIF" for those types instead of an actual thumbnail, unlike
                   the received stack view's renderFlirtContent(). */}
+              {/* ROOT CAUSE FIX Aug 19 2026 — Matt's report: no album art for
+                  songs in this list. Not a space problem (this 36x36 box
+                  already renders photo/gif fine) — the Aug 6 fix above just
+                  never extended to song/movie_show, even though
+                  metadata.album_art and metadata.media_poster already exist
+                  and are used by renderFlirtContent() in the received view. */}
               {(f.type === 'photo' || f.type === 'gif') && (
                 <img src={f.content} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />
+              )}
+              {f.type === 'song' && f.metadata?.album_art && (
+                <img src={f.metadata.album_art} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />
+              )}
+              {f.type === 'movie_show' && f.metadata?.media_poster && f.metadata.media_poster !== 'N/A' && (
+                <img src={f.metadata.media_poster} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 1.5, color: '#C9A96E', textTransform: 'uppercase', marginBottom: 2 }}>{f.type}</div>
