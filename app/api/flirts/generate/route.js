@@ -98,7 +98,13 @@ Respond with a JSON object only, no other text:
     let flirtData
     try {
       const prompt = 'Generate the flirt suggestion.'
-      const response = await noraGenerate(prompt, { route: 'flirts/generate', system: systemPrompt, maxTokens: 400 })
+      // context defaulted to noraGenerate's own 'game_room' fallback before
+      // this — meaning Nora was silently told "you are in game master mode,
+      // running a game" while composing a flirt suggestion. 'conversation'
+      // fits what this actually is, and its register note (don't invent
+      // details not actually known) is a good fit for profile-grounded
+      // suggestion generation specifically.
+      const response = await noraGenerate(prompt, { route: 'flirts/generate', context: 'conversation', system: systemPrompt, maxTokens: 400 })
 
       const raw = response
       try {
