@@ -101,9 +101,9 @@ export default function FlirtSheet({ isOpen, onClose, partnerName, partnerId, us
         })
           .then(res => res.json())
           .then(data => {
-            if (data.flirt_profile_completed === false) {
+            if (data.flirt_style_completed === false) {
               handleClose()
-              router.push('/flirts/onboarding')
+              router.push('/flirts/style')
             }
           })
           .catch(() => {})
