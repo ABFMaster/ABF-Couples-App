@@ -109,8 +109,17 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
     }
   }, [current?.id])
 
+  // ROOT CAUSE FIX Aug 18 2026 (audit finding) — song/movie_show/prompt all
+  // still send something meaningful with zero enrichment (renderFlirtContent
+  // falls back to the plain suggestion text for each). gif is the one mode
+  // where content itself must be a real image URL - there's no text
+  // fallback in the gif render case, so sending without gif_url would store
+  // a raw search term as `content` and break the <img> everywhere it's
+  // shown (stack view, sent list, received list).
+  const noraResultSendable = noraResult && (noraResult.mode !== 'gif' || !!noraResult.gif_url)
+
   const handleSend = async () => {
-    if (dropType === 'ask_nora' && !noraResult) return
+    if (dropType === 'ask_nora' && !noraResultSendable) return
     if (dropType === 'song' && !selectedTrack) return
     if (dropType === 'memory' && !selectedMemory) return
     if (dropType !== 'song' && dropType !== 'memory' && dropType !== 'ask_nora' && !content.trim()) return
@@ -711,6 +720,9 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                                   )}
                                   <div style={{ fontFamily: 'Georgia, serif', fontSize: 13, color: '#2a2015' }}>{noraResult.suggestion}</div>
                                   {noraResult.nora_note && <div style={{ fontSize: 10, color: '#C9A96E', fontStyle: 'italic', marginTop: 2 }}>— {noraResult.nora_note}</div>}
+                                  {noraResult.mode === 'gif' && !noraResult.gif_url && (
+                                    <div style={{ fontSize: 10, color: '#C4694F', fontStyle: 'italic', marginTop: 4 }}>Couldn't find that GIF — try again or a different type.</div>
+                                  )}
                                   <div style={{ marginTop: 4 }}>
                                     <button onClick={() => generateNora(noraSubMode, noraResult.suggestion)} style={{ background: 'none', border: 'none', fontSize: 10, color: '#8b7355', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic', textDecoration: 'underline' }}>get another</button>
                                     <span style={{ color: '#ddd0bc', fontSize: 10, margin: '0 5px' }}>·</span>
@@ -748,7 +760,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                               stretched box, leaving a visible gap before the card's right
                               edge. alignSelf:'flex-end' shrinks the wrapper to its content
                               width and pins it to the end (right) of the column instead. */}
-                          <div onClick={async () => { const canSend = dropType === 'song' ? !!selectedTrack : dropType === 'memory' ? !!selectedMemory : dropType === 'ask_nora' ? !!noraResult : !!content.trim(); if (!canSend || sending || !dropType) return; await handleSend(); setCardFlipped(false); setDropType(null); setContent(''); setSelectedTrack(null); setSelectedMemory(null); setNoraSubMode(null); setNoraResult(null); }} style={{ cursor: dropType ? 'pointer' : 'default', alignSelf: 'flex-end' }}>
+                          <div onClick={async () => { const canSend = dropType === 'song' ? !!selectedTrack : dropType === 'memory' ? !!selectedMemory : dropType === 'ask_nora' ? noraResultSendable : !!content.trim(); if (!canSend || sending || !dropType) return; await handleSend(); setCardFlipped(false); setDropType(null); setContent(''); setSelectedTrack(null); setSelectedMemory(null); setNoraSubMode(null); setNoraResult(null); }} style={{ cursor: dropType ? 'pointer' : 'default', alignSelf: 'flex-end' }}>
                             <img src="/abf-stamp.png" alt="ABF stamp" style={{ width: 82, height: 82, display: 'block', opacity: dropType ? 1 : 0.4, transition: 'opacity 0.2s' }} />
                             {dropType && <div style={{ fontSize: 9, color: '#c4694f', fontFamily: 'Georgia, serif', fontStyle: 'italic', textAlign: 'center', marginTop: 2 }}>{sending ? 'sending...' : 'tap to mail →'}</div>}
                           </div>

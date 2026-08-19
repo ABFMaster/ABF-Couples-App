@@ -143,8 +143,17 @@ Respond with a JSON object only, no other text:
     }
 
     if (flirtData.mode === 'movie_show') {
+      // ROOT CAUSE FIX Aug 18 2026 (audit finding) — this only ever called
+      // searchMovies (OMDB type=movie), even though the mode is explicitly
+      // "movie or TV show" and searchShows (type=series) was imported for
+      // exactly this case and then never used. Any real show suggestion
+      // ("The Bear", "Fleabag") searched under the wrong OMDB type and
+      // silently found nothing. Try movie first, fall back to show.
       try {
-        const results = await searchMovies(flirtData.suggestion)
+        let results = await searchMovies(flirtData.suggestion)
+        if (!results?.[0]) {
+          results = await searchShows(flirtData.suggestion)
+        }
         if (results?.[0]) {
           enriched.media_title = results[0].Title
           enriched.media_year = results[0].Year
