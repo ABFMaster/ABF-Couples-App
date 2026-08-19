@@ -437,7 +437,23 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
           </div>
         )
       case 'photo':
-        return <img src={flirt.content} style={{ width: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 4, marginBottom: 8 }} alt="" />
+        // ROOT CAUSE FIX Aug 19 2026 — Matt's report: received photo showed
+        // as a heavily red-tinted, cut-off sliver. Root cause: maxHeight:120
+        // + objectFit:'cover' with no fixed height forces a hard crop to a
+        // ~2:1 landscape box at default center object-position — any
+        // portrait-oriented phone photo (the common case for a personal
+        // photo, unlike a curated landscape thumbnail) gets most of its
+        // height sliced off with no control over which part survives. This
+        // is the same class of bug as the prior hero-photo centering issues
+        // (task #2, #83), but there's no focal-point metadata to lean on
+        // here — a Flirt photo is an arbitrary upload, not a tagged location
+        // photo. Since the point of a received Flirt is seeing what your
+        // partner actually sent, 'contain' (never crops, letterboxes
+        // instead) is the correct tradeoff over 'cover' for this specific
+        // case — unlike album art/movie posters elsewhere in this same
+        // switch, which are fine to crop because they're promotional
+        // images, not personal content.
+        return <img src={flirt.content} style={{ width: '100%', maxHeight: 220, objectFit: 'contain', background: '#EFE6D8', borderRadius: 4, marginBottom: 8 }} alt="" />
       case 'gif':
         return <img src={flirt.content} style={{ width: '100%', maxHeight: 120, objectFit: 'cover', borderRadius: 4, marginBottom: 8 }} alt="GIF" />
       case 'found':
