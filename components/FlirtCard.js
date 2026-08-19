@@ -34,6 +34,15 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   const [metadata, setMetadata] = useState(null)
   const [photoUploading, setPhotoUploading] = useState(false)
   const [photoError, setPhotoError] = useState('')
+  // Ask Nora — Aug 18 2026. Full integration into FlirtCard's own postcard
+  // compose flow rather than FlirtSheet's separate bottom-sheet chrome (see
+  // components/FlirtSheet.js, now retired). noraResult becomes the thing
+  // that gets sent when the existing stamp-tap fires, same as
+  // selectedTrack/selectedMemory/content do for the other types.
+  const [noraSubMode, setNoraSubMode] = useState(null)
+  const [noraGenerating, setNoraGenerating] = useState(false)
+  const [noraResult, setNoraResult] = useState(null)
+  const [noraError, setNoraError] = useState(false)
   const fileInputRef = useRef(null)
   const spotifyTimeout = useRef(null)
   const gifTimeout = useRef(null)
@@ -101,34 +110,84 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
   }, [current?.id])
 
   const handleSend = async () => {
-    if ((!content.trim() && dropType !== 'song' && dropType !== 'memory') || sending) return
+    if (dropType === 'ask_nora' && !noraResult) return
     if (dropType === 'song' && !selectedTrack) return
     if (dropType === 'memory' && !selectedMemory) return
+    if (dropType !== 'song' && dropType !== 'memory' && dropType !== 'ask_nora' && !content.trim()) return
+    if (sending) return
     setSending(true)
     try {
+      let sendType = dropType
+      let sendContent = content.trim()
+      let sendMetadata
+      let noraGenerated = false
+
+      if (dropType === 'song') {
+        sendContent = selectedTrack.spotifyUrl
+        // track_id added Aug 11 2026 (Mixtape data-flow fix) — previously
+        // selectedTrack.id was captured from the Spotify search result
+        // but never actually sent anywhere, so spotify_track_id could
+        // never be populated even after the send route was fixed to
+        // write it. Mixtape's own eligibility check doesn't require this
+        // (keys off track_name instead, which historical rows do have),
+        // but it's good to actually capture it going forward.
+        sendMetadata = {
+          track_id: selectedTrack.id,
+          track_name: selectedTrack.name,
+          artist: selectedTrack.artist,
+          album_art: selectedTrack.albumArt,
+          preview_url: selectedTrack.previewUrl,
+          track_url: selectedTrack.spotifyUrl,
+        }
+      } else if (dropType === 'memory') {
+        sendContent = selectedMemory?.title || 'a memory'
+        sendMetadata = metadata
+      } else if (dropType === 'ask_nora') {
+        // Same {type, content, metadata} shape every other flirt type sends
+        // through this route — Ask Nora just fills it from noraResult
+        // instead of a search pick. Keys here match what /api/flirts/send's
+        // spotifyColumns block reads (track_id/track_name/... unprefixed),
+        // NOT the spotify_-prefixed keys generate()'s enrichment returns
+        // them as — mapped explicitly below rather than spreading.
+        sendType = noraResult.mode
+        noraGenerated = true
+        if (noraResult.mode === 'song') {
+          sendContent = noraResult.spotify_track_url || noraResult.suggestion
+          sendMetadata = {
+            track_id: noraResult.spotify_track_id,
+            track_name: noraResult.spotify_track_name,
+            artist: noraResult.spotify_artist,
+            album_art: noraResult.spotify_album_art,
+            track_url: noraResult.spotify_track_url,
+            nora_note: noraResult.nora_note,
+          }
+        } else if (noraResult.mode === 'gif') {
+          sendContent = noraResult.gif_url || noraResult.suggestion
+          sendMetadata = { nora_note: noraResult.nora_note }
+        } else if (noraResult.mode === 'movie_show') {
+          sendContent = noraResult.suggestion
+          sendMetadata = {
+            media_title: noraResult.media_title,
+            media_year: noraResult.media_year,
+            media_poster: noraResult.media_poster,
+            nora_note: noraResult.nora_note,
+          }
+        } else {
+          sendContent = noraResult.suggestion
+          sendMetadata = { nora_note: noraResult.nora_note }
+        }
+      }
+
       await fetch('/api/flirts/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
         body: JSON.stringify({
           coupleId,
           receiverId: partnerId,
-          type: dropType,
-          content: dropType === 'song' ? selectedTrack.spotifyUrl : dropType === 'memory' ? (selectedMemory?.title || 'a memory') : content.trim(),
-          metadata: dropType === 'song' ? {
-            // track_id added Aug 11 2026 (Mixtape data-flow fix) — previously
-            // selectedTrack.id was captured from the Spotify search result
-            // but never actually sent anywhere, so spotify_track_id could
-            // never be populated even after the send route was fixed to
-            // write it. Mixtape's own eligibility check doesn't require this
-            // (keys off track_name instead, which historical rows do have),
-            // but it's good to actually capture it going forward.
-            track_id: selectedTrack.id,
-            track_name: selectedTrack.name,
-            artist: selectedTrack.artist,
-            album_art: selectedTrack.albumArt,
-            preview_url: selectedTrack.previewUrl,
-            track_url: selectedTrack.spotifyUrl
-          } : dropType === 'memory' ? metadata : undefined
+          type: sendType,
+          content: sendContent,
+          metadata: sendMetadata,
+          nora_generated: noraGenerated || undefined,
         })
       })
       setContent('')
@@ -141,10 +200,58 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
       setGifQuery('')
       setGifResults([])
       setPhotoError('')
+      setNoraSubMode(null)
+      setNoraResult(null)
+      setNoraError(false)
       setView('home')
       await fetchInbox()
     } catch {}
     setSending(false)
+  }
+
+  // Gated on flirt_style, not the old flirt_profile_completed — see
+  // /api/flirts/check-profile and /flirts/style. Checked on demand (only
+  // when someone actually taps Ask Nora) rather than on every card mount.
+  const handleTypeSelect = async (t) => {
+    setPhotoError('')
+    if (t === 'ask_nora') {
+      try {
+        const { data: { session: s } } = await supabase.auth.getSession()
+        const res = await fetch('/api/flirts/check-profile', {
+          headers: { 'Authorization': `Bearer ${s?.access_token}` },
+        })
+        const data = await res.json()
+        if (data.flirt_style_completed === false) {
+          router.push('/flirts/style')
+          return
+        }
+      } catch {}
+    }
+    setDropType(t)
+  }
+
+  const generateNora = async (mode, previousSuggestion) => {
+    setNoraSubMode(mode)
+    setNoraGenerating(true)
+    setNoraError(false)
+    setNoraResult(null)
+    try {
+      const { data: { session: s } } = await supabase.auth.getSession()
+      const res = await fetch('/api/flirts/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${s?.access_token}` },
+        body: JSON.stringify({ mode, previousSuggestion: previousSuggestion || null }),
+      })
+      const data = await res.json()
+      if (data.flirt) {
+        setNoraResult(data.flirt)
+      } else {
+        setNoraError(true)
+      }
+    } catch {
+      setNoraError(true)
+    }
+    setNoraGenerating(false)
   }
 
   // Fixed Aug 6 2026 — Matt's report: "I tried to send a photo, but get no
@@ -300,6 +407,24 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
               <p style={{ fontSize: 12, color: '#6B6560', margin: 0 }}>{flirt.metadata?.artist}</p>
               {flirt.metadata?.track_url && <a href={flirt.metadata.track_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#C4694F', textDecoration: 'none', display: 'block', marginTop: 4 }}>Open in Spotify →</a>}
             </div>
+          </div>
+        )
+      case 'movie_show':
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 0 8px' }}>
+            {flirt.metadata?.media_poster && flirt.metadata.media_poster !== 'N/A' && (
+              <img src={flirt.metadata.media_poster} style={{ width: 44, height: 64, borderRadius: 4, flexShrink: 0, objectFit: 'cover' }} alt="" />
+            )}
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 600, color: '#2A2420', margin: '0 0 2px' }}>{flirt.metadata?.media_title || flirt.content}</p>
+              {flirt.metadata?.media_year && <p style={{ fontSize: 12, color: '#6B6560', margin: 0 }}>{flirt.metadata.media_year}</p>}
+            </div>
+          </div>
+        )
+      case 'prompt':
+        return (
+          <div style={{ padding: '0 0 8px' }}>
+            <p style={{ fontFamily: 'Georgia, serif', fontSize: 16, fontStyle: 'italic', color: '#2A2420', margin: 0, lineHeight: 1.7 }}>{flirt.content}</p>
           </div>
         )
       case 'photo':
@@ -506,9 +631,9 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                           {/* Type selector — now scoped to the content column's width only */}
                           <div style={{ padding: '8px 10px', borderBottom: '0.5px solid #ddd0bc', display: 'flex', gap: 0, flexWrap: 'wrap' }}>
-                            {['song','word','photo','gif','memory'].map((t,i,arr) => (
+                            {['song','word','photo','gif','memory','ask_nora'].map((t,i,arr) => (
                               <span key={t} style={{ display: 'flex', alignItems: 'center' }}>
-                                <button onClick={() => { setDropType(t); setPhotoError(''); }} style={{ background: 'none', border: 'none', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: dropType === t ? '#c4694f' : '#6b5a4a', cursor: 'pointer', padding: 0, fontFamily: 'system-ui', textDecoration: dropType === t ? 'underline' : 'none', textUnderlineOffset: 2 }}>{t.toUpperCase()}</button>
+                                <button onClick={() => handleTypeSelect(t)} style={{ background: 'none', border: 'none', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: dropType === t ? '#c4694f' : '#6b5a4a', cursor: 'pointer', padding: 0, fontFamily: 'system-ui', textDecoration: dropType === t ? 'underline' : 'none', textUnderlineOffset: 2 }}>{t === 'ask_nora' ? 'ASK NORA' : t.toUpperCase()}</button>
                                 {i < arr.length - 1 && <span style={{ color: '#c8b8a0', fontSize: 10, margin: '0 5px' }}>·</span>}
                               </span>
                             ))}
@@ -555,6 +680,46 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                               {selectedMemory ? <div style={{ fontFamily: 'Georgia, serif', fontSize: 13, color: '#2a2015', fontStyle: 'italic' }}>{selectedMemory.title}</div> : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>{timelineEvents.slice(0,6).map(e => <button key={e.id} onClick={() => { setSelectedMemory(e); setMetadata({ title: e.title, event_date: e.event_date }); }} style={{ background: 'none', border: '0.5px solid #d4c4a8', borderRadius: 100, padding: '3px 10px', fontSize: 10, color: '#8b7355', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>{e.title}</button>)}</div>}
                             </div>
                           )}
+                          {dropType === 'ask_nora' && (
+                            <div style={{ position: 'relative', zIndex: 1 }}>
+                              {!noraSubMode && (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                  {[['song','Song'],['gif','GIF'],['movie_show','Movie · Show'],['prompt','Prompt']].map(([id,label]) => (
+                                    <button key={id} onClick={() => generateNora(id)} style={{ background: 'none', border: '0.5px solid #d4c4a8', borderRadius: 100, padding: '3px 10px', fontSize: 10, color: '#8b7355', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>{label}</button>
+                                  ))}
+                                </div>
+                              )}
+                              {noraSubMode && noraGenerating && (
+                                <div style={{ fontFamily: 'Georgia, serif', fontSize: 13, color: '#8b7355', fontStyle: 'italic' }}>Nora is thinking…</div>
+                              )}
+                              {noraSubMode && !noraGenerating && noraError && (
+                                <div>
+                                  <div style={{ fontFamily: 'Georgia, serif', fontSize: 12, color: '#C4694F', fontStyle: 'italic' }}>Something went wrong.</div>
+                                  <button onClick={() => generateNora(noraSubMode)} style={{ marginTop: 4, background: 'none', border: '0.5px solid #d4c4a8', borderRadius: 6, padding: '4px 10px', fontSize: 10, color: '#8b7355', cursor: 'pointer', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>try again</button>
+                                </div>
+                              )}
+                              {noraSubMode && !noraGenerating && !noraError && noraResult && (
+                                <div>
+                                  {noraResult.mode === 'song' && noraResult.spotify_album_art && (
+                                    <img src={noraResult.spotify_album_art} style={{ width: 40, height: 40, borderRadius: 4, marginBottom: 4, display: 'block' }} alt="" />
+                                  )}
+                                  {noraResult.mode === 'movie_show' && noraResult.media_poster && noraResult.media_poster !== 'N/A' && (
+                                    <img src={noraResult.media_poster} style={{ width: 36, height: 52, borderRadius: 4, marginBottom: 4, objectFit: 'cover', display: 'block' }} alt="" />
+                                  )}
+                                  {noraResult.mode === 'gif' && noraResult.gif_url && (
+                                    <img src={noraResult.gif_url} style={{ width: 60, height: 60, borderRadius: 4, objectFit: 'cover', marginBottom: 4, display: 'block' }} alt="" />
+                                  )}
+                                  <div style={{ fontFamily: 'Georgia, serif', fontSize: 13, color: '#2a2015' }}>{noraResult.suggestion}</div>
+                                  {noraResult.nora_note && <div style={{ fontSize: 10, color: '#C9A96E', fontStyle: 'italic', marginTop: 2 }}>— {noraResult.nora_note}</div>}
+                                  <div style={{ marginTop: 4 }}>
+                                    <button onClick={() => generateNora(noraSubMode, noraResult.suggestion)} style={{ background: 'none', border: 'none', fontSize: 10, color: '#8b7355', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic', textDecoration: 'underline' }}>get another</button>
+                                    <span style={{ color: '#ddd0bc', fontSize: 10, margin: '0 5px' }}>·</span>
+                                    <button onClick={() => { setNoraSubMode(null); setNoraResult(null); setNoraError(false); }} style={{ background: 'none', border: 'none', fontSize: 10, color: '#8b7355', cursor: 'pointer', padding: 0, fontFamily: 'Georgia, serif', fontStyle: 'italic', textDecoration: 'underline' }}>different type</button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                         </div>
                         {/* Address side with stamp — now starts flush with
@@ -583,7 +748,7 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
                               stretched box, leaving a visible gap before the card's right
                               edge. alignSelf:'flex-end' shrinks the wrapper to its content
                               width and pins it to the end (right) of the column instead. */}
-                          <div onClick={async () => { const canSend = dropType === 'song' ? !!selectedTrack : dropType === 'memory' ? !!selectedMemory : !!content.trim(); if (!canSend || sending || !dropType) return; await handleSend(); setCardFlipped(false); setDropType(null); setContent(''); setSelectedTrack(null); setSelectedMemory(null); }} style={{ cursor: dropType ? 'pointer' : 'default', alignSelf: 'flex-end' }}>
+                          <div onClick={async () => { const canSend = dropType === 'song' ? !!selectedTrack : dropType === 'memory' ? !!selectedMemory : dropType === 'ask_nora' ? !!noraResult : !!content.trim(); if (!canSend || sending || !dropType) return; await handleSend(); setCardFlipped(false); setDropType(null); setContent(''); setSelectedTrack(null); setSelectedMemory(null); setNoraSubMode(null); setNoraResult(null); }} style={{ cursor: dropType ? 'pointer' : 'default', alignSelf: 'flex-end' }}>
                             <img src="/abf-stamp.png" alt="ABF stamp" style={{ width: 82, height: 82, display: 'block', opacity: dropType ? 1 : 0.4, transition: 'opacity 0.2s' }} />
                             {dropType && <div style={{ fontSize: 9, color: '#c4694f', fontFamily: 'Georgia, serif', fontStyle: 'italic', textAlign: 'center', marginTop: 2 }}>{sending ? 'sending...' : 'tap to mail →'}</div>}
                           </div>
@@ -650,6 +815,9 @@ export default function FlirtCard({ userId, coupleId, partnerId, partnerName, us
             <div style={{ display: 'flex' }}>
               <div style={{ flex: 1, padding: '8px 10px', fontFamily: 'Georgia, serif', fontSize: 14, color: '#2a2015', lineHeight: 1.65, backgroundImage: 'repeating-linear-gradient(transparent, transparent 21px, #d8ccba 21px, #d8ccba 22px)', backgroundSize: '100% 22px', minHeight: 72 }}>
                 {renderFlirtContent(current)}
+                {current.nora_generated && current.metadata?.nora_note && (
+                  <p style={{ fontSize: 11, color: '#C9A96E', fontStyle: 'italic', margin: '2px 0 0' }}>— Nora, on why: {current.metadata.nora_note}</p>
+                )}
               </div>
               {/* Address col with ABF stamp — fixed Aug 6 2026, Matt's report:
                   "the stamp is still in the wrong spot." Root cause: this
