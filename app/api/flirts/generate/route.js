@@ -7,7 +7,7 @@ import { searchMovies, searchShows } from '@/lib/omdb'
 import { searchSpotifyTracks } from '@/lib/spotify'
 import { requireUser } from '@/lib/api-auth'
 
-const FLIRT_MODES = ['song', 'gif', 'place', 'memory', 'prompt', 'movie', 'show']
+const FLIRT_MODES = ['song', 'gif', 'movie_show', 'prompt']
 
 export async function POST(request) {
   try {
@@ -87,7 +87,6 @@ Mode definitions:
 - gif: A clean 2-4 word Giphy search term. No punctuation, no explanation, just the search term
 - movie_show: A specific movie or TV show title only — no explanation, just the title
 - prompt: A single question or line for the sender to say or text — not a script, just an opener that invites your partner in
-- memory: A specific reference to something from their shared history or inside joke — brief, actionable
 ${previousSuggestion ? `\nIMPORTANT: Do not suggest '${previousSuggestion}' — find a completely different angle.` : ''}
 Respond with a JSON object only, no other text:
 {
