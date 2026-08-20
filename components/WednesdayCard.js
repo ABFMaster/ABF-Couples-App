@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import TalkToNoraCTA from './TalkToNoraCTA'
 
 // NOTE Aug 12 2026 — this used to self-apply margin: '0 16px 16px' on every
 // branch's root div. Moved to the dashboard's wrapping div (matches Spark/
@@ -206,6 +207,12 @@ export default function WednesdayCard({ userId, coupleId, userName, partnerName,
               <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', color: '#C9A96E', textTransform: 'uppercase' }}>Nora</span>
             </div>
             <p style={{ fontFamily: 'Georgia, serif', fontSize: 15, color: 'white', lineHeight: 1.7, margin: 0, fontStyle: 'italic' }}>{entry.nora_synthesis}</p>
+            <TalkToNoraCTA
+              seedText={entry.nora_synthesis}
+              followUpPrompt={entry.nora_follow_up}
+              accent="#C9A96E"
+              style={{ color: '#C9A96E' }}
+            />
           </div>
         )}
       </div>

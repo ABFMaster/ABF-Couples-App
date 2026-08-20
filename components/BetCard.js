@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Heart, Smile, Zap, HeartHandshake, Flame, Waves } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import TalkToNoraCTA from './TalkToNoraCTA'
 
 const REACTIONS = [
   { icon: Heart, key: 'heart', label: 'Loved it' },
@@ -445,6 +446,12 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
             <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#C4B49A', lineHeight: 1.7, fontStyle: 'italic', margin: 0 }}>
               {localMine.nora_solo_insight}
             </p>
+            <TalkToNoraCTA
+              seedText={localMine.nora_solo_insight}
+              followUpPrompt={localMine.nora_follow_up}
+              isSolo={isSolo}
+              accent="#D4A853"
+            />
           </div>
         )}
       </>
@@ -695,6 +702,12 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
               <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#E8D5B7', fontStyle: 'italic', lineHeight: 1.5 }}>
                 {noraReaction}
               </p>
+              <TalkToNoraCTA
+                seedText={noraReaction}
+                followUpPrompt={localMine?.nora_follow_up}
+                isSolo={isSolo}
+                accent="#D4A853"
+              />
             </div>
           </div>
         </div>

@@ -1,0 +1,202 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+// Tests D and E from the task #187 spec, for both routes that wire in the
+// sensitive-content gate:
+//   D. When checkSensitiveContent flags a message, noraChat is never called
+//      and updateNoraMemory is never called — the disclosure never reaches
+//      generation or the notes/claims pipeline.
+//   E. A normal (unflagged) message still runs the ordinary
+//      noraChat -> updateNoraMemory path unchanged.
+//
+// This isolates each route's own control flow (the thing task #187 actually
+// changed) rather than re-testing the libraries it calls into, which
+// already have their own coverage (tests/safety.test.js for the classifier
+// itself, tests/notes-history.test.js and tests/privacy-boundary.test.js for
+// lib/nora-memory.js). Every import each route makes is mocked at the
+// module boundary — the lightest reliable strategy for exercising real
+// route handlers without a test-DB project.
+
+const state = vi.hoisted(() => ({
+  safetyResult: { flagged: false, category: null, ok: true },
+  tableResponses: {},
+}))
+
+function resetState() {
+  state.safetyResult = { flagged: false, category: null, ok: true }
+  state.tableResponses = {
+    ai_conversations: { data: { user_id: 'u1', couple_id: 'c1', type: 'shared', pending_surfaced_claim_ids: null }, error: null },
+    ai_messages: { data: { id: 'msg1', role: 'assistant', content: 'resp' }, error: null },
+    ai_usage: { data: { message_count: 1 }, error: null },
+    couples: { data: { user1_id: 'u1', user2_id: 'u2' }, error: null },
+    user_profiles: { data: { user_id: 'u1', display_name: 'Matt', is_premium: false }, error: null },
+  }
+}
+
+// Generic thenable + chainable query-builder stub. Every filter method
+// returns the same handler; .maybeSingle()/.single()/awaiting the chain
+// directly all resolve to the configured response for that table.
+function chain(table) {
+  const resolveValue = () => state.tableResponses[table] || { data: null, error: null }
+  const promise = Promise.resolve().then(resolveValue)
+  const handler = {
+    select: () => handler,
+    eq: () => handler,
+    in: () => handler,
+    order: () => handler,
+    limit: () => handler,
+    is: () => handler,
+    not: () => handler,
+    gt: () => handler,
+    lt: () => handler,
+    insert: () => handler,
+    update: () => handler,
+    upsert: () => handler,
+    maybeSingle: () => promise,
+    single: () => promise,
+    then: (res, rej) => promise.then(res, rej),
+    catch: (rej) => promise.catch(rej),
+  }
+  return handler
+}
+
+function makeSupabase() {
+  return { from: (table) => chain(table) }
+}
+
+vi.mock('next/server', () => ({
+  NextResponse: { json: (body, init) => ({ body, status: init?.status ?? 200 }) },
+}))
+
+vi.mock('@/lib/api-auth', () => ({
+  requireUser: vi.fn(async () => ({ user: { id: 'u1' }, supabase: makeSupabase() })),
+  verifyCoupleMembership: vi.fn(async () => true),
+}))
+
+vi.mock('@/lib/safety', () => ({
+  checkSensitiveContent: vi.fn(async () => state.safetyResult),
+  SAFETY_RESPONSE: 'FIXED_SAFETY_RESPONSE',
+}))
+
+vi.mock('@/lib/nora', () => ({
+  noraChat: vi.fn(async () => 'MOCK_AI_RESPONSE'),
+  noraReact: vi.fn(async () => 'ok'),
+  buildCoachSystem: vi.fn(() => 'system prompt'),
+}))
+
+vi.mock('@/lib/nora-memory', () => ({
+  getNoraMemory: vi.fn(async () => null),
+  getFullNoraContext: vi.fn(async () => ({ noraBriefing: '' })),
+  updateNoraMemory: vi.fn(async () => {}),
+  maybeUpdateNoraMemory: vi.fn(async () => {}),
+  shouldUpdateMemory: vi.fn(async () => true),
+  getMemoryBriefing: vi.fn(() => ''),
+  getSurfaceableClaims: vi.fn(async () => ({ promptBlock: '', surfacedClaimIds: [] })),
+  classifyClaimResponse: vi.fn(async () => {}),
+  SIGNAL_TYPES: { NORA_CONVERSATION: 'nora_conversation', COUPLES_SESSION: 'couples_session' },
+}))
+
+vi.mock('@/lib/nora-knowledge', () => ({
+  getNoraBriefing: vi.fn(() => ''),
+  getNoraTierContext: vi.fn(() => ''),
+}))
+
+vi.mock('@/lib/ai-coach-context', () => ({
+  buildCoachContext: vi.fn(async () => ({ user: { name: 'Matt' }, partner: { name: 'Cass' } })),
+  formatContextForPrompt: vi.fn(() => ''),
+  getRecentActivity: vi.fn(() => null),
+  getConversationHistory: vi.fn(async () => []),
+}))
+
+const { noraChat } = await import('@/lib/nora')
+const { updateNoraMemory } = await import('@/lib/nora-memory')
+const { POST: aiCoachPOST } = await import('@/app/api/ai-coach/route.js')
+const { POST: couplesSessionPOST } = await import('@/app/api/couples-session/route.js')
+
+function makeRequest(body) {
+  return {
+    headers: { get: (name) => (name.toLowerCase() === 'authorization' ? 'Bearer faketoken' : null) },
+    json: async () => body,
+  }
+}
+
+describe('sensitive-content gate — ai-coach route', () => {
+  beforeEach(() => {
+    resetState()
+    vi.clearAllMocks()
+  })
+
+  it('D: flagged input skips noraChat and updateNoraMemory', async () => {
+    state.safetyResult = { flagged: true, category: 'SELF_HARM', ok: true }
+    const res = await aiCoachPOST(makeRequest({
+      message: 'a sensitive disclosure',
+      conversationId: 'conv1',
+      coupleId: 'c1',
+    }))
+    expect(noraChat).not.toHaveBeenCalled()
+    expect(updateNoraMemory).not.toHaveBeenCalled()
+    expect(res.body.message.content).toBe('FIXED_SAFETY_RESPONSE')
+  })
+
+  it('E: normal input still runs noraChat -> updateNoraMemory', async () => {
+    state.safetyResult = { flagged: false, category: null, ok: true }
+    await aiCoachPOST(makeRequest({
+      message: 'just a normal message',
+      conversationId: 'conv1',
+      coupleId: 'c1',
+    }))
+    expect(noraChat).toHaveBeenCalled()
+    expect(updateNoraMemory).toHaveBeenCalled()
+  })
+
+  it('classifier error (ok: false) still generates a response but skips the memory write', async () => {
+    state.safetyResult = { flagged: false, category: null, ok: false }
+    await aiCoachPOST(makeRequest({
+      message: 'a message the classifier could not evaluate',
+      conversationId: 'conv1',
+      coupleId: 'c1',
+    }))
+    expect(noraChat).toHaveBeenCalled()
+    expect(updateNoraMemory).not.toHaveBeenCalled()
+  })
+})
+
+describe('sensitive-content gate — couples-session route', () => {
+  beforeEach(() => {
+    resetState()
+    vi.clearAllMocks()
+  })
+
+  it('D: flagged input skips noraChat and updateNoraMemory', async () => {
+    state.safetyResult = { flagged: true, category: 'CRISIS', ok: true }
+    const res = await couplesSessionPOST(makeRequest({
+      message: 'a sensitive disclosure',
+      conversationId: 'conv1',
+      coupleId: 'c1',
+    }))
+    expect(noraChat).not.toHaveBeenCalled()
+    expect(updateNoraMemory).not.toHaveBeenCalled()
+    expect(res.body.message.content).toBe('FIXED_SAFETY_RESPONSE')
+  })
+
+  it('E: normal input still runs noraChat -> updateNoraMemory', async () => {
+    state.safetyResult = { flagged: false, category: null, ok: true }
+    await couplesSessionPOST(makeRequest({
+      message: 'just a normal message',
+      conversationId: 'conv1',
+      coupleId: 'c1',
+    }))
+    expect(noraChat).toHaveBeenCalled()
+    expect(updateNoraMemory).toHaveBeenCalled()
+  })
+
+  it('classifier error (ok: false) still generates a response but skips the memory write', async () => {
+    state.safetyResult = { flagged: false, category: null, ok: false }
+    await couplesSessionPOST(makeRequest({
+      message: 'ambiguous',
+      conversationId: 'conv1',
+      coupleId: 'c1',
+    }))
+    expect(noraChat).toHaveBeenCalled()
+    expect(updateNoraMemory).not.toHaveBeenCalled()
+  })
+})

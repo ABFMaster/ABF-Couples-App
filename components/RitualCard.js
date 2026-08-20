@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { RITUAL_SUGGESTIONS, getStarterRituals } from '@/lib/ritual-suggestions'
 import { getWeekStart } from '@/lib/dates'
 import { supabase } from '@/lib/supabase'
+import TalkToNoraCTA from './TalkToNoraCTA'
 
 const TIER1 = RITUAL_SUGGESTIONS.filter(r => r.tier === 1)
 
@@ -159,6 +160,7 @@ export default function RitualCard({ userId, coupleId, partnerId, partnerName, o
   const [checkinResult, setCheckinResult] = useState(null) // 'completed' | 'missed' | 'retired'
   const [updatedStreak, setUpdatedStreak] = useState(null)
   const [checkinReaction, setCheckinReaction] = useState(null)
+  const [checkinFollowUp, setCheckinFollowUp] = useState(null)
   const [weekNote, setWeekNote] = useState('')
   const [adoptionReady, setAdoptionReady] = useState(false)
   // Separate suggestion index for retired mode so it doesn't share with State 1
@@ -450,6 +452,7 @@ export default function RitualCard({ userId, coupleId, partnerId, partnerName, o
         }
       }
       setCheckinReaction(data.completion?.nora_reaction || null)
+      setCheckinFollowUp(data.completion?.nora_follow_up || null)
       setCheckinResult(completed ? 'completed' : 'missed')
       setWeekNote('')
       if (completed) onCheckinComplete?.()
@@ -776,7 +779,15 @@ export default function RitualCard({ userId, coupleId, partnerId, partnerName, o
             <RitualAccentCard label={ritual.frequency} title={ritual.title} description={ritual.description} />
           </div>
           {checkinReaction ? (
-            <NoraBlock text={checkinReaction} />
+            <>
+              <NoraBlock text={checkinReaction} />
+              <TalkToNoraCTA
+                seedText={checkinReaction}
+                followUpPrompt={checkinFollowUp}
+                isSolo={isSolo}
+                accent="#3D6B22"
+              />
+            </>
           ) : (
             <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center' }}>
               Logged. See you next Friday.
@@ -795,7 +806,15 @@ export default function RitualCard({ userId, coupleId, partnerId, partnerName, o
             <RitualAccentCard label={ritual.frequency} title={ritual.title} description={ritual.description} />
           </div>
           {checkinReaction ? (
-            <NoraBlock text={checkinReaction} />
+            <>
+              <NoraBlock text={checkinReaction} />
+              <TalkToNoraCTA
+                seedText={checkinReaction}
+                followUpPrompt={checkinFollowUp}
+                isSolo={isSolo}
+                accent="#3D6B22"
+              />
+            </>
           ) : (
             <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center' }}>
               That&apos;s ok. The ritual is still there when you&apos;re ready.

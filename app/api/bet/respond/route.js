@@ -18,6 +18,7 @@ import { NextResponse } from 'next/server'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { noraReact } from '@/lib/nora'
 import { generateFollowThrough } from '@/lib/follow-through'
+import { generateFollowUpPrompt } from '@/lib/nora-followup'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 import { notifyIfMemoryJustUnlocked } from '@/lib/memory-unlock'
 
@@ -178,9 +179,21 @@ Write exactly one sentence, maximum 18 words. Speak directly to ${myName} using 
       maxTokens: 60,
     })
 
+    // Talk-to-Nora CTA (task #261) — separate call, never blocks the reveal
+    // on failure. See lib/nora-followup.js.
+    const soloFollowUp = await generateFollowUpPrompt({
+      activityLabel: 'the Bet',
+      question: betRow?.question,
+      answer: responseMode === 'solo_proxy' && proxyPartnerAnswer
+        ? `${actualAnswer} (the other person said: ${proxyPartnerAnswer})`
+        : actualAnswer,
+      reactionText: soloInsight,
+      route: 'bet/solo-followup',
+    })
+
     await supabase
       .from('bet_responses')
-      .update({ nora_solo_insight: soloInsight })
+      .update({ nora_solo_insight: soloInsight, nora_follow_up: soloFollowUp })
       .eq('bet_id', betId)
       .eq('user_id', userId)
 
@@ -311,16 +324,36 @@ You are speaking directly to ${partnerName}. React to what the predictions and a
           console.error('[bet/respond] Nora intro error:', introErr)
         }
 
+        // Talk-to-Nora CTA (task #261) — one follow-up per person, grounded
+        // in their own actual answer + reaction, run alongside rather than
+        // blocking sequentially.
+        const [myFollowUp, partnerFollowUp] = await Promise.all([
+          generateFollowUpPrompt({
+            activityLabel: 'the Bet',
+            question: betRow.question,
+            answer: mine.actual_answer,
+            reactionText: noraReaction,
+            route: 'bet/followup',
+          }),
+          generateFollowUpPrompt({
+            activityLabel: 'the Bet',
+            question: betRow.question,
+            answer: theirs.actual_answer,
+            reactionText: partnerReaction,
+            route: 'bet/followup',
+          }),
+        ])
+
         // Save nora_reaction and nora_intro to both response rows
         await Promise.all([
           supabase
             .from('bet_responses')
-            .update({ nora_reaction: noraReaction, nora_intro: noraIntro })
+            .update({ nora_reaction: noraReaction, nora_intro: noraIntro, nora_follow_up: myFollowUp })
             .eq('bet_id', betId)
             .eq('user_id', userId),
           supabase
             .from('bet_responses')
-            .update({ nora_reaction: partnerReaction, nora_intro: noraIntro })
+            .update({ nora_reaction: partnerReaction, nora_intro: noraIntro, nora_follow_up: partnerFollowUp })
             .eq('bet_id', betId)
             .eq('user_id', partnerId),
         ])

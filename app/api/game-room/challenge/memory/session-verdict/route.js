@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { noraVerdict } from '@/lib/nora'
 import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing } from '@/lib/nora-memory'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
+import { generateFollowUpPrompt } from '@/lib/nora-followup'
 
 // Session-level Memory Test verdict — mirrors game-room/call/verdict/route.js.
 // Added Aug 12 2026, Game Room audit's top finding: Memory Test ended on a
@@ -26,7 +27,7 @@ export async function POST(request) {
     // comes from the session row itself, never trusted from the client.
     const { data: session } = await supabase
       .from('challenge_sessions')
-      .select('couple_id, nora_verdict, total_rounds, challenge_type')
+      .select('couple_id, nora_verdict, nora_follow_up, total_rounds, challenge_type')
       .eq('id', challengeSessionId)
       .maybeSingle()
     if (!session) return Response.json({ error: 'Session not found' }, { status: 404 })
@@ -37,7 +38,7 @@ export async function POST(request) {
     const coupleId = session.couple_id
 
     if (session.nora_verdict) {
-      return Response.json({ verdict: session.nora_verdict })
+      return Response.json({ verdict: session.nora_verdict, followUp: session.nora_follow_up })
     }
 
     const { data: rounds } = await supabase
@@ -92,6 +93,16 @@ ${noraBriefing ? `\nWhat Nora knows about this couple:\n${noraBriefing}` : ''}`
 
     const verdict = response
 
+    // Talk-to-Nora CTA (task #261) — separate standalone call, same pattern
+    // as every other verdict surface.
+    const followUpText = await generateFollowUpPrompt({
+      activityLabel: 'the Memory Test',
+      question: 'How did the Love Map memory game go overall?',
+      answer: `${hits} hit${hits === 1 ? '' : 's'}, ${closes} close, ${misses} miss${misses === 1 ? '' : 'es'}`,
+      reactionText: verdict,
+      route: 'game-room/memory-session-followup',
+    })
+
     // Persist the session verdict. Needs the migration in
     // docs/database/memory_test_session_verdict.sql (challenge_sessions.
     // nora_verdict) — if it hasn't run yet, this update fails and the
@@ -100,12 +111,12 @@ ${noraBriefing ? `\nWhat Nora knows about this couple:\n${noraBriefing}` : ''}`
     // still works since the verdict text is returned either way.
     await supabase
       .from('challenge_sessions')
-      .update({ nora_verdict: verdict })
+      .update({ nora_verdict: verdict, nora_follow_up: followUpText })
       .eq('id', challengeSessionId)
 
     updateNoraMemory({ coupleId, userId: user.id, signalType: SIGNAL_TYPES.GAME_ROOM_DEBRIEF, inputData: { gameType: 'love_map_memory_session', hits, closes, misses, totalRounds: scored || rounds.length, verdict } }).catch(() => {})
 
-    return Response.json({ verdict, hits, closes, misses, totalRounds: scored || rounds.length })
+    return Response.json({ verdict, followUp: followUpText, hits, closes, misses, totalRounds: scored || rounds.length })
   } catch (err) {
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }

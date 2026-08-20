@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { noraVerdict } from '@/lib/nora'
 import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing, getSurfaceableClaims } from '@/lib/nora-memory'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
+import { generateFollowUpPrompt } from '@/lib/nora-followup'
 
 export async function POST(request) {
   try {
@@ -82,16 +83,26 @@ ${noraBriefing ? `\nWhat Nora knows about this couple:\n${noraBriefing}` : ''}`
 
     const verdictText = response
 
+    // Talk-to-Nora CTA (task #261) — separate standalone call, same pattern
+    // as submit/route.js.
+    const followUpText = await generateFollowUpPrompt({
+      activityLabel: 'the Rank It challenge',
+      question: rankData.prompt,
+      answer: rankFinal.length > 0 ? rankFinal.map(r => `#${r.position}: ${r.item}`).join(', ') : 'no agreement',
+      reactionText: verdictText,
+      route: 'game-room/rank-followup',
+    })
+
     await supabase
       .from('challenge_rounds')
-      .update({ nora_verdict: verdictText, completed_at: new Date().toISOString() })
+      .update({ nora_verdict: verdictText, nora_follow_up: followUpText, completed_at: new Date().toISOString() })
       .eq('id', roundId)
 
     // userId previously omitted — see generate-debrief/route.js for the
     // full explanation (GAME_ROOM_DEBRIEF is individual-only, so a missing
     // userId silently drops the individual-notes write entirely).
     updateNoraMemory({ coupleId, userId: user.id, signalType: SIGNAL_TYPES.GAME_ROOM_DEBRIEF, inputData: { gameType: 'rank_challenge', prompt, rankFinal, noAgreements, verdictText } }).catch(() => {})
-    return NextResponse.json({ noraVerdict: verdictText, rankFinal, noAgreements })
+    return NextResponse.json({ noraVerdict: verdictText, noraFollowUp: followUpText, rankFinal, noAgreements })
   } catch (err) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

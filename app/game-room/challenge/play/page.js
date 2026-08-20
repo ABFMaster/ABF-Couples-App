@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import TalkToNoraCTA from '@/components/TalkToNoraCTA'
 
 const CHALLENGE_INSTRUCTIONS = {
   story: 'Alternate sentences — keep it going.',
@@ -189,6 +190,9 @@ function ChallengePlayContent() {
   const [rankItems, setRankItems] = useState([])
   const [phase, setPhase] = useState('loading')
   const [noraVerdict, setNoraVerdict] = useState(null)
+  // Talk-to-Nora CTA (task #261) — mirrors noraVerdict, cleared/set at every
+  // point noraVerdict itself is cleared/set so the two never drift.
+  const [noraVerdictFollowUp, setNoraVerdictFollowUp] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [isScribe, setIsScribe] = useState(false)
@@ -369,7 +373,7 @@ function ChallengePlayContent() {
         // Fetch round by DB session round — not client ref
         const { data: memRound } = await supabase
           .from('challenge_rounds')
-          .select('answer_holder_ready, guesser_answer, answer_revealed, hint_requests, hints_granted, hint_denials, hint_pending, nora_verdict, memory_answer, guesser_user_id, memory_question, hint_1, hint_2, hint_3, prompt_key, round_number, id, photo_url')
+          .select('answer_holder_ready, guesser_answer, answer_revealed, hint_requests, hints_granted, hint_denials, hint_pending, nora_verdict, nora_follow_up, memory_answer, guesser_user_id, memory_question, hint_1, hint_2, hint_3, prompt_key, round_number, id, photo_url')
           .eq('session_id', challengeSessionId)
           .eq('round_number', challengeSession.current_round)
           .maybeSingle()
@@ -379,6 +383,7 @@ function ChallengePlayContent() {
         // DB is ahead of client — round has advanced
         if (memRound.round_number !== currentRound) {
           setNoraVerdict(null)
+          setNoraVerdictFollowUp('')
           setError(null)
           setResponse('')
           setSubmitted(false)
@@ -400,6 +405,7 @@ function ChallengePlayContent() {
         if (phaseRef.current === 'loading') {
           setRound(memRound)
           setNoraVerdict(null)
+          setNoraVerdictFollowUp('')
           setPhase('challenge')
           return
         }
@@ -438,6 +444,7 @@ function ChallengePlayContent() {
         // Verdict ready
         if (memRound.nora_verdict && phaseRef.current !== 'verdict' && phaseRef.current !== 'complete') {
           setNoraVerdict(memRound.nora_verdict)
+          setNoraVerdictFollowUp(memRound.nora_follow_up || '')
           setPhase('verdict')
         }
 
@@ -448,7 +455,7 @@ function ChallengePlayContent() {
       if (challengeType === 'rank' && roundRef.current) {
         const { data: rankRound } = await supabase
           .from('challenge_rounds')
-          .select('rank_user1_r1, rank_user2_r1, rank_user1_r2, rank_user2_r2, rank_nora_interjection, rank_final, no_agreements, rank_round, nora_verdict')
+          .select('rank_user1_r1, rank_user2_r1, rank_user1_r2, rank_user2_r2, rank_nora_interjection, rank_final, no_agreements, rank_round, nora_verdict, nora_follow_up')
           .eq('id', roundRef.current?.id)
           .maybeSingle()
         if (!rankRound) return
@@ -486,6 +493,7 @@ function ChallengePlayContent() {
 
         if (rankRound.nora_verdict && phaseRef.current !== 'verdict' && phaseRef.current !== 'complete') {
           setNoraVerdict(rankRound.nora_verdict)
+          setNoraVerdictFollowUp(rankRound.nora_follow_up || '')
           setPhase('verdict')
         }
 
@@ -496,7 +504,7 @@ function ChallengePlayContent() {
       if (challengeType === 'pitch' && round) {
         const { data: pitchRound } = await supabase
           .from('challenge_rounds')
-          .select('nora_challenge, nora_verdict')
+          .select('nora_challenge, nora_verdict, nora_follow_up')
           .eq('id', roundRef.current?.id)
           .maybeSingle()
         if (pitchRound?.nora_challenge && !noraChallenge) {
@@ -505,6 +513,7 @@ function ChallengePlayContent() {
         }
         if (pitchRound?.nora_verdict && phaseRef.current !== 'verdict' && phaseRef.current !== 'complete') {
           setNoraVerdict(pitchRound.nora_verdict)
+          setNoraVerdictFollowUp(pitchRound.nora_follow_up || '')
           setPhase('verdict')
         }
         return
@@ -514,7 +523,7 @@ function ChallengePlayContent() {
       if (challengeType === 'story' && challengeSession.current_round) {
         const { data: storyRound } = await supabase
           .from('challenge_rounds')
-          .select('id, prompt, sentences, current_turn_user_id, nora_nudge, nora_verdict, story_complete')
+          .select('id, prompt, sentences, current_turn_user_id, nora_nudge, nora_verdict, nora_follow_up, story_complete')
           .eq('session_id', challengeSessionId)
           .eq('round_number', challengeSession.current_round)
           .maybeSingle()
@@ -524,6 +533,7 @@ function ChallengePlayContent() {
           if (storyRound.nora_nudge) setNoraNudge(storyRound.nora_nudge)
           if (storyRound.nora_verdict && phaseRef.current !== 'verdict' && phaseRef.current !== 'complete') {
             setNoraVerdict(storyRound.nora_verdict)
+            setNoraVerdictFollowUp(storyRound.nora_follow_up || '')
             setPhase('verdict')
           } else if (storyRound.story_complete && !storyRound.nora_verdict && phaseRef.current !== 'verdict' && isScribeRef.current && !storyVerdictCalledRef.current) {
             storyVerdictCalledRef.current = true
@@ -546,6 +556,7 @@ function ChallengePlayContent() {
       if (roundRow?.nora_verdict && phaseRef.current !== 'verdict' && phaseRef.current !== 'complete') {
         setRound(roundRow)
         setNoraVerdict(roundRow.nora_verdict)
+        setNoraVerdictFollowUp(roundRow.nora_follow_up || '')
         if (roundRow.couple_response) setResponse(roundRow.couple_response)
         setPhase('verdict')
         return
@@ -565,6 +576,7 @@ function ChallengePlayContent() {
             .maybeSingle()
           if (nextRoundRow) {
             setNoraVerdict(null)
+            setNoraVerdictFollowUp('')
             setError(null)
             setResponse('')
             setSubmitted(false)
@@ -611,12 +623,12 @@ function ChallengePlayContent() {
           .order('round_number', { ascending: true }),
         supabase
           .from('challenge_sessions')
-          .select('nora_verdict')
+          .select('nora_verdict, nora_follow_up')
           .eq('id', challengeSessionId)
           .maybeSingle(),
       ])
       if (cancelled) return
-      setMemoryRecap({ rounds: rounds || [], verdict: challengeSessionRow?.nora_verdict || null })
+      setMemoryRecap({ rounds: rounds || [], verdict: challengeSessionRow?.nora_verdict || null, followUp: challengeSessionRow?.nora_follow_up || '' })
 
       if (!challengeSessionRow?.nora_verdict && isScribeRef.current && !sessionVerdictCalledRef.current) {
         sessionVerdictCalledRef.current = true
@@ -634,7 +646,7 @@ function ChallengePlayContent() {
             return
           }
           const data = await res.json().catch(() => ({}))
-          setMemoryRecap(prev => prev ? { ...prev, verdict: data.verdict } : prev)
+          setMemoryRecap(prev => prev ? { ...prev, verdict: data.verdict, followUp: data.followUp || '' } : prev)
         }).catch((err) => {
           console.error('[challenge/play] session-verdict fetch failed:', err)
           sessionVerdictCalledRef.current = false
@@ -758,6 +770,7 @@ function ChallengePlayContent() {
       if (!res.ok) throw new Error(data.error)
 
       setNoraVerdict(data.noraVerdict)
+      setNoraVerdictFollowUp(data.noraFollowUp || '')
       setPhase('verdict')
     } catch (err) {
       console.error('[challenge/play] handleSubmit failed:', err)
@@ -888,6 +901,7 @@ function ChallengePlayContent() {
       const data = await res.json()
       if (data.noraVerdict) {
         setNoraVerdict(data.noraVerdict)
+        setNoraVerdictFollowUp(data.noraFollowUp || '')
         setPhase('verdict')
       }
     } catch {} finally {
@@ -931,6 +945,7 @@ function ChallengePlayContent() {
       const data = await res.json()
       if (data.noraVerdict) {
         setNoraVerdict(data.noraVerdict)
+        setNoraVerdictFollowUp(data.noraFollowUp || '')
         setPhase('verdict')
       }
     } catch {} finally {
@@ -998,6 +1013,12 @@ function ChallengePlayContent() {
             {memoryRecap.verdict ? (
               <div style={{ background: '#FFFFFF', border: '0.5px solid #E8DDD0', borderRadius: '16px', padding: '18px 20px', marginBottom: '16px' }}>
                 <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontStyle: 'italic', fontSize: '15px', color: '#1C1510', margin: 0, lineHeight: 1.5 }}>{memoryRecap.verdict}</p>
+                <TalkToNoraCTA
+                  seedText={memoryRecap.verdict}
+                  followUpPrompt={memoryRecap.followUp}
+                  isSolo={isSolo}
+                  accent="#4338CA"
+                />
               </div>
             ) : memoryRecapLoading ? (
               <p style={{ fontSize: '13px', color: '#9CA3AF', textAlign: 'center', marginBottom: '16px' }}>Nora's putting it together…</p>
@@ -1819,6 +1840,13 @@ function ChallengePlayContent() {
               <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '18px', lineHeight: 1.6, color: '#FFFFFF', margin: 0 }}>
                 {noraVerdict}
               </p>
+              <TalkToNoraCTA
+                seedText={noraVerdict}
+                followUpPrompt={noraVerdictFollowUp}
+                isSolo={isSolo}
+                accent="#C7B8F5"
+                style={{ color: '#C7B8F5' }}
+              />
             </div>
 
             {challengeType === 'story' ? (

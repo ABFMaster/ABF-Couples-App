@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { noraVerdict } from '@/lib/nora'
 import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing, getSurfaceableClaims } from '@/lib/nora-memory'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
+import { generateFollowUpPrompt } from '@/lib/nora-followup'
 
 export async function POST(request) {
   try {
@@ -35,13 +36,13 @@ export async function POST(request) {
     // Idempotency — return existing verdict if already generated
     const { data: existingRound } = await supabase
       .from('challenge_rounds')
-      .select('nora_verdict')
+      .select('nora_verdict, nora_follow_up')
       .eq('session_id', sessionId)
       .eq('round_number', roundNumber)
       .single()
 
     if (existingRound?.nora_verdict) {
-      return Response.json({ ok: true, verdict: existingRound.nora_verdict })
+      return Response.json({ ok: true, verdict: existingRound.nora_verdict, followUp: existingRound.nora_follow_up })
     }
 
     // Fetch partner names
@@ -171,6 +172,16 @@ PHILOSOPHY: A miss is not a failure — it's a map gap worth knowing about. A hi
       result = null
     }
 
+    // Talk-to-Nora CTA (task #261) — separate standalone call, kept out of
+    // the JSON verdict schema above on purpose. See lib/nora-followup.js.
+    const followUpText = await generateFollowUpPrompt({
+      activityLabel: 'the Memory Test',
+      question: round.memory_question,
+      answer: guesserAnswer,
+      reactionText: verdict,
+      route: 'game-room/memory-followup',
+    })
+
     // Write verdict + result to DB. `result` needs the migration in
     // docs/database/memory_test_session_verdict.sql — until Matt runs it,
     // the update below fails (unknown column) and falls back to the
@@ -178,14 +189,14 @@ PHILOSOPHY: A miss is not a failure — it's a map gap worth knowing about. A hi
     // and the game isn't blocked on migration timing either way.
     const { error: updateError } = await supabase
       .from('challenge_rounds')
-      .update({ nora_verdict: verdict, result })
+      .update({ nora_verdict: verdict, result, nora_follow_up: followUpText })
       .eq('session_id', sessionId)
       .eq('round_number', roundNumber)
 
     if (updateError) {
       const { error: fallbackError } = await supabase
         .from('challenge_rounds')
-        .update({ nora_verdict: verdict })
+        .update({ nora_verdict: verdict, nora_follow_up: followUpText })
         .eq('session_id', sessionId)
         .eq('round_number', roundNumber)
       if (fallbackError) {
@@ -194,7 +205,7 @@ PHILOSOPHY: A miss is not a failure — it's a map gap worth knowing about. A hi
     }
 
     updateNoraMemory({ coupleId, userId: round.guesser_user_id, signalType: SIGNAL_TYPES.GAME_ROOM_DEBRIEF, inputData: { gameType: 'love_map_memory', question: round.memory_question, correctAnswer, guesserAnswer, verdict, result } }).catch(() => {})
-    return Response.json({ ok: true, verdict, result })
+    return Response.json({ ok: true, verdict, result, followUp: followUpText })
   } catch (err) {
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }

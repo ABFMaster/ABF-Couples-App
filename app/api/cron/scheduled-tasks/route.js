@@ -8,6 +8,7 @@ import { noraGenerate, noraChat, parseNoraJSON } from '@/lib/nora'
 import { getNoraMemory, getMemoryBriefing, getSurfaceableClaims, updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
 import { getNoraTierContext } from '@/lib/nora-knowledge'
 import { generateFollowThrough } from '@/lib/follow-through'
+import { generateFollowUpPrompt } from '@/lib/nora-followup'
 import { computeCouplePatterns } from '@/lib/checkin-patterns'
 
 const supabase = createClient(
@@ -678,10 +679,24 @@ async function processThursdayReveal(couple, user1, user2) {
       ) || ''
     }
 
+    // Talk-to-Nora CTA (task #261) — this cron loop is dual-couple-only
+    // (see the split-query comment above), so no solo branching is needed
+    // here at all, unlike Spark/Bet/Ritual. Separate call, never blocks the
+    // reveal on failure.
+    const followUp = synthesis
+      ? await generateFollowUpPrompt({
+          activityLabel: 'Thursday',
+          question: [entry.user1_question, entry.user2_question].filter(Boolean).join(' / '),
+          answer: [entry.user1_response, entry.user2_response].filter(Boolean).join(' / '),
+          reactionText: synthesis,
+          route: 'thursday/followup',
+        })
+      : ''
+
     // Update entry to revealed
     await supabase
       .from('thursday_entries')
-      .update({ nora_synthesis: synthesis.trim(), status: 'revealed' })
+      .update({ nora_synthesis: synthesis.trim(), nora_follow_up: followUp, status: 'revealed' })
       .eq('id', entry.id)
 
     // Send reveal pushes
@@ -843,9 +858,21 @@ async function processWednesdayCutoff(couple, user1, user2) {
         { route: 'wednesday/cutoff', system: systemPrompt, maxTokens: 150 }
       ) || ''
     }
+    // Talk-to-Nora CTA (task #261) — dual-couple-only cron loop, no solo
+    // branching needed. Separate call, never blocks the reveal on failure.
+    const cutoffFollowUp = synthesis
+      ? await generateFollowUpPrompt({
+          activityLabel: 'Wednesday Notice',
+          question: 'What did you notice about each other this week?',
+          answer: [entry.user1_notice, entry.user2_notice].filter(Boolean).join(' / '),
+          reactionText: synthesis,
+          route: 'wednesday/cutoff-followup',
+        })
+      : ''
+
     await supabase
       .from('wednesday_notices')
-      .update({ nora_synthesis: synthesis.trim() || null, status: 'revealed' })
+      .update({ nora_synthesis: synthesis.trim() || null, nora_follow_up: cutoffFollowUp || null, status: 'revealed' })
       .eq('id', entry.id)
     // Only push if at least one person submitted
     if (hasUser1 || hasUser2) {
@@ -920,9 +947,18 @@ async function processWednesdayReveal(couple, user1, user2) {
       { route: 'wednesday/reveal', system: systemPrompt, maxTokens: 150 }
     ) || ''
 
+    // Talk-to-Nora CTA (task #261) — same as the cutoff path above.
+    const revealFollowUp = await generateFollowUpPrompt({
+      activityLabel: 'Wednesday Notice',
+      question: 'What did you notice about each other this week?',
+      answer: [entry.user1_notice, entry.user2_notice].filter(Boolean).join(' / '),
+      reactionText: synthesis,
+      route: 'wednesday/reveal-followup',
+    })
+
     await supabase
       .from('wednesday_notices')
-      .update({ nora_synthesis: synthesis.trim(), status: 'revealed' })
+      .update({ nora_synthesis: synthesis.trim(), nora_follow_up: revealFollowUp, status: 'revealed' })
       .eq('id', entry.id)
 
     // Send evening reveal pushes.

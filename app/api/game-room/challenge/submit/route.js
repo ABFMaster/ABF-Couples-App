@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { noraVerdict } from '@/lib/nora'
 import { updateNoraMemory, SIGNAL_TYPES, getNoraMemory, getMemoryBriefing, getSurfaceableClaims } from '@/lib/nora-memory'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
+import { generateFollowUpPrompt } from '@/lib/nora-followup'
 
 export async function POST(request) {
   try {
@@ -197,12 +198,23 @@ Give a verdict that:
 
     const verdictText = response
 
+    // Talk-to-Nora CTA (task #261) — separate standalone call, never mixed
+    // into the verdict generation above. See lib/nora-followup.js for why.
+    const followUpText = await generateFollowUpPrompt({
+      activityLabel: `the ${challengeType === 'plan' ? 'Plan' : challengeType === 'pitch' ? 'Pitch' : challengeType === 'rank' ? 'Rank It' : challengeType === 'story' ? 'Write a Story' : 'Memory'} challenge`,
+      question: prompt,
+      answer: coupleResponse,
+      reactionText: verdictText,
+      route: 'game-room/challenge-followup',
+    })
+
     // Save response and verdict to round
     const { data: round, error } = await supabase
       .from('challenge_rounds')
       .update({
         couple_response: coupleResponse,
         nora_verdict: verdictText,
+        nora_follow_up: followUpText,
         completed_at: new Date().toISOString(),
       })
       .eq('id', roundId)
@@ -214,7 +226,7 @@ Give a verdict that:
     }
 
     updateNoraMemory({ coupleId, userId, signalType: SIGNAL_TYPES.GAME_ROOM_DEBRIEF, inputData: { gameType: 'challenge', challengeType, prompt, coupleResponse, verdictText } }).catch(() => {})
-    return Response.json({ round, noraVerdict: verdictText })
+    return Response.json({ round, noraVerdict: verdictText, noraFollowUp: followUpText })
   } catch (err) {
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
