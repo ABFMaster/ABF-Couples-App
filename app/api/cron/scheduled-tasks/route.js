@@ -67,6 +67,13 @@ function getTodayInTimezone(timezone) {
 }
 
 async function processDailyContent(couple, user1, user2) {
+  // Solo couples (no user2 yet) — Spark/Bet/Ritual generation and the
+  // solo-side push still fire below (all three were separately confirmed
+  // solo-compatible in the single-user arc design pass). Game Room's
+  // Saturday nudge and Sunday reengagement are skipped entirely for solo:
+  // both are written around an existing partner ("X is waiting",
+  // "reconnect with X") and don't degrade gracefully to one person.
+  const isSolo = !couple.user2_id
   const timezone = user1.timezone || user2.timezone || 'America/Los_Angeles'
   const hour = getHourInTimezone(timezone)
   const day = getDayInTimezone(timezone)
@@ -117,7 +124,7 @@ async function processDailyContent(couple, user1, user2) {
     })
 
     await sendPush(user1.user_id, 'The Spark', 'The Spark is ready.', '/dashboard', 'cron/spark')
-    await sendPush(user2.user_id, 'The Spark', 'The Spark is ready.', '/dashboard', 'cron/spark')
+    if (!isSolo) await sendPush(user2.user_id, 'The Spark', 'The Spark is ready.', '/dashboard', 'cron/spark')
   }
 
   if (BET_DAYS.includes(day)) {
@@ -152,8 +159,9 @@ async function processDailyContent(couple, user1, user2) {
       bet_date: todayStr,
     })
 
-    await sendPush(user1.user_id, 'The Bet', "The Bet is ready. Do you know them?", '/dashboard', 'cron/bet')
-    await sendPush(user2.user_id, 'The Bet', "The Bet is ready. Do you know them?", '/dashboard', 'cron/bet')
+    const betPushBody = isSolo ? 'The Bet is ready.' : 'The Bet is ready. Do you know them?'
+    await sendPush(user1.user_id, 'The Bet', betPushBody, '/dashboard', 'cron/bet')
+    if (!isSolo) await sendPush(user2.user_id, 'The Bet', betPushBody, '/dashboard', 'cron/bet')
   }
 
   if (day === 5) {
@@ -167,12 +175,16 @@ async function processDailyContent(couple, user1, user2) {
       .maybeSingle()
 
     if (ritual) {
-      await sendPush(user1.user_id, 'The Ritual', `${ritual.title} — check in together today.`, '/dashboard', 'cron/ritual')
-      await sendPush(user2.user_id, 'The Ritual', `${ritual.title} — check in together today.`, '/dashboard', 'cron/ritual')
+      const ritualBody = isSolo ? `${ritual.title} — check in today.` : `${ritual.title} — check in together today.`
+      await sendPush(user1.user_id, 'The Ritual', ritualBody, '/dashboard', 'cron/ritual')
+      if (!isSolo) await sendPush(user2.user_id, 'The Ritual', ritualBody, '/dashboard', 'cron/ritual')
     }
   }
 
-  if (day === 6) {
+  // Game Room's Saturday nudge assumes an existing partner ("X is waiting")
+  // — skipped entirely for solo rather than reworded, since Game Room is
+  // deliberately opt-in/choice-driven for solo, not a pushed activity.
+  if (day === 6 && !isSolo) {
     const { data: lastSession } = await supabase
       .from('game_sessions')
       .select('created_at')
@@ -202,7 +214,10 @@ async function processDailyContent(couple, user1, user2) {
   // redundancy replaces this single fragile window instead of duplicating
   // it. See docs/database/weekly_reflections_notified_at.sql.
 
-  if (day === 0) {
+  // Reengagement push is specifically about reconnecting with an existing
+  // partner after time apart — meaningless without one, so skipped entirely
+  // for solo rather than adapted.
+  if (day === 0 && !isSolo) {
     await sendReengagementPush(couple, user1, user2, noraMemory)
   }
 }
@@ -1089,11 +1104,27 @@ export async function GET(request) {
       .select('id, created_at, user1_id, user2_id')
       .not('user2_id', 'is', null)
 
-    if (!couples?.length) {
+    // Solo couples — no partner yet. Deliberately queried and processed
+    // separately from the block above rather than folded into one relaxed
+    // filter: the loop below calls 8 functions total, and only
+    // processDailyContent (Spark/Bet/Ritual generation) has actually been
+    // audited for a missing user2. Relaxing the shared filter would have
+    // silently turned all 8 on for solo couples at once. Widen this list
+    // only as each function gets individually checked. See
+    // Sessions/PRODUCT_BACKLOG.md — single-user arc, Aug 2026.
+    const { data: soloCouples } = await supabase
+      .from('couples')
+      .select('id, created_at, user1_id, user2_id')
+      .is('user2_id', null)
+
+    if (!couples?.length && !soloCouples?.length) {
       return Response.json({ ok: true, processed: 0 })
     }
 
-    const userIds = couples.flatMap(c => [c.user1_id, c.user2_id])
+    const userIds = [
+      ...(couples || []).flatMap(c => [c.user1_id, c.user2_id]),
+      ...(soloCouples || []).map(c => c.user1_id),
+    ]
     const { data: profiles } = await supabase
       .from('user_profiles')
       .select('user_id, timezone, display_name')
@@ -1133,6 +1164,20 @@ export async function GET(request) {
       } catch (err) {
         errored++
         console.error('[cron] couple processing error:', couple.id, err)
+      }
+    }
+
+    // Solo couples — only the audited, null-guarded path. See the query
+    // comment above for why this stays deliberately narrow.
+    for (const couple of soloCouples || []) {
+      try {
+        const user1 = profileMap[couple.user1_id] || {}
+        await processDailyContent(couple, user1, {})
+        blocksFired.add('dailyContent')
+        processed++
+      } catch (err) {
+        errored++
+        console.error('[cron] solo couple processing error:', couple.id, err)
       }
     }
 

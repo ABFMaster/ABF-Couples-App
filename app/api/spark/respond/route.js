@@ -128,6 +128,42 @@ Write exactly one sentence, maximum 18 words. Speak directly to ${currentUserNam
       .eq('spark_id', sparkId)
       .eq('user_id', user.id)
 
+    // Solo-only — a coupled user's answer already gets remembered via
+    // SPARK_REVEAL below once both sides are in. Gated on partnerId (not
+    // bothAnswered) so it also covers the ordinary "I've answered, partner
+    // hasn't yet" case for a real couple, where SPARK_REVEAL correctly
+    // hasn't fired but there IS a partner — that answer will still be
+    // captured once SPARK_REVEAL fires, so it doesn't need this path too.
+    if (!partnerId) {
+      updateNoraMemory({
+        coupleId,
+        userId: user.id,
+        signalType: SIGNAL_TYPES.SPARK_SOLO,
+        inputData: { question: sparkRow?.question, answer: responseText },
+      }).catch(() => {})
+
+      // Single-sided Follow-Through — theirAnswer omitted, same path
+      // generateFollowThrough already supports for Thursday when only one
+      // side has answered.
+      try {
+        await generateFollowThrough({
+          supabase,
+          coupleId,
+          sourceType: 'spark',
+          sourceId: sparkId,
+          sourceLabel: 'Spark',
+          sourceQuestion: sparkRow.question,
+          couple: coupleRow,
+          userId: user.id,
+          myName: currentUserName,
+          partnerName,
+          myAnswer: responseText,
+        })
+      } catch (ftErr) {
+        console.error('[spark/respond] Solo Follow-Through generation error:', ftErr)
+      }
+    }
+
     // Step 10: Generate Nora reaction if both have answered
     if (bothAnswered) {
       // Step 10a: Fetch couple profile context

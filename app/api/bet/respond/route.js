@@ -144,6 +144,44 @@ Write exactly one sentence, maximum 18 words. Speak directly to ${myName} using 
       .eq('bet_id', betId)
       .eq('user_id', userId)
 
+    // Solo-only — a coupled user's answer already gets remembered via
+    // BET_REVEAL below once both sides are in. Gated on partnerId (not
+    // allFilled) so it also covers the ordinary "I've answered, partner
+    // hasn't yet" case for a real couple, where BET_REVEAL correctly
+    // hasn't fired but there IS a partner — that answer will still be
+    // captured once BET_REVEAL fires, so it doesn't need this path too.
+    if (!partnerId) {
+      updateNoraMemory({
+        coupleId: resolvedCoupleId,
+        userId,
+        signalType: SIGNAL_TYPES.BET_SOLO,
+        inputData: { question: betRow?.question, answer: actualAnswer },
+      }).catch(() => {})
+
+      // Single-sided Follow-Through — theirAnswer omitted, same path
+      // generateFollowThrough already supports for Thursday when only one
+      // side has answered. Never called with a proxy "ask them now" answer
+      // in theirAnswer — that mode stays myAnswer-only too, since there's
+      // no real second account to attach a partner-side action to yet.
+      try {
+        await generateFollowThrough({
+          supabase,
+          coupleId: resolvedCoupleId,
+          sourceType: 'bet',
+          sourceId: betId,
+          sourceLabel: 'Bet',
+          sourceQuestion: betRow.question,
+          couple: coupleRow,
+          userId,
+          myName,
+          partnerName,
+          myAnswer: actualAnswer,
+        })
+      } catch (ftErr) {
+        console.error('[bet/respond] Solo Follow-Through generation error:', ftErr)
+      }
+    }
+
     // Push notification to partner
     const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
     const pushBody = `${myName} submitted their bet response.`
