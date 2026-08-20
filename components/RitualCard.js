@@ -113,7 +113,7 @@ function RitualAccentCard({ label, title, description }) {
 }
 
 // Suggestion cycling UI — used in State 1 suggestion mode, retired mode, and State 3 discover mode
-function SuggestionCycle({ index, onNext, onSelect, submitting, usedIds = [] }) {
+function SuggestionCycle({ index, onNext, onSelect, submitting, usedIds = [], isSolo = false }) {
   const available = TIER1.filter(s => !usedIds.includes(s.id))
   const list = available.length > 0 ? available : TIER1
   const suggestion = list[index % list.length]
@@ -128,7 +128,7 @@ function SuggestionCycle({ index, onNext, onSelect, submitting, usedIds = [] }) 
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <PrimaryBtn onClick={() => onSelect(suggestion)} disabled={submitting}>
-          We'll try this one
+          {isSolo ? "I'll try this one" : "We'll try this one"}
         </PrimaryBtn>
         <GhostBtn onClick={onNext}>Show me another</GhostBtn>
       </div>
@@ -138,7 +138,12 @@ function SuggestionCycle({ index, onNext, onSelect, submitting, usedIds = [] }) 
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export default function RitualCard({ userId, coupleId, partnerName, onCheckinComplete, session }) {
+export default function RitualCard({ userId, coupleId, partnerId, partnerName, onCheckinComplete, session }) {
+  // Derived live off partnerId, never cached — flips to coupled copy the instant
+  // a partner joins, same pattern as SparkCard/BetCard. The pendingConfirmation
+  // flow below (partner proposing a ritual) can structurally never fire for solo
+  // users regardless of this flag, since it requires a second account to exist.
+  const isSolo = !partnerId
   const [loading, setLoading] = useState(true)
   const [rituals, setRituals] = useState([])
   const [completions, setCompletions] = useState([])
@@ -609,7 +614,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
         <div style={WRAPPER}>
           <RitualLabel />
           <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '22px', color: '#1A2E10', textAlign: 'center', marginBottom: '8px', fontWeight: 400 }}>
-            Try something together
+            {isSolo ? 'Try something new' : 'Try something together'}
           </p>
           <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center', marginBottom: '20px' }}>
             Something from Nora's list.
@@ -620,10 +625,11 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
             onSelect={handleSelectSuggestion}
             submitting={submitting}
             usedIds={usedSuggestionIds}
+            isSolo={isSolo}
           />
           {startError && <p style={{ fontSize: '12px', color: '#B4453A', textAlign: 'center', marginTop: '10px' }}>{startError}</p>}
           <div style={{ marginTop: '10px' }}>
-            <GhostBtn onClick={() => setSuggestionMode(false)}>Add something we already do</GhostBtn>
+            <GhostBtn onClick={() => setSuggestionMode(false)}>{isSolo ? 'Add something I already do' : 'Add something we already do'}</GhostBtn>
           </div>
         </div>
       )
@@ -633,13 +639,15 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
     return (
       <div style={WRAPPER}>
         <RitualLabel />
-        <NoraBlock text="Before I start suggesting things — tell me something you two already do together. Could be tiny, could be weird. Cook dinner together on Thursday. The Sunday walk. Anything that's become a thing." />
+        <NoraBlock text={isSolo
+          ? "Before I start suggesting things — tell me something you already do for yourself, regularly. Could be tiny, could be weird. Coffee on the porch before anyone's up. The Sunday walk. Anything that's become a thing."
+          : "Before I start suggesting things — tell me something you two already do together. Could be tiny, could be weird. Cook dinner together on Thursday. The Sunday walk. Anything that's become a thing."} />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
           {/* Card 1 */}
           <div style={{ background: '#FFFFFF', borderLeft: '3px solid #3D6B22', borderRadius: '0 14px 14px 0', padding: '18px 20px' }}>
             <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#3D6B22', textTransform: 'uppercase', marginBottom: '4px' }}>
-              What do you do together?
+              {isSolo ? 'What do you do regularly?' : 'What do you do together?'}
             </p>
             <p style={{ fontSize: '13px', color: '#7A8C6E', lineHeight: 1.5, marginBottom: '10px' }}>
               A habit, a tradition, something that repeats and feels like yours.
@@ -647,7 +655,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
             <textarea
               value={textarea1}
               onChange={e => setTextarea1(e.target.value)}
-              placeholder="We cook dinner together every Thursday night..."
+              placeholder={isSolo ? "I go for a walk every Sunday morning..." : "We cook dinner together every Thursday night..."}
               style={{
                 width: '100%',
                 background: '#FAF6F0',
@@ -677,7 +685,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
             <textarea
               value={textarea2}
               onChange={e => setTextarea2(e.target.value)}
-              placeholder="It's the one hour where we're not thinking about anything else..."
+              placeholder={isSolo ? "It's the one hour where I'm not thinking about anything else..." : "It's the one hour where we're not thinking about anything else..."}
               style={{
                 width: '100%',
                 background: '#FAF6F0',
@@ -698,10 +706,10 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <PrimaryBtn onClick={handleAddOwn} disabled={!textarea1.trim() || submitting}>
-            Add to our library
+            {isSolo ? 'Add to your library' : 'Add to our library'}
           </PrimaryBtn>
           <GhostBtn onClick={() => setSuggestionMode(true)}>
-            We don&apos;t have one yet — suggest something
+            {isSolo ? "I don't have one yet — suggest something" : "We don't have one yet — suggest something"}
           </GhostBtn>
         </div>
       </div>
@@ -719,7 +727,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
         <div style={WRAPPER}>
           <RitualLabel />
           <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '22px', color: '#1A2E10', textAlign: 'center', marginBottom: '8px', fontWeight: 400 }}>
-            Try something together
+            {isSolo ? 'Try something new' : 'Try something together'}
           </p>
           <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center', marginBottom: '20px' }}>
             No worries. Let's find something that fits better.
@@ -729,6 +737,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
             onNext={() => setRetiredSuggestionIndex(prev => (prev + 1) % TIER1.length)}
             onSelect={handleSelectSuggestion}
             submitting={submitting}
+            isSolo={isSolo}
           />
           {startError && <p style={{ fontSize: '12px', color: '#B4453A', textAlign: 'center', marginTop: '10px' }}>{startError}</p>}
         </div>
@@ -748,7 +757,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
           </div>
           <NoraBlock text="Three weeks. That's not a habit yet — but it's becoming one. Want to make it official?" />
           <PrimaryBtn onClick={() => handleAdopt(ritual)} disabled={submitting}>
-            Make it ours
+            {isSolo ? 'Make it official' : 'Make it ours'}
           </PrimaryBtn>
         </div>
       )
@@ -841,7 +850,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
                 disabled={submitting}
                 style={{ flex: 1, background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '10px', padding: '11px 8px', fontSize: '13px', color: '#3D6B22', cursor: 'pointer' }}
               >
-                We did it
+                {isSolo ? 'Did it' : 'We did it'}
               </button>
               <button
                 onClick={() => handleCheckin(false, ritual)}
@@ -855,7 +864,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
                 disabled={submitting}
                 style={{ flex: 1, background: '#FFFFFF', border: '0.5px solid #D4E8C4', borderRadius: '10px', padding: '11px 8px', fontSize: '13px', color: '#B8A898', cursor: 'pointer' }}
               >
-                Not for us
+                {isSolo ? 'Not for me' : 'Not for us'}
               </button>
             </div>
           </>
@@ -875,13 +884,14 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
           Discover a ritual
         </p>
         <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '14px', color: '#7A8C6E', fontStyle: 'italic', textAlign: 'center', marginBottom: '20px' }}>
-          Something to try together.
+          {isSolo ? 'Something to try.' : 'Something to try together.'}
         </p>
         <SuggestionCycle
           index={discoverIndex}
           onNext={() => setDiscoverIndex(prev => (prev + 1) % TIER1.length)}
           onSelect={handleDiscoverMore}
           submitting={submitting}
+          isSolo={isSolo}
         />
         {startError && <p style={{ fontSize: '12px', color: '#B4453A', textAlign: 'center', marginTop: '10px' }}>{startError}</p>}
         <div style={{ marginTop: '10px' }}>
@@ -1013,7 +1023,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
               <PrimaryBtn onClick={handleRevisitStillGoing} disabled={submitting}>
                 Still going
               </PrimaryBtn>
-              <GhostBtn onClick={handleRevisitDrifted}>We drifted from this one</GhostBtn>
+              <GhostBtn onClick={handleRevisitDrifted}>{isSolo ? 'I drifted from this one' : 'We drifted from this one'}</GhostBtn>
             </div>
           </div>
           <a href="/ritual" style={{ display: 'block', textAlign: 'center', fontSize: '13px', color: '#7A8C6E', textDecoration: 'none', padding: '8px 0' }}>
@@ -1036,7 +1046,7 @@ export default function RitualCard({ userId, coupleId, partnerName, onCheckinCom
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <PrimaryBtn onClick={() => handleDiscoverMore(nextSuggestion)} disabled={submitting}>
-                We'll try this one
+                {isSolo ? "I'll try this one" : "We'll try this one"}
               </PrimaryBtn>
               <GhostBtn onClick={handleNextLibrarySuggestion}>Show me another</GhostBtn>
             </div>

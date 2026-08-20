@@ -556,6 +556,7 @@ export default function Dashboard() {
             <RitualCard
               userId={user?.id}
               coupleId={couple?.id}
+              partnerId={partnerId}
               partnerName={partnerName}
               onCheckinComplete={fetchHero}
               session={session}
