@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { updateNoraMemory, SIGNAL_TYPES, getFullNoraContext } from '@/lib/nora-memory'
 import { noraReact } from '@/lib/nora'
 import { generateFollowThrough } from '@/lib/follow-through'
+import { generateFollowUpPrompt } from '@/lib/nora-followup'
 import { requireUser, verifyCoupleMembership } from '@/lib/api-auth'
 import { notifyIfMemoryJustUnlocked } from '@/lib/memory-unlock'
 
@@ -122,9 +123,21 @@ Write exactly one sentence, maximum 18 words. Speak directly to ${currentUserNam
       maxTokens: 60,
     })
 
+    // Talk-to-Nora CTA (task #261) — a genuine follow-up question, not a
+    // static button label. Separate call, never blocks the reveal on
+    // failure — see lib/nora-followup.js for why this isn't folded into the
+    // call above.
+    const soloFollowUp = await generateFollowUpPrompt({
+      activityLabel: 'the Spark',
+      question: sparkRow.question,
+      answer: responseText,
+      reactionText: soloInsight,
+      route: 'spark/solo-followup',
+    })
+
     await supabase
       .from('spark_responses')
-      .update({ nora_solo_insight: soloInsight })
+      .update({ nora_solo_insight: soloInsight, nora_follow_up: soloFollowUp })
       .eq('spark_id', sparkId)
       .eq('user_id', user.id)
 
@@ -225,16 +238,36 @@ You are speaking directly to ${partnerName}. React to both answers but speak TO 
       const noraReaction = completion || ''
       const partnerReaction = partnerCompletion || ''
 
+      // Talk-to-Nora CTA (task #261) — one follow-up question per person,
+      // grounded in their own reaction (not their partner's), run alongside
+      // the reactions above rather than blocking on them sequentially.
+      const [myFollowUp, partnerFollowUp] = await Promise.all([
+        generateFollowUpPrompt({
+          activityLabel: 'the Spark',
+          question: sparkRow.question,
+          answer: responseText,
+          reactionText: noraReaction,
+          route: 'spark/followup',
+        }),
+        generateFollowUpPrompt({
+          activityLabel: 'the Spark',
+          question: sparkRow.question,
+          answer: partnerResponse.response_text,
+          reactionText: partnerReaction,
+          route: 'spark/followup',
+        }),
+      ])
+
       // Steps 10e & 10f: Write nora_reaction to both users' spark_responses
       await Promise.all([
         supabase
           .from('spark_responses')
-          .update({ nora_reaction: noraReaction })
+          .update({ nora_reaction: noraReaction, nora_follow_up: myFollowUp })
           .eq('spark_id', sparkId)
           .eq('user_id', user.id),
         supabase
           .from('spark_responses')
-          .update({ nora_reaction: partnerReaction })
+          .update({ nora_reaction: partnerReaction, nora_follow_up: partnerFollowUp })
           .eq('spark_id', sparkId)
           .eq('user_id', partnerId),
       ])

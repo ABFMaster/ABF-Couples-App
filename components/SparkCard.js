@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Clock, Heart, Smile, Zap, HeartHandshake, Flame, Waves } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import TalkToNoraCTA from './TalkToNoraCTA'
 
 const REACTIONS = [
   { icon: Heart, key: 'heart', label: 'Loved it' },
@@ -295,6 +296,12 @@ export default function SparkCard({
             <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#5C3D2E', lineHeight: 1.7, fontStyle: 'italic', margin: 0 }}>
               {mine.nora_solo_insight}
             </p>
+            <TalkToNoraCTA
+              seedText={mine.nora_solo_insight}
+              followUpPrompt={mine.nora_follow_up}
+              isSolo={isSolo}
+              accent="#C1440E"
+            />
           </div>
         )}
       </div>
@@ -347,6 +354,12 @@ export default function SparkCard({
         <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#5C3D2E', lineHeight: 1.7, fontStyle: 'italic', margin: 0 }}>
           {mine?.nora_reaction}
         </p>
+        <TalkToNoraCTA
+          seedText={mine?.nora_reaction}
+          followUpPrompt={mine?.nora_follow_up}
+          isSolo={isSolo}
+          accent="#C1440E"
+        />
       </div>
 
       {/* Separator */}
