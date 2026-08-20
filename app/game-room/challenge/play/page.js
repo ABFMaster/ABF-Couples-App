@@ -178,6 +178,11 @@ function ChallengePlayContent() {
   const [userId, setUserId] = useState(null)
   const [coupleId, setCoupleId] = useState(null)
   const [partnerName, setPartnerName] = useState('your partner')
+  // isSolo mirrors the lobby's soloBypass (task #260) — a solo user is always
+  // the scribe (only account, always host), so every !isScribe branch below is
+  // structurally unreachable for them already. This only covers the copy shown
+  // WITHIN the isScribe branches that assumed a watching partner.
+  const [isSolo, setIsSolo] = useState(false)
   const [currentRound, setCurrentRound] = useState(1)
   const [round, setRound] = useState(null)
   const [response, setResponse] = useState('')
@@ -265,6 +270,7 @@ function ChallengePlayContent() {
       if (!couple) { router.push('/connect'); return }
       setCoupleId(couple.id)
       setIsUser1(couple.user1_id === user.id)
+      setIsSolo(!couple.user2_id)
 
       const partnerId = couple.user1_id === user.id ? couple.user2_id : couple.user1_id
       const { data: partnerProfile } = await supabase
@@ -1282,7 +1288,7 @@ function ChallengePlayContent() {
                       style={{ width: '100%', padding: '16px', background: response.trim() ? 'linear-gradient(135deg, #1E1B4B 0%, #4338CA 100%)' : '#E8DDD0', color: response.trim() ? '#FFFFFF' : '#B8A898', border: 'none', borderRadius: '30px', fontSize: '15px', fontWeight: 600, cursor: response.trim() ? 'pointer' : 'not-allowed' }}>
                       {pitchSubmitting ? 'Pitching...' : 'Pitch it →'}
                     </button>
-                    <p style={{ textAlign: 'center', fontSize: '13px', color: '#9CA3AF', marginTop: '12px', fontStyle: 'italic' }}>{partnerName} is watching — talk it through together</p>
+                    <p style={{ textAlign: 'center', fontSize: '13px', color: '#9CA3AF', marginTop: '12px', fontStyle: 'italic' }}>{isSolo ? 'Pitch it to Nora' : `${partnerName} is watching — talk it through together`}</p>
                   </div>
                 )}
 
@@ -1755,10 +1761,10 @@ function ChallengePlayContent() {
                     fontWeight: 600, cursor: response.trim() ? 'pointer' : 'not-allowed',
                   }}
                 >
-                  {submitting ? 'Submitting…' : 'Submit our answer'}
+                  {submitting ? 'Submitting…' : isSolo ? 'Submit my answer' : 'Submit our answer'}
                 </button>
                 <p style={{ textAlign: 'center', fontSize: '13px', color: '#9CA3AF', marginTop: '12px', fontStyle: 'italic' }}>
-                  {partnerName} is watching — talk it through together
+                  {isSolo ? 'Nora will read your plan when you submit it' : `${partnerName} is watching — talk it through together`}
                 </p>
               </>
             )}

@@ -45,6 +45,12 @@ export async function POST(request) {
       .in('user_id', [coupleData.user1_id, coupleData.user2_id])
 
     const names = profiles ? profiles.map(p => p.display_name).join(' and ') : 'this couple'
+    // isSolo: task #260. profiles already only contains the one matching row
+    // when user2_id is null (the .in() query above simply has nothing to match
+    // for a null id), so `names` is already just the solo user's own name —
+    // only the pitch/plan verdict prompts' explicit "as a couple"/"together"
+    // framing below needs branching, not `names` itself.
+    const isSolo = !coupleData?.user2_id
     const noraMemoryFull = await getNoraMemory(coupleId)
     const noraBriefing = noraMemoryFull ? getMemoryBriefing(noraMemoryFull, profiles?.[0]?.display_name || 'Partner 1', profiles?.[1]?.display_name || 'Partner 2') : null
     const claimsResult = (coupleData?.user1_id && coupleData?.user2_id)
@@ -117,7 +123,19 @@ Do not summarise the story. Do not be reverent about it. React to it like you we
         .eq('id', roundId)
         .maybeSingle()
 
-      verdictPrompt = `You are Nora — a hostile, sharp, witty investor. A couple pitched you something together, you challenged them, and they defended it as a team.
+      verdictPrompt = isSolo ? `You are Nora — a hostile, sharp, witty investor. ${names} pitched you something solo, you challenged it, and they defended it.
+
+The pitch challenge: "${prompt}"
+Their pitch: "${pitchRound?.couple_response || coupleResponse}"
+Your challenge: "${pitchRound?.nora_challenge || 'N/A'}"
+Their defense: "${coupleResponse}"
+Nora memory: ${noraMemory?.memory_summary || 'none yet'}${claimsBlock ? `\n\n${claimsBlock}` : ''}
+
+Give a final verdict:
+- Rule on whether you invest — yes, no, or conditionally. Be decisive.
+- Reference something specific from their pitch and defense — did they convince you?
+- End with one sharp line about what the pitch reveals about ${names} as a person
+- 2-4 sentences max. You are not a pushover. Address them directly as "you" — there is no partner in this pitch, don't imply one.` : `You are Nora — a hostile, sharp, witty investor. A couple pitched you something together, you challenged them, and they defended it as a team.
 
 The pitch challenge: "${prompt}"
 Their pitch: "${pitchRound?.couple_response || coupleResponse}"
@@ -146,7 +164,17 @@ Give a verdict that:
 - Is tender and specific, 2-4 sentences max`
 
     } else if (challengeType === 'plan') {
-      verdictPrompt = `You are Nora, an AI relationship coach. ${names} just planned something together.
+      verdictPrompt = isSolo ? `You are Nora, an AI relationship coach. ${names} just planned something on their own.
+
+The planning challenge: "${prompt}"
+Their plan: "${coupleResponse}"
+Nora memory: ${noraMemory?.memory_summary || 'none yet'}${claimsBlock ? `\n\n${claimsBlock}` : ''}
+
+Give a verdict that:
+- Responds to the specific plan they made
+- Finds what their choices reveal about what ${names} values
+- Ends with one sentence that makes them want to actually do it
+- Is warm, grounded, and 2-4 sentences max. Address them directly as "you" — there is no partner here, don't imply one or use "as a couple" framing.` : `You are Nora, an AI relationship coach. ${names} just planned something together.
 
 The planning challenge: "${prompt}"
 Their plan: "${coupleResponse}"

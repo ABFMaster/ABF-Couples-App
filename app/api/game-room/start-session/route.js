@@ -82,7 +82,11 @@ export async function POST(request) {
         .maybeSingle()
       const partnerId = hostSession?.host_user_id === couple.user1_id ? couple.user2_id : couple.user1_id
       const { data: sessionData } = await supabase.from('game_sessions').select('together').eq('id', sessionId).maybeSingle()
-      if (!sessionData?.together) {
+      // partnerId is null for solo couples (see lobby's soloBypass, task #260) —
+      // nothing to notify. Newly reachable for solo now that Pitch/Plan skip
+      // the lobby's wait-for-partner gate; guarded the same way every other
+      // partner-only push is guarded elsewhere in the solo arc.
+      if (partnerId && !sessionData?.together) {
         fetch(`${appBase}/api/push/send`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },

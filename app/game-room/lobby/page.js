@@ -19,6 +19,14 @@ function GameRoomLobbyContent() {
   const [partnerName, setPartnerName] = useState('your partner')
   const [iAmIn, setIAmIn] = useState(false)
   const [partnerIsIn, setPartnerIsIn] = useState(false)
+  // Solo lobby bypass — see task #260 (Sessions/PRODUCT_BACKLOG.md). Deliberately
+  // scoped to Pitch/Plan only, not every mode: those two were the ones the Aug 19
+  // solo-arc audit confirmed have no real two-person requirement in their
+  // generation/verdict logic. Memory Test's solo-banking was explicitly rejected,
+  // and Rabbit Hole/The Hunt/Rank/Story/Hot Take/The Call haven't been individually
+  // cleared yet (that's task #262) — so the bypass must not leak to them.
+  const SOLO_ELIGIBLE_MODES = ['pitch', 'plan']
+  const [isSolo, setIsSolo] = useState(false)
   const [together, setTogether] = useState(null)
   const [selectedTimer, setSelectedTimer] = useState(config.defaultTimer || 60)
   const [sessionId, setSessionId] = useState(null)
@@ -53,6 +61,7 @@ function GameRoomLobbyContent() {
       if (!couple) { router.push('/connect'); return }
       setCoupleId(couple.id)
       coupleRef.current = couple
+      setIsSolo(!couple.user2_id)
 
       const partnerId = couple.user1_id === user.id ? couple.user2_id : couple.user1_id
       const [{ data: myProfile }, { data: partnerProfile }] = await Promise.all([
@@ -271,7 +280,8 @@ function GameRoomLobbyContent() {
   }
 
 
-  const bothInLobby = iAmIn && partnerIsIn
+  const soloBypass = isSolo && SOLO_ELIGIBLE_MODES.includes(mode)
+  const bothInLobby = iAmIn && (partnerIsIn || soloBypass)
   const canStart = bothInLobby && (['story', 'pitch', 'rank', 'plan', 'memory'].includes(mode) || together !== null) && (!config.hasTimer || selectedTimer)
 
   return (
@@ -301,15 +311,17 @@ function GameRoomLobbyContent() {
               <p style={{ fontSize: '13px', color: iAmIn ? '#4338CA' : '#9CA3AF', margin: '2px 0 0' }}>{iAmIn ? 'In the lobby' : 'Not yet in'}</p>
             </div>
           </div>
-          <div style={{ background: '#FFFFFF', border: `2px solid ${partnerIsIn ? '#4338CA' : '#E8DDD0'}`, borderRadius: '16px', padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: partnerIsIn ? '#EEF2FF' : '#F5F0EA', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
-              {partnerIsIn ? '✓' : '○'}
+          {!soloBypass && (
+            <div style={{ background: '#FFFFFF', border: `2px solid ${partnerIsIn ? '#4338CA' : '#E8DDD0'}`, borderRadius: '16px', padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: partnerIsIn ? '#EEF2FF' : '#F5F0EA', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0 }}>
+                {partnerIsIn ? '✓' : '○'}
+              </div>
+              <div>
+                <p style={{ fontSize: '15px', fontWeight: 600, color: '#1A1A1A', margin: 0 }}>{partnerName}</p>
+                <p style={{ fontSize: '13px', color: partnerIsIn ? '#4338CA' : '#9CA3AF', margin: '2px 0 0' }}>{partnerIsIn ? 'In the lobby' : iAmIn ? 'Waiting for them...' : 'Not yet in'}</p>
+              </div>
             </div>
-            <div>
-              <p style={{ fontSize: '15px', fontWeight: 600, color: '#1A1A1A', margin: 0 }}>{partnerName}</p>
-              <p style={{ fontSize: '13px', color: partnerIsIn ? '#4338CA' : '#9CA3AF', margin: '2px 0 0' }}>{partnerIsIn ? 'In the lobby' : iAmIn ? 'Waiting for them...' : 'Not yet in'}</p>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* What you'll need */}
@@ -330,8 +342,9 @@ function GameRoomLobbyContent() {
         {/* Together/Remote + Timer — only show when both in lobby */}
         {bothInLobby && (
           <div style={{ marginBottom: '24px' }}>
-            {/* Together or remote — not shown for Challenge since mechanic is proximity-independent */}
-            {isHost && mode !== 'challenge' ? (
+            {/* Together or remote — not shown for Challenge since mechanic is proximity-independent,
+                and not shown for solo (soloBypass) since there's no partner to be together/remote with */}
+            {isHost && mode !== 'challenge' && !soloBypass ? (
               <>
                 <p style={{ fontSize: '13px', fontWeight: 600, color: '#1A1A1A', marginBottom: '12px' }}>Are you together right now?</p>
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
@@ -385,7 +398,7 @@ function GameRoomLobbyContent() {
             {entering ? 'Entering...' : 'Enter the lobby'}
           </button>
         )}
-        {iAmIn && !partnerIsIn && (
+        {iAmIn && !partnerIsIn && !soloBypass && (
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#9CA3AF', fontSize: '14px' }}>
               <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4338CA', animation: 'pulse 1.5s ease-in-out infinite' }} />
