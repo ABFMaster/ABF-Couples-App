@@ -114,9 +114,16 @@ async function processDailyContent(couple, user1, user2) {
     const q = getSparkQuestion({ coupleAgeDays, skipCount: 0, usedIds })
     if (!q) return
 
+    // Solo — every question now has a question_solo variant (added Aug 20
+    // 2026), redirected to "your partner" instead of "I"/"we"/"{partnerName}"
+    // so it's answerable about a real person who just doesn't have an app
+    // account yet. Resolved once, here, at generation time — the sparks row
+    // only ever stores one final string. If a partner joins mid-week this
+    // stays solo-phrased until next Monday's regeneration; see the
+    // question_solo comment in lib/spark-questions.js for why that's fine.
     await supabase.from('sparks').insert({
       couple_id: couple.id,
-      question: q.question,
+      question: isSolo ? q.question_solo : q.question,
       question_id: q.id,
       question_level: q.level,
       question_tone: q.tone,

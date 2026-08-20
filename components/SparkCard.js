@@ -20,6 +20,7 @@ export default function SparkCard({
   spark,
   mine,
   theirs,
+  partnerId,
   partnerName,
   sparkIntroShown,
   onRespond,
@@ -28,6 +29,12 @@ export default function SparkCard({
   onInvite,
   onRevealed,
 }) {
+  // No partner yet — the state machine below already lands here naturally
+  // (state B never advances to C without a real theirs.responded_at, no
+  // polling forces it), so no structural change is needed. Only the copy
+  // that explicitly promises a reveal needs to not say that when there's
+  // no partner account to reveal against.
+  const isSolo = !partnerId
   const [answerText, setAnswerText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [inviteSent, setInviteSent] = useState(false)
@@ -190,7 +197,9 @@ export default function SparkCard({
           </p>
         )}
         <div style={{ marginBottom: '24px' }}>{questionLarge}</div>
-        <p style={{ fontSize: '13px', color: '#A09080', fontStyle: 'italic', textAlign: 'center', marginBottom: '12px' }}>Answer about {partnerName} — you'll see their answer after you both respond.</p>
+        <p style={{ fontSize: '13px', color: '#A09080', fontStyle: 'italic', textAlign: 'center', marginBottom: '12px' }}>
+          {isSolo ? 'Nora will read into what your answer reveals.' : `Answer about ${partnerName} — you'll see their answer after you both respond.`}
+        </p>
         <textarea
           value={answerText}
           onChange={e => setAnswerText(e.target.value)}

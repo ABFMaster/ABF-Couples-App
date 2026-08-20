@@ -474,6 +474,7 @@ export default function Dashboard() {
                 spark={spark}
                 mine={mine}
                 theirs={theirs}
+                partnerId={partnerId}
                 partnerName={partnerName}
                 sparkIntroShown={sparkIntroShown}
                 onRespond={handleSparkRespond}
