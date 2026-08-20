@@ -14,6 +14,39 @@ This file is permanent and cumulative. Add items, update status, never delete hi
 
 ---
 
+## ABF — SINGLE-USER ARC — full design pass Aug 19 2026 (Matt + Sr App Designer session)
+Resolves the 🔴 flagged Aug 14 (see NORA STANDALONE section below) — that prior discussion was never saved, this is the reconstructed-from-scratch design, now recorded so it can't be lost again. Also closes the pre-launch audit's "single-user arc — vital to launch" leadership item.
+
+**Governing principle, agreed:** solo mode is not a second product bolted onto ABF — it's the same seven-day weekly rhythm skeleton, running in a different register. The thing solo users are missing isn't features, it's material for Nora to react to; her reacting with real specificity to real input is the actual engine of the app, and it doesn't require a partner to fire. Where a day already collects a "mine" answer independent of "theirs," it just works solo. Where a day's entire mechanic is inherently two-person, it needs real new content, not a patched version of the couple mechanic.
+
+**Current known gap, confirmed by reading the live code (Aug 19):** `isSolo` state exists in `app/dashboard/page.js` but gates exactly one thing — a "Bring them in" nudge card. Every other daily surface still assumes couple context. A user with no couple row at all hits a dead-end (dashboard's fetches all gate on `couple?.id`).
+
+**Feature-by-feature verdict:**
+- 🟢 Spark — already works solo, no code change needed. `mine`/`theirs` already separate per user. Needs only: skip the reveal-wait, Nora's voice not defaulting to "you two" when solo.
+- 🟢 Ritual — confirmed no break. `ritual_completions` is architecturally one shared row per ritual per week (`onConflict: ritual_id,week_start`, `completed_by` just records who tapped it) — there was never a second independent partner data point to lose. Minor voice-copy adjustment only.
+- 🟡 Weekly Reflection — genuinely broken solo, needs real code fix. `reflection/generate/route.js` is hard-wired for two people (`Promise.all([sendOne(user1), sendOne(user2)])`, dual-profile context building). Fix: skip absent partner, single-recipient synthesis, solo-aware prompt copy. Not a redesign, a few contained branches.
+- 🟢 Pitch, Plan — confirmed near-free. Read `challenge/generate` + `challenge/submit`: Pitch's opponent is always Nora ("never at the partner," explicit in the live prompt), Plan and Pitch both store response as one `coupleResponse` text field regardless of author count — no dual-account requirement exists in the data model today. Needs: solo-aware branch in Nora's verdict copy (currently says "as a couple"), confirm no lobby "both ready" gate blocks solo access (unverified, check before building).
+- 🔴 Bet — no solo version of the core mechanic possible (needs two blind predictions to mean anything). Real new build — see below.
+- 🔴 Talk to Nora hook — confirmed real gap, not just under-used. Searched every component: only the bottom nav tab (passive) and one prioritized insight card exist. No consistent per-activity CTA into AI Coach fires after Spark, Ritual, or Game Room completion. Matters more for solo users, where Nora is the primary hook rather than a bonus layer. Needs its own build.
+- ⛔ Memory Test as solo data-banking — explicitly considered and rejected after stress-test. The gate a solo user would "unlock early" isn't actually a gap: a freshly-connected couple already sees Memory Test locked for weeks, same experience a solo user would get, nothing new or broken by leaving it as-is. Building a solo-banking flow would require a new content type, a split unlock formula (timeline/age components legitimately solo-satisfiable, Spark/Bet component should require genuine post-join couple activity so the first real test isn't 100% one-sided), staleness handling, and a consent-framing problem on the reveal — real complexity for a gap that doesn't exist. Optional cheap consolation if still wanted later: a no-write preview of sample questions, zero backend change.
+
+**Game Room audit (opt-in, not mandatory daily rhythm — expanding it isn't clutter risk):**
+- 🟢 Hot Take, The Call, Rank It, Write a Story — real single-device "pass and play" candidates. The Call is the cleanest fit (already an asymmetric hot-seat/predictor shape, not symmetric dual-input). Rank It already has an explicit "rank independently, reconcile together" structure. Write a Story is literally blind-alternating-sentence, the same shape as handing over a notebook — no partner account needed at all.
+- ⛔ Rabbit Hole, The Hunt — not candidates. Rabbit Hole needs two people exploring separate threads simultaneously to have anything to compare. The Hunt is hard-gated to an existing couple in its own code (`if (!couple) router.push('/connect')`) and its real mechanic is live two-person collaborative sentence-building, not a single Q&A beat.
+- ⛔ The Remake — excluded for a different reason than the above: not a sync-multiplayer problem, there's just no shared history yet to recreate. Correctly, naturally unavailable pre-partner, same as anything gated on accumulated data. Nothing to build.
+- 📋 Memory Test's own multiplayer shape — still unconfirmed, separate question from the banking idea above (which was rejected). Needs its own look before any verdict.
+
+**Data-integrity rule for the whole arc, non-negotiable:** any answer typed by one person on behalf of a not-yet-account-holding partner (Game Room pass-and-play, Bet's "ask them now" mode) must be tagged as self-reported/proxy input, distinct from the partner directly authenticating and answering themselves. Protects against Nora's memory/signal/tier layer treating proxy content as equivalent-confidence to real engagement once the partner actually joins — this is what keeps the solo-to-coupled transition from creating a data-integrity break.
+
+**Bet solo fallback — the one day with no free or cheap answer, real build, in progress:**
+Two modes, both reuse the existing `bet_responses.nora_solo_insight` generation path (already fires unconditionally on `actual_answer` today, independent of partner status — confirmed by reading `bet/respond/route.js`, nothing new needed there):
+- "Answer for yourself" — not actually a guess (there's no partner yet to guess about, correcting earlier framing). Solo user answers the question about themselves, gets Nora's immediate read. `prediction` field not applicable in this mode.
+- "Ask them right now" — real-world relay. User asks a real person the question out loud, logs both real answers. Needs a new column (not a repurposed `prediction` field — that implies a blind guess that never happened here), tagged with the proxy-input rule above. Payoff is always the immediate Nora reaction in the same turn, never a deferred reveal — has to stand alone even if a partner never joins or joins months later.
+Stress-tested and passed with two required conditions: (1) separate, lighter-filtered question set for this mode — the existing 120-question Bet bank was written for an already-committed couple and includes content not appropriate to spring on someone who hasn't agreed to be profiled; (2) copy must never require disclosing "an app told me to ask you this" — has to read as a genuinely curious question, disclosure optional and natural, not scripted.
+Mocked in-session (three states: choice, ask-them-now input, Nora reaction) — matches existing ABF postcard visual language.
+
+---
+
 ## ABF — FEATURES
 
 ### Date Night
@@ -373,7 +406,7 @@ Agent frameworks (LangGraph, etc.); vector databases / RAG infrastructure; multi
 ## NORA STANDALONE
 
 ### Single-User Arc — DO NOW, vital to launch (Matt, Aug 14 2026)
-- 🔴 Full design conversation needed, not yet scheduled. Prior discussion happened only in chat, never saved to a doc — reconstructing from Matt's summary, not a prior artifact. Core question: what's the entry point and ongoing experience for a single user who joins ABF (or Nora Standalone) alone, before their partner joins if ever — how do they find real purpose and enjoyment in the meantime, not just a waiting room. Explored previously through the lens of "could a single user thrive here on their own" — Nora Standalone may have originally spun out of that exploration specifically to serve this need, meaning some of the answer may already exist in Standalone's product shape rather than needing to be invented fresh. Distinct from (but related to) the narrower asymmetric-engagement question below — that one's about an already-matched couple where one partner skips a single activity; this one is about whether ABF/Standalone has a real answer for someone with no partner in the system at all.
+- ✅ Design pass complete Aug 19 2026 — see "ABF — SINGLE-USER ARC" section near the top of this file for the full decision record. Build in progress, starting with Bet's solo fallback.
 - ✅ Narrower, related fix shipped same day: Thursday's Follow-Through no longer requires both partners to have responded — see BOTH PRODUCTS section below. Doesn't resolve the bigger onboarding question, just stops penalizing the partner who did show up.
 
 ### App Store
