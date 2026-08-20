@@ -1167,13 +1167,22 @@ export async function GET(request) {
       }
     }
 
-    // Solo couples — only the audited, null-guarded path. See the query
-    // comment above for why this stays deliberately narrow.
+    // Solo couples — only functions individually audited for a missing
+    // user2. See the query comment above for why this stays deliberately
+    // narrow rather than just relaxing the shared filter. Weekly Reflection
+    // added Aug 20 2026 — processWeeklyReflection(couple) itself only ever
+    // used couple.user1_id/couple.id, no partner dependency; reflection/
+    // generate's internals were checked and null-guarded for a missing
+    // user2 in the same pass (skips the second getFullNoraContext call,
+    // solo-aware prompt framing, notifyReflectionReady skips the absent
+    // partner's push).
     for (const couple of soloCouples || []) {
       try {
         const user1 = profileMap[couple.user1_id] || {}
         await processDailyContent(couple, user1, {})
         blocksFired.add('dailyContent')
+        const day = getDayInTimezone(user1.timezone || 'America/Los_Angeles')
+        if (day === 0) { await processWeeklyReflection(couple); blocksFired.add('weeklyReflection') }
         processed++
       } catch (err) {
         errored++

@@ -61,7 +61,8 @@ async function notifyReflectionReady(supabase, coupleId, reflectionId) {
       }),
     }).catch(() => {})
 
-  await Promise.all([sendOne(couple.user1_id), sendOne(couple.user2_id)])
+  // Solo — no partner to notify yet.
+  await Promise.all(couple.user2_id ? [sendOne(couple.user1_id), sendOne(couple.user2_id)] : [sendOne(couple.user1_id)])
 }
 
 // Diagnostic log, Aug 17 2026 — see docs/database/reflection-generation-log.sql.
@@ -247,10 +248,16 @@ export async function POST(request) {
     const profile1 = coupleRowForContext ? profilesByUserId[coupleRowForContext.user1_id] : userProfiles?.[0]
     const profile2 = coupleRowForContext ? profilesByUserId[coupleRowForContext.user2_id] : userProfiles?.[1]
     const nameForUserId = (uid) => profilesByUserId[uid]?.display_name || 'Partner'
+    // Solo — no user2 to build a context block for. Calling
+    // getFullNoraContext with a null actingUserId wouldn't crash (couple.
+    // user1_id never equals null, so it'd just fall into the "user2" branch
+    // and compute a context for a signal count that's always 0), but it's
+    // wasted work for a person who doesn't exist. Skip outright instead.
+    const isSolo = !coupleRowForContext?.user2_id
     const [user1FullContext, user2FullContext] = coupleRowForContext
       ? await Promise.all([
           getFullNoraContext(coupleId, coupleRowForContext.user1_id, profile1?.display_name || 'Partner 1', profile2?.display_name || 'Partner 2'),
-          getFullNoraContext(coupleId, coupleRowForContext.user2_id, profile2?.display_name || 'Partner 2', profile1?.display_name || 'Partner 1'),
+          isSolo ? Promise.resolve({ fullContextBlock: '' }) : getFullNoraContext(coupleId, coupleRowForContext.user2_id, profile2?.display_name || 'Partner 2', profile1?.display_name || 'Partner 1'),
         ])
       : [{ fullContextBlock: '' }, { fullContextBlock: '' }]
 
@@ -316,7 +323,33 @@ ACTIVE RITUALS:
 ${ritualLines || 'None.'}` + (dateLines.length > 0 ? `\n\nDATE ACTIVITY THIS WEEK:\n${dateLines.join('\n')}` : '')).trim()
 
     // STEP 5 — Generate reflection using Claude
-    const systemPrompt = `You've been paying attention to this couple all week. The reflection moments you surface should be specific to what actually happened — not generic prompts dressed up with their names. Each observation should make them feel caught in the best possible way: "Nora noticed that." Never preachy. Never therapeutic framing. The prompt that follows each observation opens something they haven't said yet — not something they've already answered.
+    // Solo — a genuinely different framing, not the couple prompt with a
+    // blank left in for user2. "Which partner" and "pattern across their
+    // sparks/bets/rituals together" both presuppose two people; asking
+    // Nora to pick a subject between a real person and a placeholder
+    // 'Partner 2' produces confused, half-empty output instead of just
+    // not asking the question.
+    const systemPrompt = isSolo
+      ? `You've been paying attention to this person all week — no partner yet, just them navigating the app and their days on their own. The reflection moments you surface should be specific to what actually happened — not generic prompts dressed up with their name. Each observation should make them feel caught in the best possible way: "Nora noticed that." Never preachy. Never therapeutic framing. The prompt that follows each observation opens something they haven't said yet — not something they've already answered. Never write as if a partner is present or reference "you two" — this is about them alone this week.
+
+You return ONLY valid JSON in this exact format:
+{
+  "opening": "A 2-3 sentence personal greeting that acknowledges their week and sets a warm tone. Reference something specific if possible.",
+  "moments": [
+    {
+      "subject": "user1",
+      "observation": "A specific observation about something they did or shared this week (1-2 sentences)",
+      "prompt": "A reflective question or gentle nudge related to that observation"
+    }
+  ],
+  "pattern": "1-2 sentences about a pattern or theme you noticed across the week — something connecting their sparks, bets, or rituals",
+  "week_ahead": "A brief, warm closing that looks forward to the coming week (1-2 sentences). Can include a soft suggestion or encouragement."
+}
+
+The moments array should have 2-3 items. Do not include more than 3. If there is not much data, make fewer and more thoughtful observations.
+
+Return only the JSON object. No markdown, no explanation, no wrapper text.`
+      : `You've been paying attention to this couple all week. The reflection moments you surface should be specific to what actually happened — not generic prompts dressed up with their names. Each observation should make them feel caught in the best possible way: "Nora noticed that." Never preachy. Never therapeutic framing. The prompt that follows each observation opens something they haven't said yet — not something they've already answered.
 
 You return ONLY valid JSON in this exact format:
 {
@@ -338,12 +371,17 @@ Return only the JSON object. No markdown, no explanation, no wrapper text.`
 
     const user1Name = profile1?.display_name || 'Partner 1'
     const user2Name = profile2?.display_name || 'Partner 2'
-    const message = await noraReact(`Here is the data for this couple's week:\n\n${contextString}\n\nGenerate their weekly reflection.\n\nIMPORTANT: In the moments array, set "subject" to "user1" when the moment is primarily about ${user1Name}, and "user2" when it is primarily about ${user2Name}. Every Spark and Bet line above is already labeled with the exact name of who said it — use that label, never guess from tone or phrasing, and never swap which partner an answer or action belongs to. If a moment is about both equally, assign it to whichever partner's action or statement it centers on.`, {
-      route: 'reflection/generate',
-      system: systemPrompt,
-      context: 'daily',
-      maxTokens: 1200,
-    })
+    const message = await noraReact(
+      isSolo
+        ? `Here is the data for this person's week:\n\n${contextString}\n\nGenerate their weekly reflection. Every moment's "subject" is "user1" — there's no partner to attribute anything to yet.`
+        : `Here is the data for this couple's week:\n\n${contextString}\n\nGenerate their weekly reflection.\n\nIMPORTANT: In the moments array, set "subject" to "user1" when the moment is primarily about ${user1Name}, and "user2" when it is primarily about ${user2Name}. Every Spark and Bet line above is already labeled with the exact name of who said it — use that label, never guess from tone or phrasing, and never swap which partner an answer or action belongs to. If a moment is about both equally, assign it to whichever partner's action or statement it centers on.`,
+      {
+        route: 'reflection/generate',
+        system: systemPrompt,
+        context: 'daily',
+        maxTokens: 1200,
+      }
+    )
 
     // STEP 6 — Parse response. Was a bare JSON.parse with no fence-stripping
     // or preamble-extraction at all — the highest-risk shape in the whole
