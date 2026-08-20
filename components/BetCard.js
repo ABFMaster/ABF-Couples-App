@@ -47,6 +47,12 @@ function CardBack({ label }) {
 }
 
 export default function BetCard({ bet, mine, theirs, partnerId, partnerName, userId, coupleId, onRevealed }) {
+  // No partner yet — a structurally different flow, not a smaller version
+  // of the coupled one. Handled as its own early-return branch below,
+  // after all hooks (React requires hooks called unconditionally every
+  // render), so none of the coupled state/polling logic below is touched
+  // or affected by this at all.
+  const isSolo = !partnerId
   const [localMine, setLocalMine] = useState(mine)
   const [localTheirs, setLocalTheirs] = useState(theirs)
   const [actualText, setActualText] = useState('')
@@ -98,6 +104,13 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
   const [pulsingDown, setPulsingDown] = useState(null)
   const [pulsingUp, setPulsingUp] = useState(null)
 
+  // Solo-only state — inert whenever isSolo is false.
+  const [soloMode, setSoloMode] = useState(mine?.response_mode || null)
+  const [proxyAnswerText, setProxyAnswerText] = useState('')
+  const [soloInsightShown, setSoloInsightShown] = useState(!!mine?.nora_solo_insight)
+  const soloHasSubmitted = !!(localMine?.actual_answer && localMine?.response_mode)
+  const soloNoraReady = !!localMine?.nora_solo_insight
+
   const allFlipped = flipped.every(f => f)
   const flipCard = (i) => setFlipped(prev => { const next = [...prev]; next[i] = true; return next })
 
@@ -148,6 +161,64 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
       return () => clearInterval(interval)
     }
   }, [state, noraReady, poll])
+
+  // Solo: poll briefly for nora_solo_insight once submitted, same pattern
+  // the coupled flow uses while waiting on its own Nora reaction.
+  useEffect(() => {
+    if (!isSolo || !soloHasSubmitted || soloNoraReady) return
+    const interval = setInterval(async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.access_token) return
+        const res = await fetch(`/api/bet/today?userId=${userId}&bet=true`, {
+          headers: { 'Authorization': `Bearer ${session.access_token}` },
+        })
+        const data = await res.json()
+        if (data.mine) setLocalMine(prev => ({ ...prev, ...data.mine }))
+      } catch {}
+    }, 2000)
+    return () => clearInterval(interval)
+  }, [isSolo, soloHasSubmitted, soloNoraReady, userId])
+
+  // Fires the same onRevealed contract FollowThroughCard's blend relies on
+  // for the coupled flow (pillsShown there), so solo Bet blends into
+  // Follow-Through the same way once Nora's insight is actually on screen.
+  useEffect(() => {
+    if (!isSolo || !soloNoraReady || soloInsightShown) return
+    const t = setTimeout(() => { setSoloInsightShown(true); onRevealed?.() }, 400)
+    return () => clearTimeout(t)
+  }, [isSolo, soloNoraReady, soloInsightShown, onRevealed])
+
+  const handleSoloSubmit = async () => {
+    if (!actualText.trim() || submitting) return
+    if (soloMode === 'solo_proxy' && !proxyAnswerText.trim()) return
+    setSubmitting(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/bet/respond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+        body: JSON.stringify({
+          betId: bet.id,
+          coupleId,
+          actualAnswer: actualText.trim(),
+          responseMode: soloMode,
+          ...(soloMode === 'solo_proxy' ? { proxyPartnerAnswer: proxyAnswerText.trim() } : {}),
+        }),
+      })
+      const data = await res.json()
+      setLocalMine(prev => ({
+        ...(prev || {}),
+        actual_answer: actualText.trim(),
+        response_mode: soloMode,
+        ...(soloMode === 'solo_proxy' ? { proxy_partner_answer: proxyAnswerText.trim() } : {}),
+        responded_at: new Date().toISOString(),
+        ...(data.mine || {}),
+      }))
+    } catch {} finally {
+      setSubmitting(false)
+    }
+  }
 
   const handleRevealStart = () => {
     setRevealStarted(true)
@@ -249,6 +320,136 @@ export default function BetCard({ bet, mine, theirs, partnerId, partnerName, use
     boxSizing: 'border-box',
     transition: 'border-color 150ms',
   })
+
+  // ── SOLO — no partner yet ───────────────────────────────────────────────
+  if (isSolo) {
+    const cardShell = (children) => (
+      <div style={{ background: '#1C1510', borderRadius: '20px', padding: '24px', border: '0.5px solid #3D2E1E', boxShadow: '0 4px 24px rgba(28, 21, 16, 0.15)' }}>
+        <p style={{ fontSize: '11px', letterSpacing: '0.2em', color: '#D4A853', textTransform: 'uppercase', textAlign: 'center', marginBottom: '16px' }}>
+          The Bet
+        </p>
+        {children}
+      </div>
+    )
+
+    // Not yet submitted, mode not yet chosen — offer the two solo paths.
+    if (!soloHasSubmitted && !soloMode) {
+      return cardShell(
+        <>
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '22px', color: '#F5ECD7', lineHeight: 1.35, textAlign: 'center', marginBottom: '24px', fontWeight: 400 }}>
+            {bet.question}
+          </p>
+          <button
+            onClick={() => setSoloMode('solo_self')}
+            style={{ width: '100%', textAlign: 'left', background: '#2A1E14', border: '1.5px solid #3D2E1E', borderRadius: '14px', padding: '16px', marginBottom: '10px', cursor: 'pointer' }}
+          >
+            <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#D4A853', textTransform: 'uppercase', marginBottom: '4px' }}>Answer for yourself</p>
+            <p style={{ fontSize: '13px', color: '#C4B49A', margin: 0 }}>Just you today — Nora reads into what you say.</p>
+          </button>
+          <button
+            onClick={() => setSoloMode('solo_proxy')}
+            style={{ width: '100%', textAlign: 'left', background: '#2A1E14', border: '1.5px solid #3D2E1E', borderRadius: '14px', padding: '16px', cursor: 'pointer' }}
+          >
+            <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#D4A853', textTransform: 'uppercase', marginBottom: '4px' }}>Ask them right now</p>
+            <p style={{ fontSize: '13px', color: '#C4B49A', margin: 0 }}>Say it out loud to someone. Log what you both actually said.</p>
+          </button>
+        </>
+      )
+    }
+
+    // Not yet submitted, mode chosen — collect the answer(s).
+    if (!soloHasSubmitted && soloMode) {
+      const isProxy = soloMode === 'solo_proxy'
+      const canSubmit = actualText.trim() && (!isProxy || proxyAnswerText.trim()) && !submitting
+      return cardShell(
+        <>
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '20px', color: '#F5ECD7', lineHeight: 1.35, textAlign: 'center', marginBottom: '20px', fontWeight: 400 }}>
+            {bet.question}
+          </p>
+
+          <div style={{ background: '#2A1E14', border: '1.5px solid #3D2E1E', borderRadius: '14px', padding: '16px', marginBottom: '10px' }}>
+            <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#D4A853', textTransform: 'uppercase', marginBottom: '4px' }}>Your answer</p>
+            <textarea
+              value={actualText}
+              onChange={e => setActualText(e.target.value)}
+              placeholder="Give your honest answer..."
+              rows={3}
+              style={textareaStyle(actualFocused)}
+              onFocus={() => setActualFocused(true)}
+              onBlur={() => setActualFocused(false)}
+              className="placeholder-[#5A4A38]"
+            />
+          </div>
+
+          {isProxy && (
+            <div style={{ background: '#2A1E14', border: '1.5px solid #3D2E1E', borderRadius: '14px', padding: '16px', marginBottom: '20px' }}>
+              <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#D4A853', textTransform: 'uppercase', marginBottom: '4px' }}>What did they say?</p>
+              <textarea
+                value={proxyAnswerText}
+                onChange={e => setProxyAnswerText(e.target.value)}
+                placeholder="Log their real answer..."
+                rows={3}
+                style={textareaStyle(predictionFocused)}
+                onFocus={() => setPredictionFocused(true)}
+                onBlur={() => setPredictionFocused(false)}
+                className="placeholder-[#5A4A38]"
+              />
+            </div>
+          )}
+
+          <button
+            onClick={handleSoloSubmit}
+            disabled={!canSubmit}
+            style={{
+              width: '100%', padding: '14px', background: '#D4A853', color: '#1C1510', fontSize: '15px', fontWeight: 600,
+              border: 'none', borderRadius: '30px', cursor: 'pointer',
+              opacity: canSubmit ? 1 : 0.4, transition: 'opacity 150ms',
+              marginTop: isProxy ? 0 : '10px',
+            }}
+          >
+            {isProxy ? 'Log both answers' : 'Lock in my answer'}
+          </button>
+        </>
+      )
+    }
+
+    // Submitted — terminal solo state. No flip-card ceremony: unlike the
+    // coupled reveal (two blind submissions, genuine suspense), everything
+    // here was typed by one person in one sitting, so showing it plainly is
+    // the honest version, not a lesser one.
+    return cardShell(
+      <>
+        <div style={{ background: '#2A1E14', border: '1.5px solid #3D2E1E', borderRadius: '14px', padding: '16px', marginBottom: '10px' }}>
+          <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#D4A853', textTransform: 'uppercase', marginBottom: '8px' }}>Your answer</p>
+          <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#F5ECD7', lineHeight: 1.45 }}>{localMine?.actual_answer}</p>
+        </div>
+
+        {localMine?.response_mode === 'solo_proxy' && localMine?.proxy_partner_answer && (
+          <div style={{ background: '#2A1E14', border: '1.5px solid #3D2E1E', borderRadius: '14px', padding: '16px', marginBottom: '20px' }}>
+            <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#D4A853', textTransform: 'uppercase', marginBottom: '8px' }}>What they said</p>
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#F5ECD7', lineHeight: 1.45 }}>{localMine.proxy_partner_answer}</p>
+          </div>
+        )}
+
+        {!soloNoraReady ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="animate-pulse" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#5A4A38', flexShrink: 0 }} />
+            <p style={{ fontSize: '13px', color: '#5A4A38' }}>Nora is reading into it…</p>
+          </div>
+        ) : (
+          <div style={{ ...fadeStyle(soloInsightShown, 500), paddingLeft: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#D4A853', flexShrink: 0 }} />
+              <p style={{ fontSize: '10px', letterSpacing: '0.14em', color: '#D4A853', textTransform: 'uppercase', margin: 0 }}>Nora</p>
+            </div>
+            <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#C4B49A', lineHeight: 1.7, fontStyle: 'italic', margin: 0 }}>
+              {localMine.nora_solo_insight}
+            </p>
+          </div>
+        )}
+      </>
+    )
+  }
 
   // State A
   if (state === 'A') {

@@ -147,7 +147,7 @@ async function processDailyContent(couple, user1, user2) {
     // Oldest-first, so slicing the last few inside getBetQuestion gets the
     // couple's most recent categories, not an arbitrary sample.
     const recentCategories = (usedBets || []).map(b => b.question_category).filter(Boolean)
-    const q = getBetQuestion({ coupleAgeDays, usedIds, recentCategories })
+    const q = getBetQuestion({ coupleAgeDays, usedIds, recentCategories, soloOnly: isSolo })
     if (!q) return
 
     await supabase.from('bets').insert({

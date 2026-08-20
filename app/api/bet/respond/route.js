@@ -1,6 +1,18 @@
 export const dynamic = 'force-dynamic'
 
 // DB migration: ALTER TABLE bet_responses ADD COLUMN IF NOT EXISTS nora_intro text;
+// DB migration (Aug 20 2026, solo Bet fallback):
+//   ALTER TABLE bet_responses ADD COLUMN IF NOT EXISTS response_mode text;
+//   ALTER TABLE bet_responses ADD COLUMN IF NOT EXISTS proxy_partner_answer text;
+// response_mode: null for standard two-account responses (unchanged
+// default). 'solo_self' — solo user answering about themselves, no partner
+// referenced. 'solo_proxy' — solo user relayed the question to a real
+// person in real life and is logging both real answers; proxy_partner_answer
+// holds what the other person said, self-reported by the account holder.
+// Deliberately its own column, not a repurposed prediction/actual_answer —
+// proxy content must stay tagged distinctly from a real second account's
+// own answer per the data-integrity rule (Sessions/PRODUCT_BACKLOG.md,
+// single-user arc). Never written when a real partnerId exists.
 
 import { NextResponse } from 'next/server'
 import { updateNoraMemory, SIGNAL_TYPES } from '@/lib/nora-memory'
@@ -14,7 +26,7 @@ export async function POST(request) {
     const { user, supabase, error: authError } = await requireUser(request)
     if (authError) return NextResponse.json(authError.body, { status: authError.status })
 
-    const { betId, coupleId, prediction, actualAnswer } = await request.json()
+    const { betId, coupleId, prediction, actualAnswer, responseMode, proxyPartnerAnswer } = await request.json()
 
     if (!betId) {
       return NextResponse.json({ error: 'betId required' }, { status: 400 })
@@ -49,6 +61,16 @@ export async function POST(request) {
 
     const partnerId = coupleRow?.user1_id === userId ? coupleRow?.user2_id : coupleRow?.user1_id
 
+    // Solo response modes only make sense with no real partner — reject
+    // rather than silently ignore, so a client bug can't accidentally
+    // write proxy content against a real couple.
+    if (responseMode && partnerId) {
+      return NextResponse.json({ error: 'responseMode is solo-only' }, { status: 400 })
+    }
+    if (responseMode && !['solo_self', 'solo_proxy'].includes(responseMode)) {
+      return NextResponse.json({ error: 'Invalid responseMode' }, { status: 400 })
+    }
+
     // Fetch existing response row for this user
     const { data: existingRow } = await supabase
       .from('bet_responses')
@@ -63,6 +85,8 @@ export async function POST(request) {
       prediction,
       actual_answer: actualAnswer,
       responded_at: now,
+      response_mode: responseMode || null,
+      proxy_partner_answer: responseMode === 'solo_proxy' ? (proxyPartnerAnswer || null) : null,
     }
 
     // Insert or update the response row
@@ -95,7 +119,7 @@ export async function POST(request) {
         check_date: todayStr,
         question_id: betRow?.id || null,
         question_text: betRow?.question || null,
-        question_response: prediction || null,
+        question_response: prediction || actualAnswer || null,
       }, { onConflict: 'user_id,check_date' })
 
     // Fetch both response rows after save
@@ -123,8 +147,24 @@ export async function POST(request) {
     const myName = myProfile?.display_name || 'Your partner'
     const partnerName = partnerProfile?.display_name || 'Your partner'
 
-    // Solo Nora insight — always generated, speaks only to this user about themselves
-    const soloPrompt = `The Bet question was: "${betRow?.question}"
+    // Solo Nora insight — always generated, speaks only to this user.
+    // 'solo_proxy' has two real answers (asked in real life, not a blind
+    // guess) — richer reaction that can actually compare them, still
+    // addressed only to the account holder since there's no second app
+    // account to speak to. Every other case (solo_self, or a coupled
+    // user's single-sided early answer) keeps the original single-answer
+    // read.
+    const soloPrompt = responseMode === 'solo_proxy' && proxyPartnerAnswer
+      ? `The Bet question was: "${betRow?.question}"
+
+${myName} asked this to someone in real life and logged both real answers — this was not a blind guess.
+${myName}'s answer: "${actualAnswer}"
+The other person's answer: "${proxyPartnerAnswer}"
+
+You are Nora — a world-class couples therapist. React to what these two real answers reveal — where they align, where they surprise each other, what it shows about how well ${myName} actually knows this person. Speak only to ${myName}.
+
+Write exactly one sentence, maximum 20 words. Speak directly to ${myName} using "you". Never generic. Never start with "Your answer", "You said", or "That's".`
+      : `The Bet question was: "${betRow?.question}"
 
 ${myName} answered: "${actualAnswer}"
 
@@ -155,7 +195,16 @@ Write exactly one sentence, maximum 18 words. Speak directly to ${myName} using 
         coupleId: resolvedCoupleId,
         userId,
         signalType: SIGNAL_TYPES.BET_SOLO,
-        inputData: { question: betRow?.question, answer: actualAnswer },
+        inputData: {
+          question: betRow?.question,
+          answer: actualAnswer,
+          // Tagged explicitly so this never reads as equivalent-confidence
+          // to a real second account's own answer, per the data-integrity
+          // provenance rule.
+          ...(responseMode === 'solo_proxy' && proxyPartnerAnswer
+            ? { proxyPartnerAnswer, source: 'self-reported, asked in real life' }
+            : {}),
+        },
       }).catch(() => {})
 
       // Single-sided Follow-Through — theirAnswer omitted, same path
@@ -182,21 +231,23 @@ Write exactly one sentence, maximum 18 words. Speak directly to ${myName} using 
       }
     }
 
-    // Push notification to partner
-    const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
-    const pushBody = `${myName} submitted their bet response.`
+    // Push notification to partner — solo has no one to notify.
+    if (partnerId) {
+      const appBase = process.env.NEXT_PUBLIC_APP_URL || 'https://abf-couples-app.vercel.app'
+      const pushBody = `${myName} submitted their bet response.`
 
-    fetch(`${appBase}/api/push/send`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
-      body: JSON.stringify({
-        userId: partnerId,
-        title: 'The Bet',
-        body: pushBody,
-        url: '/dashboard',
-        route: 'bet/respond',
-      }),
-    }).catch(() => {})
+      fetch(`${appBase}/api/push/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
+        body: JSON.stringify({
+          userId: partnerId,
+          title: 'The Bet',
+          body: pushBody,
+          url: '/dashboard',
+          route: 'bet/respond',
+        }),
+      }).catch(() => {})
+    }
 
     // Check if all four fields are filled
     const allFilled = !!(
