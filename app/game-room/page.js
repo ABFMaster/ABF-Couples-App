@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { checkMemoryUnlocked } from '@/lib/memory-unlock'
 import { MEMORY_LOCKED_COPY } from '@/lib/challenge-prompts'
+import { SOLO_ELIGIBLE_MODES, SOLO_LOCKED_COPY } from '@/lib/game-room-config'
 
 const MODES = [
   {
@@ -98,7 +99,12 @@ export default function GameRoomPage() {
   const [loading, setLoading] = useState(true)
   const [userName, setUserName] = useState('')
   const [memoryUnlocked, setMemoryUnlocked] = useState(false)
-  const [showMemoryLocked, setShowMemoryLocked] = useState(false)
+  // expandedLockId replaces the old single showMemoryLocked boolean — now
+  // multiple cards (Memory Test's eligibility lock, plus every solo-locked
+  // mode below) can each have their own expandable explanation, so it needs
+  // to track WHICH card is expanded, not just whether one boolean is true.
+  const [expandedLockId, setExpandedLockId] = useState(null)
+  const [isSolo, setIsSolo] = useState(false)
 
   useEffect(() => {
     const init = async () => {
@@ -119,13 +125,15 @@ export default function GameRoomPage() {
       if (profile?.display_name) setUserName(profile.display_name)
       setLoading(false)
 
-      // Memory Test eligibility — non-blocking, doesn't hold up the rest of the page
+      // Memory Test eligibility + solo status — both non-blocking, don't hold
+      // up the rest of the page
       const { data: couple } = await supabase
         .from('couples')
-        .select('id')
+        .select('id, user2_id')
         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
         .maybeSingle()
       if (couple?.id) {
+        setIsSolo(!couple.user2_id)
         const { unlocked } = await checkMemoryUnlocked(supabase, couple.id)
         setMemoryUnlocked(unlocked)
       }
@@ -181,14 +189,23 @@ export default function GameRoomPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {MODES.map(mode => {
             const isMemory = mode.id === 'memory'
-            const isAvailable = isMemory ? memoryUnlocked : mode.available
-            const isLockedNotSoon = isMemory && !memoryUnlocked // eligibility-gated, not "coming soon"
+            // Solo lock (task #262) only applies to modes that are otherwise
+            // globally available — Memory's eligibility gate and Remake's
+            // not-built-yet "Soon" state are unrelated and keep their own
+            // existing behavior untouched, not layered with this.
+            const isSoloLocked = isSolo && mode.available && !isMemory && !SOLO_ELIGIBLE_MODES.includes(mode.id)
+            const isAvailable = isMemory ? memoryUnlocked : (mode.available && !isSoloLocked)
+            const isLockedNotSoon = (isMemory && !memoryUnlocked) || isSoloLocked // eligibility/solo-gated, not "coming soon"
+            const lockCopy = isMemory ? MEMORY_LOCKED_COPY : SOLO_LOCKED_COPY
+            const lockCta = isMemory ? '/us/add' : '/connect'
+            const lockLabel = isMemory ? 'Locked' : isSoloLocked ? 'Needs partner' : 'Locked'
+            const isExpanded = expandedLockId === mode.id
             return (
             <div key={mode.id}>
               <button
                 onClick={() => {
                   if (isAvailable) { router.push(`/game-room/lobby?mode=${mode.id}`); return }
-                  if (isLockedNotSoon) setShowMemoryLocked(s => !s)
+                  if (isLockedNotSoon) setExpandedLockId(id => id === mode.id ? null : mode.id)
                 }}
                 style={{
                   background: '#FFFFFF',
@@ -217,7 +234,7 @@ export default function GameRoomPage() {
                     </p>
                     {!isAvailable && (
                       <span style={{ fontSize: '10px', letterSpacing: '0.08em', color: '#B8A898', textTransform: 'uppercase', background: '#F5F0EA', borderRadius: '6px', padding: '2px 7px' }}>
-                        {isLockedNotSoon ? 'Locked' : 'Soon'}
+                        {isLockedNotSoon ? lockLabel : 'Soon'}
                       </span>
                     )}
                   </div>
@@ -234,19 +251,19 @@ export default function GameRoomPage() {
                 )}
               </button>
 
-              {isLockedNotSoon && showMemoryLocked && (
+              {isLockedNotSoon && isExpanded && (
                 <div style={{ background: '#F5F0EA', border: '0.5px solid #E8DDD0', borderRadius: '16px', padding: '18px 20px', marginTop: '8px' }}>
                   <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '15px', color: '#1A1A1A', margin: '0 0 6px' }}>
-                    {MEMORY_LOCKED_COPY.headline}
+                    {lockCopy.headline}
                   </p>
                   <p style={{ fontSize: '13px', color: '#7A6F63', lineHeight: 1.5, margin: '0 0 12px' }}>
-                    {MEMORY_LOCKED_COPY.body}
+                    {lockCopy.body}
                   </p>
                   <button
-                    onClick={() => router.push('/us/add')}
+                    onClick={() => router.push(lockCta)}
                     style={{ background: 'none', border: 'none', color: '#8B7355', fontSize: '13px', fontWeight: 600, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
                   >
-                    {MEMORY_LOCKED_COPY.cta} →
+                    {lockCopy.cta} →
                   </button>
                 </div>
               )}

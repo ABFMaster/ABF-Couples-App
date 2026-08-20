@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { getModeConfig } from '@/lib/game-room-config'
+import { getModeConfig, SOLO_ELIGIBLE_MODES } from '@/lib/game-room-config'
 import { MEMORY_LOCKED_COPY } from '@/lib/challenge-prompts'
 
 function GameRoomLobbyContent() {
@@ -19,13 +19,11 @@ function GameRoomLobbyContent() {
   const [partnerName, setPartnerName] = useState('your partner')
   const [iAmIn, setIAmIn] = useState(false)
   const [partnerIsIn, setPartnerIsIn] = useState(false)
-  // Solo lobby bypass — see task #260 (Sessions/PRODUCT_BACKLOG.md). Deliberately
-  // scoped to Pitch/Plan only, not every mode: those two were the ones the Aug 19
-  // solo-arc audit confirmed have no real two-person requirement in their
-  // generation/verdict logic. Memory Test's solo-banking was explicitly rejected,
-  // and Rabbit Hole/The Hunt/Rank/Story/Hot Take/The Call haven't been individually
-  // cleared yet (that's task #262) — so the bypass must not leak to them.
-  const SOLO_ELIGIBLE_MODES = ['pitch', 'plan']
+  // Solo lobby bypass — see task #260/#262 (Sessions/PRODUCT_BACKLOG.md).
+  // SOLO_ELIGIBLE_MODES now lives in lib/game-room-config.js as the single
+  // source of truth shared with the Game Room home page's lock tagging, so
+  // this can't silently drift out of sync with what's actually advertised as
+  // playable there.
   const [isSolo, setIsSolo] = useState(false)
   const [together, setTogether] = useState(null)
   const [selectedTimer, setSelectedTimer] = useState(config.defaultTimer || 60)
