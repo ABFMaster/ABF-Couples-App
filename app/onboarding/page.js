@@ -242,8 +242,34 @@ function OnboardingFlow() {
       // portion complete regardless of assessment/pairing status (both of
       // those have their own always-available entry points: /profile/
       // assessment and /connect + dashboard's "Get your connect code").
+      //
+      // ROOT CAUSE FIX Aug 21 2026 — solo-arc break-it audit found a real
+      // dead-end here: handleStep3 sets completed_at THEN calls
+      // prepareStep4 (which is what actually creates the couples row) as
+      // two separate awaits, not one atomic operation. If the tab closes
+      // or the network drops between them, completed_at is true but no
+      // couples row was ever created. On the next visit this block used to
+      // trust completed_at alone and send them straight to /dashboard —
+      // which has no couples row to gate anything on, so Spark/Bet/Ritual/
+      // Wednesday/Thursday (all conditioned on couple?.id) silently never
+      // appear, with nothing but a small "Get your connect code" link to
+      // notice. Now verifies a couples row actually exists before trusting
+      // that signal; if not, falls through to step 4 below, which already
+      // self-heals (prepareStep4 creates the row if missing).
       if (profile.completed_at) {
-        router.push('/dashboard')
+        const { data: existingCouple } = await supabase
+          .from('couples')
+          .select('id')
+          .or(`user1_id.eq.${authUser.id},user2_id.eq.${authUser.id}`)
+          .maybeSingle()
+        if (existingCouple) {
+          router.push('/dashboard')
+          return
+        }
+        // No couples row despite completed_at — fall through to step 4,
+        // which creates/resumes one via prepareStep4.
+        setStep(4)
+        await prepareStep4(authUser)
         return
       }
 
