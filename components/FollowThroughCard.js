@@ -344,8 +344,32 @@ export default function FollowThroughCard({ userId, coupleId, session, children,
     ? cloneElement(children, { onRevealed: handleRevealed })
     : children
 
-  if (loading || !data?.active) {
+  // ROOT CAUSE FIX Aug 21 2026 — Matt reported the Spark and Notice cards'
+  // reveal appearing to finish, then "quickly reloading" the same content
+  // moments later. Root cause: this used to `return children` bare
+  // whenever there was no active same-source Follow-Through yet, then
+  // switch to `return <div>{blendChildren}{followThroughBlock}</div>`
+  // (a NEW div ancestor around the same activity card) the moment isBlend
+  // flipped true — which happens automatically, mid-session, via the
+  // 8-second poll below once a Follow-Through generates for TODAY's Spark/
+  // Notice/Bet (typically right around when the reveal itself completes,
+  // since both are triggered by the same response-submission). Wrapping an
+  // already-mounted child in a new parent type at the same tree position
+  // is exactly what forces React to unmount + remount it — resetting
+  // SparkCard/WednesdayCard's local reveal-animation state and re-running
+  // their mount effects, which is what actually looked like a "reload."
+  // The data itself never changed; only the DOM identity did. Fixed by
+  // keeping the wrapper shape identical across both states — same outer
+  // div always present once loading resolves, only its style/contents
+  // vary — so the activity card's ancestor chain never changes shape and
+  // React preserves its instance (and in-flight animation) across the
+  // isBlend transition.
+  if (loading) {
     return children
+  }
+
+  if (!data?.active) {
+    return <div>{children}</div>
   }
 
   const handleReport = async (status, note, candidateIndex) => {
