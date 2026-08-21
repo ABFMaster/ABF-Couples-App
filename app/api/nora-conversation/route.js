@@ -28,12 +28,15 @@ export async function POST(request) {
     return NextResponse.json({ content: response })
   } catch (err) {
     console.error('[NoraConversation] Error:', err)
-    // TEMP DIAGNOSTIC Aug 21 2026 — live turn-2-and-on failure in Game Room
-    // onboarding, reproduces deterministically on fresh conversations with
-    // varied content, so not content- or history-specific. No Vercel log
-    // access from this session and nora_calls isn't queryable here either,
-    // so this is the only way to see the real underlying error instead of
-    // the generic message. Revert once root cause is confirmed.
-    return NextResponse.json({ error: 'Failed to get response', _debug: { message: err?.message, status: err?.status, name: err?.name } }, { status: 500 })
+    // Aug 21 2026 — root cause of the "turn 2 always failed" bug (fixed
+    // separately in NoraConversation.js) was the client sending an
+    // assistant-first message array, which Anthropic rejects. Temporarily
+    // added a client-visible _debug field here to confirm that live, since
+    // this route has no Vercel log or nora_calls DB access from this
+    // session — removed again now that it's confirmed. Remaining 500s here
+    // are genuine transient failures (network blips, occasional upstream
+    // errors), already surfaced gracefully client-side via the isError
+    // retry flow in NoraConversation.js.
+    return NextResponse.json({ error: 'Failed to get response' }, { status: 500 })
   }
 }
