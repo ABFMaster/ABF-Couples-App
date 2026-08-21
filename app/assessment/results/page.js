@@ -83,11 +83,16 @@ export default function AssessmentResults() {
         if (partnerId) {
           const { data: pp } = await supabase
             .from('user_profiles')
-            .select('name')
+            // ROOT CAUSE FIX Aug 21 2026 — found via full schema-drift audit:
+            // user_profiles has no `name` column, only `display_name`. This
+            // select was silently failing (invalid column), so pp was always
+            // null and the partner's name never showed here — fell back to
+            // the generic "Your partner" on every load.
+            .select('display_name')
             .eq('user_id', partnerId)
             .single()
           partnerProfile = pp
-          if (partnerProfile) setPartnerName(partnerProfile.name || 'Your partner')
+          if (partnerProfile) setPartnerName(partnerProfile.display_name || 'Your partner')
 
           const { data: partnerAss } = await supabase
             .from('relationship_assessments')

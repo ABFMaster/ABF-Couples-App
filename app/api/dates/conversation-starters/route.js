@@ -32,9 +32,17 @@ export async function POST(request) {
       .in('user_id', userIds)
 
     // Fetch assessments
+    // ROOT CAUSE FIX Aug 21 2026 — found via full schema-drift audit:
+    // relationship_assessments has no `overall_percentage` column (that
+    // value lives inside the `results` jsonb as `overallPercentage`, see
+    // app/assessment/page.js's completeAssessment()), and `module_results`
+    // isn't populated by any current write path either. The old select
+    // included both, which silently failed the whole query — assessments
+    // was always empty and this route's assessment-personalization branch
+    // never actually ran.
     const { data: assessments } = await supabase
       .from('relationship_assessments')
-      .select('user_id, module_results, overall_percentage')
+      .select('user_id, results')
       .eq('couple_id', coupleId)
 
     // Fetch recent check-ins for themes
@@ -68,7 +76,7 @@ export async function POST(request) {
       ? (recentReflection?.opening ? `Recent reflection: ${recentReflection.opening}` : '')
       : ''
     const assessmentSummary = (assessments || [])
-      .map(a => `${a.user_id}: ${a.overall_percentage}% overall`)
+      .map(a => `${a.user_id}: ${a.results?.overallPercentage}% overall`)
       .join(', ')
 
     const prompt = `You are a warm relationship coach generating conversation starters for a couple going on a date.

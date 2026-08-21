@@ -54,7 +54,12 @@ export async function POST(request) {
 
     const { data: profiles } = await supabase
       .from('user_profiles')
-      .select('user_id, display_name, love_language, attachment_style')
+      // ROOT CAUSE FIX Aug 21 2026 — found via full schema-drift audit:
+      // user_profiles has no `love_language` column, only
+      // `love_language_primary`. Harmless in practice (love_language was
+      // fetched but never actually read anywhere below), fixed for
+      // correctness anyway.
+      .select('user_id, display_name, love_language_primary, attachment_style')
       .in('user_id', [coupleData.user1_id, coupleData.user2_id])
 
     const { data: noraMemory } = await supabase
@@ -90,26 +95,43 @@ export async function POST(request) {
       return true
     })
 
+    // ROOT CAUSE FIX Aug 21 2026 — found via full schema-drift audit: there
+    // is no `dates` table in the live DB at all (never existed under that
+    // name — the real table is `custom_dates`, and it has no scalar
+    // `location`/`name`/`notes` columns; per-stop location lives inside the
+    // `stops` jsonb array as `stop.address`/`stop.name`, see
+    // app/dates/custom/page.js). Both queries below were silently failing
+    // on every Hunt start — the dateId-specific "date planned" context
+    // never populated (though nothing in the app currently passes a
+    // dateId into /game-room/hunt/start, so that branch was unreachable in
+    // practice) and "visited places" personalization for dynamic missions
+    // was always empty.
+
     // Fetch date context if launched from Date Night
     let dateContext = ''
     if (dateId) {
       const { data: date } = await supabase
-        .from('dates')
-        .select('name, location, notes')
+        .from('custom_dates')
+        .select('title, stops')
         .eq('id', dateId)
         .maybeSingle()
       if (date) {
-        dateContext = `They have a date planned: ${date.name}${date.location ? ` at ${date.location}` : ''}${date.notes ? `. Notes: ${date.notes}` : ''}.`
+        const firstStop = Array.isArray(date.stops) ? date.stops[0] : null
+        const stopLocation = firstStop?.address || firstStop?.name || null
+        dateContext = `They have a date planned: ${date.title}${stopLocation ? ` at ${stopLocation}` : ''}.`
       }
     }
 
     // Fetch visited places to power dynamic discovery missions
     const { data: visitedDates } = await supabase
-      .from('dates')
-      .select('location')
+      .from('custom_dates')
+      .select('stops')
       .eq('couple_id', coupleId)
-      .not('location', 'is', null)
-    const visitedPlaces = (visitedDates || []).map(d => d.location).filter(Boolean)
+      .eq('status', 'completed')
+    const visitedPlaces = (visitedDates || [])
+      .flatMap(d => Array.isArray(d.stops) ? d.stops : [])
+      .map(s => s?.address || s?.name)
+      .filter(Boolean)
 
     const partnerNames = profiles
       ? profiles.map(p => p.display_name).join(' and ')
