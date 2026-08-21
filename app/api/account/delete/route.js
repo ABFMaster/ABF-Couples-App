@@ -161,7 +161,14 @@ export async function POST(request) {
     }
 
     await del('timeline_events', q => q.eq('created_by', userId))
-    await del('shared_items', q => q.eq('created_by', userId))
+    // ROOT CAUSE FIX Aug 21 2026 — found live while scripting a manual
+    // cleanup for a stuck test account: shared_items has no `created_by`
+    // column (confirmed against its actual writer, app/shared/add/page.js,
+    // which inserts `user_id`) — this delete has been failing silently on
+    // every account deletion since the Aug 5 rewrite (task #126), inside
+    // the best-effort del() wrapper that swallows and logs rather than
+    // throwing. shared_items rows were never actually being cleaned up.
+    await del('shared_items', q => q.eq('user_id', userId))
 
     // Storage — flat single-level prefixes only (see note above re: nested ones)
     for (const prefix of [`relationship/${coupleId || userId}`, `timeline/${coupleId || userId}`, `memories/${userId}`]) {
@@ -175,11 +182,32 @@ export async function POST(request) {
       }
     }
 
+    // ROOT CAUSE FIX Aug 21 2026 — found live via the same manual-cleanup
+    // script that surfaced the shared_items bug above: user_profiles.
+    // couple_id has a foreign key into couples.id, and this used to delete
+    // couples FIRST, then user_profiles — violating that FK on every single
+    // deletion that had a couples row. Since every onboarded user gets one
+    // now (even solo, see this week's onboarding fix), that's been close to
+    // 100% of deletions. del()'s try/catch swallows the error and logs it,
+    // so the request still returned { success: true } while the couples
+    // row silently never got removed — directly contradicting the "this
+    // permanently deletes... cannot be undone" promise in the UI. Deleting
+    // user_profiles first resolves this for the solo case (the departing
+    // user's own row was the only thing still pointing at the couple).
+    //
+    // Still open, unchanged from before this fix: for a genuinely PAIRED
+    // couple, the OTHER partner's user_profiles row also references the
+    // same couple_id, so this delete will still fail (now visibly logged,
+    // at least) until someone makes the actual product call flagged in the
+    // file-level comment above — whether one partner deleting their account
+    // should also erase the shared couple history out from under the other
+    // partner. Not decided here; not something to resolve silently via a
+    // reorder.
+    await del('user_profiles', q => q.eq('user_id', userId))
+
     if (coupleId) {
       await del('couples', q => q.eq('id', coupleId))
     }
-
-    await del('user_profiles', q => q.eq('user_id', userId))
 
     const { error: deleteUserError } = await supabase.auth.admin.deleteUser(userId)
     if (deleteUserError) {
