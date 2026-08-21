@@ -51,8 +51,26 @@ export default function NoraConversation({
       const data = await res.json()
       const content = data.content
 
-      if (!content) {
+      // ROOT CAUSE FIX Aug 21 2026 — found live during the Game Room
+      // interests onboarding walkthrough: a transient failure here (the
+      // route returns { error } with a non-2xx status on any noraChat()
+      // failure) used to just console.error and silently return, leaving
+      // the typing indicator disappear with no reply, no error shown, and
+      // — since input was already cleared at the top of send() — the
+      // user's typed answer gone with no way to recover it short of
+      // retyping. Combined with this page having no draft-save until the
+      // whole conversation completes, a single transient hiccup could
+      // strand someone with real, if lower, odds of just giving up.
+      // Now surfaces an inline error in the thread and restores the text
+      // to the input so retrying is one tap, not a retype.
+      if (!res.ok || !content) {
         console.error('[NoraConversation] empty response:', data)
+        setMessages([...nextMessages, {
+          role: 'assistant',
+          content: "Sorry, that didn't go through — can you try sending it again?",
+          isError: true,
+        }])
+        setInput(text)
         return
       }
 
@@ -66,6 +84,12 @@ export default function NoraConversation({
       }
     } catch (err) {
       console.error('[NoraConversation] send error:', err)
+      setMessages([...nextMessages, {
+        role: 'assistant',
+        content: "Sorry, that didn't go through — can you try sending it again?",
+        isError: true,
+      }])
+      setInput(text)
     } finally {
       setLoading(false)
       inputRef.current?.focus()
@@ -88,15 +112,15 @@ export default function NoraConversation({
             {msg.role === 'assistant' ? (
               <div className="max-w-[85%]">
                 <div className="flex items-center gap-2 mb-1.5 px-1">
-                  <div className="w-2 h-2 rounded-full bg-[#F2A090]" />
-                  <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400">Nora</span>
+                  <div className={`w-2 h-2 rounded-full ${msg.isError ? 'bg-neutral-300' : 'bg-[#F2A090]'}`} />
+                  <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-neutral-400">{msg.isError ? 'Not sent' : 'Nora'}</span>
                 </div>
-                <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border border-neutral-100">
+                <div className={`rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm border ${msg.isError ? 'bg-neutral-50 border-neutral-200' : 'bg-white border-neutral-100'}`}>
                   <p
-                    className="text-[15px] text-neutral-800 leading-relaxed whitespace-pre-wrap"
+                    className={`text-[15px] leading-relaxed whitespace-pre-wrap ${msg.isError ? 'text-neutral-500 italic' : 'text-neutral-800'}`}
                     style={{ fontFamily: "'Fraunces', Georgia, serif", fontWeight: 400 }}
                   >
-                    {completionTrigger
+                    {completionTrigger && !msg.isError
                       ? msg.content.replace(completionTrigger, '').trim()
                       : msg.content}
                   </p>
