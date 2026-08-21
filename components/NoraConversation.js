@@ -39,11 +39,33 @@ export default function NoraConversation({
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
+
+      // ROOT CAUSE FIX Aug 21 2026 — found live: every single message in
+      // this component's history, including the very first turn, was
+      // failing with a 500. Root cause: initialMessage is seeded into
+      // local `messages` state as {role:'assistant', ...} purely for
+      // display (so the opening line shows before the user has typed
+      // anything), but nextMessages — built by appending the user's reply
+      // to that seeded state — was sent to the API as-is. The Anthropic
+      // Messages API requires the message array to start with role
+      // 'user'; an assistant-first array is an invalid request (400),
+      // which this route's outer catch flattens to a generic 500 with no
+      // distinguishing detail. Since the seed is never actually part of
+      // the real API conversation (the model doesn't need its own scripted
+      // opener echoed back), strip a leading assistant message before
+      // sending — display state is untouched, only the wire payload
+      // changes. This affected every turn of every conversation this
+      // component has ever run in production; the component was
+      // effectively broken from turn one at every call site since launch.
+      const apiMessages = nextMessages[0]?.role === 'assistant'
+        ? nextMessages.slice(1)
+        : nextMessages
+
       const res = await fetch('/api/nora-conversation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
         body: JSON.stringify({
-          messages: nextMessages,
+          messages: apiMessages,
           systemPrompt,
           conversationKey,
         }),
