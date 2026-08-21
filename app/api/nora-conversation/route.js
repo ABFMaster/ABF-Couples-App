@@ -28,6 +28,12 @@ export async function POST(request) {
     return NextResponse.json({ content: response })
   } catch (err) {
     console.error('[NoraConversation] Error:', err)
-    return NextResponse.json({ error: 'Failed to get response' }, { status: 500 })
+    // TEMP DIAGNOSTIC Aug 21 2026 — live turn-2-and-on failure in Game Room
+    // onboarding, reproduces deterministically on fresh conversations with
+    // varied content, so not content- or history-specific. No Vercel log
+    // access from this session and nora_calls isn't queryable here either,
+    // so this is the only way to see the real underlying error instead of
+    // the generic message. Revert once root cause is confirmed.
+    return NextResponse.json({ error: 'Failed to get response', _debug: { message: err?.message, status: err?.status, name: err?.name } }, { status: 500 })
   }
 }
